@@ -5,7 +5,7 @@ description: Install polite-crawler, fetch your first page from the command line
 
 import { Steps } from "@astrojs/starlight/components";
 
-polite-crawler needs Node.js 22.13 or later. It operates on Linux, macOS and Windows.
+polite-crawler needs Node.js 22.19 or later. It operates on Linux, macOS and Windows.
 
 ## From the command line
 
@@ -37,9 +37,11 @@ polite-crawler needs Node.js 22.13 or later. It operates on Linux, macOS and Win
 
 </Steps>
 
-Fetch the page again within 24 hours, and the answer comes from the store with no request. Use `--max-age 7d` to accept an older copy, or `--max-age 0s` to ask the site again.
+Fetch the page again within 24 hours, and the answer comes from the store with no request. Use `--max-age 7d` to accept an older copy, or `--max-age 0` to ask the site again.
 
 ## From your code
+
+{/* TODO(core): find and verify become asynchronous. Add await to the example below after the core change. */}
 
 ```sh title="Install the library"
 npm install polite-crawler

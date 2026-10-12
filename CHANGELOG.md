@@ -17,13 +17,37 @@ A prerelease version (`0.2.0-beta.1`) goes to the npm tag `next`. Each other ver
 
 ## 0.1.0
 
-The first version. It needs Node.js 22.19 or later, and it is an ES module package.
+The first version. It needs Node.js 22.19 or later, and it is ESM only.
 
-- **The library.** `openCrawler({ dir })` gives `fetch`, `find`, `read`, `verify` and `reindex` over one folder.
+<!-- This section tells what 0.1.0 contains. No earlier version is on npm, so the changes before the first release are part of it. TODO(core): add the asynchronous find and verify, the versions of a document and the pinned captures after the core change. -->
+
+- **The library.** `openCrawler({ dir })` gives `fetch`, `find`, `read`, `verify` and `reindex` over one folder. The root entry point also exports the parts of the runtime for an application: `Crawler`, `CaptureLog`, `DocIndex`, `FileBlobStore`, `Extractors`, `fetchAndIndex`, `fetchPage` and `reindex`.
 - **The command line.** `polite-crawler fetch`, `find`, `read`, `verify`, `reindex` and `mcp`. The `--json` option gives output for programs.
-- **The MCP server.** `polite-crawler mcp` gives four tools over standard input and output: `crawl_fetch`, `crawl_find`, `crawl_read` and `crawl_verify`.
-- **Politeness.** The crawler obeys robots.txt (RFC 9309), and the rules for `Claude-User` when an assistant asks. It sends one request at a time to each host and obeys `Retry-After`. A challenge, a 402 or a 403 stops the host for the run. The `User-Agent` names the crawler and links to a page for site owners.
+  - The exit codes are 0 (done), 1 (not done: a page not fetched, no match, a quote not found, a document unknown or held back, or an error) and 2 (a wrong command line).
+  - The command checks the command line before it opens the store. `--version` and `--help` load no part of the crawler.
+  - `--dir` and `POLITE_CRAWLER_DIR` expand `~` and resolve a relative path.
+  - `read --user-provided` reads a page that refuses AI input, for a URL that you gave yourself.
+  - `reindex` stops when the log has captures of another application. `--force` builds only the pages again.
+- **The MCP server.** `polite-crawler mcp` gives four tools over standard input and output: `crawl_fetch`, `crawl_find`, `crawl_read` and `crawl_verify`. Its entry point is `polite-crawler/mcp`, so the root entry point does not load the MCP SDK.
+  - The text of each page comes in an `<untrusted-web-content>` envelope with the URL, the capture id and the fetch date. A page cannot close its envelope.
+  - `user_provided` releases held-back text only when the user confirms it (MCP elicitation), or when the operator permits it (`POLITE_CRAWLER_ALLOW_USER_PROVIDED=1`).
+  - Each tool has descriptions of its parameters, an output schema and structured content. A result gives the age of each copy.
+  - `crawl_read` gives the page metadata with the first range only, and the position of the next range.
+  - A bad URL in `crawl_fetch` is an error of that URL only, and a URL given twice is fetched one time. The server sends progress for each URL.
+  - With no browser installed, the server turns rendering off at start and writes one note.
+- **Politeness.** The crawler obeys robots.txt (RFC 9309), and the rules for `Claude-User` when an assistant asks. It sends one request at a time to each host and obeys `Retry-After`. The `User-Agent` names the crawler and links to a page for site owners.
+  - A 401 or a 403 stops the host for 1 hour, a challenge or a 402 for 24 hours, and five failures in sequence for 1 hour. A longer `Retry-After` stops the host for that time, up to 30 days.
+  - A client error, a 429 and a 503 do not count toward a stop. The backoff starts at 5 seconds and stops at 300 seconds, with random jitter.
+  - When robots.txt cannot be read, the crawler fetches nothing from the site and tries again after some minutes. A good copy from the last 30 days applies in that time. A 401 or a 403 for robots.txt means that the site has no file.
+  - `CrawlerOptions.politeness` changes the limits for each host or for some hosts, and `hostState` keeps the state of each host. `crawler.resetHosts()` removes the stops.
+- **Egress.** By default, the crawler fetches only `http:` and `https:` URLs on public addresses, and it checks the address after DNS. `CrawlerOptions.egress` and the flag `--allow-private` permit private addresses.
 - **The store.** Each fetch decision goes into a capture log, and each body goes into a store by SHA-256 hash. A SQLite FTS5 index answers later questions with no request. A quote check finds the exact span of a quote, with the capture id to cite.
+  - A capture shows `REDACTED` in place of a user name, a password and the values of secret query parameters.
+  - A body longer than the limit keeps its first part, and the capture says `truncated`. A body that does not download or decode gives the outcome `error`.
+  - `FetchRequest.maxAgeMs` can be `"auto"`, the freshness that the server gave.
 - **Reading.** The crawler reads JSON-LD, the visible text, the links and PDF files with no browser. With the optional peer `playwright-core`, it opens a headless browser for a page that shows almost nothing without JavaScript.
+  - `decodeBody` and `bodyEncoding` decode a body in the encoding that it declares.
+  - `PageExtract` gives `canonical`, `redirect`, `blocked` and `notes`. `Hours` gives `partial` and `season`. `PdfOptions` sets the limits of the PDF reader.
+  - A renderer throws `RenderRefused` for a page that it did not render, and the crawler does not count it as a failure of the host.
 - **Usage signals.** When a page asks not to be AI input (`ai-input=no`), the crawler keeps the page but holds back its text from the AI reader.
 - **The parts.** The entry points `polite-crawler/robots`, `/hours`, `/html`, `/classify`, `/politeness` and `/signals` have no Node.js dependency, so a browser can import them.

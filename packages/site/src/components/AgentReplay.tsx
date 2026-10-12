@@ -9,6 +9,10 @@ const DOC = "url:https://www.rfc-editor.org/rfc/rfc9309.html";
 const CAPTURE = "fetch.f403dd2770c1";
 const QUOTE = "the crawler MUST assume complete disallow";
 
+/** The text of a page comes in an envelope that names its source. The URL and the date are left out here. */
+const web = (id: string, body: string): string =>
+  `<untrusted-web-content id="${id}" capture="${CAPTURE}">\n${body}\n</untrusted-web-content id="${id}">`;
+
 interface Step {
   readonly kind: "person" | "tool" | "answer";
   readonly name: string;
@@ -34,21 +38,20 @@ const STEPS: readonly Step[] = [
   "doc": "${DOC}",
   "outcome": "ok",
   "status": 200,
-  "title": "RFC 9309: Robots Exclusion Protocol",
   "chars": 21050,
-  "captures": ["${CAPTURE}"]
-}]`,
+  "captures": ["${CAPTURE}"],
+  "age": "0s"
+}]
+${web("4f1c09a2", "title: RFC 9309: Robots Exclusion Protocol")}`,
     requests: 2,
-    note: "Two requests: the robots.txt of the site, then the page. Each one goes into the capture log.",
+    note: "Two requests: the robots.txt of the site, then the page. Each one goes into the capture log. The title is page text, so it comes in an envelope.",
   },
   {
     kind: "tool",
     name: "crawl_find",
     input: `{ "q": "unreachable server error" }`,
-    output: `[{
-  "doc": "${DOC}",
-  "snippet": "…2.3.1.4. \\"[Unreachable]\\" Status If the robots.txt file is [unreachable] due to [server] or network [errors], this means…"
-}]`,
+    output: `[{ "doc": "${DOC}", "kind": "page", "age": "1m" }]
+${web("b83e5d10", `snippet: …2.3.1.4. "[Unreachable]" Status If the robots.txt file is [unreachable] due to [server] or network [errors], this means…`)}`,
     requests: 0,
     note: "No request: a full-text search of the store on the disk.",
   },
@@ -56,11 +59,14 @@ const STEPS: readonly Step[] = [
     kind: "tool",
     name: "crawl_read",
     input: `{ "doc": "${DOC}", "from": 14315, "length": 420 }`,
-    output: `{
-  "from": 14315, "to": 14735, "total": 21050,
-  "text": "2.3.1.4. \\"Unreachable\\" Status\\nIf the robots.txt file is unreachable due to server or network\\nerrors, this means the robots.txt file is undefined and the crawler\\nMUST assume complete disallow. …",
-  "captures": ["${CAPTURE}"]
-}`,
+    output: `{ "from": 14315, "to": 14735, "total": 21050, "next_from": 14735, "captures": ["${CAPTURE}"] }
+${web(
+  "70d2a6e4",
+  `2.3.1.4. "Unreachable" Status
+If the robots.txt file is unreachable due to server or network
+errors, this means the robots.txt file is undefined and the crawler
+MUST assume complete disallow. …`,
+)}`,
     requests: 0,
     note: "No request: the stored copy of the page.",
   },

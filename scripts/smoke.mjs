@@ -145,6 +145,27 @@ try {
     `engines.node is ${String(manifest.engines?.node)}`,
   );
 
+  // The root entry point must not load the MCP SDK or zod: only polite-crawler/mcp does. This walks
+  // the static imports of the root module through the files of the tarball.
+  const rootTarget = manifest.exports?.["."]?.default ?? manifest.main;
+  const graph = new Set();
+  const packages = new Set();
+  const walk = (file) => {
+    if (graph.has(file) || !files.has(file)) return;
+    graph.add(file);
+    const source = files.get(file).toString("utf8");
+    for (const [, specifier] of source.matchAll(/^\s*(?:import|export)\b[^"'`]*?\bfrom\s*["']([^"']+)["']|^\s*import\s*["']([^"']+)["']/gm)) {
+      if (specifier === undefined) continue;
+      if (specifier.startsWith(".")) walk(join(dirname(file), specifier).replace(/\\/g, "/"));
+      else packages.add(specifier.startsWith("@") ? specifier.split("/").slice(0, 2).join("/") : specifier.split("/")[0]);
+    }
+  };
+  walk(rootTarget.replace(/^\.\//, ""));
+  check(
+    graph.size > 1 && !packages.has("@modelcontextprotocol/sdk") && !packages.has("zod"),
+    `the root entry point loads ${String(graph.size)} files and no MCP SDK or zod (${[...packages].sort((a, b) => a.localeCompare(b)).join(", ")})`,
+  );
+
   const registry = JSON.parse(readFileSync(join(root, "server.json"), "utf8"));
   const entry = registry.packages?.find((item) => item.registryType === "npm");
   check(
@@ -194,7 +215,14 @@ for (const subpath of subpaths) {
   }
   console.log("imported " + specifier);
 }
-const { openCrawler } = await import(${JSON.stringify(manifest.name)});
+const root = await import(${JSON.stringify(manifest.name)});
+if (typeof root.openCrawler !== "function") throw new Error("the root entry point has no openCrawler");
+if ("createMcpServer" in root) throw new Error("the root entry point exports the MCP server");
+const mcp = await import(${JSON.stringify(`${manifest.name}/mcp`)});
+for (const name of ["createMcpServer", "startMcpServer"]) {
+  if (typeof mcp[name] !== "function") throw new Error("polite-crawler/mcp has no " + name);
+}
+const { openCrawler } = root;
 const crawler = openCrawler({ dir: "./store-library", renderer: false });
 const found = await crawler.find("smoke");
 await crawler.close();
@@ -216,9 +244,17 @@ console.log("opened a store, find gave " + String(found.length) + " results");
   check(version.stdout.trim() === manifest.version, `--version prints ${version.stdout.trim()}`);
   const help = must(`${command} --help`, run(command, ["--help"], { cwd: consumer, env }));
   check(help.stdout.includes("Usage"), "--help prints the usage");
-  must(
-    `${command} find smoke --dir ./store-cli`,
-    run(command, ["find", "smoke", "--dir", "./store-cli"], { cwd: consumer, env }),
+  // find with no match exits 1, and a wrong command line exits 2 before it opens a store
+  const found = run(command, ["find", "smoke", "--dir", "./store-cli"], { cwd: consumer, env });
+  check(
+    found.status === 1 && found.stdout.includes("nothing stored matches"),
+    `${command} find smoke --dir ./store-cli: no match, exit ${String(found.status)}`,
+  );
+  if (found.status !== 1) show(found.stdout + found.stderr);
+  const wrong = run(command, ["bogus", "--dir", "./store-wrong"], { cwd: consumer, env });
+  check(
+    wrong.status === 2 && !existsSync(join(consumer, "store-wrong")),
+    `${command} bogus: exit ${String(wrong.status)}, and no store`,
   );
 
   // The MCP server: initialize, then tools/list. Each line of stdout must be JSON-RPC.

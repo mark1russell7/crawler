@@ -92,17 +92,62 @@ describe("reading a web page", () => {
     const long = `<html><body><header><a href="/">Home</a></header><article><h1>Our story</h1>${paragraph.repeat(90)}<p>The second chapter.</p></article><aside><h2>Hours</h2><table><tbody><tr><td>Sunday</td><td>10 am–5 pm</td></tr><tr><td>Tuesday</td><td>Closed</td></tr></tbody></table></aside><footer><p>40 Elm St</p></footer></body></html>`;
     const page = extractPage(long, "https://bakery.example/story");
     expect(page.visibleChars).toBeGreaterThan(6000);
-    const lines = page.text.split("\n");
+    const [article, after] = page.text.split("\n\n");
+    const lines = article!.split("\n");
     expect(lines[0]).toBe("Our story");
     expect(lines).toContain("The second chapter.");
-    // the article is not repeated after the marker
-    const rest = lines.slice(lines.indexOf("[the rest of the page]") + 1);
-    expect(rest).toEqual(["Home", "Hours", "Sunday 10 am–5 pm", "Tuesday Closed", "40 Elm St"]);
+    // the article is not repeated after the blank line, and no marker is made up
+    expect(after!.split("\n")).toEqual([
+      "Home",
+      "Hours",
+      "Sunday 10 am–5 pm",
+      "Tuesday Closed",
+      "40 Elm St",
+    ]);
+  });
+
+  it("keeps a line that the article and a sidebar share in the sidebar too", () => {
+    const story = "<p>The story of our family's bakery and its hearth is a long one, told here in full.</p>";
+    const html = `<html><body><article><h1>Events this month</h1>${story.repeat(80)}<h3>Saturday</h3><p>10 am – 5 pm</p></article>
+      <aside><h2>Hours</h2><dl><dt>Monday</dt><dd>Closed</dd><dt>Tuesday</dt><dd>10 am – 5 pm</dd><dt>Wednesday</dt><dd>10 am – 5 pm</dd></dl></aside></body></html>`;
+    const after = extractPage(html, "https://bakery.example/").text.split("\n\n")[1]!;
+    expect(after.split("\n")).toEqual([
+      "Hours",
+      "Monday",
+      "Closed",
+      "Tuesday",
+      "10 am – 5 pm",
+      "Wednesday",
+      "10 am – 5 pm",
+    ]);
+  });
+
+  it("keeps the heading above a table that Readability leaves out, and the footer of a long article", () => {
+    const story = "<p>The story of our family's bakery and its hearth is a long one, told here in full.</p>";
+    const visit = extractPage(
+      `<html><body><article><h1>Visit</h1>${story.repeat(80)}<h2>Opening hours</h2></article><aside><table><tr><td>Tue–Sun</td><td>7am–3pm</td></tr></table></aside></body></html>`,
+      "https://bakery.example/",
+    );
+    expect(visit.text.split("\n\n")[1]).toBe("Opening hours\nTue–Sun 7am–3pm");
+    const history = extractPage(
+      `<html><body><article><h1>History</h1>${story.repeat(800)}</article><footer><h2>Hours</h2><p>Tue–Sun 10 am – 5 pm</p></footer></body></html>`,
+      "https://bakery.example/",
+    );
+    expect(history.text.length).toBeLessThanOrEqual(50_000);
+    expect(history.text).toContain("Tue–Sun 10 am – 5 pm");
+    expect(history.notes).toContain("the text is cut to 50000 characters");
   });
 
   it("spells a URL one way", () => {
     expect(canonicalUrl("https://Venue.EXAMPLE:443/menu?utm_source=x&page=2#top")).toBe(
       "https://venue.example/menu?page=2",
+    );
+    expect(
+      canonicalUrl("https://shop.example/p?srsltid=Af1&gbraid=0A&_hsenc=p2&mkt_tok=a&id=7"),
+    ).toBe("https://shop.example/p?id=7");
+    expect(canonicalUrl("https://shop.example/p?")).toBe("https://shop.example/p");
+    expect(canonicalUrl("https://shop.example/%7Euser/a%2fb")).toBe(
+      "https://shop.example/~user/a%2Fb",
     );
   });
 
@@ -111,5 +156,193 @@ describe("reading a web page", () => {
       '[{"@type":"http://schema.org/Event","name":"Trivia"},{"@type":["Bar","Restaurant"]}]',
     ]);
     expect(records.map((record) => typesOf(record))).toEqual([["Event"], ["Bar", "Restaurant"]]);
+    expect(typesOf({ "@type": "schema:Restaurant" })).toEqual(["Restaurant"]);
+  });
+
+  it("repairs the JSON-LD that sites break, and counts what it cannot repair", () => {
+    const records = readJsonLd([
+      '{"@type":"Restaurant","name":"Trailing comma",}',
+      '{"@type":"Bakery","description":"line one\nline two"}',
+      '/*<![CDATA[*/{"@type":"Cafe"}/*]]>*/',
+      '{"@type":"Bar"} {"@type":"Pub"}',
+      '{"@context":"https://schema.org","@graph":{"@type":"Museum"}}',
+    ]);
+    expect(records.map((record) => typesOf(record)[0])).toEqual([
+      "Restaurant",
+      "Bakery",
+      "Cafe",
+      "Bar",
+      "Pub",
+      "Museum",
+    ]);
+    expect(records[1]!["description"]).toBe("line one\nline two");
+    const page = extractPage(
+      `<html><head><script type='application/ld+json; charset=utf-8'>{"@type":"Bakery"}</script>
+      <script type="application/ld+json ">{"@type":"Store"}</script><script type="application/ld+json">{ not json</script></head>
+      <body><p>${"Fresh bread every morning. ".repeat(5)}</p></body></html>`,
+      "https://bakery.example/",
+    );
+    expect(page.jsonld.map((record) => typesOf(record)[0])).toEqual(["Bakery", "Store"]);
+    expect(page.notes).toContain("1 JSON-LD block could not be read");
+  });
+});
+
+describe("markup that a browser forgives", () => {
+  const filler = "We serve wood-fired pizza and fresh pasta made in house every day. ";
+
+  it("reads a page that opens <head> and never closes it, with no <body>", () => {
+    const page = extractPage(
+      `<!doctype html><html lang=en><head><meta charset=utf-8><title>Bakery</title><link rel=stylesheet href=a.css><main><p>Hours: Tue-Sun 7am-3pm. ${filler}</p></main></html>`,
+      "https://bakery.example/",
+    );
+    expect(page.text).toContain("Hours: Tue-Sun 7am-3pm.");
+    expect(page.needsRender).toBe(false);
+    expect(page.title).toBe("Bakery");
+  });
+
+  it("starts a line at each legacy block element", () => {
+    const page = extractPage(
+      `<html><body><center>Joe's Diner</center><center>Mon-Fri 6am-2pm</center><center>Sat-Sun 7am-1pm</center>
+      <fieldset><legend>Book</legend>Pick a time</fieldset><details><summary>Menu</summary>Pancakes</details>
+      <p>${filler}</p></body></html>`,
+      "https://diner.example/",
+    );
+    expect(page.text.split("\n").slice(0, 7)).toEqual([
+      "Joe's Diner",
+      "Mon-Fri 6am-2pm",
+      "Sat-Sun 7am-1pm",
+      "Book",
+      "Pick a time",
+      "Menu",
+      "Pancakes",
+    ]);
+  });
+
+  it("reads the content of a declarative shadow root, and keeps custom elements apart", () => {
+    const page = extractPage(
+      `<html><body><opening-hours><template shadowrootmode="open"><p>Tue-Sun 11am-9pm</p></template></opening-hours>
+      <x-price>12</x-price><x-unit>USD</x-unit><template><p>Never shown</p></template><p>${filler}</p></body></html>`,
+      "https://venue.example/",
+    );
+    expect(page.text).toContain("Tue-Sun 11am-9pm");
+    expect(page.text).toContain("12 USD");
+    expect(page.text).not.toContain("Never shown");
+  });
+
+  it("gives the title of the page, not of an icon, and no empty title or language", () => {
+    const body = `<p>${filler}</p>`;
+    const read = (html: string) => extractPage(html, "https://x.example/");
+    expect(read(`<html><head><title></title></head><body><h1>Heading</h1>${body}</body></html>`).title).toBe(
+      "Heading",
+    );
+    expect(read(`<html><body><svg><title>Icon</title></svg><h1>Heading</h1>${body}</body></html>`).title).toBe(
+      "Heading",
+    );
+    expect(read(`<html lang=""><body>${body}</body></html>`).lang).toBeNull();
+  });
+
+  it("keeps links to other pages only, with an image's words, and without credentials", () => {
+    const page = extractPage(
+      `<html><head><base href="javascript:void(0)"><link rel="canonical" href="/home?utm_source=x"></head><body>
+      <a href="#top">Top</a><a href="/menu">Menu</a><a href="/r"><img alt="Reserve a table"></a>
+      <a href="https://user:pass@venue.example/p">Private</a><p>${filler}</p></body></html>`,
+      "https://venue.example/",
+    );
+    expect(page.links).toEqual([
+      { href: "https://venue.example/menu", text: "Menu" },
+      { href: "https://venue.example/r", text: "Reserve a table" },
+      { href: "https://venue.example/p", text: "Private" },
+    ]);
+    expect(page.canonical).toBe("https://venue.example/home");
+    // a canonical on another site is not trusted
+    const other = `<html><head><link rel="canonical" href="https://other.example/"></head><body><p>${filler}</p></body></html>`;
+    expect(extractPage(other, "https://venue.example/").canonical).toBeNull();
+  });
+});
+
+describe("what a page needs", () => {
+  it("follows a meta refresh as a redirect, with no browser", () => {
+    const page = extractPage(
+      `<html><head><meta http-equiv="refresh" content="0; url='/home'"><title>Redirecting</title></head><body></body></html>`,
+      "https://venue.example/",
+    );
+    expect(page).toMatchObject({
+      redirect: "https://venue.example/home",
+      needsRender: false,
+      links: [{ href: "https://venue.example/home", text: "" }],
+    });
+  });
+
+  it("knows an application root without quotes, and Angular's root element", () => {
+    const loading =
+      "<p>Loading the restaurant, please wait while we fetch the menu and the hours for you today.</p>";
+    for (const root of ["<div id=root></div>", "<app-root></app-root>"]) {
+      const page = extractPage(`<html><body>${root}${loading}</body></html>`, "https://spa.example/");
+      expect(page.renderReason).toBe("an empty application root");
+    }
+  });
+
+  it("does not render a short post for the noscript of its comments", () => {
+    const post = `<html><body><p>${"Our new spring menu starts on Tuesday. ".repeat(8)}</p>
+      <noscript>Please enable JavaScript to view the comments powered by Disqus.</noscript></body></html>`;
+    expect(extractPage(post, "https://blog.example/").needsRender).toBe(false);
+  });
+
+  it("names a bot check or a firewall page, and does not send it to the browser", () => {
+    const incapsula = `<html><head><meta name="robots" content="noindex"></head><body><iframe id="main-iframe" src="/_Incapsula_Resource?CWUDNSAI=9">Request unsuccessful. Incapsula incident ID: 1</iframe></body></html>`;
+    expect(extractPage(incapsula, "https://venue.example/")).toMatchObject({
+      blocked: "Incapsula",
+      needsRender: false,
+      renderReason: null,
+    });
+    const cloudflare = `<!DOCTYPE html><html><head><title>Just a moment...</title></head><body><h2>Checking if the site connection is secure</h2><noscript>Enable JavaScript and cookies to continue</noscript><script src="/cdn-cgi/challenge-platform/h/b/orchestrate/chl_page/v1"></script></body></html>`;
+    expect(extractPage(cloudflare, "https://venue.example/")).toMatchObject({
+      blocked: "Cloudflare",
+      needsRender: false,
+    });
+  });
+});
+
+describe("pages that cost far more than their size", () => {
+  const timed = <T>(run: () => T): { readonly value: T; readonly ms: number } => {
+    const started = performance.now();
+    const value = run();
+    return { value, ms: performance.now() - started };
+  };
+
+  it("reads a table of 5,000 rows and an article of 1 MB in time that grows with the size", () => {
+    const table = `<html><body><table><tbody>${"<tr><td>Monday</td><td>10 am - 5 pm</td></tr>".repeat(5000)}</tbody></table></body></html>`;
+    const rows = timed(() => extractPage(table, "https://x.example/"));
+    expect(rows.value.text.startsWith("Monday 10 am - 5 pm\n")).toBe(true);
+    expect(rows.ms).toBeLessThan(2000);
+    const para =
+      "<p>The museum is open to visitors and offers guided tours of the permanent collection, with special exhibitions each season.</p>\n";
+    const article = `<html><body><article>${para.repeat(Math.floor(1_000_000 / para.length))}</article></body></html>`;
+    const big = timed(() => extractPage(article, "https://x.example/"));
+    expect(big.value.text.length).toBeLessThanOrEqual(50_000);
+    // a walk that read childNodes again for each child took 80 seconds on this page
+    expect(big.ms).toBeLessThan(8000);
+  }, 30_000);
+
+  it("reads markup nested 20,000 and 400,000 deep without a stack overflow", () => {
+    for (const depth of [20_000, 400_000]) {
+      const html = `<!doctype html><html><body>${"<div>".repeat(depth)}hello${"</div>".repeat(depth)}<p>after</p></body></html>`;
+      const deep = timed(() => extractPage(html, "https://x.example/"));
+      expect(deep.value.text).toBe("hello\nafter");
+      expect(deep.ms).toBeLessThan(5000);
+    }
+    const unclosed = extractPage(
+      `<html><body>${"<font>item ".repeat(30_000)}</body></html>`,
+      "https://x.example/",
+    );
+    expect(unclosed.text.startsWith("item item item")).toBe(true);
+    expect(unclosed.notes[0]).toMatch(/nests deeper than 1000 elements/);
+  }, 30_000);
+
+  it("keeps the whole page when Readability fails on it", () => {
+    const story =
+      "<p>The story of our family's bakery and its hearth is a long one, told here in full.</p>";
+    const page = extractPage(`<td><article>${story.repeat(80)}</article>`, "https://x.example/");
+    expect(page.text.startsWith("The story of our family's bakery")).toBe(true);
   });
 });

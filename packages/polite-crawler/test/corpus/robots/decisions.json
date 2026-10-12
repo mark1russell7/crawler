@@ -1,0 +1,319 @@
+{
+  "source": "packages/site/src/data/robots-study.json",
+  "list": {
+    "name": "Tranco",
+    "id": "4672X",
+    "date": "2026-10-11",
+    "url": "https://tranco-list.eu/list/4672X/1000",
+    "size": 1000
+  },
+  "fetched": {
+    "from": "2026-10-12T16:42:51.894Z",
+    "to": "2026-10-12T16:44:14.733Z"
+  },
+  "userAgent": "PoliteCrawler/0.1.0 (+https://mark1russell7.github.io/crawler/bot/)",
+  "pagePath": "/polite-crawler-study/a-page",
+  "agents": [
+    "GPTBot",
+    "ClaudeBot",
+    "Google-Extended",
+    "CCBot",
+    "Applebot-Extended",
+    "Bytespider",
+    "meta-externalagent",
+    "OAI-SearchBot",
+    "Claude-SearchBot",
+    "PerplexityBot",
+    "ChatGPT-User",
+    "Claude-User",
+    "Perplexity-User",
+    "Googlebot",
+    "PoliteCrawler"
+  ],
+  "legend": {
+    ".": "allowed, no group names the agent",
+    "n": "allowed, a group names the agent",
+    "N": "refused by a group that names the agent",
+    "S": "refused by the * group",
+    "U": "robots.txt unreachable"
+  },
+  "sites": {
+    "google.com": {
+      "url": "https://www.google.com/robots.txt",
+      "fetched_at": "2026-10-12T16:43:27.649Z",
+      "sha256": "1aba570a1b32deb66941e0c29d4f37be71ee58aa1a624aa20754b3639538cf2c",
+      "bytes": 6624,
+      "page": "..............."
+    },
+    "cloudflare.com": {
+      "url": "https://www.cloudflare.com/robots.txt",
+      "fetched_at": "2026-10-12T16:43:27.627Z",
+      "sha256": "c6e360cc6e931ea35c33ae917ff9e2194eb55f79f68e949ec54bcd4533324d98",
+      "bytes": 1099,
+      "page": "n.nn.....nn...."
+    },
+    "gstatic.com": {
+      "url": "https://www.gstatic.com/robots.txt",
+      "fetched_at": "2026-10-12T16:43:27.662Z",
+      "sha256": "1a0ee0ed4af291dcd479b26d2ba6b80823dcdb80e67849c01b2698e6a9881663",
+      "bytes": 5105,
+      "page": "SSSSSSSSSSSSSSS"
+    },
+    "facebook.com": {
+      "url": "https://facebook.com/robots.txt",
+      "fetched_at": "2026-10-12T16:42:52.478Z",
+      "sha256": "6dc6e048d337f9f673706cfddc036c9b21d7a423fb5f515ef8f630522fa303e9",
+      "bytes": 35223,
+      "page": "nnnSnSSSSnSSSnS"
+    },
+    "wikipedia.org": {
+      "url": "https://en.wikipedia.org/robots.txt",
+      "fetched_at": "2026-10-12T16:44:00.240Z",
+      "sha256": "48b98d80c8444d37cdf50cc9a4d2257b66039477e581066d2356062a4cbd678f",
+      "bytes": 28275,
+      "page": "..............."
+    },
+    "github.com": {
+      "url": "https://github.com/robots.txt",
+      "fetched_at": "2026-10-12T16:42:53.336Z",
+      "sha256": "12bc55582b1ddb8eb3300d9cb26b0421c9fc80193fc77e5f04862e934f8097db",
+      "bytes": 16739,
+      "page": "nn...N.n.n....."
+    },
+    "amazon.com": {
+      "url": "https://www.amazon.com/robots.txt",
+      "fetched_at": "2026-10-12T16:43:28.686Z",
+      "sha256": "74fa27e28cd9d80bdd155ffecf3a033ea2e195a80c83d6fa46acb20665c3cb4d",
+      "bytes": 7947,
+      "page": "NNNN.NNNNNNNN.."
+    },
+    "x.com": {
+      "url": "https://x.com/robots.txt",
+      "fetched_at": "2026-10-12T16:42:53.306Z",
+      "sha256": "14a72e33b3e9af07e1e8f5f645bfa00ed3fe9f9c87249d861d369d33d3f3ddc6",
+      "bytes": 2678,
+      "page": "SSNSSSNSSSSSSnS"
+    },
+    "whatsapp.net": {
+      "url": "https://www.whatsapp.com/robots.txt",
+      "fetched_at": "2026-10-12T16:44:00.298Z",
+      "sha256": "b0dc29a03f811635b16c416f0c890b4acad4112533b78feed9bdb13de7156cf9",
+      "bytes": 1180,
+      "page": "NNN.N....N....."
+    },
+    "tiktok.com": {
+      "url": "https://www.tiktok.com/robots.txt",
+      "fetched_at": "2026-10-12T16:43:32.136Z",
+      "sha256": "835705a2ecb862f49a813b3aa4061e0edfefbb8318316b371f8fa2dba4018802",
+      "bytes": 1567,
+      "page": "NNNNNNNNNNNNN.."
+    },
+    "yahoo.com": {
+      "url": "https://www.yahoo.com/robots.txt",
+      "fetched_at": "2026-10-12T16:43:29.183Z",
+      "sha256": "dfcd18f101783bde40c3bdca97bb90dbea1653321fd8b57f81cf5a6a6dc00b4b",
+      "bytes": 1464,
+      "page": "NNNN.N.nnNN...."
+    },
+    "msn.com": {
+      "url": "https://www.msn.com/robots.txt",
+      "fetched_at": "2026-10-12T16:43:29.277Z",
+      "sha256": "aefbffa0a0a083e30637972046b42afc1569f7813c5687739a5ecdee0a6be4dd",
+      "bytes": 5245,
+      "page": "NNNNNNNNNNNNN.."
+    },
+    "vimeo.com": {
+      "url": "https://vimeo.com/robots.txt",
+      "fetched_at": "2026-10-12T16:42:54.267Z",
+      "sha256": "021ea0af6b29208b5ad678715c9e6671373ae3a937b8e879a366e5f497f88b10",
+      "bytes": 22615,
+      "page": "NNNN.N.........",
+      "home": "nnnN.N........."
+    },
+    "chatgpt.com": {
+      "url": "https://chatgpt.com/robots.txt",
+      "fetched_at": "2026-10-12T16:42:54.465Z",
+      "sha256": "a6628f6c9c3b373e41c38ce40a18a15f65179e19241e63e78bcfef74dcaee21a",
+      "bytes": 4390,
+      "page": "SSNNSNSSSNSSSSS",
+      "home": "..NN.N...N....."
+    },
+    "reddit.com": {
+      "url": "https://www.reddit.com/robots.txt",
+      "fetched_at": "2026-10-12T16:43:29.680Z",
+      "sha256": "41aea42110242175c7b4247f222fa95ac6caee62044af686b684785832781857",
+      "bytes": 538,
+      "page": "SSSSSSSSSSSSSSS"
+    },
+    "mail.ru": {
+      "url": "https://mail.ru/robots.txt",
+      "fetched_at": "2026-10-12T16:42:53.636Z",
+      "sha256": "d3fd6768e203ab4008918459ce8d1ccc9e31d703cc01c9765902bcfc894822bf",
+      "bytes": 433,
+      "page": "SSSSSSSSSSSSSnS",
+      "home": ".............n."
+    },
+    "myfritz.net": {
+      "url": "https://myfritz.net/robots.txt",
+      "fetched_at": "2026-10-12T16:42:54.255Z",
+      "sha256": "0267852a7136ff65cf570bc69e024a5198e7d31ef564f90165cd5333250a62ac",
+      "bytes": 269,
+      "page": "SSSSSSSSSSSSSSS",
+      "home": "..............."
+    },
+    "soundcloud.com": {
+      "url": "https://soundcloud.com/robots.txt",
+      "fetched_at": "2026-10-12T16:42:57.848Z",
+      "sha256": "7bbee7524de61fe4a1b4e1701bd55e9dde6ad96e3e5e97e04001b128ea890998",
+      "bytes": 1441,
+      "page": "NNNNNNNN.NN....",
+      "home": "nnnnnnnn.nn...."
+    },
+    "bloomberg.com": {
+      "url": "https://www.bloomberg.com/robots.txt",
+      "fetched_at": "2026-10-12T16:43:37.399Z",
+      "sha256": "6879b4e3afbc243a8422c6e1331cad0f7c85a7817612bf65a56d27cd6bc9ebf7",
+      "bytes": 10640,
+      "page": "NNNNNNNNNNNN...",
+      "home": "NNNNNNNnnNnn..."
+    },
+    "statista.com": {
+      "url": "https://www.statista.com/robots.txt",
+      "fetched_at": "2026-10-12T16:43:41.241Z",
+      "sha256": "57bfb95a1d305aca2c2a197a29c0431d5b32a8272dfc78655b81645442fba0c0",
+      "bytes": 11030,
+      "page": "NNNNNNN..N..N..",
+      "home": "nnnnnnn..n..n.."
+    },
+    "quora.com": {
+      "url": "https://www.quora.com/robots.txt",
+      "fetched_at": "2026-10-12T16:43:41.283Z",
+      "sha256": "a3755528cbd265c9d927ad5b486f6a4eda99a1c642daf60929b2dfbcceb7db59",
+      "bytes": 18962,
+      "page": "NNnSNNSNNNNNSnS",
+      "home": "NNn.NN.NNNNN.n."
+    },
+    "sohu.com": {
+      "url": "https://www.sohu.com/robots.txt",
+      "fetched_at": "2026-10-12T16:43:49.362Z",
+      "sha256": "06a2166c549a518ed89bfd544c9f8ddaeab5ea2d655e1955988e5a227b702aab",
+      "bytes": 3097,
+      "page": "NNNNNnNNNNNNNnS",
+      "home": "nnnnnnnnnnnnnnS"
+    },
+    "gosuslugi.ru": {
+      "url": "https://www.gosuslugi.ru/robots.txt",
+      "fetched_at": "2026-10-12T16:43:43.997Z",
+      "sha256": "ee498570e53c919099d0d942670a6980bcf1b2bcf86aaba3d8ef21f5984248fa",
+      "bytes": 8746,
+      "page": "SSSSSSSSSSSSSNS",
+      "home": ".............n."
+    },
+    "apache.org": {
+      "url": "https://apache.org/robots.txt",
+      "fetched_at": "2026-10-12T16:42:55.720Z",
+      "sha256": "e969244acbbadc64dd66254a7d2bb20017fd9ed3115290694c9a1f562a070c53",
+      "bytes": 47,
+      "page": "..............."
+    },
+    "tumblr.com": {
+      "url": "https://www.tumblr.com/robots.txt",
+      "fetched_at": "2026-10-12T16:43:30.180Z",
+      "sha256": "2892c51fb7e06e7629ccb662ecf47dec3b0bfa6a679b4e112f25f7565ac1fcb0",
+      "bytes": 3452,
+      "page": ".NNNN.N......n."
+    },
+    "ubuntu.com": {
+      "url": "https://ubuntu.com/robots.txt",
+      "fetched_at": "2026-10-12T16:42:58.050Z",
+      "sha256": "16e26f4cb730b111c334f112f075115ef4a50cf8df110581f3d4ee032a47cca9",
+      "bytes": 5511,
+      "page": "nnn.nnnnnnn.n.."
+    },
+    "weather.com": {
+      "url": "https://weather.com/robots.txt",
+      "fetched_at": "2026-10-12T16:43:00.410Z",
+      "sha256": "77ef153abfe0a92e10e0f6ecb17bbfc5f316ad3366cf8e32305d3eda4f7c3f2f",
+      "bytes": 3440,
+      "page": "...N.N....n...."
+    },
+    "linktr.ee": {
+      "url": "https://linktr.ee/robots.txt",
+      "fetched_at": "2026-10-12T16:42:59.802Z",
+      "sha256": "25904770b73d44de31a5f5265925541d51d958007baf01183e84cb72d2274246",
+      "bytes": 11029,
+      "page": "nnnnnSSnnnnnnnS"
+    },
+    "forter.com": {
+      "url": "https://forter.com/robots.txt",
+      "fetched_at": "2026-10-12T16:42:59.839Z",
+      "sha256": "816144fcf584068f993830623dcecaab44c89fe6519ab4f4bbae21e70d2f1a7f",
+      "bytes": 1253,
+      "page": "nnnNnNNnnnnnn.."
+    },
+    "sentry.io": {
+      "url": "https://sentry.io/robots.txt",
+      "fetched_at": "2026-10-12T16:42:54.598Z",
+      "sha256": "c0f7d803d97db6c0bf75804b97eed4a533f7249c27994e253ad4fa403652da96",
+      "bytes": 140,
+      "page": "..............."
+    },
+    "weibo.com": {
+      "url": "https://weibo.com/robots.txt",
+      "fetched_at": "2026-10-12T16:43:02.388Z",
+      "sha256": "15b0db632716dd8564dda06ed3db8ed48cd35722eb65ac87eed134f82e9eb85e",
+      "bytes": 968,
+      "page": "SSSSSNNNSSNSNnS"
+    },
+    "naver.com": {
+      "url": "https://www.naver.com/robots.txt",
+      "fetched_at": "2026-10-12T16:43:37.217Z",
+      "sha256": "5342900c4c6bb95dbfdb9faf9cd447ed78a1f9c3699be58c370d2133658bc26b",
+      "bytes": 91,
+      "page": "SSSSSSSSSSSSSSS",
+      "home": "..............."
+    },
+    "googlevideo.com": {
+      "url": "https://www.googlevideo.com/robots.txt",
+      "fetched_at": "2026-10-12T16:43:27.970Z",
+      "sha256": "331ea9090db0c9f6f597bd9840fd5b171830f6e0b3ba1cb24dfa91f0c95aedc1",
+      "bytes": 26,
+      "page": "SSSSSSSSSSSSSSS"
+    },
+    "ntp.org": {
+      "url": "https://www.ntp.org/robots.txt",
+      "fetched_at": "2026-10-12T16:43:29.453Z",
+      "sha256": "5a5a4434f108ef034c256b9d3e169e516fb806aa6f6353e53eff9655732fbb79",
+      "bytes": 16,
+      "page": "..............."
+    },
+    "quickconnect.to": {
+      "url": "https://quickconnect.to/robots.txt",
+      "fetched_at": "2026-10-12T16:43:05.577Z",
+      "sha256": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+      "bytes": 1,
+      "page": "..............."
+    },
+    "europa.eu": {
+      "url": "https://europa.eu/robots.txt",
+      "fetched_at": "2026-10-12T16:42:55.185Z",
+      "sha256": "bede8dd1fdd4b10f8a4ba2f0087e13cce1d83a52c192323b7959fd8213aeeb31",
+      "bytes": 4930,
+      "page": "..............."
+    },
+    "nvidia.com": {
+      "url": "https://www.nvidia.com/robots.txt",
+      "fetched_at": "2026-10-12T16:43:37.173Z",
+      "sha256": "5069f0e6713ea599a59d48d5fb160ac859af14dcce9ec2a87fb9f554fe0f7125",
+      "bytes": 3725,
+      "page": "..............."
+    },
+    "cloudflare.net": {
+      "url": "https://cloudflare.net/robots.txt",
+      "fetched_at": "2026-10-12T16:42:53.624Z",
+      "sha256": "de73d32142f114b8d18bbfd7fa5779ccee5f7a1753873402cfdab59444834ccd",
+      "bytes": 207,
+      "page": "..............."
+    }
+  }
+}

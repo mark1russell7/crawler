@@ -20,20 +20,39 @@ npx polite-crawler <command> [options]
 
 ## Options
 
+These options apply to each command:
+
 | Option | Default | What it does |
 | --- | --- | --- |
-| `--dir <path>` | `$POLITE_CRAWLER_DIR`, or `~/.polite-crawler` | The store. |
+| `--dir <path>` | `$POLITE_CRAWLER_DIR`, or `~/.polite-crawler` | The store. A path that starts with `~` is in your home folder, and a relative path starts at the working folder. |
 | `--contact <text>` | `$POLITE_CRAWLER_CONTACT` | An email or a URL for the `From` header. |
-| `--render <mode>` | `auto` | `auto`, `never` or `always`. |
-| `--max-age <age>` | `24h` | A stored copy younger than this age answers with no request. |
-| `--limit <n>` | `10` | The number of results of `find`. |
-| `--kind <kind>` | all | Only this kind of document, for example `page` or `pdf`. |
-| `--from <n>` | `0` | The position where `read` starts. |
-| `--length <n>` | `4000` | The number of characters that `read` prints. |
+| `--allow-private` | `$POLITE_CRAWLER_ALLOW_PRIVATE=1` | Fetch loopback, private and link-local addresses too. By default, the crawler refuses them. |
 | `--no-browser` | | Do not open the headless browser. |
 | `--json` | | Print JSON. |
-| `--version` | | Print the version and stop. |
-| `--help` | | Print the commands and the options, and stop. |
+| `-v`, `--version` | | Print the version and stop. |
+| `-h`, `--help` | | Print the commands and the options, and stop. |
+
+These options apply to one command. The command line is wrong when another command gets them.
+
+| Command | Option | Default | What it does |
+| --- | --- | --- | --- |
+| `fetch` | `--render <mode>` | `auto` | `auto`, `never` or `always`. |
+| `fetch` | `--max-age <age>` | `24h` | A stored copy younger than this age answers with no request. `0` fetches the page again. |
+| `find` | `--limit <n>` | `10` | The number of results. |
+| `find` | `--kind <kind>` | all | Only this kind of document, for example `page` or `pdf`. |
+| `read` | `--from <n>` | `0` | The position where the range starts. |
+| `read` | `--length <n>` | `4000` | The number of characters to print. |
+| `read` | `--user-provided` | | Read a page that asked not to be AI input. Use it only for a URL that you gave yourself. The crawler records each such read. |
+| `reindex` | `--force` | | Build the index again although the log has captures that another application wrote. Their documents go away until that application reindexes. |
+| `mcp` | `--allow-user-provided` | `$POLITE_CRAWLER_ALLOW_USER_PROVIDED=1` | Let `user_provided` work when the MCP client cannot ask the user. |
+
+## Exit codes
+
+| Code | Meaning |
+| --- | --- |
+| `0` | The command did its work. |
+| `1` | The command did not do its work: a page that the crawler did not fetch, no search result, a quote that is not in the document, a document that is not stored or that is held back, or an error. |
+| `2` | The command line is wrong. The command opens no store. |
 
 ## Examples
 
@@ -46,4 +65,7 @@ npx polite-crawler find "opening hours" --limit 5 --json
 
 # a store for one project
 npx polite-crawler fetch https://example.com/ --dir ./research
+
+# a script that stops when a quote is not in the page
+npx polite-crawler verify "url:https://example.com/" "for use in documentation examples" || exit 1
 ```

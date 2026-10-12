@@ -99,14 +99,28 @@ export default function PageReader({ initial }: { readonly initial: PageRead }):
             <p className="pc-empty">The reader stopped: {page.error}</p>
           ) : (
             <>
-              <div className={`pc-callout ${page.needsRender ? "pc-callout-warn" : "pc-callout-ok"}`}>
-                <strong>{page.needsRender ? "This page needs a browser" : "No browser necessary"}</strong>
-                <span>
-                  {page.needsRender
-                    ? `The crawler renders it in a headless browser: ${page.renderReason ?? "it shows almost nothing"}.`
-                    : `The crawler reads ${page.visibleChars.toLocaleString("en-US")} characters of text with no browser.`}
-                </span>
-              </div>
+              {page.blocked !== null ? (
+                <div className="pc-callout pc-callout-warn">
+                  <strong>A bot check sent its page</strong>
+                  <span>
+                    {`This is the page of ${page.blocked}, not the content. The crawler does not open a browser to get past it.`}
+                  </span>
+                </div>
+              ) : page.redirect !== null ? (
+                <div className="pc-callout pc-callout-warn">
+                  <strong>The page moved</strong>
+                  <span>{`A meta refresh sends the reader to ${page.redirect}. The crawler does not render this page.`}</span>
+                </div>
+              ) : (
+                <div className={`pc-callout ${page.needsRender ? "pc-callout-warn" : "pc-callout-ok"}`}>
+                  <strong>{page.needsRender ? "This page needs a browser" : "No browser necessary"}</strong>
+                  <span>
+                    {page.needsRender
+                      ? `The crawler renders it in a headless browser: ${page.renderReason ?? "it shows almost nothing"}.`
+                      : `The crawler reads ${page.visibleChars.toLocaleString("en-US")} characters of text with no browser.`}
+                  </span>
+                </div>
+              )}
               <dl className="pc-facts">
                 <div>
                   <dt>Title</dt>
@@ -115,6 +129,10 @@ export default function PageReader({ initial }: { readonly initial: PageRead }):
                 <div>
                   <dt>Language</dt>
                   <dd>{page.lang ?? "not stated"}</dd>
+                </div>
+                <div>
+                  <dt>Canonical URL</dt>
+                  <dd>{page.canonical ?? "none on this site"}</dd>
                 </div>
                 <div>
                   <dt>JSON-LD types</dt>
@@ -128,6 +146,16 @@ export default function PageReader({ initial }: { readonly initial: PageRead }):
                   </dd>
                 </div>
               </dl>
+              {page.notes.length > 0 ? (
+                <section className="pc-out" aria-label="What the reader left out">
+                  <p className="pc-out-title">What the reader left out</p>
+                  <ul className="pc-notes">
+                    {page.notes.map((note) => (
+                      <li key={note}>{note}</li>
+                    ))}
+                  </ul>
+                </section>
+              ) : null}
               <section className="pc-out" aria-label="The visible text">
                 <p className="pc-out-title">The visible text</p>
                 <pre tabIndex={0}>{page.text.length > 0 ? page.text : "(no text)"}</pre>

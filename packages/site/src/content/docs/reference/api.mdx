@@ -24,6 +24,8 @@ The function opens a crawler on a folder and gives a `PoliteCrawler`.
 | `onBehalfOf` | `string[]` | `[]` | More product tokens whose robots.txt rules apply, for example `["Claude-User"]`. |
 | `dispatcher` | `Dispatcher` | an `undici` agent | The dispatcher for the requests, for a proxy or a test. |
 
+{/* TODO(core): openCrawler passes egress, politeness and hostState to the Crawler after the core change. Add them to this table then. */}
+
 ## `PoliteCrawler`
 
 ### `fetch(url, options?)`
@@ -52,13 +54,15 @@ interface PageResult {
 }
 ```
 
+{/* TODO(core): find and verify become asynchronous, and read and verify can pin a capture. Complete these sections after the core change. */}
+
 ### `find(q, options?)`
 
 The method searches the stored documents with SQLite FTS5 and BM25. It sends no request. The options are `limit` (default 10) and `kind` (for example `"page"` or `"pdf"`). Each result has `doc`, `kind`, `title`, `url`, `snippet`, `score` and `ai_input`.
 
 ### `read(doc, options?)`
 
-The method gives a range of the text of a document. The options are `from` (default 0), `length` (default 4000) and `userProvided`. When a page refuses AI input, the text is empty and `held_back` is true, unless `userProvided` is true. The crawler records each `userProvided` read.
+The method gives a range of the text of a document. The options are `from` (default 0), `length` (default 4000) and `userProvided`. When a page refuses AI input, the text is empty and `held_back` is true, unless `userProvided` is true. The crawler records each `userProvided` read. The MCP server sets it only with a signal from a person: [read the rule](../../guide/mcp/#pages-that-refuse-ai-input).
 
 ### `verify(doc, quote)`
 
@@ -74,25 +78,40 @@ The method closes the browser, the log files and the index.
 
 ## The MCP server
 
+The MCP server is in its own entry point, `polite-crawler/mcp`. Only this entry point loads the MCP SDK and `zod`.
+
 ```ts title="An MCP server in your code"
-import { createMcpServer, openCrawler, startMcpServer } from "polite-crawler";
+import { openCrawler } from "polite-crawler";
+import { createMcpServer, startMcpServer } from "polite-crawler/mcp";
 
 await startMcpServer({ dir: "./crawl" }); // standard input and output
 
 const server = createMcpServer(openCrawler({ dir: "./crawl" })); // any transport
 ```
 
-## The parts
+| Option of `createMcpServer` | Default | What it does |
+| --- | --- | --- |
+| `onBehalfOf` | `["Claude-User"]` | The product tokens whose robots.txt rules apply to each fetch, with the token of the crawler. |
+| `allowUserProvided` | `false` | The opt-in of the operator: `user_provided` works when the client cannot ask the user. |
+| `renderOff` | none | The reason for a server with no browser. A page that needs JavaScript shows it in its note. |
 
-Each part is also an entry point of its own. The parts below have no Node.js dependency, so they operate in a browser too.
+`startMcpServer` takes the options of `openCrawler` and these options. It turns rendering off at start when no browser is installed.
+
+## The entry points
+
+The package is ESM only. These are its entry points:
 
 | Import | What it gives |
 | --- | --- |
+| `polite-crawler` | `openCrawler`, and the parts of the runtime for an application. It needs Node.js. |
+| `polite-crawler/mcp` | `createMcpServer` and `startMcpServer`. It needs Node.js. |
 | `polite-crawler/robots` | `parseRobots`, `decide`, `robotsFromStatus`: robots.txt as RFC 9309 specifies it. `decide` gives the rule that decided and its line. |
-| `polite-crawler/html` | `extractPage`: the JSON-LD, the visible text, the links and the decision about JavaScript. |
-| `polite-crawler/hours` | `fromText`, `fromSchemaOrg`, `fromCompact`, `describeWeek`: opening hours. |
+| `polite-crawler/html` | `extractPage`: the JSON-LD, the visible text, the links and the decision about JavaScript. It also gives the canonical URL, a quick redirect, the name of a bot check and notes about what it left out. |
+| `polite-crawler/hours` | `fromText`, `fromSchemaOrg`, `fromCompact`, `describeWeek`: opening hours. A reading tells its season and if it left out a rule (`season`, `partial`). |
 | `polite-crawler/classify` | `classify`, `parseRetryAfter`: the outcome of a response. |
 | `polite-crawler/politeness` | `HostScheduler`, `backoffMs`: one request in progress for each host. |
 | `polite-crawler/signals` | `readSignals`: content signals for AI input. |
 
-The main entry point also exports `Crawler`, `DocIndex`, `CaptureLog`, `FileBlobStore`, `makeRecord` and `fetchAndIndex`, for an application that builds its own runtime.
+The entry points below `polite-crawler/mcp` have no Node.js dependency, so they operate in a browser too.
+
+The main entry point also exports `Crawler`, `CaptureLog`, `DocIndex`, `FileBlobStore`, `Extractors`, `fetchAndIndex`, `fetchPage`, `reindex` and `makeRecord`, for an application that builds its own runtime. It exports the readers that such an application uses: `extractPage`, `decodeBody`, `readPdf`, the hours reader, `parseRobots` and `decide`.

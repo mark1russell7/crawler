@@ -14,6 +14,8 @@ const SAMPLES: readonly string[] = [
   "Lunch\nMon-Fri 11:30-2:30\nDinner\nMon-Sat 5-10",
   "Sunday\nMonday\nTuesday\nWednesday\nThursday\nFriday\nSaturday\n11:00 am – 10:00 pm\n11:00 am – 11:00 pm\n11:00 am – 11:00 pm\n11:00 am – 11:00 pm\n11:00 am – 11:00 pm\n11:00 am – 1:00 am\n11:00 am – 1:00 am",
   "Mo-Fr 11:00-21:00, Sa-Su 12:00-20:00; PH off",
+  "Summer (June to August)\nDaily 11am-10pm\nWinter\nDaily 11am-8pm",
+  "Tue-Sun 5-10pm\nClosed Mondays\nClosed on holidays",
 ];
 
 const LABEL: Readonly<Record<string, string>> = {
@@ -116,6 +118,12 @@ const Reading = ({ title, reading }: { readonly title: string; readonly reading:
         <strong>{title}</strong>
         {reading.label ? <span className="pc-tag">below “{reading.label}”</span> : null}
         {reading.inferred ? <span className="pc-tag pc-tag-guess">am or pm guessed</span> : null}
+        {reading.season !== undefined ? <span className="pc-tag">season: {reading.season}</span> : null}
+        {reading.partial === true ? (
+          <span className="pc-tag pc-tag-guess" title="The reader left out a rule or a line, for example a holiday or a date.">
+            a rule left out
+          </span>
+        ) : null}
       </header>
       <p className="pc-reading-says">{said === "" ? "no days" : said}</p>
       <WeekChart week={reading.week} />
@@ -156,7 +164,7 @@ export default function HoursPlayground(): ReactElement {
         ))}
       </div>
       <label className="pc-field">
-        <span>Text from a page, with one line for each line of the page</span>
+        <span>Text from a page, with one line for each line of the page. The reader reads English only.</span>
         <textarea value={text} rows={5} spellCheck={false} onChange={(event) => setText(event.target.value)} />
       </label>
       <div className="pc-readings" aria-live="polite">
@@ -167,7 +175,7 @@ export default function HoursPlayground(): ReactElement {
         {compact !== undefined ? <Reading title="OpenStreetMap notation" reading={compact} /> : null}
         {readings.length === 0 && compact === undefined && failure === undefined ? (
           <p className="pc-empty">
-            The reader found no hours. It needs a day and a time near each other, or one range below an hours heading.
+            The reader found no hours. It needs a day and a time near each other, or one range below an hours heading. It reads English only.
           </p>
         ) : null}
       </div>

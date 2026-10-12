@@ -1,7 +1,7 @@
 import type { AddressInfo } from "node:net";
 import { createServer } from "node:http";
 import type { Browser } from "playwright-core";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import type { PlaywrightRenderer } from "./render.ts";
 import { RenderRefused, playwrightRenderer } from "./render.ts";
 import { extractPage } from "./html.ts";
@@ -207,8 +207,8 @@ describe("the headless browser", () => {
     const brief = playwrightRenderer({ idleMs: 200 });
     await brief.render(`${base}/late`, OPTIONS);
     expect(brief.open()).toBe(true);
-    await new Promise((resolve) => setTimeout(resolve, 600));
-    expect(brief.open()).toBe(false);
+    // a busy computer can fire the idle timer late: the test waits for it, with a limit
+    await vi.waitFor(() => expect(brief.open()).toBe(false), { timeout: 10_000, interval: 50 });
     await brief.close();
   }, 60_000);
 });

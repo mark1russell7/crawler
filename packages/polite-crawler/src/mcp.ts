@@ -5,9 +5,7 @@ import type { RequestHandlerExtra } from "@modelcontextprotocol/sdk/shared/proto
 import type { CallToolResult, ServerNotification, ServerRequest } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
 import { browserMissing } from "./browser.ts";
-import { renderedKey } from "./crawler.ts";
-import type { EgressOptions } from "./egress.ts";
-import type { FetchOptions, OpenOptions, PoliteCrawler } from "./open.ts";
+import type { OpenOptions, PoliteCrawler } from "./open.ts";
 import { durationMs, openCrawler } from "./open.ts";
 import type { PageResult } from "./runtime.ts";
 import { VERSION } from "./version.ts";
@@ -44,8 +42,6 @@ export interface CrawlServerOptions {
 
 /** These options start the MCP server on the standard input and output. */
 export interface StartMcpOptions extends OpenOptions, CrawlServerOptions {
-  /** This policy controls the addresses that the crawler fetches. By default, the crawler fetches only public addresses. */
-  readonly egress?: EgressOptions | undefined;
   /** This function writes the messages of the server. The default writes them to the standard error. */
   readonly log?: ((line: string) => void) | undefined;
 }
@@ -100,9 +96,6 @@ const ageOf = (fetchedAt: string | null, now: number): string | null => {
   return `${String(Math.round(seconds / 86_400))}d`;
 };
 
-/** A bare `0` is a valid age: it asks for a new fetch. The other texts follow `durationMs`. */
-const maxAgeOf = (text: string): number => (/^\s*0+\s*$/.test(text) ? 0 : durationMs(text));
-
 const httpUrl = z.url({ protocol: /^https?$/ });
 
 const stamp = {
@@ -123,6 +116,8 @@ const pageShape = z.object({
   rendered: z.boolean(),
   links: z.number(),
   captures: z.array(z.string()),
+  capture_count: z.number().describe("the number of captures of the document"),
+  held_back: z.boolean().describe("true when the page asked not to be AI input"),
   from_cache: z.boolean().describe("true when a stored copy answered, with no request"),
   ...stamp,
   note: z.string().nullable(),
@@ -135,6 +130,11 @@ const hitShape = z.object({
   ai_input: z.string(),
   ...stamp,
 });
+
+const CAPTURE = z
+  .string()
+  .optional()
+  .describe("a capture id from an earlier result: use the text of that capture, not the current text");
 
 const json = (value: unknown): string => JSON.stringify(value);
 
@@ -161,6 +161,11 @@ const failed = (url: string, note: string): PageResult => ({
   structured: [],
   links: 0,
   captures: [],
+  capture: null,
+  capture_count: 0,
+  fetched_at: null,
+  from_cache: false,
+  held_back: false,
   note,
 });
 
@@ -186,25 +191,6 @@ const trimMeta = (meta: Readonly<Record<string, unknown>>, jsonld: boolean): Rec
 export const createMcpServer = (crawler: PoliteCrawler, options: CrawlServerOptions = {}): McpServer => {
   const server = new McpServer({ name: "polite-crawler", version: VERSION }, { instructions: INSTRUCTIONS });
   const onBehalfOf = options.onBehalfOf ?? ["Claude-User"];
-  const index = crawler.runtime.index;
-
-  /** This function finds the capture and the fetch date of a document: the cache entry of its URL that holds one of its captures. */
-  const sourceOf = (doc: string | null, url: string | null, captures: readonly string[]): Source => {
-    if (url !== null) {
-      for (const key of [url, renderedKey(url)]) {
-        const latest = index.latest(key);
-        if (latest !== undefined && captures.includes(latest.capture))
-          return { doc, url, capture: latest.capture, fetched_at: latest.fetched_at };
-      }
-    }
-    return { doc, url, capture: captures.at(-1) ?? null, fetched_at: null };
-  };
-  const sourceOfDoc = (doc: string): Source => {
-    const stored = index.get(doc);
-    return stored === undefined
-      ? { doc, url: null, capture: null, fetched_at: null }
-      : sourceOf(doc, stored.url, stored.captures);
-  };
   const noteOf = (page: PageResult): string | null =>
     options.renderOff !== undefined && page.note !== null && /no browser/i.test(page.note)
       ? `this page needs JavaScript, and rendering is off: ${options.renderOff}`
@@ -235,8 +221,7 @@ export const createMcpServer = (crawler: PoliteCrawler, options: CrawlServerOpti
       annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true },
     },
     async ({ urls, render, max_age }, extra) => {
-      const maxAge = maxAgeOf(max_age);
-      const started = Date.now();
+      const maxAge = durationMs(max_age);
       // the same page twice, or with another #fragment, is one fetch
       const unique = new Map<string, string>();
       for (const url of urls) {
@@ -249,14 +234,7 @@ export const createMcpServer = (crawler: PoliteCrawler, options: CrawlServerOpti
       const one = async (url: string): Promise<PageResult> => {
         try {
           if (!httpUrl.safeParse(url).success) return failed(url, `not an http or https URL: ${url}`);
-          // TODO(core): FetchOptions gets `signal`; until then the crawler does not see it
-          const fetchOptions: FetchOptions & { readonly signal?: AbortSignal } = {
-            render,
-            maxAge,
-            onBehalfOf,
-            signal: extra.signal,
-          };
-          return await crawler.fetch(url, fetchOptions);
+          return await crawler.fetch(url, { render, maxAge, onBehalfOf, signal: extra.signal });
         } finally {
           done += 1;
           if (progressToken !== undefined) {
@@ -280,12 +258,11 @@ export const createMcpServer = (crawler: PoliteCrawler, options: CrawlServerOpti
           result.status === "fulfilled"
             ? result.value
             : failed(url, `${url}: ${reason instanceof Error ? reason.message : String(reason)}`);
-        const source = page.doc === null ? undefined : sourceOfDoc(page.doc);
-        if (source !== undefined && (page.title !== null || page.structured.length > 0)) {
+        const source: Source = { doc: page.doc, url: page.url, capture: page.capture, fetched_at: page.fetched_at };
+        if (page.doc !== null && (page.title !== null || page.structured.length > 0)) {
           const types = page.structured.length > 0 ? [`types: ${page.structured.join(", ")}`] : [];
           web.add(source, [`title: ${page.title ?? ""}`, ...types].join("\n"));
         }
-        const fetchedAt = source?.fetched_at ?? null;
         return {
           url: page.url,
           doc: page.doc,
@@ -295,10 +272,12 @@ export const createMcpServer = (crawler: PoliteCrawler, options: CrawlServerOpti
           rendered: page.rendered,
           links: page.links,
           captures: [...page.captures],
-          from_cache: fetchedAt !== null && Date.parse(fetchedAt) < started,
-          capture: source?.capture ?? null,
-          fetched_at: fetchedAt,
-          age: ageOf(fetchedAt, now),
+          capture_count: page.capture_count,
+          held_back: page.held_back,
+          from_cache: page.from_cache,
+          capture: page.capture,
+          fetched_at: page.fetched_at,
+          age: ageOf(page.fetched_at, now),
           note: noteOf(page),
         };
       });
@@ -311,9 +290,9 @@ export const createMcpServer = (crawler: PoliteCrawler, options: CrawlServerOpti
     {
       title: "Search stored pages",
       description:
-        "Search every stored document with SQLite FTS5 and BM25 ranking. It sends no request. Each word of q is a term, and a document matches when it holds any term. A document with more of the terms, or with rarer terms, ranks higher. Quotes, operators and prefixes have no effect. The JSON gives the document ids: read one with crawl_read. Titles and snippets come in <untrusted-web-content> blocks, and [ and ] mark the matched terms in a snippet. A page that asked not to be AI input gives no snippet.",
+        "Search every stored document with SQLite FTS5 and BM25 ranking. It sends no request. Each word of q is a term. The documents that hold each term come first, then the documents that hold one term. Case, accents and Unicode forms do not matter, English words match their stems, and Chinese, Japanese and Thai words match as text. \"two words\" in quotes is a phrase, and bake* is a prefix. The JSON gives the document ids: read one with crawl_read. Titles and snippets come in <untrusted-web-content> blocks, and [ and ] mark the first match in a snippet. A page that asked not to be AI input is not in the results.",
       inputSchema: {
-        q: z.string().min(1).describe("the words to search for"),
+        q: z.string().min(1).describe('the words to search for; "a phrase" in quotes, and word* for a prefix'),
         limit: z.number().int().min(1).max(50).default(10).describe("the most results to give"),
         kind: z.string().nullable().default(null).describe("only this kind of document, for example page or pdf"),
       },
@@ -321,23 +300,22 @@ export const createMcpServer = (crawler: PoliteCrawler, options: CrawlServerOpti
       annotations: { readOnlyHint: true, openWorldHint: false },
     },
     async ({ q, limit, kind }) => {
-      // TODO(core): `find` becomes asynchronous; Promise.resolve accepts both forms
-      const found = await Promise.resolve(crawler.find(q, { limit, kind }));
+      const found = await crawler.find(q, { limit, kind });
       const now = Date.now();
       const web = new WebContent();
       const hits = found.map((hit) => {
-        const source = sourceOfDoc(hit.doc);
+        const source: Source = { doc: hit.doc, url: hit.url, capture: hit.capture, fetched_at: hit.fetched_at };
         const snippet = hit.snippet === "" ? [] : [`snippet: ${hit.snippet.replace(/\s+/g, " ")}`];
-        web.add({ ...source, url: hit.url ?? source.url }, [`title: ${hit.title}`, ...snippet].join("\n"));
+        web.add(source, [`title: ${hit.title}`, ...snippet].join("\n"));
         return {
           doc: hit.doc,
           kind: hit.kind,
           url: hit.url,
           score: hit.score,
           ai_input: hit.ai_input,
-          capture: source.capture,
-          fetched_at: source.fetched_at,
-          age: ageOf(source.fetched_at, now),
+          capture: hit.capture,
+          fetched_at: hit.fetched_at,
+          age: ageOf(hit.fetched_at, now),
         };
       });
       return answer(hits, { hits }, web);
@@ -404,6 +382,7 @@ export const createMcpServer = (crawler: PoliteCrawler, options: CrawlServerOpti
           .optional()
           .describe("true gives the page metadata. By default it comes with the first range only."),
         include_jsonld: z.boolean().default(false).describe("true adds the JSON-LD records to the metadata"),
+        capture: CAPTURE,
         user_provided: z
           .boolean()
           .default(false)
@@ -428,19 +407,19 @@ export const createMcpServer = (crawler: PoliteCrawler, options: CrawlServerOpti
       },
       annotations: { readOnlyHint: true, openWorldHint: false },
     },
-    async ({ doc, from, length, include_meta, include_jsonld, user_provided }, extra) => {
-      let read = await crawler.read(doc, { from, length });
+    async ({ doc, from, length, include_meta, include_jsonld, user_provided, capture }, extra) => {
+      let read = await crawler.read(doc, { from, length, capture });
       let note = read.note;
       if (read.held_back && user_provided) {
         const decision = await confirmUserProvided(read.url, doc, extra);
         if (decision.allowed) {
-          read = await crawler.read(doc, { from, length, userProvided: true });
+          read = await crawler.read(doc, { from, length, capture, userProvided: true });
           note = read.note;
         } else {
           note = decision.note ?? note;
         }
       }
-      const source = sourceOf(read.doc, read.url, read.captures);
+      const source: Source = { doc: read.doc, url: read.url, capture: read.capture, fetched_at: read.fetched_at };
       const web = new WebContent();
       if (!read.held_back) {
         const lines = [`title: ${read.title}`];
@@ -457,9 +436,9 @@ export const createMcpServer = (crawler: PoliteCrawler, options: CrawlServerOpti
         total: read.total,
         next_from: !read.held_back && read.to < read.total ? read.to : null,
         captures: [...read.captures],
-        capture: source.capture,
-        fetched_at: source.fetched_at,
-        age: ageOf(source.fetched_at, Date.now()),
+        capture: read.capture,
+        fetched_at: read.fetched_at,
+        age: ageOf(read.fetched_at, Date.now()),
         ai_input: read.ai_input,
         held_back: read.held_back,
         note,
@@ -473,16 +452,19 @@ export const createMcpServer = (crawler: PoliteCrawler, options: CrawlServerOpti
     {
       title: "Check a quote",
       description:
-        "Check that a quote really appears in a stored document. The check ignores case, spaces and typographic punctuation. It sends no request. It gives the exact character positions and the capture ids to cite, so a citation rests on stored text, not memory. The stored text around the quote comes in an <untrusted-web-content> block.",
+        "Check that a quote really appears in a stored document. The check ignores case, spaces, typographic punctuation, soft hyphens and Unicode forms. It sends no request. It gives the exact character positions and the capture that holds the quote, so a citation rests on stored text, not memory. When only an earlier capture holds the quote, stale is true. With capture, the check uses the text of that capture only. A page that asked not to be AI input gives found false. The stored text around the quote comes in an <untrusted-web-content> block.",
       inputSchema: {
         doc: z.string().min(1).describe("a document id from crawl_fetch or crawl_find"),
         quote: z.string().min(3).describe("the exact words to find, 3 characters or more"),
+        capture: CAPTURE,
       },
       outputSchema: {
         doc: z.string(),
         found: z.boolean(),
         start: z.number().nullable(),
         end: z.number().nullable(),
+        stale: z.boolean().describe("true when only an earlier capture holds the quote"),
+        held_back: z.boolean(),
         url: z.string().nullable(),
         captures: z.array(z.string()),
         ...stamp,
@@ -490,10 +472,14 @@ export const createMcpServer = (crawler: PoliteCrawler, options: CrawlServerOpti
       },
       annotations: { readOnlyHint: true, openWorldHint: false },
     },
-    async ({ doc, quote }) => {
-      // TODO(core): `verify` becomes asynchronous; Promise.resolve accepts both forms
-      const verified = await Promise.resolve(crawler.verify(doc, quote));
-      const source = sourceOf(verified.doc, verified.url, verified.captures);
+    async ({ doc, quote, capture }) => {
+      const verified = await crawler.verify(doc, quote, { capture });
+      const source: Source = {
+        doc: verified.doc,
+        url: verified.url,
+        capture: verified.capture,
+        fetched_at: verified.fetched_at,
+      };
       const web = new WebContent();
       if (verified.excerpt !== null) web.add(source, `excerpt: ${verified.excerpt}`);
       const data = {
@@ -501,11 +487,13 @@ export const createMcpServer = (crawler: PoliteCrawler, options: CrawlServerOpti
         found: verified.found,
         start: verified.start,
         end: verified.end,
+        stale: verified.stale,
+        held_back: verified.held_back,
         url: verified.url,
         captures: [...verified.captures],
-        capture: source.capture,
-        fetched_at: source.fetched_at,
-        age: ageOf(source.fetched_at, Date.now()),
+        capture: verified.capture,
+        fetched_at: verified.fetched_at,
+        age: ageOf(verified.fetched_at, Date.now()),
       };
       return answer(data, data, web);
     },

@@ -1,5 +1,3 @@
-import { mkdtemp, rm } from "node:fs/promises";
-import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { gzipSync } from "node:zlib";
 import { MockAgent } from "undici";
@@ -10,6 +8,7 @@ import { DocIndex } from "./docs.ts";
 import { CaptureLog } from "./log.ts";
 import type { Clock } from "./politeness.ts";
 import type { CaptureRecord } from "./record.ts";
+import { removeDir, tempDir } from "./test-helpers.ts";
 
 let dir: string | undefined;
 // a capture log keeps its file open: one left open is closed by the garbage
@@ -21,7 +20,7 @@ const opened = (log: CaptureLog): CaptureLog => {
 };
 afterEach(async () => {
   for (const log of logs.splice(0)) await log.close();
-  if (dir !== undefined) await rm(dir, { recursive: true, force: true });
+  if (dir !== undefined) await removeDir(dir);
   dir = undefined;
 });
 
@@ -41,7 +40,7 @@ const fakeClock = (): Clock & { slept: number[] } => {
 };
 
 const setup = async () => {
-  dir = await mkdtemp(join(tmpdir(), "polite-crawler-"));
+  dir = await tempDir("crawler");
   const agent = new MockAgent();
   agent.disableNetConnect();
   const clock = fakeClock();

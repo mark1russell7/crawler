@@ -41,6 +41,8 @@ export interface RenderOptions {
    * egress policy and robots.txt to the requests of the page.
    */
   readonly allowRequest?: ((url: string) => Promise<boolean> | boolean) | undefined;
+  /** When this signal aborts, the renderer stops the page: it closes the context, and the render rejects. */
+  readonly signal?: AbortSignal | undefined;
 }
 
 export interface Renderer {
@@ -85,7 +87,7 @@ const OPEN_MS = 5000;
 
 /** The text of the error when the optional package `playwright-core` is not installed. */
 export const NO_PLAYWRIGHT =
-  "rendering needs the package playwright-core and a browser: npm install playwright-core, then npx playwright-core install chromium-headless-shell";
+  "rendering needs the package playwright-core and a browser: npm install playwright-core, then npx playwright-core install chromium-headless-shell. For the MCP server with npx, start it with npx -y -p polite-crawler -p playwright-core polite-crawler mcp";
 
 // playwright-core is an optional peer: it loads only when a page first needs a browser
 const launch = async (): Promise<Browser> => {
@@ -252,8 +254,9 @@ export const playwrightRenderer = (
 
   const renderPage = async (
     url: string,
-    { userAgent, timeoutMs, headers, allowRequest }: RenderOptions,
+    { userAgent, timeoutMs, headers, allowRequest, signal }: RenderOptions,
   ): Promise<Rendered> => {
+    if (signal?.aborted === true) throw signal.reason instanceof Error ? signal.reason : new Error("the render was cancelled");
     const deadline = Date.now() + timeoutMs;
     const left = (): number => Math.max(1, deadline - Date.now());
     let running: Browser | undefined;
@@ -381,11 +384,17 @@ export const playwrightRenderer = (
     // the deadline can win the race; the work then ends when its context closes
     work.catch(() => undefined);
     let timer: ReturnType<typeof setTimeout> | undefined;
+    let cancel: (() => void) | undefined;
     const expired = new Promise<never>((_, reject) => {
       timer = setTimeout(
         () => reject(new Error(`render timed out after ${String(timeoutMs)} ms`)),
         timeoutMs,
       );
+      // a cancelled render ends now; the context closes below, and that stops the page
+      if (signal !== undefined) {
+        cancel = () => reject(signal.reason instanceof Error ? signal.reason : new Error("the render was cancelled"));
+        signal.addEventListener("abort", cancel, { once: true });
+      }
     });
     const closeContext = async (): Promise<void> => {
       const open = context;
@@ -403,6 +412,7 @@ export const playwrightRenderer = (
       return await Promise.race([work, expired]);
     } finally {
       clearTimeout(timer);
+      if (cancel !== undefined) signal?.removeEventListener("abort", cancel);
       if (context !== undefined) await closeContext();
       // a context made after the deadline is closed when it arrives
       else void work.then(closeContext, closeContext).catch(() => undefined);

@@ -85,7 +85,7 @@ const crawlerWith = async (robots?: string) => {
 
 /** A crawler that records the options of each fetch, and gives a fixed result. */
 const recordingCrawler = (note: string | null = null) => {
-  const seen: Array<{ url: string; options: FetchOptions & { signal?: AbortSignal } }> = [];
+  const seen: Array<{ url: string; options: FetchOptions }> = [];
   const crawler = {
     runtime: { index: { get: () => undefined, latest: () => undefined } },
     fetch: (url: string, options: FetchOptions = {}): Promise<PageResult> => {
@@ -101,6 +101,11 @@ const recordingCrawler = (note: string | null = null) => {
         structured: [],
         links: 0,
         captures: [],
+        capture: null,
+        capture_count: 0,
+        fetched_at: null,
+        from_cache: false,
+        held_back: false,
         note,
       });
     },
@@ -405,7 +410,8 @@ describe("crawl_verify", () => {
     const { call } = await connect(crawler);
     await call("crawl_fetch", { urls: ["https://members.example/"] });
     const verified = await call("crawl_verify", { doc: "url:https://members.example/", quote: "access code" });
-    expect(verified.data).toMatchObject({ found: true });
+    // a held-back page is no oracle: no match, and no positions
+    expect(verified.data).toMatchObject({ found: false, held_back: true, start: null });
     expect(verified.web).toBe("");
   });
 });

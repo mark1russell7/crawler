@@ -19,15 +19,18 @@ A prerelease version (`0.2.0-beta.1`) goes to the npm tag `next`. Each other ver
 
 The first version. It needs Node.js 22.19 or later, and it is ESM only.
 
-<!-- This section tells what 0.1.0 contains. No earlier version is on npm, so the changes before the first release are part of it. TODO(core): add the asynchronous find and verify, the versions of a document and the pinned captures after the core change. -->
+<!-- This section tells what 0.1.0 contains. No earlier version is on npm, so the changes before the first release are part of it. -->
 
-- **The library.** `openCrawler({ dir })` gives `fetch`, `find`, `read`, `verify` and `reindex` over one folder. The root entry point also exports the parts of the runtime for an application: `Crawler`, `CaptureLog`, `DocIndex`, `FileBlobStore`, `Extractors`, `fetchAndIndex`, `fetchPage` and `reindex`.
+- **The library.** `openCrawler({ dir })` gives `fetch`, `find`, `read`, `verify`, `versions` and `reindex` over one folder. Each method gives a promise. The root entry point also exports the parts of the runtime for an application. Examples are `createRuntime`, `Crawler`, `DocIndex`, `SqliteHostStateStore`, `fetchAndIndex`, `reindex`, `readDocument`, `verifyQuote` and the rule for a held-back page.
+  - A result of `fetch` gives `capture`, `fetched_at`, `from_cache` and `held_back`. A result of `read` gives the `capture` and the `fetched_at` of its text.
+  - `read` and `verify` take `capture`, the text of one capture. `verify` tells the capture, the blob and the fetch time of the text that holds a quote. `stale` is true when only an earlier capture holds it.
+  - `openCrawler` takes `egress`, `politeness`, `hostState`, `clock`, `scope`, `onEvent` and `extractors`.
 - **The command line.** `polite-crawler fetch`, `find`, `read`, `verify`, `reindex` and `mcp`. The `--json` option gives output for programs.
   - The exit codes are 0 (done), 1 (not done: a page not fetched, no match, a quote not found, a document unknown or held back, or an error) and 2 (a wrong command line).
   - The command checks the command line before it opens the store. `--version` and `--help` load no part of the crawler.
   - `--dir` and `POLITE_CRAWLER_DIR` expand `~` and resolve a relative path.
   - `read --user-provided` reads a page that refuses AI input, for a URL that you gave yourself.
-  - `reindex` stops when the log has captures of another application. `--force` builds only the pages again.
+  - `reindex` keeps the documents of the recipes of another application.
 - **The MCP server.** `polite-crawler mcp` gives four tools over standard input and output: `crawl_fetch`, `crawl_find`, `crawl_read` and `crawl_verify`. Its entry point is `polite-crawler/mcp`, so the root entry point does not load the MCP SDK.
   - The text of each page comes in an `<untrusted-web-content>` envelope with the URL, the capture id and the fetch date. A page cannot close its envelope.
   - `user_provided` releases held-back text only when the user confirms it (MCP elicitation), or when the operator permits it (`POLITE_CRAWLER_ALLOW_USER_PROVIDED=1`).
@@ -42,6 +45,11 @@ The first version. It needs Node.js 22.19 or later, and it is ESM only.
   - `CrawlerOptions.politeness` changes the limits for each host or for some hosts, and `hostState` keeps the state of each host. `crawler.resetHosts()` removes the stops.
 - **Egress.** By default, the crawler fetches only `http:` and `https:` URLs on public addresses, and it checks the address after DNS. `CrawlerOptions.egress` and the flag `--allow-private` permit private addresses.
 - **The store.** Each fetch decision goes into a capture log, and each body goes into a store by SHA-256 hash. A SQLite FTS5 index answers later questions with no request. A quote check finds the exact span of a quote, with the capture id to cite.
+  - The index keeps each capture of a document as a version: the latest capture is the current text. A page that asks not to be AI input stops being held back when a later capture does not ask it.
+  - The search folds case, accents and Unicode forms, reads phrases and prefixes, and finds Chinese, Japanese and Thai words.
+  - The quote check ignores soft hyphens, zero-width characters and the differences of NFKC, NFC and NFD.
+  - `reindex` builds a new index beside the old one, so a rebuild that fails keeps the old index. It counts damaged lines, missing bodies and readers that fail, and it does not stop at them.
+  - The log and the bodies go to the disk before a fetch finishes. Two processes can use one store: the index waits for a lock, and `hosts.sqlite` keeps one pace for each host.
   - A capture shows `REDACTED` in place of a user name, a password and the values of secret query parameters.
   - A body longer than the limit keeps its first part, and the capture says `truncated`. A body that does not download or decode gives the outcome `error`.
   - `FetchRequest.maxAgeMs` can be `"auto"`, the freshness that the server gave.
@@ -49,5 +57,5 @@ The first version. It needs Node.js 22.19 or later, and it is ESM only.
   - `decodeBody` and `bodyEncoding` decode a body in the encoding that it declares.
   - `PageExtract` gives `canonical`, `redirect`, `blocked` and `notes`. `Hours` gives `partial` and `season`. `PdfOptions` sets the limits of the PDF reader.
   - A renderer throws `RenderRefused` for a page that it did not render, and the crawler does not count it as a failure of the host.
-- **Usage signals.** When a page asks not to be AI input (`ai-input=no`), the crawler keeps the page but holds back its text from the AI reader.
+- **Usage signals.** When a page asks not to be AI input (`ai-input=no`), the crawler keeps the page but holds back its text from the AI reader. The read gives no title, no text and only the structural metadata, the quote check gives no match, and the search leaves the page out.
 - **The parts.** The entry points `polite-crawler/robots`, `/hours`, `/html`, `/classify`, `/politeness` and `/signals` have no Node.js dependency, so a browser can import them.

@@ -41,8 +41,6 @@ Fetch the page again within 24 hours, and the answer comes from the store with n
 
 ## From your code
 
-{/* TODO(core): find and verify become asynchronous. Add await to the example below after the core change. */}
-
 ```sh title="Install the library"
 npm install polite-crawler
 ```
@@ -58,17 +56,18 @@ const crawler = openCrawler({
 const page = await crawler.fetch("https://example.com/", { maxAge: "24h" });
 console.log(page.outcome, page.status, page.title, page.structured);
 
-for (const hit of crawler.find("documentation examples")) {
+for (const hit of await crawler.find("documentation examples")) {
   console.log(hit.doc, hit.score, hit.snippet);
 }
 
 const read = await crawler.read(page.doc!, { from: 0, length: 2000 });
-const check = crawler.verify(page.doc!, "for use in documentation examples");
+const check = await crawler.verify(page.doc!, "for use in documentation examples");
+console.log(check.found, check.capture, check.fetched_at); // the capture to cite
 
 await crawler.close();
 ```
 
-Each fetch gives the outcome (`ok`, `not-modified`, `skipped` and others), the HTTP status, the document id, the schema.org types of the JSON-LD, and the capture ids. When the crawler does not fetch a page, the `note` tells why, for example `robots.txt disallows it for PoliteCrawler`.
+Each fetch gives the outcome (`ok`, `not-modified`, `skipped` and others), the HTTP status, the document id and the schema.org types of the JSON-LD. It also gives the capture ids, the fetch time and `from_cache`. When the crawler does not fetch a page, the `note` tells why, for example `robots.txt disallows it for PoliteCrawler`.
 
 ## Pages that need JavaScript
 

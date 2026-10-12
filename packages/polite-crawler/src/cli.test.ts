@@ -6,7 +6,6 @@ import type { LocalSite } from "./test-surfaces.ts";
 import {
   PLAIN_PAGE,
   childEnv,
-  egressPassesThrough,
   localSite,
   removeDir,
   runCli,
@@ -14,9 +13,6 @@ import {
   tempDir,
 } from "./test-surfaces.ts";
 import { VERSION } from "./version.ts";
-
-// TODO(core): remove this probe when open.ts passes `egress` to the crawler
-const EGRESS = await egressPassesThrough();
 
 const SLOW = 60_000;
 let store: string;
@@ -113,7 +109,7 @@ describe("the command line: the store", () => {
     expect(read.code).toBe(0);
     expect(read.stdout).toContain("Forno Esempio\nhttps://bakery.example/\n[0–100 of ");
     expect(verified.code).toBe(0);
-    expect(verified.stdout).toMatch(/^found at \d+–\d+: /);
+    expect(verified.stdout).toMatch(/^found at \d+–\d+ in fetch\.[0-9a-f]{12}: /);
     expect(missing).toMatchObject({ code: 1, stdout: "not found\n" });
     expect(unknown.code).toBe(1);
     expect(unknown.stderr).toContain("no stored document url:https://nowhere.example/");
@@ -141,17 +137,14 @@ describe("the command line: the store", () => {
     expect(text.join("")).toContain('"kind":"override"');
   }, SLOW);
 
-  it("does not reindex over the documents of an application recipe, unless --force", async () => {
+  it("keeps the documents of an application recipe through a reindex", async () => {
     const dir = await tempDir("cli-reindex");
     try {
       await seedStore(dir);
-      const refused = await runCli(["reindex", "--dir", dir]);
-      expect(refused.code).toBe(1);
-      expect(refused.stderr).toContain("cannot read: menu (1)");
+      const rebuilt = await runCli(["reindex", "--dir", dir]);
+      expect(rebuilt.code).toBe(0);
+      expect(rebuilt.stdout).toMatch(/^\d+ captures replayed, 3 documents, \d+ URLs\n1 documents of other recipes kept: menu\n$/);
       expect((await runCli(["find", "focaccia", "--dir", dir])).code).toBe(0);
-      const forced = await runCli(["reindex", "--force", "--dir", dir]);
-      expect(forced.code).toBe(0);
-      expect(forced.stdout).toMatch(/^\d+ captures replayed, 2 documents, \d+ URLs\n$/);
       expect((await runCli(["find", "bread", "--dir", dir])).code).toBe(0);
     } finally {
       await removeDir(dir);
@@ -193,7 +186,7 @@ describe("the command line: fetch", () => {
     }
   }, SLOW);
 
-  it.skipIf(!EGRESS)("fetches a private address with --allow-private, and a new copy with --max-age 0", async () => {
+  it("fetches a private address with --allow-private, and a new copy with --max-age 0", async () => {
     const dir = await tempDir("cli-fetch");
     try {
       const first = await runCli(["fetch", `${site.origin}/a`, "--allow-private", "--no-browser", "--dir", dir]);

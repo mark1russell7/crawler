@@ -3,7 +3,6 @@ import type { LocalSite, McpChild } from "./test-surfaces.ts";
 import {
   PLAIN_PAGE,
   childEnv,
-  egressPassesThrough,
   localSite,
   removeDir,
   seedStore,
@@ -11,9 +10,6 @@ import {
   tempDir,
 } from "./test-surfaces.ts";
 import { VERSION } from "./version.ts";
-
-// TODO(core): remove this probe when open.ts passes `egress` to the crawler
-const EGRESS = await egressPassesThrough();
 
 const SLOW = 60_000;
 let store: string;
@@ -161,7 +157,7 @@ describe("the MCP server over standard input and output", () => {
     }
   }, SLOW);
 
-  it.skipIf(!EGRESS)("fetches a private address when POLITE_CRAWLER_ALLOW_PRIVATE is 1", async () => {
+  it("fetches a private address when POLITE_CRAWLER_ALLOW_PRIVATE is 1", async () => {
     const dir = await tempDir("stdio-private");
     try {
       const { server } = await start(["--dir", dir, "--no-browser"], childEnv({ POLITE_CRAWLER_ALLOW_PRIVATE: "1" }));

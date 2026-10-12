@@ -34,6 +34,20 @@ describe("capture records", () => {
     const base = { source: "fetch", kind: "skipped", payload: {}, received_at: "2026-10-07T12:00:00Z" };
     expect(makeRecord({ ...base, scope: "private" }).id).toBe(makeRecord(base).id);
   });
+
+  it("keep labels out of the hash, so an input with no labels hashes as before", () => {
+    const input = {
+      source: "fetch",
+      kind: "capture",
+      payload: { url: "https://example.com/", status: 200, outcome: "ok", nested: { b: 1, a: [2, { d: null, c: "x" }] } },
+      received_at: "2026-10-07T12:00:00.000Z",
+      external_id: "https://example.com/",
+    };
+    const labelled = makeRecord({ ...input, scope: "intimate", labels: { carrier: "gift-17", intent: "buy" } });
+    expect(labelled.id).toBe("fetch.6d57153296df");
+    expect(labelled.labels).toEqual({ carrier: "gift-17", intent: "buy" });
+    expect(makeRecord({ ...input, labels: {} })).toEqual(makeRecord(input));
+  });
 });
 
 describe("the version", () => {

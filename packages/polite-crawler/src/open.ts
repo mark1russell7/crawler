@@ -1,17 +1,40 @@
+import { existsSync, lstatSync, mkdirSync, realpathSync, statSync } from "node:fs";
 import { join } from "node:path";
 import type { Dispatcher } from "undici";
+import type { BlobStore } from "./blobs.ts";
 import { FileBlobStore } from "./blobs.ts";
+import type { CrawlEvent } from "./crawler.ts";
 import { Crawler } from "./crawler.ts";
-import type { Found } from "./docs.ts";
-import { DocIndex, locate } from "./docs.ts";
+import type { DocVersion, Found } from "./docs.ts";
+import { DocIndex } from "./docs.ts";
+import type { EgressOptions } from "./egress.ts";
+import { SqliteHostStateStore } from "./hoststate.ts";
 import { CaptureLog } from "./log.ts";
-import { makeRecord } from "./record.ts";
+import type { Clock, HostStateStore, PolicyOptions } from "./politeness.ts";
+import { MemoryHostStateStore, realClock } from "./politeness.ts";
 import type { Renderer } from "./render.ts";
 import { playwrightRenderer } from "./render.ts";
-import type { CrawlRuntime, PageResult } from "./runtime.ts";
-import { Extractors, fetchPage, reindex } from "./runtime.ts";
-import type { AiInput } from "./signals.ts";
+import type {
+  CrawlRuntime,
+  Extractor,
+  PageResult,
+  ReadOptions,
+  ReadResult,
+  ReindexResult,
+  VerifyOptions,
+  VerifyResult,
+} from "./runtime.ts";
+import {
+  Extractors,
+  fetchPage,
+  findDocuments,
+  readDocument,
+  reindex,
+  verifyQuote,
+} from "./runtime.ts";
 import { VERSION } from "./version.ts";
+
+export type { ReadOptions, ReadResult, VerifyOptions, VerifyResult } from "./runtime.ts";
 
 /** This is the product token that robots.txt rules match when an application gives no token. */
 export const DEFAULT_TOKEN = "PoliteCrawler";
@@ -38,25 +61,45 @@ const UNITS: Readonly<Record<string, number>> = {
   w: 604_800_000,
 };
 
-/** This function changes a duration into milliseconds. It throws an error for a text that it cannot read. */
+/**
+ * This function changes a duration into milliseconds. The units are `ms`, `s`, `m` (minutes), `h`,
+ * `d` and `w`, in any case. The unit `M` is an error, because a month is not a unit. A bare `0`
+ * is zero. The function throws an error for a text that it cannot read.
+ */
 export const durationMs = (duration: Duration): number => {
   if (typeof duration === "number") {
     if (!Number.isFinite(duration) || duration < 0) throw new Error(`not a duration: ${String(duration)}`);
     return duration;
   }
+  if (/^\s*0+(\.0+)?\s*$/.test(duration)) return 0;
   const match = /^\s*(\d+(?:\.\d+)?)\s*(ms|s|m|h|d|w)\s*$/i.exec(duration);
-  const unit = match?.[2]?.toLowerCase();
-  const factor = unit === undefined ? undefined : UNITS[unit];
+  const unit = match?.[2];
+  const factor = unit === undefined || unit === "M" ? undefined : UNITS[unit.toLowerCase()];
   if (match === null || factor === undefined) {
-    throw new Error(`not a duration: "${duration}" (write a number and ms, s, m, h, d or w)`);
+    throw new Error(`not a duration: "${duration}" (write a number and ms, s, m, h, d or w; m is minutes)`);
   }
   return Number(match[1]) * factor;
 };
 
-/** These options open a crawler on a folder. Only `dir` is necessary. */
-export interface OpenOptions {
-  /** This folder keeps the capture log, the response bodies and the search index. */
-  readonly dir: string;
+/**
+ * These options make a runtime. A store needs a log, a blob store and an index. Give `dir`, and
+ * the runtime makes the three parts in it, or give the parts. A part that you give replaces the
+ * part in `dir`.
+ */
+export interface RuntimeOptions {
+  /** This folder keeps the capture log (`captures/`), the bodies (`blobs/`), the index (`index.sqlite`) and the state of each host (`hosts.sqlite`). */
+  readonly dir?: string | undefined;
+  /** This log replaces `<dir>/captures`. */
+  readonly log?: CaptureLog | undefined;
+  /** This blob store replaces `<dir>/blobs`. */
+  readonly blobs?: BlobStore | undefined;
+  /** This index replaces `<dir>/index.sqlite`. */
+  readonly index?: DocIndex | undefined;
+  /**
+   * This store keeps the pace and the stops of each host. The default with `dir` is a SQLite file
+   * (`hosts.sqlite`), so the processes on one store share the pace. With no `dir`, it is in memory.
+   */
+  readonly hostState?: HostStateStore | undefined;
   /** This token is the name that robots.txt rules match. The default is `PoliteCrawler`. */
   readonly token?: string | undefined;
   /** This text is the full `User-Agent` header. The default names the crawler and its page. */
@@ -67,84 +110,88 @@ export interface OpenOptions {
   readonly renderer?: Renderer | false | undefined;
   /** This value is the number of sites that the crawler fetches from at one time. The default is 16. */
   readonly maxActive?: number | undefined;
-  /** These agents get their robots.txt rules applied to each fetch, for example `Claude-User`. */
-  readonly onBehalfOf?: readonly string[] | undefined;
   /** This `undici` dispatcher sends the requests. Tests give a mock agent, and a proxy is possible. */
   readonly dispatcher?: Dispatcher | undefined;
+  /** This policy controls the addresses that the crawler fetches. By default, it fetches only public addresses. */
+  readonly egress?: EgressOptions | undefined;
+  /** These values change the limits of the politeness policy, for each host or for some hosts. */
+  readonly politeness?: PolicyOptions | undefined;
+  /** This clock gives the time to the crawler and to the index. Tests give a clock that they control. */
+  readonly clock?: Clock | undefined;
+  /** This function gives the random numbers of the jitter. The default is `Math.random`. */
+  readonly random?: (() => number) | undefined;
+  /** This label goes into each capture record. */
+  readonly scope?: string | undefined;
+  /** This function gets an event for each request, response, wait, stop and skip. */
+  readonly onEvent?: ((event: CrawlEvent) => void) | undefined;
+  /** These extractors read the captures of the recipes of an application. The recipe `page` is built in. */
+  readonly extractors?: Readonly<Record<string, Extractor>> | undefined;
 }
 
-/** These options control one fetch. */
-export interface FetchOptions {
-  /** The value `auto` renders a page only when it shows almost nothing without JavaScript. */
-  readonly render?: "auto" | "never" | "always" | undefined;
-  /** A stored copy younger than this age answers, and the crawler sends no request. The default is `24h`. */
-  readonly maxAge?: Duration | undefined;
-  /** These agents get their robots.txt rules applied to this fetch, in addition to the defaults. */
-  readonly onBehalfOf?: readonly string[] | undefined;
-}
-
-/** This result is a part of one stored document. */
-export interface ReadResult {
-  readonly doc: string;
-  readonly kind: string;
-  readonly title: string;
-  readonly url: string | null;
-  readonly meta: Readonly<Record<string, unknown>>;
-  readonly from: number;
-  readonly to: number;
-  readonly total: number;
-  readonly text: string;
-  readonly captures: readonly string[];
-  readonly ai_input: AiInput;
-  /** This value is true when the page asked not to be AI input. The text is then empty. */
-  readonly held_back: boolean;
-  readonly note: string | null;
-}
-
-/** This result tells if a quote is in a stored document, and where. */
-export interface VerifyResult {
-  readonly doc: string;
-  readonly found: boolean;
-  readonly start: number | null;
-  readonly end: number | null;
-  readonly excerpt: string | null;
-  readonly url: string | null;
-  readonly captures: readonly string[];
-}
-
-/** A polite crawler fetches each source one time, keeps it, and answers the next questions from the disk. */
-export interface PoliteCrawler {
-  /** The runtime gives the parts to an application that needs more control. */
-  readonly runtime: CrawlRuntime;
-  /** This method fetches a page, reads it and adds it to the index. */
-  fetch(url: string, options?: FetchOptions): Promise<PageResult>;
-  /** This method searches the stored documents. It sends no request. */
-  find(q: string, options?: { readonly limit?: number; readonly kind?: string | null }): Found[];
-  /** This method reads a range of characters of one stored document. */
-  read(
-    doc: string,
-    options?: { readonly from?: number; readonly length?: number; readonly userProvided?: boolean },
-  ): Promise<ReadResult>;
-  /** This method finds a quote in a stored document. It ignores case, spaces and typographic punctuation. */
-  verify(doc: string, quote: string): VerifyResult;
-  /** This method builds the index again from the capture log and the stored bodies, with no request. */
-  reindex(): Promise<{ readonly captures: number; readonly docs: number; readonly urls: number }>;
-  /** This method closes the browser, the log files and the index. */
+/** A runtime that a store made. It owns the parts that it made, and it closes them. */
+export interface StoreRuntime extends CrawlRuntime {
+  readonly hostState: HostStateStore;
+  /** This method closes the crawler, the browser, the log, the index and the host state store that the runtime made. A second close does nothing. */
   close(): Promise<void>;
 }
 
-const HELD_BACK =
-  "This page asked not to be used as AI input, so its text is held back. Open the URL to read it, or read again with userProvided when a person gave this URL directly (the crawler logs that).";
+/** The parts of a store that can be a symbolic link to a different place only by mistake or by attack. */
+const STORE_PARTS = ["captures", "blobs", "index.sqlite", "hosts.sqlite"];
 
 /**
- * This function opens a crawler on a folder. The folder keeps the capture log (`captures/`), the
- * response bodies (`blobs/`) and the search index (`index.sqlite`). The index is a projection:
- * `reindex` makes it again from the other two.
+ * This function makes the folder of a store for the owner only, where the system has modes. It
+ * refuses a store folder of a different user, and a part of the store that is a symbolic link.
+ * The store folder itself can be a link, for example to a larger disk.
  */
-export const openCrawler = (options: OpenOptions): PoliteCrawler => {
-  const log = new CaptureLog(join(options.dir, "captures"));
-  const blobs = new FileBlobStore(join(options.dir, "blobs"));
-  const index = new DocIndex(join(options.dir, "index.sqlite"));
+const guardStore = (dir: string): void => {
+  mkdirSync(dir, { recursive: true, mode: 0o700 });
+  const real = lstatSync(dir).isSymbolicLink() ? realpathSync(dir) : dir;
+  const info = statSync(real);
+  if (!info.isDirectory()) throw new Error(`the store ${dir} is not a folder`);
+  if (process.platform !== "win32" && typeof process.getuid === "function" && info.uid !== process.getuid()) {
+    throw new Error(`the store ${dir} belongs to a different user: use a folder of your own`);
+  }
+  for (const part of STORE_PARTS) {
+    let link = false;
+    try {
+      link = lstatSync(join(dir, part)).isSymbolicLink();
+    } catch {
+      // a part that is not there yet
+    }
+    if (link) throw new Error(`${part} in the store ${dir} is a symbolic link: the crawler does not follow it`);
+  }
+};
+
+/**
+ * This function makes a runtime. It is the one place that puts the log, the blob store, the index,
+ * the host state, the crawler and the extractors together. The function `openCrawler` uses it.
+ * An application that needs the parts uses it too. The runtime and the crawler share one clock.
+ */
+export const createRuntime = (options: RuntimeOptions): StoreRuntime => {
+  const dir = options.dir;
+  if (dir === undefined && (options.log === undefined || options.blobs === undefined || options.index === undefined)) {
+    throw new Error("a runtime needs dir, or a log, a blob store and an index");
+  }
+  if (dir !== undefined) guardStore(dir);
+  const owned: Array<() => Promise<void> | void> = [];
+  const log = options.log ?? new CaptureLog(join(dir!, "captures"));
+  const blobs = options.blobs ?? new FileBlobStore(join(dir!, "blobs"));
+  let index = options.index;
+  if (index === undefined) {
+    const made = new DocIndex(join(dir!, "index.sqlite"));
+    owned.push(() => made.close());
+    index = made;
+  }
+  let hostState = options.hostState;
+  if (hostState === undefined) {
+    if (dir === undefined) hostState = new MemoryHostStateStore();
+    else {
+      const made = new SqliteHostStateStore(join(dir, "hosts.sqlite"));
+      owned.push(() => made.close());
+      hostState = made;
+    }
+  }
+  const clock = options.clock ?? realClock;
   const renderer = options.renderer === false ? undefined : (options.renderer ?? playwrightRenderer());
   const crawler = new Crawler({
     token: options.token ?? DEFAULT_TOKEN,
@@ -156,84 +203,160 @@ export const openCrawler = (options: OpenOptions): PoliteCrawler => {
     renderer,
     maxActive: options.maxActive,
     dispatcher: options.dispatcher,
+    egress: options.egress,
+    politeness: options.politeness,
+    hostState,
+    clock,
+    random: options.random,
+    scope: options.scope,
+    onEvent: options.onEvent,
   });
-  const runtime: CrawlRuntime = {
+  const extractors = new Extractors();
+  for (const [recipe, extractor] of Object.entries(options.extractors ?? {})) {
+    extractors.register(recipe, extractor);
+  }
+  let closing: Promise<void> | undefined;
+  return {
     crawler,
     index,
     blobs,
     captures: log,
     log,
-    extractors: new Extractors(),
-    now: () => new Date().toISOString(),
+    extractors,
+    hostState,
+    now: () => new Date(clock.now()).toISOString(),
+    close() {
+      closing ??= (async () => {
+        // the crawler closes the browser and the log
+        await crawler.close();
+        for (const close of owned) await close();
+      })();
+      return closing;
+    },
   };
-  const known = (id: string) => {
-    const doc = index.get(id);
-    if (doc === undefined) throw new Error(`no stored document ${id}: find one with find(), or fetch its page`);
-    return doc;
+};
+
+/** These options open a crawler on a folder. Only `dir` is necessary. */
+export interface OpenOptions extends Omit<RuntimeOptions, "dir" | "log" | "blobs" | "index"> {
+  /** This folder keeps the capture log, the response bodies, the search index and the state of each host. */
+  readonly dir: string;
+  /** These agents get their robots.txt rules applied to each fetch, for example `Claude-User`. */
+  readonly onBehalfOf?: readonly string[] | undefined;
+}
+
+/** These options control one fetch. */
+export interface FetchOptions {
+  /** The value `auto` renders a page only when it shows almost nothing without JavaScript. */
+  readonly render?: "auto" | "never" | "always" | undefined;
+  /**
+   * A stored copy younger than this age answers, and the crawler sends no request. The default is
+   * `24h`. The value `auto` uses the freshness that the server gave. The value `0s` asks again.
+   */
+  readonly maxAge?: Duration | undefined;
+  /** These agents get their robots.txt rules applied to this fetch, in addition to the defaults. */
+  readonly onBehalfOf?: readonly string[] | undefined;
+  /** When this signal aborts, the crawler stops the fetch and the render. */
+  readonly signal?: AbortSignal | undefined;
+  /** This label goes into the capture records of this fetch. */
+  readonly scope?: string | undefined;
+  /** These labels go into the capture records of this fetch. They are not part of the capture ids. */
+  readonly labels?: Readonly<Record<string, string>> | undefined;
+}
+
+/** These options control a search. */
+export interface FindOptions {
+  /** This value is the maximum number of results. The default is 10. */
+  readonly limit?: number | undefined;
+  /** This value keeps only the documents of one kind, for example `page` or `pdf`. */
+  readonly kind?: string | null | undefined;
+}
+
+/** A polite crawler fetches each source one time, keeps it, and answers the next questions from the disk. */
+export interface PoliteCrawler {
+  /** The runtime gives the parts to an application that needs more control. */
+  readonly runtime: StoreRuntime;
+  /** This method fetches a page, reads it and adds it to the index. */
+  fetch(url: string, options?: FetchOptions): Promise<PageResult>;
+  /**
+   * This method searches the stored documents. It sends no request. A held-back document is not
+   * in the results. The syntax of the query is the syntax of `parseQuery`.
+   */
+  find(q: string, options?: FindOptions): Promise<Found[]>;
+  /** This method reads a range of characters of one stored document, the current version or the version of one capture. */
+  read(doc: string, options?: ReadOptions): Promise<ReadResult>;
+  /**
+   * This method finds a quote in a stored document. It ignores case, spaces, typographic
+   * punctuation and Unicode forms. It tells which capture holds the quote.
+   */
+  verify(doc: string, quote: string, options?: VerifyOptions): Promise<VerifyResult>;
+  /** This method gives the versions of a stored document, the newest first. */
+  versions(doc: string, options?: { readonly limit?: number }): Promise<DocVersion[]>;
+  /** This method builds the index again from the capture log and the stored bodies, with no request. */
+  reindex(): Promise<ReindexResult>;
+  /** This method closes the browser, the log files and the index. A second close does nothing. */
+  close(): Promise<void>;
+}
+
+/**
+ * This function opens a crawler on a folder. The folder keeps the capture log (`captures/`), the
+ * response bodies (`blobs/`), the search index (`index.sqlite`) and the state of each host
+ * (`hosts.sqlite`). The index is a projection: `reindex` makes it again from the log and the bodies.
+ * An index of an earlier version opens empty, and the crawler rebuilds it first.
+ *
+ * Each method gives a promise, and none throws before its promise. After `close`, each method
+ * rejects.
+ */
+export const openCrawler = (options: OpenOptions): PoliteCrawler => {
+  const runtime = createRuntime(options);
+  let closed = false;
+  // an index that opened empty (a new schema, or a deleted file) is rebuilt from a log that exists
+  const ready: Promise<unknown> =
+    runtime.index.stale && existsSync(join(options.dir, "captures"))
+      ? reindex(runtime).catch(() => undefined)
+      : Promise.resolve();
+  const live = async (): Promise<void> => {
+    if (closed) throw new Error("the crawler is closed");
+    await ready;
+    if (closed) throw new Error("the crawler is closed");
   };
   return {
     runtime,
-    fetch: (url, fetchOptions = {}) =>
-      fetchPage(runtime, url, {
+    async fetch(url, fetchOptions = {}) {
+      await live();
+      const maxAge = fetchOptions.maxAge ?? "24h";
+      return fetchPage(runtime, url, {
         render: fetchOptions.render ?? "auto",
-        maxAgeMs: durationMs(fetchOptions.maxAge ?? "24h"),
+        maxAgeMs: maxAge === "auto" ? "auto" : durationMs(maxAge),
         onBehalfOf: [...(options.onBehalfOf ?? []), ...(fetchOptions.onBehalfOf ?? [])],
-      }),
-    find: (q, findOptions = {}) =>
-      index.find(q, { limit: findOptions.limit ?? 10, kind: findOptions.kind ?? null }),
+        signal: fetchOptions.signal,
+        scope: fetchOptions.scope,
+        labels: fetchOptions.labels,
+      });
+    },
+    async find(q, findOptions = {}) {
+      await live();
+      return findDocuments(runtime, q, findOptions);
+    },
     async read(id, readOptions = {}) {
-      const doc = known(id);
-      const from = readOptions.from ?? 0;
-      const length = readOptions.length ?? 4000;
-      const userProvided = readOptions.userProvided ?? false;
-      const held = doc.ai_input === "no" && !userProvided;
-      if (doc.ai_input === "no" && userProvided) {
-        const at = runtime.now();
-        await log.append(
-          makeRecord({
-            source: "fetch",
-            kind: "override",
-            payload: { doc: doc.doc, url: doc.url, reason: "a person provided this URL", at },
-            received_at: at,
-            external_id: doc.url ?? doc.doc,
-          }),
-        );
-      }
-      const to = held ? from : Math.min(doc.text.length, from + length);
-      return {
-        doc: doc.doc,
-        kind: doc.kind,
-        title: doc.title,
-        url: doc.url,
-        meta: doc.meta,
-        from,
-        to,
-        total: doc.text.length,
-        text: held ? "" : doc.text.slice(from, to),
-        captures: doc.captures,
-        ai_input: doc.ai_input,
-        held_back: held,
-        note: held ? HELD_BACK : null,
-      };
+      await live();
+      return readDocument(runtime, id, readOptions);
     },
-    verify(id, quote) {
-      const doc = known(id);
-      const hit = locate(doc.text, quote);
-      return {
-        doc: doc.doc,
-        found: hit.found,
-        start: hit.start,
-        end: hit.end,
-        // a held-back page confirms the quote but shows nothing around it
-        excerpt: doc.ai_input === "no" ? null : hit.excerpt,
-        url: doc.url,
-        captures: doc.captures,
-      };
+    async verify(id, quote, verifyOptions = {}) {
+      await live();
+      return verifyQuote(runtime, id, quote, verifyOptions);
     },
-    reindex: () => reindex(runtime),
+    async versions(id, versionOptions = {}) {
+      await live();
+      return runtime.index.versions(id, versionOptions);
+    },
+    async reindex() {
+      await live();
+      return reindex(runtime);
+    },
     async close() {
-      await crawler.close();
-      index.close();
+      closed = true;
+      await ready;
+      await runtime.close();
     },
   };
 };

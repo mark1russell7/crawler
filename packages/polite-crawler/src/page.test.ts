@@ -1,5 +1,3 @@
-import { mkdtemp, rm } from "node:fs/promises";
-import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { MockAgent } from "undici";
 import { afterEach, describe, expect, it } from "vitest";
@@ -10,6 +8,7 @@ import { CaptureLog } from "./log.ts";
 import type { Renderer } from "./render.ts";
 import type { CrawlRuntime } from "./runtime.ts";
 import { Extractors, fetchPage, pageExtractor, reindex } from "./runtime.ts";
+import { removeDir, tempDir } from "./test-helpers.ts";
 
 let dir: string | undefined;
 // a capture log keeps its file open: one left open is closed by the garbage
@@ -21,7 +20,7 @@ const opened = (log: CaptureLog): CaptureLog => {
 };
 afterEach(async () => {
   for (const log of logs.splice(0)) await log.close();
-  if (dir !== undefined) await rm(dir, { recursive: true, force: true });
+  if (dir !== undefined) await removeDir(dir);
   dir = undefined;
 });
 
@@ -46,7 +45,7 @@ const fakeRenderer = (html: string): Renderer & { asked: string[] } => {
 };
 
 const setup = async (renderer: Renderer) => {
-  dir = await mkdtemp(join(tmpdir(), "polite-crawler-pages-"));
+  dir = await tempDir("pages");
   const agent = new MockAgent();
   agent.disableNetConnect();
   const blobs = new FileBlobStore(join(dir, "blobs"));
@@ -129,7 +128,7 @@ describe("reading pages, rendering only on evidence", () => {
     await fetchPage(runtime, "https://bistro.example/", { render: "auto" });
     await runtime.log.close();
     const rebuilt = { ...runtime, index: new DocIndex(":memory:") };
-    expect(await reindex(rebuilt)).toEqual({ captures: 3, docs: 1, urls: 3 });
+    expect(await reindex(rebuilt)).toMatchObject({ captures: 3, docs: 1, urls: 3, failed: 0, missing: 0, damaged: 0 });
     expect(rebuilt.index.get("url:https://bistro.example/")!.text).toContain(
       "Dinner Monday to Friday",
     );

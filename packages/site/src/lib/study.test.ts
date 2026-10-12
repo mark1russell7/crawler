@@ -179,10 +179,10 @@ describe("the dataset in the repository", () => {
   });
 
   it("counts no 304 and no blocked site as a site that answered", () => {
-    for (const site of real.sites) {
-      if (site.status === 304) expect(site.state).toBe("file");
-      if (site.state === "blocked") expect(site.p).toMatch(/^B+$/);
-    }
+    const revisits = real.sites.filter((site) => site.status === 304);
+    expect(revisits.filter((site) => site.state !== "file")).toEqual([]);
+    const blocked = real.sites.filter((site) => site.state === "blocked");
+    expect(blocked.filter((site) => !/^B+$/.test(site.p))).toEqual([]);
   });
 
   it("has a CSV download that agrees with the JSON", () => {

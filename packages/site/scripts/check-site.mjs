@@ -63,7 +63,7 @@ const walk = (dir, prefix) => {
   }
 };
 walk(dist, "");
-pages.sort();
+pages.sort((a, b) => a.localeCompare(b));
 
 const problems = [];
 const browser = await chromium.launch();
@@ -102,9 +102,9 @@ for (const path of pages) {
 if (shots !== undefined) {
   mkdirSync(shots, { recursive: true });
   for (const scheme of ["light", "dark"]) {
-    for (const [device, viewport] of [
-      ["desktop", { width: 1440, height: 900 }],
-      ["phone", { width: 375, height: 812 }],
+    for (const { device, viewport } of [
+      { device: "desktop", viewport: { width: 1440, height: 900 } },
+      { device: "phone", viewport: { width: 375, height: 812 } },
     ]) {
       const shot = await browser.newContext({ viewport, colorScheme: scheme, reducedMotion: "reduce", deviceScaleFactor: 1 });
       for (const path of pages) {

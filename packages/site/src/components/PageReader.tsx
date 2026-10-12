@@ -31,7 +31,7 @@ export default function PageReader({ initial }: { readonly initial: PageRead }):
       return;
     }
     const id = ++job.current;
-    const done = (result: PageRead): void => {
+    const show = (result: PageRead): void => {
       if (id !== job.current) return;
       running.current = false;
       setPage(result);
@@ -40,7 +40,7 @@ export default function PageReader({ initial }: { readonly initial: PageRead }):
     const run = (): void => {
       setBusy(true);
       if (typeof Worker === "undefined") {
-        void import("../lib/page-read.ts").then(({ readPage }) => done(readPage(html, url)));
+        void import("../lib/page-read.ts").then(({ readPage }) => show(readPage(html, url)));
         return;
       }
       // a reader that is still busy with an old page stops, so the newest text wins
@@ -50,7 +50,7 @@ export default function PageReader({ initial }: { readonly initial: PageRead }):
       }
       worker.current ??= new Worker(new URL("../lib/page-worker.ts", import.meta.url), { type: "module" });
       worker.current.onmessage = (event: MessageEvent<{ id: number; result: PageRead }>) => {
-        if (event.data.id === id) done(event.data.result);
+        if (event.data.id === id) show(event.data.result);
       };
       running.current = true;
       worker.current.postMessage({ id, html, url });

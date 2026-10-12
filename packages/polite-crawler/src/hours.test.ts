@@ -266,3 +266,220 @@ describe("what the place keeps", () => {
     expect(disagreements(site, osm)).toEqual(["fri"]);
   });
 });
+
+const describeAll = (text: string): string =>
+  fromText(text)
+    .map((hours) => describeWeek(hours.week))
+    .join(" || ");
+
+describe("a closed day stays closed", () => {
+  it("before or after the schedule, and whatever the selector of the schedule", () => {
+    expect(describeAll("Closed Mondays\nTue-Sun 5-10pm")).toBe("Mon closed; Tue–Sun 17:00–22:00");
+    expect(describeAll("Closed Monday & Tuesday\nWed-Sun 11am-9pm")).toBe(
+      "Mon–Tue closed; Wed–Sun 11:00–21:00",
+    );
+    expect(describeAll("Closed Sunday, Monday\nTue-Sat 5pm-10pm")).toBe(
+      "Mon closed; Tue–Sat 17:00–22:00; Sun closed",
+    );
+    expect(describeAll("Open daily 11am-9pm\nClosed Tuesdays")).toBe(
+      "Mon 11:00–21:00; Tue closed; Wed–Sun 11:00–21:00",
+    );
+    expect(describeAll("Daily 11am-9pm, closed Tuesday")).toBe(
+      "Mon 11:00–21:00; Tue closed; Wed–Sun 11:00–21:00",
+    );
+    expect(describeAll("Mon-Sun 7am-3pm\nClosed Mondays")).toBe("Mon closed; Tue–Sun 07:00–15:00");
+  });
+
+  it("reads except and but", () => {
+    expect(describeAll("Open daily 11am-9pm except Monday")).toBe(
+      "Mon closed; Tue–Sun 11:00–21:00",
+    );
+    expect(describeAll("Open 11am-9pm every day except Tuesdays")).toBe(
+      "Mon 11:00–21:00; Tue closed; Wed–Sun 11:00–21:00",
+    );
+    expect(describeAll("Every day but Sunday 9am-5pm")).toBe("Mon–Sat 09:00–17:00; Sun closed");
+    // "but" before other words is only a word
+    expect(describeAll("Small but cozy. Open Mon-Fri 9am-5pm")).toBe("Mon–Fri 09:00–17:00");
+  });
+
+  it("does not close the days of a schedule for a closed holiday", () => {
+    expect(describeAll("Mon-Fri 9am-5pm, closed on holidays")).toBe("Mon–Fri 09:00–17:00");
+    expect(describeAll("Hours: Mon-Fri 9-5 (closed 12/25)")).toBe("Mon–Fri 09:00–17:00");
+  });
+});
+
+describe("hours that are not the week", () => {
+  it("does not give a day that it cannot read the hours of the next day", () => {
+    expect(describeAll("Monday: By appointment\nTuesday: 9am-5pm")).toBe("Tue 09:00–17:00");
+    expect(describeAll("Monday: Varies\nTuesday 9am-5pm\nWednesday 9am-5pm")).toBe(
+      "Tue–Wed 09:00–17:00",
+    );
+    expect(describeAll("Monday: Open 24 hours\nTuesday: 9am-5pm")).toBe(
+      "Mon open 24 hours; Tue 09:00–17:00",
+    );
+  });
+
+  it("leaves out a line for a date or an occasion, and says so", () => {
+    for (const text of [
+      "Mon-Fri 9am-5pm\nNew Year's Eve 8pm-1am",
+      "Mon-Fri 9am-5pm\nDec 24: 9am-2pm\nDec 25: Closed",
+      "Mon-Fri 9am-5pm\nPrivate events available 11am-3pm",
+    ]) {
+      const [found] = fromText(text);
+      expect(describeWeek(found!.week)).toBe("Mon–Fri 09:00–17:00");
+      expect(found!.partial).toBe(true);
+    }
+    const events =
+      "Upcoming events\nSat, Oct 18 · 7:00 PM – 10:00 PM\nFri, Oct 24 · 8:00 PM – 11:00 PM";
+    expect(fromText(events)).toEqual([]);
+  });
+
+  it("reads no hours in a menu, an age, a price or a score", () => {
+    for (const text of [
+      "Sun-dried tomato pasta 12-14",
+      "Starters\nSun-Dried Tomato Flatbread 14\nMon Ami Burger 16\nHappy Hour 4-6pm",
+      "Kids Club Saturdays, ages 5-10",
+      "Sunday's game: Patriots 21-14",
+      "Burgers on Tuesdays $12-14",
+    ]) {
+      expect(fromText(text)).toEqual([]);
+    }
+  });
+
+  it("gives each season a schedule of its own, and names it", () => {
+    const seasons = fromText("Summer: Mon-Sun 10am-8pm\nWinter: Sat-Sun 10am-4pm");
+    expect(seasons.map((hours) => [hours.season, describeWeek(hours.week)])).toEqual([
+      ["Summer", "Mon–Sun 10:00–20:00"],
+      ["Winter", "Sat–Sun 10:00–16:00"],
+    ]);
+    expect(fromText("Hours (June-August)\nMon-Sun 7am-10pm")[0]!.season).toBe("June-August");
+  });
+});
+
+describe("guesses that make sense", () => {
+  it("reads a diner's morning, a noon close and a bar's late close", () => {
+    expect(range("6", "2")).toEqual({ interval: ["06:00", "14:00"], inferred: true });
+    expect(range("5", "1")).toEqual({ interval: ["05:00", "13:00"], inferred: true });
+    expect(range("7", "12")).toEqual({ interval: ["07:00", "12:00"], inferred: true });
+    expect(range("10", "12")?.interval).toEqual(range("10am", "12")?.interval);
+    expect(range("11", "1am")).toEqual({ interval: ["11:00", "01:00"], inferred: true });
+    expect(range("12", "1am")).toEqual({ interval: ["12:00", "01:00"], inferred: true });
+    expect(range("13", "2")?.interval).toEqual(["13:00", "02:00"]);
+    expect(range("09", "5")).toEqual({ interval: ["09:00", "17:00"], inferred: true });
+  });
+
+  it("reads 12 midnight and 12 noon as one time, and refuses a score", () => {
+    expect(describeAll("Mon-Sat 11am-12 midnight")).toBe("Mon–Sat 11:00–00:00");
+    expect(describeAll("Mon-Fri 6am-12 noon")).toBe("Mon–Fri 06:00–12:00");
+    expect(range("21", "14")).toBeUndefined();
+    expect(range("8:60", "9")).toBeUndefined();
+  });
+});
+
+describe("more ways to write hours", () => {
+  it("reads open 24 hours, 24/7, short day names, weekend and the 9h clock", () => {
+    expect(describeAll("Open 24 hours")).toBe("Mon–Sun open 24 hours");
+    expect(fromText("Open 24/7")[0]!.inferred).toBe(false);
+    expect(describeAll("Mon-Sun: Open 24 hours")).toBe("Mon–Sun open 24 hours");
+    expect(describeAll("M-F 9am-5pm\nSat 10am-2pm")).toBe("Mon–Fri 09:00–17:00; Sat 10:00–14:00");
+    expect(describeAll("Tu-Th 11am-9pm")).toBe("Tue–Thu 11:00–21:00");
+    expect(describeAll("Su-Th 11am-10pm")).toBe("Mon–Thu 11:00–22:00; Sun 11:00–22:00");
+    expect(describeAll("Weekend 10am-4pm")).toBe("Sat–Sun 10:00–16:00");
+    expect(describeAll("Mon-Fri 9h-17h")).toBe("Mon–Fri 09:00–17:00");
+    expect(describeAll("Mon-Fri 00:00-24:00")).toBe("Mon–Fri open 24 hours");
+    // 24 hours of notice is not 24 hours open
+    expect(fromText("Hours\nOrders need 24 hours notice")).toEqual([]);
+  });
+
+  it("reads any dash, a tilde, a full-width colon and text with zero-width spaces", () => {
+    for (const text of [
+      "Mon−Fri 9am−5pm",
+      "Mon‐Fri 9am‐5pm",
+      "Mon​-​Fri 9am-5pm",
+      "Mon~Fri 9:00~17:00",
+      "Mon-Fri 9：00-17：00",
+    ]) {
+      expect(describeAll(text)).toBe("Mon–Fri 09:00–17:00");
+    }
+  });
+});
+
+const ALL_WEEK = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+
+describe("schema.org and OpenStreetMap, more strictly", () => {
+  const spec = (opens: string, closes: string): string =>
+    describeWeek(
+      fromSchemaOrg({ openingHoursSpecification: { dayOfWeek: ["Monday"], opens, closes } })
+        ?.week ?? {},
+    );
+
+  it("reads 00:00 to 24:00 as open 24 hours, and an am or a pm in a time", () => {
+    expect(spec("00:00", "24:00")).toBe("Mon open 24 hours");
+    expect(spec("00:00", "23:59")).toBe("Mon open 24 hours");
+    expect(spec("9:00 AM", "5:00 PM")).toBe("Mon 09:00–17:00");
+    expect(spec("11:00am", "10:00pm")).toBe("Mon 11:00–22:00");
+    expect(spec("09:75", "25:00")).toBe("");
+    expect(fromCompact("Mo-Fr 09:75-25:00")).toBeUndefined();
+  });
+
+  it("reads the days of a specification written as an @id or a short name", () => {
+    for (const dayOfWeek of [{ "@id": "https://schema.org/Monday" }, "Mo"]) {
+      const hours = fromSchemaOrg({
+        openingHoursSpecification: { dayOfWeek, opens: "09:00", closes: "17:00" },
+      });
+      expect(describeWeek(hours!.week)).toBe("Mon 09:00–17:00");
+    }
+  });
+
+  it("picks the season of a date, and leaves a holiday out", () => {
+    const record = {
+      openingHoursSpecification: [
+        {
+          dayOfWeek: ALL_WEEK,
+          opens: "10:00",
+          closes: "20:00",
+          validFrom: "2026-06-01",
+          validThrough: "2026-08-31",
+        },
+        {
+          dayOfWeek: ["Saturday", "Sunday"],
+          opens: "10:00",
+          closes: "16:00",
+          validFrom: "2026-09-01",
+          validThrough: "2027-05-31",
+        },
+        {
+          dayOfWeek: "Thursday",
+          opens: "00:00",
+          closes: "00:00",
+          validFrom: "2026-11-26",
+          validThrough: "2026-11-26",
+        },
+      ],
+    };
+    const winter = fromSchemaOrg(record, { at: "2026-12-01" });
+    expect(describeWeek(winter!.week)).toBe("Sat–Sun 10:00–16:00");
+    expect(winter).toMatchObject({ season: "2026-09-01/2027-05-31", partial: true });
+    expect(fromSchemaOrg(record)!.season).toBe("2026-06-01/2026-08-31");
+  });
+
+  it("reads the openingHours that sites write, and leaves out the rules for dates", () => {
+    const read = (openingHours: string | string[]): string =>
+      describeWeek(fromSchemaOrg({ openingHours })?.week ?? {});
+    expect(read("Monday-Friday 9:00-17:00")).toBe("Mon–Fri 09:00–17:00");
+    expect(read("Mo-Fr: 09:00-17:00")).toBe("Mon–Fri 09:00–17:00");
+    expect(read("mo-fr 09:00-17:00")).toBe("Mon–Fri 09:00–17:00");
+    expect(read("Mo-Fr 9am-5pm")).toBe("Mon–Fri 09:00–17:00");
+    expect(read("Mo-Fr 09:00-17:00 Sa 10:00-14:00")).toBe("Mon–Fri 09:00–17:00; Sat 10:00–14:00");
+    const dated = fromSchemaOrg({ openingHours: ["Mo-Fr 09:00-17:00", "Dec 25 off"] });
+    expect(dated).toMatchObject({ partial: true });
+    expect(describeWeek(dated!.week)).toBe("Mon–Fri 09:00–17:00");
+    // a rule it cannot read leaves its days unknown: Wednesday is not 09:00-17:00
+    expect(describeWeek(fromCompact("Mo-Fr 09:00-17:00; We sunrise-sunset")!.week)).toBe(
+      "Mon–Tue 09:00–17:00; Thu–Fri 09:00–17:00",
+    );
+    expect(describeWeek(fromCompact("Mo-Fr 09:00-17:00, We off")!.week)).toBe(
+      "Mon–Tue 09:00–17:00; Wed closed; Thu–Fri 09:00–17:00",
+    );
+  });
+});

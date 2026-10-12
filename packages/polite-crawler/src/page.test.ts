@@ -9,7 +9,7 @@ import { DocIndex } from "./docs.ts";
 import { CaptureLog } from "./log.ts";
 import type { Renderer } from "./render.ts";
 import type { CrawlRuntime } from "./runtime.ts";
-import { Extractors, fetchPage, reindex } from "./runtime.ts";
+import { Extractors, fetchPage, pageExtractor, reindex } from "./runtime.ts";
 
 let dir: string | undefined;
 // a capture log keeps its file open: one left open is closed by the garbage
@@ -133,5 +133,59 @@ describe("reading pages, rendering only on evidence", () => {
     expect(rebuilt.index.get("url:https://bistro.example/")!.text).toContain(
       "Dinner Monday to Friday",
     );
+  });
+});
+
+describe("the page extractor", () => {
+  it("decodes a page in the charset that it declares", async () => {
+    // "Café" and "Mon–Fri 11am–9pm" in windows-1252: é is 0xE9, the en dash 0x96
+    const parts = [
+      "<html><head><title>Caf",
+      "\u00e9",
+      "</title></head><body><h2>Hours</h2><p>Mon",
+      "\u0096",
+      "Fri 11am",
+      "\u0096",
+      "9pm</p></body></html>",
+    ];
+    const body = new Uint8Array(Array.from(parts.join(""), (char) => char.charCodeAt(0)));
+    const [doc] = await pageExtractor(body, {
+      url: "https://cafe.example/",
+      contentType: "text/html; charset=windows-1252",
+    });
+    expect(doc).toMatchObject({ title: "Café" });
+    expect(doc!.text).toContain("Mon–Fri 11am–9pm");
+  });
+
+  it("keeps the record with the hours when a large record comes before it", async () => {
+    const reviews = Array.from({ length: 400 }, (_, index) => ({
+      "@type": "Review",
+      reviewBody: `Great bread number ${String(index)}, we would buy it again and again.`,
+    }));
+    const product = { "@type": "Product", name: "Sourdough", review: reviews };
+    const bakery = { "@type": "Bakery", name: "Bakery", openingHours: "Tu-Su 07:00-15:00" };
+    const html = `<html><head><script type="application/ld+json">${JSON.stringify(product)}</script>
+      <script type="application/ld+json">${JSON.stringify(bakery)}</script></head><body><p>Bread.</p></body></html>`;
+    const [doc] = await pageExtractor(new TextEncoder().encode(html), {
+      url: "https://bakery.example/",
+      contentType: "text/html",
+    });
+    expect(doc!.meta["jsonld"]).toEqual([bakery, { "@type": "Product", name: "Sourdough" }]);
+  });
+
+  it("reads a page nested too deep for a recursive walk, and the index still rebuilds", async () => {
+    const { agent, runtime } = await setup(fakeRenderer(SHOWN));
+    const deep = `<html><body>${"<span>".repeat(20_000)}Catalogue${"</span>".repeat(20_000)}<p>${"Hand-made bowls and cups. ".repeat(10)}</p></body></html>`;
+    site(agent, "https://shop.example", "User-agent: *\nAllow: /\n", {
+      "/catalog": deep,
+      "/also-good": PLAIN,
+    });
+    const catalog = await fetchPage(runtime, "https://shop.example/catalog", { render: "never" });
+    expect(catalog.doc).toBe("url:https://shop.example/catalog");
+    await fetchPage(runtime, "https://shop.example/also-good", { render: "never" });
+    await runtime.log.close();
+    const rebuilt = { ...runtime, index: new DocIndex(":memory:") };
+    expect((await reindex(rebuilt)).docs).toBe(2);
+    expect(rebuilt.index.get("url:https://shop.example/catalog")!.text).toContain("Catalogue");
   });
 });

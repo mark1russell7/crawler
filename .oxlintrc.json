@@ -9,13 +9,27 @@
     "typescript/no-floating-promises": "error",
     "typescript/no-misused-promises": "error",
     "typescript/no-misused-spread": "error",
-    "unicorn/no-useless-spread": "warn",
+    "unicorn/no-useless-spread": "error",
     "vitest/valid-expect": [
       "error",
       {
         "maxArgs": 2
       }
+    ],
+    "vitest/expect-expect": [
+      "error",
+      {
+        "assertFunctionNames": ["expect", "expect.*", "fc.assert", "wellFormed", "linear"]
+      }
     ]
   },
-  "ignorePatterns": ["**/build/**", "**/dist/**", "**/.astro/**", "**/coverage/**"]
+  "ignorePatterns": ["**/build/**", "**/dist/**", "**/.astro/**", "**/coverage/**"],
+  "overrides": [
+    {
+      "files": ["**/*.property.test.ts"],
+      "rules": {
+        "vitest/no-conditional-expect": "off"
+      }
+    }
+  ]
 }

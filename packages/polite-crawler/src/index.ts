@@ -42,7 +42,7 @@ export type { PageExtract, PageLink } from "./html.ts";
 export { canonicalUrl, extractPage, readJsonLd, typesOf, visibleText } from "./html.ts";
 export type { CaptureFilter, CaptureReader } from "./log.ts";
 export { CaptureLog } from "./log.ts";
-export type { PdfText } from "./pdf.ts";
+export type { PdfOptions, PdfText } from "./pdf.ts";
 export { isPdf, readPdf } from "./pdf.ts";
 export type {
   Clock,
@@ -69,7 +69,7 @@ export {
 export type { CaptureRecord, RecordInput } from "./record.ts";
 export { makeRecord, sha256, stableStringify } from "./record.ts";
 export type { PlaywrightRenderer, RenderOptions, Renderer, Rendered } from "./render.ts";
-export { playwrightRenderer } from "./render.ts";
+export { RenderRefused, playwrightRenderer } from "./render.ts";
 export type { Robots, RobotsDecision, RobotsGroup, RobotsRule, RobotsSignal } from "./robots.ts";
 export {
   ALLOW_ALL,
@@ -113,3 +113,4 @@ export { NO_PLAYWRIGHT } from "./render.ts";
 export { VERSION } from "./version.ts";
 export type { AiInput, Signals } from "./signals.ts";
 export { NO_SIGNALS, readSignals } from "./signals.ts";
+export { bodyEncoding, decodeBody } from "./text.ts";

@@ -1,7 +1,9 @@
 import type { BlobStore } from "./blobs.ts";
 import type { Crawler, FetchRequest, Fetched, RenderRequest } from "./crawler.ts";
 import { renderedKey } from "./crawler.ts";
+import type { PageExtract } from "./html.ts";
 import { canonicalUrl, extractPage, typesOf } from "./html.ts";
+import { decodeBody } from "./text.ts";
 import type { Doc, DocIndex, DocInput } from "./docs.ts";
 import type { CaptureLog, CaptureReader } from "./log.ts";
 import { isPdf, readPdf } from "./pdf.ts";
@@ -22,26 +24,89 @@ export type Extractor = (
 /** This function gives the document id of a web page. Each page has one id. */
 export const pageDocId = (url: string): string => `url:${canonicalUrl(url)}`;
 
+/** The JSON-LD that a document keeps, in characters of JSON. */
 const MAX_JSONLD_CHARS = 30_000;
+/** These properties make a JSON-LD record large, and they say little about the place: they go first when a record is too large. */
+const BULKY = [
+  "review",
+  "reviews",
+  "comment",
+  "hasMenu",
+  "hasMenuSection",
+  "hasMenuItem",
+  "menu",
+  "photo",
+  "image",
+  "subjectOf",
+  "makesOffer",
+  "hasOfferCatalog",
+];
+/** These properties say where and when a place is open. A record with one of them is kept first. */
+const PLACE_KEYS = ["openingHours", "openingHoursSpecification", "address", "geo", "telephone"];
+
+/**
+ * This function keeps the JSON-LD records that fit the limit. A record with hours, an address or a
+ * position goes first. A large record loses its reviews and its menu before it is left out. A
+ * record that does not fit does not stop the records after it.
+ */
+const keepJsonLd = (
+  records: readonly Record<string, unknown>[],
+): { readonly kept: Record<string, unknown>[]; readonly dropped: number } => {
+  const place = (record: Record<string, unknown>): boolean =>
+    PLACE_KEYS.some((key) => record[key] !== undefined);
+  const ordered = [...records.filter(place), ...records.filter((record) => !place(record))];
+  const kept: Record<string, unknown>[] = [];
+  let dropped = 0;
+  let room = MAX_JSONLD_CHARS;
+  for (const record of ordered) {
+    let size = JSON.stringify(record).length;
+    let candidate = record;
+    if (size > room) {
+      candidate = Object.fromEntries(Object.entries(record).filter(([key]) => !BULKY.includes(key)));
+      size = JSON.stringify(candidate).length;
+    }
+    if (size > room) {
+      dropped += 1;
+      continue;
+    }
+    kept.push(candidate);
+    room -= size;
+  }
+  return { kept, dropped };
+};
 
 /**
  * This extractor is the built-in recipe for a web page, plain or rendered. It keeps the visible
- * text, the JSON-LD (whole objects, up to a limit) and the links.
+ * text, the JSON-LD (whole objects, up to a limit) and the links. It decodes the body in the
+ * encoding that the page declares, with `decodeBody`. It does not throw: a page that it cannot read
+ * gives a document that names the error.
  */
 export const pageExtractor: Extractor = (body, capture) => {
   if (isPdf(body, capture.contentType)) return pdfDocs(body, capture.url);
   if (capture.contentType !== null && !/html|xml/i.test(capture.contentType)) return [];
-  const page = extractPage(new TextDecoder("utf-8").decode(body), capture.url);
-  const jsonld: Record<string, unknown>[] = [];
-  let size = 0;
-  for (const record of page.jsonld) {
-    size += JSON.stringify(record).length;
-    if (size > MAX_JSONLD_CHARS) break;
-    jsonld.push(record);
+  const doc = pageDocId(capture.url);
+  let page: PageExtract;
+  try {
+    page = extractPage(decodeBody(body, capture.contentType), capture.url);
+  } catch (error) {
+    // one page that breaks the reader must not break the fetch, or each later reindex
+    return [
+      {
+        doc,
+        kind: "page",
+        title: capture.url,
+        text: capture.url,
+        url: capture.url,
+        meta: {
+          extract_error: error instanceof Error ? error.message.slice(0, 300) : String(error),
+        },
+      },
+    ];
   }
+  const jsonld = keepJsonLd(page.jsonld);
   return [
     {
-      doc: pageDocId(capture.url),
+      doc,
       kind: "page",
       title: page.title,
       text: page.text.length > 0 ? page.text : page.title,
@@ -50,12 +115,17 @@ export const pageExtractor: Extractor = (body, capture) => {
         description: page.description,
         lang: page.lang,
         jsonld_types: [...new Set(page.jsonld.flatMap(typesOf))],
-        jsonld,
+        jsonld: jsonld.kept,
+        ...(jsonld.dropped > 0 ? { jsonld_dropped: jsonld.dropped } : {}),
         links: page.links.slice(0, 100),
         visible_chars: page.visibleChars,
         embedded: page.embedded,
         needs_render: page.needsRender,
         render_reason: page.renderReason,
+        canonical: page.canonical,
+        redirect: page.redirect,
+        blocked: page.blocked,
+        ...(page.notes.length > 0 ? { notes: page.notes } : {}),
       },
     },
   ];
@@ -63,18 +133,21 @@ export const pageExtractor: Extractor = (body, capture) => {
 
 const MAX_PDF_TEXT_CHARS = 200_000;
 
-/** This function changes a PDF into one document of its text. A scan or a damaged file gives no document. */
+/**
+ * This function changes a PDF into one document of its text. A PDF with no text, a scan for
+ * example, gives a document of its title only, and the document says that it needs OCR. A damaged
+ * file gives no document.
+ */
 const pdfDocs = async (
   body: Uint8Array,
   url: string,
 ): Promise<ReadonlyArray<Omit<DocInput, "captures" | "ai_input">>> => {
   let read;
   try {
-    read = await readPdf(body);
+    read = await readPdf(body, { maxChars: MAX_PDF_TEXT_CHARS });
   } catch {
     return [];
   }
-  if (read.text.length === 0) return [];
   const file = new URL(url).pathname.split("/").pop() ?? "";
   let named = file;
   try {
@@ -82,14 +155,38 @@ const pdfDocs = async (
   } catch {
     // a malformed escape: the name as written
   }
+  const title = read.title ?? (named || url);
+  const notes = {
+    ...(read.truncated ? { truncated: true } : {}),
+    ...(read.note !== null ? { note: read.note } : {}),
+  };
+  if (read.text.length === 0) {
+    return [
+      {
+        doc: pageDocId(url),
+        kind: "pdf",
+        title,
+        text: title,
+        url,
+        meta: {
+          format: "pdf",
+          pages: read.pages,
+          visible_chars: 0,
+          // a file that a budget stopped is not a scan
+          ocr_needed: read.note === null,
+          ...notes,
+        },
+      },
+    ];
+  }
   return [
     {
       doc: pageDocId(url),
       kind: "pdf",
-      title: read.title ?? (named || url),
+      title,
       text: read.text.slice(0, MAX_PDF_TEXT_CHARS),
       url,
-      meta: { format: "pdf", pages: read.pages, visible_chars: read.text.length },
+      meta: { format: "pdf", pages: read.pages, visible_chars: read.text.length, ...notes },
     },
   ];
 };

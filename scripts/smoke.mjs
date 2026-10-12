@@ -216,9 +216,17 @@ console.log("opened a store, find gave " + String(found.length) + " results");
   check(version.stdout.trim() === manifest.version, `--version prints ${version.stdout.trim()}`);
   const help = must(`${command} --help`, run(command, ["--help"], { cwd: consumer, env }));
   check(help.stdout.includes("Usage"), "--help prints the usage");
-  must(
-    `${command} find smoke --dir ./store-cli`,
-    run(command, ["find", "smoke", "--dir", "./store-cli"], { cwd: consumer, env }),
+  // find with no match exits 1, and a wrong command line exits 2 before it opens a store
+  const found = run(command, ["find", "smoke", "--dir", "./store-cli"], { cwd: consumer, env });
+  check(
+    found.status === 1 && found.stdout.includes("nothing stored matches"),
+    `${command} find smoke --dir ./store-cli: no match, exit ${String(found.status)}`,
+  );
+  if (found.status !== 1) show(found.stdout + found.stderr);
+  const wrong = run(command, ["bogus", "--dir", "./store-wrong"], { cwd: consumer, env });
+  check(
+    wrong.status === 2 && !existsSync(join(consumer, "store-wrong")),
+    `${command} bogus: exit ${String(wrong.status)}, and no store`,
   );
 
   // The MCP server: initialize, then tools/list. Each line of stdout must be JSON-RPC.

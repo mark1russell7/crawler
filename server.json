@@ -37,6 +37,18 @@
           "name": "POLITE_CRAWLER_CONTACT",
           "description": "An email address or URL for the From header of each request.",
           "isRequired": false
+        },
+        {
+          "name": "POLITE_CRAWLER_ALLOW_PRIVATE",
+          "description": "Set it to 1 to let the crawler fetch loopback, private and link-local addresses. The default refuses them.",
+          "format": "boolean",
+          "isRequired": false
+        },
+        {
+          "name": "POLITE_CRAWLER_ALLOW_USER_PROVIDED",
+          "description": "Set it to 1 to let user_provided read a page that refuses AI input when the client cannot ask the user to confirm.",
+          "format": "boolean",
+          "isRequired": false
         }
       ]
     }

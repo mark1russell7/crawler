@@ -1,5 +1,6 @@
 import { Readability } from "@mozilla/readability";
 import { parseHTML } from "linkedom";
+import { canonicalUrl } from "./urls.ts";
 
 export { bodyEncoding, decodeBody } from "./text.ts";
 
@@ -30,6 +31,11 @@ export interface PageExtract {
   readonly title: string;
   readonly description: string | null;
   readonly text: string;
+  /**
+   * When the reader cut `text` to its maximum, this text is the whole visible text in the order of
+   * the page. A quote past the cut is still in it. Otherwise this value is undefined.
+   */
+  readonly fullText?: string | undefined;
   /** These are the JSON-LD objects of the page, with each `@graph` made flat. */
   readonly jsonld: readonly Record<string, unknown>[];
   readonly links: readonly PageLink[];
@@ -670,39 +676,7 @@ export const typesOf = (record: Record<string, unknown>): string[] => {
 
 // ── URLs ────────────────────────────────────────────────────────────────────
 
-const TRACKING =
-  /^(utm_[a-z_]+|fbclid|gclid|gclsrc|dclid|gbraid|wbraid|msclkid|yclid|ttclid|twclid|li_fat_id|srsltid|mc_[a-z]+|_ga|_gl|_hsenc|_hsmi|__hstc|__hssc|__hsfp|mkt_tok|ref_src|igshid)$/i;
-
-/** This function decodes the escapes of unreserved characters (`%7E` is `~`), and writes the other escapes in capitals. */
-const normalizeEscapes = (value: string): string =>
-  value.replace(/%[0-9a-f]{2}/gi, (escape) => {
-    const char = String.fromCharCode(Number.parseInt(escape.slice(1), 16));
-    return /^[A-Za-z0-9\-._~]$/.test(char) ? char : escape.toUpperCase();
-  });
-
-/**
- * This function gives one URL for each page: a lowercase host, and no fragment, tracking
- * parameters, empty query or default port. It decodes the escapes of unreserved characters.
- */
-export const canonicalUrl = (value: string): string => {
-  const url = new URL(value);
-  url.hash = "";
-  url.hostname = url.hostname.toLowerCase();
-  if (
-    (url.protocol === "https:" && url.port === "443") ||
-    (url.protocol === "http:" && url.port === "80")
-  ) {
-    url.port = "";
-  }
-  // a copy of the keys, because the loop deletes from the live list
-  for (const key of Array.from(url.searchParams.keys())) {
-    if (TRACKING.test(key)) url.searchParams.delete(key);
-  }
-  if (url.pathname.includes("%")) url.pathname = normalizeEscapes(url.pathname);
-  // "/p?" is "/p"
-  url.search = url.search.includes("%") ? normalizeEscapes(url.search) : url.search;
-  return url.href;
-};
+export { canonicalUrl };
 
 const isWeb = (url: URL): boolean => url.protocol === "http:" || url.protocol === "https:";
 const siteOf = (host: string): string => host.toLowerCase().replace(/^www\./, "");
@@ -1030,6 +1004,7 @@ export const extractPage = (html: string, pageUrl: string): PageExtract => {
     title: title.replace(/\s+/g, " ").slice(0, 300),
     description,
     text,
+    ...(cut ? { fullText: all } : {}),
     jsonld,
     links,
     lang,

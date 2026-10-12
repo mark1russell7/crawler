@@ -1,6 +1,6 @@
-import { mkdtemp, rm } from "node:fs/promises";
-import { tmpdir } from "node:os";
+import { mkdir, symlink } from "node:fs/promises";
 import { join } from "node:path";
+import { DatabaseSync } from "node:sqlite";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { MockAgent } from "undici";
@@ -8,6 +8,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { createMcpServer } from "./mcp.ts";
 import type { PoliteCrawler } from "./open.ts";
 import { defaultUserAgent, durationMs, openCrawler } from "./open.ts";
+import { fakeClock, removeDir, tempDir } from "./test-helpers.ts";
 
 const HTML = `<!doctype html><html lang="en"><head><title>Forno Esempio</title>
 <script type="application/ld+json">{"@type":"Restaurant","name":"Forno Esempio"}</script></head>
@@ -20,12 +21,12 @@ let crawler: PoliteCrawler | undefined;
 afterEach(async () => {
   await crawler?.close();
   crawler = undefined;
-  if (dir !== undefined) await rm(dir, { recursive: true, force: true });
+  if (dir !== undefined) await removeDir(dir);
   dir = undefined;
 });
 
 const setup = async (robots = "User-agent: *\nAllow: /\n") => {
-  dir = await mkdtemp(join(tmpdir(), "polite-crawler-open-"));
+  dir = await tempDir("open");
   const agent = new MockAgent();
   agent.disableNetConnect();
   const site = agent.get("https://bakery.example");
@@ -34,7 +35,9 @@ const setup = async (robots = "User-agent: *\nAllow: /\n") => {
     .intercept({ path: "/" })
     .reply(200, HTML, { headers: { "content-type": "text/html; charset=utf-8" } })
     .persist();
-  crawler = openCrawler({ dir, renderer: false, dispatcher: agent });
+  // a clock of the test: the pace of robots.txt and the page passes with no real wait
+  const clock = fakeClock();
+  crawler = openCrawler({ dir, renderer: false, dispatcher: agent, clock });
   return crawler;
 };
 
@@ -79,7 +82,56 @@ describe("openCrawler", () => {
     expect(durationMs("30m")).toBe(1_800_000);
     expect(durationMs(" 7d ")).toBe(604_800_000);
     expect(durationMs(5000)).toBe(5000);
+    expect(durationMs("0")).toBe(0);
+    expect(durationMs("0s")).toBe(0);
+    expect(durationMs("2H")).toBe(7_200_000);
     expect(() => durationMs("soon")).toThrow(/not a duration/);
+    // a month is not a unit: M is an error, not minutes
+    expect(() => durationMs("1M")).toThrow(/m is minutes/);
+  });
+
+  it("never throws before its promise, closes once, and refuses work after the close", async () => {
+    const polite = await setup();
+    const bad = polite.fetch("https://bakery.example/", { maxAge: "1mo" });
+    await expect(bad).rejects.toThrow(/not a duration/);
+    const page = await polite.fetch("https://bakery.example/");
+    await expect(polite.read(page.doc!, { from: -10 })).rejects.toThrow(RangeError);
+    await expect(polite.read(page.doc!, { length: Number.NaN })).rejects.toThrow(RangeError);
+    const end = await polite.read(page.doc!, { from: 1_000_000 });
+    expect(end).toMatchObject({ text: "" });
+    expect(end.from).toBe(end.total);
+    await polite.close();
+    await polite.close();
+    await expect(polite.fetch("https://bakery.example/")).rejects.toThrow(/closed/);
+    await expect(polite.read(page.doc!)).rejects.toThrow(/closed/);
+    expect(() => polite.find("bread")).toThrow(/closed/);
+  });
+
+  it("rebuilds an index of an earlier version when it opens", async () => {
+    const polite = await setup();
+    const page = await polite.fetch("https://bakery.example/");
+    await polite.close();
+    crawler = undefined;
+    // the file as version 0.1 left it: other tables, and no schema version
+    const path = join(dir!, "index.sqlite");
+    for (const suffix of ["-wal", "-shm"]) await removeDir(`${path}${suffix}`);
+    await removeDir(path);
+    const old = new DatabaseSync(path);
+    old.exec("CREATE TABLE docs (doc TEXT PRIMARY KEY, text TEXT)");
+    old.close();
+    crawler = openCrawler({ dir: dir!, renderer: false, clock: fakeClock() });
+    const read = await crawler.read(page.doc!);
+    expect(read.text).toContain("Forno Esempio");
+  });
+
+  it.skipIf(process.platform === "win32")("refuses a part of the store that is a symbolic link", async () => {
+    const root = await tempDir("open");
+    dir = root;
+    const elsewhere = join(root, "elsewhere");
+    await mkdir(join(root, "store"), { recursive: true });
+    await mkdir(elsewhere);
+    await symlink(elsewhere, join(root, "store", "blobs"));
+    expect(() => openCrawler({ dir: join(root, "store"), renderer: false })).toThrow(/symbolic link/);
   });
 });
 

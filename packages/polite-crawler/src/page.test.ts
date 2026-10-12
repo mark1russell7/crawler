@@ -129,7 +129,7 @@ describe("reading pages, rendering only on evidence", () => {
     await fetchPage(runtime, "https://bistro.example/", { render: "auto" });
     await runtime.log.close();
     const rebuilt = { ...runtime, index: new DocIndex(":memory:") };
-    expect(await reindex(rebuilt)).toEqual({ captures: 3, docs: 1, urls: 3 });
+    expect(await reindex(rebuilt)).toMatchObject({ captures: 3, docs: 1, urls: 3, failed: 0, missing: 0, damaged: 0 });
     expect(rebuilt.index.get("url:https://bistro.example/")!.text).toContain(
       "Dinner Monday to Friday",
     );

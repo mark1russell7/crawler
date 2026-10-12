@@ -1,15 +1,19 @@
 /**
  * The robots.txt tester. It parses the text with `parseRobots` and decides each path with `decide`,
  * the same functions that the crawler uses before each request. It shows the rule that decided, on
- * its line, for each user agent.
+ * its line, for each user agent. The last column is the verdict of the MCP server, which obeys the
+ * rules for its own token and for `Claude-User`.
  */
-import { useMemo, useState, type ReactElement } from "react";
+import { useEffect, useMemo, useState, type ReactElement } from "react";
 import type { RobotsDecision } from "polite-crawler/robots";
 import { decide, parseRobots } from "polite-crawler/robots";
 import { readSignals } from "polite-crawler/signals";
+import { TRAINING_BLOCK_PATHS, TRAINING_BLOCK_ROBOTS } from "../lib/recipes.ts";
+import { productToken, toPath } from "../lib/tester.ts";
 
-const PRESETS: ReadonlyArray<{ readonly name: string; readonly text: string; readonly paths: string }> = [
+const PRESETS: ReadonlyArray<{ readonly id: string; readonly name: string; readonly text: string; readonly paths: string }> = [
   {
+    id: "typical",
     name: "A typical site",
     text: `# Keep the search pages and the account pages out of the crawl
 User-agent: *
@@ -22,6 +26,7 @@ Sitemap: https://www.example.com/sitemap.xml
     paths: "/\n/search?q=bread\n/account/orders\n/account/help\n/blog/robots",
   },
   {
+    id: "ai",
     name: "Blocks AI crawlers",
     text: `User-agent: GPTBot
 User-agent: ClaudeBot
@@ -38,6 +43,13 @@ Allow: /
     paths: "/\n/members/news\n/about",
   },
   {
+    id: "training",
+    name: "Refuses training, permits assistants",
+    text: TRAINING_BLOCK_ROBOTS,
+    paths: TRAINING_BLOCK_PATHS,
+  },
+  {
+    id: "wildcards",
     name: "Wildcards and $",
     text: `User-agent: *
 Disallow: /*.pdf$
@@ -48,6 +60,7 @@ Disallow: /tmp
     paths: "/report.pdf\n/report.pdf?page=2\n/public/menu.pdf\n/shop?sessionid=42\n/tmp/a\n/tmpfile",
   },
   {
+    id: "signals",
     name: "Crawl delay and content signals",
     text: `User-agent: *
 Crawl-delay: 10
@@ -60,10 +73,14 @@ Disallow: /drafts/
 
 const AGENTS = ["PoliteCrawler", "Claude-User", "GPTBot", "ClaudeBot", "Googlebot"] as const;
 
-interface Row {
-  readonly path: string;
-  readonly agent: string;
-  readonly decision: RobotsDecision;
+/** The tokens of the MCP server: its own token, and the token of the agent it fetches for. */
+const MCP_TOKENS = ["PoliteCrawler", "Claude-User"] as const;
+
+interface Column {
+  readonly key: string;
+  readonly label: string;
+  readonly title: string;
+  readonly tokens: readonly string[];
 }
 
 /** This function gives the text that explains one decision. */
@@ -71,7 +88,8 @@ const reason = (decision: RobotsDecision): string => {
   const rule = decision.rule;
   if (rule === undefined) return "no rule matches";
   const verb = rule.allow ? "Allow" : "Disallow";
-  return `line ${String(rule.line ?? "?")}: ${verb}: ${rule.pattern}`;
+  const by = decision.by !== undefined && decision.by !== "PoliteCrawler" ? ` (the group for ${decision.by})` : "";
+  return `line ${String(rule.line ?? "?")}: ${verb}: ${rule.pattern}${by}`;
 };
 
 /** The tester. */
@@ -79,15 +97,47 @@ export default function RobotsTester(): ReactElement {
   const [text, setText] = useState(PRESETS[0]!.text);
   const [paths, setPaths] = useState(PRESETS[0]!.paths);
   const [custom, setCustom] = useState("");
-  const [selected, setSelected] = useState<number | undefined>(undefined);
+  const [selected, setSelected] = useState<string | undefined>(undefined);
+
+  // a link can open an example: ?example=training
+  useEffect(() => {
+    const id = new URLSearchParams(window.location.search).get("example");
+    const preset = PRESETS.find((candidate) => candidate.id === id);
+    if (preset !== undefined) {
+      setText(preset.text);
+      setPaths(preset.paths);
+    }
+  }, []);
+
   const robots = useMemo(() => parseRobots(text), [text]);
-  const agents = custom.trim().length > 0 ? [...AGENTS, custom.trim()] : [...AGENTS];
-  const rows: Row[] = paths
-    .split("\n")
-    .map((path) => path.trim())
-    .filter((path) => path.length > 0)
-    .flatMap((path) => agents.map((agent) => ({ path, agent, decision: decide(robots, [agent], path) })));
-  const chosen = selected === undefined ? undefined : rows[selected];
+  const token = productToken(custom);
+  const known = AGENTS.some((agent) => agent.toLowerCase() === token.toLowerCase());
+  const columns: Column[] = [
+    ...AGENTS.map((agent) => ({ key: agent, label: agent, title: agent, tokens: [agent] })),
+    ...(token.length > 0 && !known ? [{ key: "custom", label: token, title: custom.trim(), tokens: [token] }] : []),
+    {
+      key: "mcp",
+      label: "MCP server",
+      title: "The MCP server of polite-crawler: the rules for PoliteCrawler and for Claude-User",
+      tokens: MCP_TOKENS,
+    },
+  ];
+  const targets = [
+    ...new Map(
+      paths
+        .split("\n")
+        .filter((line) => line.trim().length > 0)
+        .map((line) => toPath(line))
+        .map((target) => [target.path, target] as const),
+    ).values(),
+  ];
+  const decisionOf = (path: string, column: Column): RobotsDecision => decide(robots, column.tokens, path);
+  const [chosenPath, chosenKey] = selected?.split("\u0000") ?? [];
+  const chosenColumn = columns.find((column) => column.key === chosenKey);
+  const chosen =
+    chosenPath !== undefined && chosenColumn !== undefined && targets.some((target) => target.path === chosenPath)
+      ? { path: chosenPath, column: chosenColumn, decision: decisionOf(chosenPath, chosenColumn) }
+      : undefined;
   const signals = readSignals(robots.signals, () => undefined);
   const lines = text.split(/\r\n|\r|\n/);
   const delay = decide(robots, ["PoliteCrawler"], "/").crawlDelaySeconds;
@@ -97,7 +147,7 @@ export default function RobotsTester(): ReactElement {
       <div className="pc-presets" role="group" aria-label="Examples">
         {PRESETS.map((preset) => (
           <button
-            key={preset.name}
+            key={preset.id}
             type="button"
             className="pc-chip"
             aria-pressed={text === preset.text}
@@ -127,18 +177,31 @@ export default function RobotsTester(): ReactElement {
         </label>
         <div className="pc-tool-side">
           <label className="pc-field">
-            <span>Paths to test, one on each line</span>
+            <span>Paths or URLs to test, one on each line</span>
             <textarea value={paths} spellCheck={false} rows={5} onChange={(event) => setPaths(event.target.value)} />
           </label>
           <label className="pc-field">
-            <span>Your own user agent</span>
+            <span>Your own user agent: a token or a full User-Agent header</span>
             <input
               value={custom}
-              placeholder="For example MyBot"
+              placeholder="For example MyBot/1.0"
               spellCheck={false}
               onChange={(event) => setCustom(event.target.value)}
             />
           </label>
+          {token.length > 0 ? (
+            <p className="pc-empty" aria-live="polite">
+              {known ? (
+                <>
+                  The token <code>{token}</code> is already a column.
+                </>
+              ) : (
+                <>
+                  The tester matches the product token <code>{token}</code>.
+                </>
+              )}
+            </p>
+          ) : null}
           <dl className="pc-facts">
             <div>
               <dt>Groups</dt>
@@ -156,38 +219,40 @@ export default function RobotsTester(): ReactElement {
         </div>
       </div>
 
-      <div className="pc-table-wrap">
-        <table className="pc-table">
+      <div className="pc-table-wrap" tabIndex={0} role="region" aria-label="The verdict for each path and each agent">
+        <table className="pc-table pc-tester-table">
           <thead>
             <tr>
               <th scope="col">Path</th>
-              {agents.map((agent) => (
-                <th scope="col" key={agent}>
-                  {agent}
+              {columns.map((column) => (
+                <th scope="col" key={column.key} title={column.title} className={column.key === "mcp" ? "pc-tester-mcp" : undefined}>
+                  {column.label}
+                  {column.key === "mcp" ? <span className="pc-tester-sub">PoliteCrawler and Claude-User</span> : null}
                 </th>
               ))}
             </tr>
           </thead>
           <tbody>
-            {[...new Set(rows.map((row) => row.path))].map((path) => (
-              <tr key={path}>
+            {targets.map((target) => (
+              <tr key={target.path}>
                 <th scope="row">
-                  <code>{path}</code>
+                  <code>{target.path}</code>
+                  {target.from !== undefined ? <span className="pc-tester-sub">from {target.from}</span> : null}
                 </th>
-                {agents.map((agent) => {
-                  const index = rows.findIndex((row) => row.path === path && row.agent === agent);
-                  const row = rows[index]!;
+                {columns.map((column) => {
+                  const decision = decisionOf(target.path, column);
+                  const key = `${target.path}\u0000${column.key}`;
                   return (
-                    <td key={agent}>
+                    <td key={column.key} className={column.key === "mcp" ? "pc-tester-mcp" : undefined}>
                       <button
                         type="button"
-                        className={`pc-verdict ${row.decision.allowed ? "pc-verdict-yes" : "pc-verdict-no"}`}
-                        aria-pressed={selected === index}
-                        title={reason(row.decision)}
-                        onClick={() => setSelected(index)}
+                        className={`pc-verdict ${decision.allowed ? "pc-verdict-yes" : "pc-verdict-no"}`}
+                        aria-pressed={selected === key}
+                        title={reason(decision)}
+                        onClick={() => setSelected(key)}
                       >
-                        <span aria-hidden="true">{row.decision.allowed ? "✓" : "×"}</span>
-                        {row.decision.allowed ? "Permitted" : "Refused"}
+                        <span aria-hidden="true">{decision.allowed ? "✓" : "×"}</span>
+                        {decision.allowed ? "Permitted" : "Refused"}
                       </button>
                     </td>
                   );
@@ -202,7 +267,7 @@ export default function RobotsTester(): ReactElement {
         <p className="pc-listing-head">
           {chosen === undefined
             ? "Select a result to see the rule that decided it."
-            : `${chosen.agent} on ${chosen.path}: ${chosen.decision.allowed ? "permitted" : "refused"}, ${reason(chosen.decision)}.`}
+            : `${chosen.column.label} on ${chosen.path}: ${chosen.decision.allowed ? "permitted" : "refused"}, ${reason(chosen.decision)}.`}
         </p>
         <ol>
           {lines.map((line, index) => {

@@ -35,7 +35,7 @@ export { HostScheduler, HostStopped, backoffMs, realClock } from "./politeness.t
 export type { CaptureRecord, RecordInput } from "./record.ts";
 export { makeRecord, sha256, stableStringify } from "./record.ts";
 export type { PlaywrightRenderer, RenderOptions, Renderer, Rendered } from "./render.ts";
-export { playwrightRenderer } from "./render.ts";
+export { RenderRefused, playwrightRenderer } from "./render.ts";
 export type { Robots, RobotsDecision, RobotsGroup, RobotsRule } from "./robots.ts";
 export {
   ALLOW_ALL,

@@ -19,6 +19,15 @@ npx polite-crawler find "robots exclusion"
 claude mcp add polite-crawler -- npx -y polite-crawler mcp
 ```
 
+What the crawler does for you and for the sites:
+
+- It stops a host after a challenge, a 401, a 402 or a 403, for 1 to 24 hours. It does not try a different identity.
+- By default, it fetches only public addresses. `--allow-private` permits loopback and private addresses.
+- The MCP server gives page text in an `<untrusted-web-content>` envelope, so an assistant can tell data from instructions. A page that refuses AI input stays held back until a person confirms.
+- The library is `polite-crawler`, and the MCP server is `polite-crawler/mcp`.
+
+The [package README](packages/polite-crawler/README.md) tells the details.
+
 ## Development
 
 The repository is a pnpm workspace. It needs Node.js 22.19 or later and pnpm 10 or later.

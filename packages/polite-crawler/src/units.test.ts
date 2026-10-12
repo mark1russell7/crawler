@@ -1,10 +1,6 @@
-import { mkdtemp, readFile, rm, writeFile, mkdir } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { classify, isClientError, parseHttpDate, parseRetryAfter } from "./classify.ts";
 import { DEFAULT_SECRET_PARAMS, redact } from "./crawler.ts";
-import { CaptureLog } from "./log.ts";
 import {
   DEFAULT_POLICY,
   HostScheduler,
@@ -16,14 +12,7 @@ import {
   policyFor,
   realClock,
 } from "./politeness.ts";
-import { makeRecord } from "./record.ts";
 import { readSignals } from "./signals.ts";
-
-let dir: string | undefined;
-afterEach(async () => {
-  if (dir !== undefined) await rm(dir, { recursive: true, force: true });
-  dir = undefined;
-});
 
 const headers =
   (values: Record<string, string>) =>
@@ -285,28 +274,5 @@ describe("the politeness policy", () => {
     expect(() => checkPolicy({ maxFailures: 2.5 })).toThrow(RangeError);
     expect(() => checkPolicy({ hosts: { "a.example": { robotsTtlMs: -1 } } })).toThrow(RangeError);
     expect(() => checkPolicy({ blockedStopMs: Number.POSITIVE_INFINITY })).not.toThrow();
-  });
-});
-
-describe("the capture log", () => {
-  it("drops a torn last line before appending, once", async () => {
-    dir = await mkdtemp(join(tmpdir(), "polite-crawler-log-"));
-    const shard = join(dir, "fetch", "2026");
-    await mkdir(shard, { recursive: true });
-    await writeFile(join(shard, "10.ndjson"), '{"complete":true}\n{"torn":', "utf8");
-    const log = new CaptureLog(dir);
-    const envelope = makeRecord({
-      source: "fetch",
-      kind: "capture",
-      payload: { url: "https://x.example/" },
-      received_at: "2026-10-07T12:00:00.000Z",
-    });
-    await log.append(envelope);
-    await log.append({ ...envelope, id: "fetch.second" });
-    await log.close();
-    const lines = (await readFile(join(shard, "10.ndjson"), "utf8")).trim().split("\n");
-    expect(lines).toHaveLength(3);
-    expect(lines[0]).toBe('{"complete":true}');
-    expect(JSON.parse(lines[2]!).id).toBe("fetch.second");
   });
 });

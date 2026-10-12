@@ -81,8 +81,15 @@ export const DISALLOW_ALL: Robots = {
 };
 
 const UNRESERVED = /^[A-Za-z0-9\-._~]$/;
-/** The URL parser encodes these ASCII characters in a path or a query. A rule can contain them as written. */
-const ENCODED_ASCII = /^[\u0000- "'<>\\^`{|}\u007f]$/;
+const URL_ENCODED = new Set("\"'<>\\^`{|}");
+/**
+ * The URL parser encodes these ASCII characters in a path or a query: the controls, a space, DEL,
+ * and `"'<>\^`{|}`. A rule can contain them as written.
+ */
+const encodedAscii = (char: string): boolean => {
+  const code = char.charCodeAt(0);
+  return code <= 0x20 || code === 0x7f || URL_ENCODED.has(char);
+};
 const HEX = /^[0-9A-Fa-f]$/;
 
 const escapeOf = (char: string): string => {
@@ -104,7 +111,7 @@ const escapeOf = (char: string): string => {
  */
 export const normalizePath = (value: string): string => {
   let out = "";
-  const chars = [...value];
+  const chars = Array.from(value);
   for (let index = 0; index < chars.length; index += 1) {
     const char = chars[index]!;
     if (char === "%" && HEX.test(chars[index + 1] ?? "") && HEX.test(chars[index + 2] ?? "")) {
@@ -114,7 +121,7 @@ export const normalizePath = (value: string): string => {
       index += 2;
       continue;
     }
-    out += char.charCodeAt(0) > 0x7f || ENCODED_ASCII.test(char) ? escapeOf(char) : char;
+    out += char.charCodeAt(0) > 0x7f || encodedAscii(char) ? escapeOf(char) : char;
   }
   return out;
 };

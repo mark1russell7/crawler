@@ -1804,7 +1804,7 @@ export class Crawler {
       this.closed = true;
       this.closing.abort(new Error("crawler closed"));
       this.closingDone = (async () => {
-        await Promise.allSettled([...this.running]);
+        await Promise.allSettled(this.running);
         await this.options.renderer?.close();
         await this.options.log.close?.();
         if (this.ownsDispatcher) await this.dispatcher.close();

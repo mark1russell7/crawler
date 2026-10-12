@@ -23,11 +23,15 @@ export interface RobotsRule {
   readonly allow: boolean;
   /** This value is the path pattern, normalized for comparison. */
   readonly pattern: string;
+  /** This value is the number of the line in robots.txt, from 1. A rule that the code makes has none. */
+  readonly line?: number | undefined;
 }
 
 export interface RobotsGroup {
   /** These values are the user agents of the group, in lowercase. */
   readonly agents: readonly string[];
+  /** This value is the number of the first `user-agent` line of the group, from 1. */
+  readonly line?: number | undefined;
   readonly rules: readonly RobotsRule[];
   /** This value is the nonstandard `crawl-delay` in seconds, when the group sets one. */
   readonly crawlDelaySeconds: number | undefined;
@@ -99,6 +103,7 @@ const truncateUtf8 = (text: string, maxBytes: number): string => {
 export const parseRobots = (input: string): Robots => {
   const groups: Array<{
     agents: string[];
+    line: number;
     rules: RobotsRule[];
     crawlDelaySeconds: number | undefined;
   }> = [];
@@ -106,7 +111,7 @@ export const parseRobots = (input: string): Robots => {
   const signals: string[] = [];
   let current: (typeof groups)[number] | undefined;
   let collectingAgents = false;
-  for (const raw of truncateUtf8(input, ROBOTS_MAX_BYTES).split(/\r\n|\r|\n/)) {
+  for (const [index, raw] of truncateUtf8(input, ROBOTS_MAX_BYTES).split(/\r\n|\r|\n/).entries()) {
     const line = raw.replace(/#.*$/, "").trim();
     const colon = line.indexOf(":");
     if (colon <= 0) continue;
@@ -114,7 +119,7 @@ export const parseRobots = (input: string): Robots => {
     const value = line.slice(colon + 1).trim();
     if (key === "user-agent") {
       if (current === undefined || !collectingAgents) {
-        current = { agents: [], rules: [], crawlDelaySeconds: undefined };
+        current = { agents: [], line: index + 1, rules: [], crawlDelaySeconds: undefined };
         groups.push(current);
       }
       current.agents.push(value.toLowerCase());
@@ -134,7 +139,7 @@ export const parseRobots = (input: string): Robots => {
     collectingAgents = false;
     if (key === "allow" || key === "disallow") {
       if (value.length > 0)
-        current.rules.push({ allow: key === "allow", pattern: normalizePath(value) });
+        current.rules.push({ allow: key === "allow", pattern: normalizePath(value), line: index + 1 });
     } else if (key === "crawl-delay") {
       const seconds = Number(value);
       if (Number.isFinite(seconds) && seconds >= 0) current.crawlDelaySeconds = seconds;
@@ -164,6 +169,7 @@ const matches = (pattern: string, path: string): boolean => {
 
 interface Chosen {
   readonly rules: readonly RobotsRule[];
+  readonly groups: readonly RobotsGroup[];
   readonly crawlDelaySeconds: number | undefined;
   /** This value is true when a group names this token, and `*` did not apply. */
   readonly explicit: boolean;
@@ -181,12 +187,14 @@ const groupsFor = (robots: Robots, token: string): Chosen => {
   );
   return {
     rules: chosen.flatMap((group) => group.rules),
+    groups: chosen,
     crawlDelaySeconds: delays.length > 0 ? Math.max(...delays) : undefined,
     explicit: named.length > 0,
   };
 };
 
-const allowedBy = (rules: readonly RobotsRule[], path: string): boolean => {
+/** This function gives the rule that decides for the path: the longest match, and `allow` in a tie. */
+const decidingRule = (rules: readonly RobotsRule[], path: string): RobotsRule | undefined => {
   let best: RobotsRule | undefined;
   for (const rule of rules) {
     if (!matches(rule.pattern, path)) continue;
@@ -198,7 +206,7 @@ const allowedBy = (rules: readonly RobotsRule[], path: string): boolean => {
       best = rule;
     }
   }
-  return best === undefined || best.allow;
+  return best;
 };
 
 export interface RobotsDecision {
@@ -206,6 +214,10 @@ export interface RobotsDecision {
   /** This value is the product token whose rules refused the path. */
   readonly by: string | undefined;
   readonly crawlDelaySeconds: number | undefined;
+  /** This rule decided. When no rule matches the path, the path is permitted and this value is empty. */
+  readonly rule?: RobotsRule | undefined;
+  /** These groups applied to the decision: the groups that name the token, or the group `*`. */
+  readonly groups?: readonly RobotsGroup[] | undefined;
 }
 
 /**
@@ -221,19 +233,22 @@ export const decide = (
 ): RobotsDecision => {
   const path = normalizePath(pathAndQuery.length === 0 ? "/" : pathAndQuery);
   const primary = groupsFor(robots, tokens[0] ?? "*");
+  const crawlDelaySeconds = primary.crawlDelaySeconds;
   if (path === "/robots.txt") {
-    return { allowed: true, by: undefined, crawlDelaySeconds: primary.crawlDelaySeconds };
+    return { allowed: true, by: undefined, crawlDelaySeconds, rule: undefined, groups: [] };
   }
-  if (!allowedBy(primary.rules, path)) {
-    return { allowed: false, by: tokens[0], crawlDelaySeconds: primary.crawlDelaySeconds };
+  const rule = decidingRule(primary.rules, path);
+  if (rule !== undefined && !rule.allow) {
+    return { allowed: false, by: tokens[0], crawlDelaySeconds, rule, groups: primary.groups };
   }
   for (const token of tokens.slice(1)) {
     const extra = groupsFor(robots, token);
-    if (extra.explicit && !allowedBy(extra.rules, path)) {
-      return { allowed: false, by: token, crawlDelaySeconds: primary.crawlDelaySeconds };
+    const refusal = extra.explicit ? decidingRule(extra.rules, path) : undefined;
+    if (refusal !== undefined && !refusal.allow) {
+      return { allowed: false, by: token, crawlDelaySeconds, rule: refusal, groups: extra.groups };
     }
   }
-  return { allowed: true, by: undefined, crawlDelaySeconds: primary.crawlDelaySeconds };
+  return { allowed: true, by: undefined, crawlDelaySeconds, rule, groups: primary.groups };
 };
 
 /** This function gives the robots of a site whose robots.txt the crawler cannot read. No path is permitted, and the reason stays. */

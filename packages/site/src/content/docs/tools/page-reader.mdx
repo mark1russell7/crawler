@@ -1,0 +1,33 @@
+---
+title: What the crawler sees
+description: Paste the HTML of a web page and see what a crawler reads with no browser - the JSON-LD structured data, the visible text, the links - and if the page needs JavaScript to show its content.
+tableOfContents: false
+---
+
+import PageReader from "../../../components/PageReader.tsx";
+
+A crawler reads a page the cheap way first: it parses the HTML and opens no browser. This tool shows the result. Paste the HTML of a page, or select an example.
+
+The tool runs `extractPage` from polite-crawler, the same code that reads each page that the crawler fetches. Your HTML stays in your browser.
+
+<PageReader client:visible />
+
+## What the crawler reads
+
+- **The JSON-LD.** Many pages describe themselves with schema.org data in a `<script type="application/ld+json">` element. For a venue, this data gives the name, the address, the phone number and sometimes the opening hours. For a product, it gives the price.
+- **The visible text.** The crawler reads the text of the whole document and leaves out the scripts, the styles and the head. A table row becomes one line, so "Monday 10 am–5 pm" stays together.
+- **The links.** The crawler keeps the links with their text. A recipe can then follow the link "Hours & Location" to the page that has the hours.
+
+On a long page that looks like an article, the main text from [Readability](https://github.com/mozilla/readability) comes first, and the other lines of the page follow it. Readability removes footers, sidebars and tables, but a venue often keeps its hours there.
+
+## When a page needs a browser
+
+Some pages show nothing until their JavaScript runs. The crawler opens a headless browser for a page only when the plain HTML shows almost nothing:
+
+| Visible text | And | The decision |
+| --- | --- | --- |
+| Fewer than 80 characters | (nothing more) | A browser is necessary. |
+| Fewer than 1,200 characters | A `noscript` element asks for JavaScript | A browser is necessary. |
+| Fewer than 600 characters | An empty root element, for example `<div id="root">` | A browser is necessary. |
+
+Of 231 restaurant homepages in a survey, 13 needed a browser. The other 218 gave their text with one plain request. [Read the survey](../../notes/restaurant-websites/).

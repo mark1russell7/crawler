@@ -1,0 +1,49 @@
+---
+title: What 300 restaurant websites taught a crawler
+description: A survey of 300 restaurant, cafe and bar websites in the Boston area - how many a polite crawler can read, which site builders hide their opening hours, how many pages need JavaScript, and what each fix changed.
+---
+
+import { BuildersChart, OutcomesChart, ProgressChart } from "../../../components/SurveyCharts.tsx";
+
+A restaurant website answers one question for most visitors: is it open? We measured how well a polite crawler answers that question. We took 300 of the 1,187 restaurant, cafe and bar websites that OpenStreetMap lists in the Boston area, and we used polite-crawler on each one.
+
+## What the crawler could do
+
+<OutcomesChart client:visible />
+
+The crawler read 231 sites. It did not fetch the other 69:
+
+- **35 sites had no robots.txt that the crawler could read.** Most of these domains were dead, had a broken certificate or gave a server error. A crawler that cannot read the rules fetches nothing.
+- **13 sites refused the crawler in their robots.txt.** The crawler obeyed.
+- **13 sites showed a bot wall**, a challenge page or a block. The crawler stopped at once and did not try again.
+- **8 sites gave "not found".**
+
+Only 13 of the 231 homepages needed a browser to show their text. A plain request was enough for 218. 29 of the 231 sites link a menu as a PDF, and the crawler reads the text of each.
+
+## The site builder matters less than the links
+
+Most restaurants build their sites with a builder: Squarespace, Wix, WordPress, or a builder for restaurants, for example BentoBox. We expected each builder to need an adapter of its own. It did not.
+
+<BuildersChart client:visible />
+
+The homepage alone gives the hours for some builders and not for others. BentoBox sites give the hours on the homepage for only 5 of 23 sites. But each builder puts the hours one link away, on a page with a name like "Hours & Location". The venue recipe of the crawler follows the three links that most likely lead to the hours. Then BentoBox goes from 5 of 23 to 18 of 23. Then no builder is much worse than the others.
+
+## Five things that the survey fixed
+
+Each of these pages changed how the crawler reads every page.
+
+- **A tag before the head.** One homepage had a `<meta charset>` element before its `<head>`. The HTML parser then made an empty `body`, and the crawler read 0 characters of 89 KB. It went to the browser for nothing. The fix: the crawler reads the text of the whole document, and it reads 1,614 characters with no browser.
+- **Hours in a table.** A museum keeps its hours in a table. Readability removes tables from a long page, so the hours were gone. The fix: the main text comes first, and each other line of the page follows it.
+- **Two columns.** One venue lists seven day names and then seven time ranges. The reader paired each day with every range. The fix: it pairs the nth day with the nth range, and it reads nothing when the columns have different lengths.
+- **A confirmed robots.txt.** When a restarted crawler asks again with its `ETag`, some sites answer `304 Not Modified` for robots.txt. The crawler read that as an unreachable file and fetched nothing. The fix: a 304 keeps the stored rules.
+- **Lapsed domains.** OpenStreetMap still lists some domains that a restaurant no longer owns. Some of them show gambling spam. The fix: the venue recipe reads a listed site only when its homepage names the venue.
+
+## How the reader improved
+
+<ProgressChart client:visible />
+
+The hours "suggested" are the hours that the crawler offers as the hours of the venue. A reading below a label for a different schedule, for example "Happy hour" or "Brunch", stays a reading, but the crawler does not suggest it.
+
+## The sites with no hours
+
+49 of the 231 sites still give no hours that the crawler reads. 2 of them link the hours as a PDF or an image. A crawl of eight pages for each site, not three, finds 4 more. The other sites do not state their hours on a page at all.

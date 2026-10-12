@@ -28,7 +28,7 @@ export interface PageExtract {
   readonly links: readonly PageLink[];
   readonly lang: string | null;
   readonly visibleChars: number;
-  /** This value is true when the HTML holds the state of an application (Next.js, Nuxt, Apollo). */
+  /** These are the names of the application states that the HTML holds (Next.js, Nuxt, Apollo). */
   readonly embedded: readonly string[];
   /** This value is true when the page shows almost nothing without its scripts. */
   readonly needsRender: boolean;

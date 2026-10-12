@@ -1,0 +1,66 @@
+---
+title: Use it from Claude
+description: Give Claude, Claude Desktop, Cursor or any MCP client a polite web crawler with four tools - fetch, find, read and verify - over the Model Context Protocol.
+---
+
+import { Tabs, TabItem } from "@astrojs/starlight/components";
+
+The package includes an MCP server, and it gives an AI assistant four tools. The assistant fetches pages politely and searches the pages that it fetched before. It also reads a range of a page, and it checks a quote before it cites it.
+
+## Set up the server
+
+<Tabs>
+  <TabItem label="Claude Code">
+
+  ```sh
+  claude mcp add polite-crawler -- npx -y polite-crawler mcp
+  ```
+
+  </TabItem>
+  <TabItem label="Claude Desktop">
+
+  Add the server to `claude_desktop_config.json`:
+
+  ```json
+  {
+    "mcpServers": {
+      "polite-crawler": {
+        "command": "npx",
+        "args": ["-y", "polite-crawler", "mcp"]
+      }
+    }
+  }
+  ```
+
+  </TabItem>
+  <TabItem label="Other clients">
+
+  Start the server with standard input and output:
+
+  ```sh
+  npx -y polite-crawler mcp
+  ```
+
+  Use `--dir` to choose the store, and `--contact` to send an address in the `From` header.
+
+  </TabItem>
+</Tabs>
+
+## The tools
+
+| Tool | Input | What it gives |
+| --- | --- | --- |
+| `crawl_fetch` | `urls` (1 to 20), `render` (`auto`, `never` or `always`), `max_age` (for example `24h`) | For each page: the outcome, the status, the document id, the title, the schema.org types and the capture ids. |
+| `crawl_find` | `q`, `limit`, `kind` | Ranked passages from the stored pages, with their document ids. |
+| `crawl_read` | `doc`, `from`, `length`, `user_provided` | A range of the text of a document, with its captures. |
+| `crawl_verify` | `doc`, `quote` | The exact span of the quote and its position, or `found: false`. |
+
+`crawl_find`, `crawl_read` and `crawl_verify` send no request. They read the store on your disk.
+
+## Why an assistant needs a polite crawler
+
+A plain fetch tool goes back to the site for each question, and nothing stays. With polite-crawler, the assistant fetches a source one time, reads the stored copy many times, and cites the exact capture.
+
+- **Rules for assistants.** The MCP server obeys the robots.txt rules for `Claude-User` too, because an assistant asks for these pages. [Test a robots.txt](../../tools/robots-txt-tester/).
+- **Content signals.** When a page asks not to be AI input, the server keeps the page but holds back its text. When a person gave the URL directly, the assistant can pass `user_provided`, and the crawler records that choice.
+- **Quotes from the source.** `crawl_verify` finds the quote in the stored text and ignores only case, spaces and typographic punctuation. A citation thus rests on the text, not on the memory of the model.

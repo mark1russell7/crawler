@@ -1,0 +1,18 @@
+---
+/**
+ * The hero of the home page: the hero of Starlight with the install commands, and the live crawl
+ * below them. The site config sets this component as the override of the Starlight hero, so only the
+ * home page uses it.
+ */
+import Default from "@astrojs/starlight/components/Hero.astro";
+import CopyInstall from "./CopyInstall.tsx";
+import LiveCrawl from "./LiveCrawl.tsx";
+---
+
+<div class="pc-hero">
+  <div class="pc-hero-copy">
+    <Default />
+    <CopyInstall client:idle />
+  </div>
+  <LiveCrawl client:load />
+</div>

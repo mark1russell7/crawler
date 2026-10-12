@@ -146,3 +146,18 @@ describe("robots.txt per RFC 9309", () => {
     ).toBe(false);
   });
 });
+
+describe("the deciding rule", () => {
+  it("names the rule and its line, so a reader can see why", () => {
+    const robots = parseRobots(
+      "# comment\nUser-agent: *\nDisallow: /private\nAllow: /private/open\n\nUser-agent: GPTBot\nDisallow: /\n",
+    );
+    const refused = decide(robots, ["PoliteCrawler"], "/private/a");
+    expect(refused).toMatchObject({ allowed: false, rule: { allow: false, pattern: "/private", line: 3 } });
+    expect(refused.groups?.[0]).toMatchObject({ agents: ["*"], line: 2 });
+    const opened = decide(robots, ["PoliteCrawler"], "/private/open/x");
+    expect(opened).toMatchObject({ allowed: true, rule: { allow: true, line: 4 } });
+    expect(decide(robots, ["PoliteCrawler"], "/elsewhere").rule).toBeUndefined();
+    expect(decide(robots, ["GPTBot"], "/a")).toMatchObject({ allowed: false, rule: { line: 7 } });
+  });
+});

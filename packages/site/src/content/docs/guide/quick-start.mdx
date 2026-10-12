@@ -1,0 +1,86 @@
+---
+title: Quick start
+description: Install polite-crawler, fetch your first page from the command line, search the store, and use the library from TypeScript or JavaScript.
+---
+
+import { Steps } from "@astrojs/starlight/components";
+
+polite-crawler needs Node.js 22.13 or later. It runs on Linux, macOS and Windows.
+
+## From the command line
+
+<Steps>
+
+1. Fetch a page. The crawler reads robots.txt first, and then it keeps the page in `~/.polite-crawler`.
+
+   ```sh
+   npx polite-crawler fetch https://en.wikipedia.org/wiki/Web_crawler
+   ```
+
+2. Search the store. This step sends no request.
+
+   ```sh
+   npx polite-crawler find "robots exclusion"
+   ```
+
+3. Read a part of the page, with the id from the search.
+
+   ```sh
+   npx polite-crawler read "url:https://en.wikipedia.org/wiki/Web_crawler" --length 2000
+   ```
+
+4. Check a quote. The result gives the exact span and the capture to cite.
+
+   ```sh
+   npx polite-crawler verify "url:https://en.wikipedia.org/wiki/Web_crawler" "robots.txt protocol"
+   ```
+
+</Steps>
+
+Fetch the page again within 24 hours, and the answer comes from the store with no request. Use `--max-age 7d` to accept an older copy, or `--max-age 0s` to ask the site again.
+
+## From your code
+
+```sh
+npm install polite-crawler
+```
+
+```ts
+import { openCrawler } from "polite-crawler";
+
+const crawler = openCrawler({
+  dir: "./crawl", // the capture log, the bodies and the index
+  contact: "ops@example.com", // optional: sent in the From header
+});
+
+const page = await crawler.fetch("https://example.com/", { maxAge: "24h" });
+console.log(page.outcome, page.status, page.title, page.structured);
+
+for (const hit of crawler.find("documentation examples")) {
+  console.log(hit.doc, hit.score, hit.snippet);
+}
+
+const read = await crawler.read(page.doc!, { from: 0, length: 2000 });
+const check = crawler.verify(page.doc!, "for use in documentation examples");
+
+await crawler.close();
+```
+
+Each fetch gives the outcome (`ok`, `not-modified`, `skipped` and others), the HTTP status, the document id, the schema.org types of the JSON-LD, and the capture ids. When the crawler does not fetch a page, the `note` tells why, for example `robots.txt disallows it for PoliteCrawler`.
+
+## Pages that need JavaScript
+
+Some pages show nothing until their scripts run. For these pages, install the optional browser:
+
+```sh
+npm install playwright-core
+npx playwright-core install chromium-headless-shell
+```
+
+The crawler opens the browser only for a page that shows almost nothing without JavaScript. Without the browser, the crawler reads each page as plain HTML. [See the rules](../../tools/page-reader/).
+
+## Next
+
+- [Use it from Claude](../mcp/): give an AI assistant the four tools.
+- [How it works](../how-it-works/): the path of each request.
+- [The API](../../reference/api/): each option and each method.

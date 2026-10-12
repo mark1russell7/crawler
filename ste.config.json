@@ -5,7 +5,9 @@
     "CLAUDE.md",
     "packages/*/README.md",
     "packages/*/src/**/*.{ts,tsx}",
-    "packages/*/*.config.{ts,mts}"
+    "packages/*/*.config.{ts,mts}",
+    "packages/site/src/content/**/*.mdx",
+    "packages/site/src/content/**/*.md"
   ],
   "ignore": [
     "**/node_modules/**",

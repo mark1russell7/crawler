@@ -1,0 +1,48 @@
+---
+title: robots.txt tester
+description: Test a robots.txt file against paths and user agents, including GPTBot, ClaudeBot and Claude-User. See the rule that permits or refuses each path, on its line, as RFC 9309 specifies.
+tableOfContents: false
+---
+
+import RobotsTester from "../../../components/RobotsTester.tsx";
+
+Paste a robots.txt and the paths to test. The tester shows if each user agent can fetch each path. Select a result to see the group and the rule that decided it.
+
+The tester runs `parseRobots` and `decide` from [`polite-crawler`](../../guide/quick-start/), the same code that the crawler uses before each request. Your text stays in your browser.
+
+<RobotsTester client:visible />
+
+## How a robots.txt decision works
+
+RFC 9309 is the standard for robots.txt since September 2022. The crawler applies these rules:
+
+1. **Find the group.** A group is one or more `User-agent` lines and the rules after them. The crawler uses the groups that name its product token. When no group names it, it uses the group `*`.
+2. **Merge the groups.** When two groups name the same token, their rules apply together.
+3. **Find the longest match.** The rule with the longest path pattern that matches the path wins. When an `Allow` and a `Disallow` have the same length, `Allow` wins.
+4. **Read the wildcards.** A `*` matches any sequence of characters. A `$` at the end of a pattern matches the end of the path.
+5. **Permit by default.** When no rule matches, the path is permitted. The file `/robots.txt` is always permitted.
+
+The match of the token ignores case, and it uses only the product token: `Googlebot/2.1` matches the group `googlebot`.
+
+## Agents that act for a person
+
+An AI assistant can fetch a page because a person asked for it. Anthropic names this agent `Claude-User`, and OpenAI names it `ChatGPT-User`. These agents are different from the crawlers that collect training data, for example `ClaudeBot` and `GPTBot`.
+
+When the crawler fetches a page for an assistant, it obeys two sets of rules. It obeys the rules for its own token, and the rules that a site writes for `Claude-User`. A site that writes no group for `Claude-User` gets the rules for the crawler.
+
+## When the crawler cannot read robots.txt
+
+The status of the robots.txt request has a meaning of its own:
+
+| Status | Meaning | What the crawler does |
+| --- | --- | --- |
+| 2xx | The file is there. | It obeys the rules of the file. |
+| 4xx | The file is not there. | It fetches all paths. |
+| 429 | The site limits the rate. | It fetches nothing from the site. |
+| 5xx, or no response | The site is unreachable. | It fetches nothing from the site. |
+
+A crawler that cannot read the rules does not guess them. polite-crawler records the reason, for example a dead domain or a broken certificate.
+
+## Content signals
+
+A robots.txt can also state how a site permits the use of its content. Cloudflare publishes the `Content-Signal` line, for example `Content-Signal: search=yes, ai-train=no, ai-input=no`. When a page refuses AI input, polite-crawler keeps the page but holds back its text from the AI reader. Test the example "Crawl delay and content signals" above to see the result.

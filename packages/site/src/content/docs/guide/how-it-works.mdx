@@ -1,0 +1,59 @@
+---
+title: How it works
+description: The path of a request through polite-crawler - the store, robots.txt, the host queue, the fetch, the classification, the capture log, extraction, rendering and the full-text index.
+---
+
+import Pipeline from "../../../components/Pipeline.tsx";
+
+Each fetch takes the same path, from the caller that asks for it. A page that shows nothing without JavaScript takes one detour, through the headless browser. Then the crawler reads it like any other page. Select a stage to read what it does.
+
+<Pipeline client:visible />
+
+## The store is the source of truth
+
+The crawler keeps three things on your disk:
+
+| Path | What it holds |
+| --- | --- |
+| `captures/fetch/<yyyy>/<mm>.ndjson` | The capture log. Each fetch decision is one line of JSON, and a declined fetch is one line too. |
+| `blobs/ab/cd/<hash>` | The body of each response, by its SHA-256 hash. Equal bodies are written one time. |
+| `index.sqlite` | The search index (SQLite FTS5). |
+
+The capture log and the blobs are the record. The index is a projection of them: delete it, and `reindex` builds it again with no request. A new version of the page reader can thus read each stored page again.
+
+## A capture id is a citation
+
+Each record of the capture log has an id, for example `fetch.6d57153296df`. The id comes from a hash of the record, so the same decision always gets the same id. A document lists the captures that it came from, and a quote check gives them. A citation can thus name the exact response that holds the text.
+
+## A document is what a reader cites
+
+A document is what a reader cites, not what the crawler fetched. A web page is one document. One search response of an API can hold many papers, so one capture can give many documents. One paper from two sources is one document with two captures.
+
+## Recipes
+
+A recipe turns one kind of capture into documents. The built-in recipe `page` reads web pages and PDFs. An application can add its own recipes, for example for the JSON of an API. `reindex` replays each capture through its recipe.
+
+```ts
+import { fetchAndIndex, openCrawler } from "polite-crawler";
+
+const crawler = openCrawler({ dir: "./crawl" });
+crawler.runtime.extractors.register("papers", (body, capture) => {
+  const json = JSON.parse(new TextDecoder().decode(body));
+  return json.results.map((paper) => ({
+    doc: `doi:${paper.doi}`,
+    kind: "paper",
+    title: paper.title,
+    text: `${paper.title}\n\n${paper.abstract}`,
+    url: capture.url,
+    meta: { year: paper.year },
+  }));
+});
+
+// an API follows its own terms, so robots.txt does not apply to it
+await fetchAndIndex(crawler.runtime, {
+  url: "https://api.example.org/search?q=crawler",
+  mode: "api",
+  recipe: "papers",
+  maxAgeMs: 7 * 24 * 3600 * 1000,
+});
+```

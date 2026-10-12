@@ -96,3 +96,6 @@ temp/
 *.tmp
 *.bak
 *.orig
+
+# Astro
+.astro/

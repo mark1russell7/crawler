@@ -46,6 +46,12 @@
   "main": "./src/index.ts",
   "exports": {
     ".": "./src/index.ts",
+    "./robots": "./src/robots.ts",
+    "./hours": "./src/hours.ts",
+    "./html": "./src/html.ts",
+    "./classify": "./src/classify.ts",
+    "./politeness": "./src/politeness.ts",
+    "./signals": "./src/signals.ts",
     "./package.json": "./package.json"
   },
   "bin": {
@@ -101,6 +107,30 @@
       ".": {
         "types": "./build/index.d.mts",
         "default": "./build/index.mjs"
+      },
+      "./robots": {
+        "types": "./build/robots.d.mts",
+        "default": "./build/robots.mjs"
+      },
+      "./hours": {
+        "types": "./build/hours.d.mts",
+        "default": "./build/hours.mjs"
+      },
+      "./html": {
+        "types": "./build/html.d.mts",
+        "default": "./build/html.mjs"
+      },
+      "./classify": {
+        "types": "./build/classify.d.mts",
+        "default": "./build/classify.mjs"
+      },
+      "./politeness": {
+        "types": "./build/politeness.d.mts",
+        "default": "./build/politeness.mjs"
+      },
+      "./signals": {
+        "types": "./build/signals.d.mts",
+        "default": "./build/signals.mjs"
       },
       "./package.json": "./package.json"
     }

@@ -1,0 +1,68 @@
+---
+title: polite-crawler
+description: A polite web crawler for research and AI agents. It fetches a source once, keeps it, and reads it many times. It obeys robots.txt, sends one request at a time to each site, and gives full-text search and an MCP server.
+template: splash
+hero:
+  title: Fetch once. Read many times.
+  tagline: polite-crawler is a web crawler for research and for AI agents. It obeys robots.txt, sends one request at a time to each site, and keeps each page on your disk. The next question about a page costs no request.
+  actions:
+    - text: Start in two minutes
+      link: guide/quick-start/
+      icon: right-arrow
+    - text: Try the robots.txt tester
+      link: tools/robots-txt-tester/
+      variant: minimal
+head:
+  - tag: script
+    attrs:
+      type: application/ld+json
+    content: '{"@context":"https://schema.org","@type":"SoftwareSourceCode","name":"polite-crawler","description":"A polite web crawler for research and AI agents: robots.txt obeyed, one request per site, a local full-text index and an MCP server.","codeRepository":"https://github.com/mark1russell7/crawler","programmingLanguage":"TypeScript","runtimePlatform":"Node.js","license":"https://opensource.org/licenses/MIT","url":"https://mark1russell7.github.io/crawler/","author":{"@type":"Person","name":"Mark Russell","url":"https://github.com/mark1russell7"}}'
+---
+
+import { Card, CardGrid } from "@astrojs/starlight/components";
+
+## Why a polite crawler
+
+Research reads the same sources again and again. A plain web fetch goes back to the site each time, and nothing stays. This crawler fetches a page one time, keeps the response, and answers the next questions from a local index. Each site sees one request at a time, from a crawler that tells its name.
+
+<CardGrid>
+  <Card title="It obeys the site" icon="approve-check">
+    The crawler reads robots.txt as RFC 9309 specifies. It obeys `Retry-After`, and it stops at a challenge, a 402 or a 403. [Test a robots.txt](tools/robots-txt-tester/).
+  </Card>
+  <Card title="It reads the cheap way" icon="document">
+    The crawler reads the JSON-LD, the visible text and the links with no browser. It opens a headless browser only for a page that needs JavaScript. [See what it reads](tools/page-reader/).
+  </Card>
+  <Card title="It answers from the disk" icon="seti:db">
+    Each response goes into a capture log. A full-text index finds passages, and a quote check finds the exact text to cite. [How it works](guide/how-it-works/).
+  </Card>
+</CardGrid>
+
+## For AI agents
+
+One command gives Claude four tools. The tools fetch pages politely, search the store, read a range of a document and check a quote.
+
+```sh
+claude mcp add polite-crawler -- npx -y polite-crawler mcp
+```
+
+The same server works in Claude Desktop, Cursor and each MCP client. [Set up the MCP server](guide/mcp/).
+
+## As a library
+
+```ts
+import { openCrawler } from "polite-crawler";
+
+const crawler = openCrawler({ dir: "./crawl" });
+const page = await crawler.fetch("https://en.wikipedia.org/wiki/Web_crawler");
+
+crawler.find("robots exclusion"); // ranked passages, with no request
+crawler.verify(page.doc!, "robots.txt protocol"); // the exact span and the capture to cite
+```
+
+## Tools to try
+
+These tools run the code of the package in your browser. Nothing goes to a server.
+
+- [robots.txt tester](tools/robots-txt-tester/): paste a robots.txt, and find the rule that permits or refuses each path, for each user agent.
+- [What the crawler sees](tools/page-reader/): paste HTML, and get the JSON-LD, the visible text and the decision about JavaScript.
+- [Opening-hours parser](tools/opening-hours/): paste the hours from a page, and get the week that the crawler reads.

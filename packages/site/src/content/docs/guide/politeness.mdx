@@ -1,0 +1,49 @@
+---
+title: How the crawler is polite
+description: The rules polite-crawler keeps - robots.txt, one request at a time for each host, Retry-After and backoff, refusals that stop a host, an honest User-Agent, and content signals for AI input.
+---
+
+import ResponseClassifier from "../../../components/ResponseClassifier.tsx";
+
+A polite crawler costs a site almost nothing, and it stops when the site says no. The package keeps these rules in its code. You cannot turn them off with an option.
+
+## One request at a time for each host
+
+The speed of a polite crawler is the number of hosts in progress, divided by the rest for each host. Thus the crawler keeps one request in progress for each host, and it fetches from many hosts in parallel. The [live crawl on the home page](../../) uses this scheduler.
+
+The rest between two requests to one host is the longest of these times:
+
+- **3 seconds** for a web page, and 1 second for a documented API.
+- **5 times the duration of the last request**, to a maximum of 30 seconds. A slow server gets more rest.
+- **The `Crawl-delay`** of robots.txt, to a maximum of 60 seconds.
+- **The `Retry-After`** of a 429 or a 503. Without it, a random backoff that grows with each failure, to a maximum of 5 minutes.
+
+## A refusal stops the host
+
+A challenge page, a 402 or a 403 stops the host for the run. The crawler does not try again with a different identity, a proxy or a browser in disguise. Five failures in sequence stop a host too.
+
+Test what each response means:
+
+<ResponseClassifier client:visible />
+
+## An honest User-Agent
+
+The default header is:
+
+```text
+PoliteCrawler/0.1.0 (+https://mark1russell7.github.io/crawler/bot/)
+```
+
+The link goes to [a page for site owners](../../bot/). The `contact` option adds an address to the header and to the `From` header. The crawler sends no contact without it.
+
+## robots.txt first
+
+For each web page, the crawler reads the robots.txt of the site first and obeys it, as RFC 9309 specifies. When the crawler cannot read robots.txt, because of a dead domain, a broken certificate or a server error, it fetches nothing from the site. A documented public API follows its own terms. [Test a robots.txt](../../tools/robots-txt-tester/).
+
+## Conditional requests
+
+When the store has a copy of a page, the request includes its `ETag` and its `Last-Modified` date. A site that answers `304 Not Modified` sends no body, and the crawler reads the stored copy again.
+
+## Content signals
+
+A site can state the uses of its content in robots.txt or in a header. Two formats exist: the `Content-Signal` lines of Cloudflare, and the `ai-use` of the IETF AIPREF draft. When a page refuses AI input, the crawler keeps the page but holds back its text from an AI reader. A training opt-out (`ai-train=no`) does not apply, because the crawler trains no model.

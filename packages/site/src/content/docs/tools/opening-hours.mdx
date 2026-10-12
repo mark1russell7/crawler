@@ -1,0 +1,34 @@
+---
+title: Opening-hours parser
+description: Paste the opening hours from a restaurant or shop page and see the week that a parser reads. It reads page text in many layouts, schema.org openingHours and the OpenStreetMap opening_hours notation.
+tableOfContents: false
+---
+
+import HoursPlayground from "../../../components/HoursPlayground.tsx";
+
+Venues write their hours in many ways. This parser reads the text of a page and gives a week. The week shows the intervals of each day, the closed days, and the days that the text does not state. Select an example, or paste your own text.
+
+The parser is `fromText` from polite-crawler, compiled into this page. Your text stays in your browser.
+
+<HoursPlayground client:visible />
+
+## What the parser reads
+
+- **Days before or after the times.** "Mon–Thu 11am–10pm" and "11am–9pm Mon–Thu" give the same week.
+- **Days and times on separate lines.** A day on one line goes with the time range on the next line.
+- **Two columns.** Seven day names and then seven time ranges go together in sequence. Columns of different lengths give no result, because the parser cannot be sure.
+- **Closed days.** "Closed Mondays" closes Monday.
+- **Two services.** Lunch and dinner with a gap between them stay two intervals.
+- **Late nights.** A close at or before the opening, for example 11:00 am – 1:00 am, ends on the next day.
+- **A heading with one range.** One range below "Hours" or after "Open", with no day, applies to each day. The parser marks the result as a guess.
+
+When a time has no am or pm, for example "11-9", the parser chooses the likely meaning and marks the result as a guess. A guess does not look like a fact.
+
+## Structured hours
+
+The parser also reads two notations:
+
+- **schema.org.** The `openingHours` strings and the `openingHoursSpecification` objects of JSON-LD.
+- **OpenStreetMap.** The `opening_hours` tag, for example `Mo-Fr 11:00-21:00, Sa-Su 12:00-20:00; PH off`. A later rule replaces an earlier rule for its days. The parser does not guess a rule that it cannot fully read, for example a rule with months or with sunrise.
+
+A day that no source states is unknown, not closed. A venue with hours from more than one source can thus show where the sources disagree.

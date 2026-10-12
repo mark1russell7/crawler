@@ -1,0 +1,98 @@
+---
+title: Library API
+description: The API of polite-crawler - openCrawler and its options, fetch, find, read, verify and reindex, the MCP server, and the parts for robots.txt, HTML, opening hours and scheduling.
+---
+
+```ts
+import { openCrawler } from "polite-crawler";
+```
+
+The package is ESM only, and it includes its TypeScript declarations.
+
+## `openCrawler(options)`
+
+The function opens a crawler on a folder and gives a `PoliteCrawler`.
+
+| Option | Type | Default | What it does |
+| --- | --- | --- | --- |
+| `dir` | `string` | (necessary) | The folder of the capture log, the bodies and the index. |
+| `token` | `string` | `"PoliteCrawler"` | The product token that robots.txt rules match. |
+| `userAgent` | `string` | `PoliteCrawler/<version> (+<bot page>)` | The full `User-Agent` header. |
+| `contact` | `string` | none | An address for the `From` header and the `User-Agent`. |
+| `renderer` | `Renderer \| false` | a Playwright renderer | The browser for pages that need JavaScript. `false` turns rendering off. |
+| `maxActive` | `number` | `16` | The number of hosts that get requests at one time. |
+| `onBehalfOf` | `string[]` | `[]` | More product tokens whose robots.txt rules apply, for example `["Claude-User"]`. |
+| `dispatcher` | `Dispatcher` | an `undici` agent | The dispatcher for the requests, for a proxy or a test. |
+
+## `PoliteCrawler`
+
+### `fetch(url, options?)`
+
+The method fetches a page, reads it and adds it to the index. It gives a `PageResult`.
+
+| Option | Type | Default |
+| --- | --- | --- |
+| `render` | `"auto" \| "never" \| "always"` | `"auto"` |
+| `maxAge` | a count of milliseconds, or a text, for example `"30m"`, `"24h"` or `"7d"` | `"24h"` |
+| `onBehalfOf` | `string[]` | `[]` |
+
+```ts
+interface PageResult {
+  url: string;
+  doc: string | null; // the document id, for read and verify
+  outcome: string; // ok, not-modified, skipped, blocked, rate-limited and others
+  status: number;
+  title: string | null;
+  chars: number;
+  rendered: boolean;
+  structured: string[]; // the schema.org types of the JSON-LD
+  links: number;
+  captures: string[]; // the capture ids to cite
+  note: string | null; // for example "robots.txt disallows it for PoliteCrawler"
+}
+```
+
+### `find(q, options?)`
+
+The method searches the stored documents with SQLite FTS5 and BM25. It sends no request. The options are `limit` (default 10) and `kind` (for example `"page"` or `"pdf"`). Each result has `doc`, `kind`, `title`, `url`, `snippet`, `score` and `ai_input`.
+
+### `read(doc, options?)`
+
+The method gives a range of the text of a document. The options are `from` (default 0), `length` (default 4000) and `userProvided`. When a page refuses AI input, the text is empty and `held_back` is true, unless `userProvided` is true. The crawler records each `userProvided` read.
+
+### `verify(doc, quote)`
+
+The method finds a quote in a stored document. It ignores case, spaces and typographic punctuation. It gives `found`, the `start` and `end` positions, an `excerpt` and the `captures` to cite.
+
+### `reindex()`
+
+The method builds the index again from the capture log and the blobs, with no request. It gives the counts of the captures, the documents and the URLs.
+
+### `close()`
+
+The method closes the browser, the log files and the index.
+
+## The MCP server
+
+```ts
+import { createMcpServer, openCrawler, startMcpServer } from "polite-crawler";
+
+await startMcpServer({ dir: "./crawl" }); // standard input and output
+
+const server = createMcpServer(openCrawler({ dir: "./crawl" })); // any transport
+```
+
+## The parts
+
+Each part is also an entry point of its own. The parts below have no Node.js dependency, so they run in a browser too.
+
+| Import | What it gives |
+| --- | --- |
+| `polite-crawler/robots` | `parseRobots`, `decide`, `robotsFromStatus`: robots.txt as RFC 9309 specifies it. `decide` gives the rule that decided and its line. |
+| `polite-crawler/html` | `extractPage`: the JSON-LD, the visible text, the links and the decision about JavaScript. |
+| `polite-crawler/hours` | `fromText`, `fromSchemaOrg`, `fromCompact`, `describeWeek`: opening hours. |
+| `polite-crawler/classify` | `classify`, `parseRetryAfter`: the outcome of a response. |
+| `polite-crawler/politeness` | `HostScheduler`, `backoffMs`: one request in progress for each host. |
+| `polite-crawler/signals` | `readSignals`: content signals for AI input. |
+
+The main entry point also exports `Crawler`, `DocIndex`, `CaptureLog`, `FileBlobStore`, `makeRecord` and `fetchAndIndex`, for an application that builds its own runtime.

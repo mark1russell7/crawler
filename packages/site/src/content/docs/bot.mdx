@@ -1,0 +1,56 @@
+---
+title: About PoliteCrawler
+description: PoliteCrawler visited your site. What it is, what it fetches, how fast it goes, and how to slow it down or block it with robots.txt.
+---
+
+You found this page because a request to your site had this header:
+
+```text
+User-Agent: PoliteCrawler/0.1.0 (+https://mark1russell7.github.io/crawler/bot/)
+```
+
+## What PoliteCrawler is
+
+PoliteCrawler is the user agent of [polite-crawler](../), open-source software for research and for AI assistants. A person runs it on their own computer to read pages that they or their assistant asked for. It is not a search engine, and it does not collect training data.
+
+Many people can run the software. When the operator gave a contact, the `From` header and the `User-Agent` include it.
+
+## What it does on your site
+
+- **It reads robots.txt first** and obeys it, as RFC 9309 specifies.
+- **It sends one request at a time** to your site, with a rest of 3 seconds or more between two requests.
+- **It fetches the pages that it was asked for.** It does not follow every link of your site.
+- **It obeys `Retry-After`** on a 429 or a 503.
+- **It stops at a refusal.** After a challenge, a 402 or a 403, it sends no more requests to your site in that run.
+- **It sends conditional requests.** With an `ETag` or a `Last-Modified` date, your server can answer `304 Not Modified` and send no body.
+
+## How to control it
+
+To block PoliteCrawler, add this group to your robots.txt:
+
+```text
+User-agent: PoliteCrawler
+Disallow: /
+```
+
+To slow it down, add a crawl delay in seconds:
+
+```text
+User-agent: PoliteCrawler
+Crawl-delay: 10
+```
+
+When the crawler fetches a page for an AI assistant, it also obeys your rules for `Claude-User`.
+
+To refuse the use of your text as AI input, add a content signal. The crawler keeps such a page but holds back its text from an AI reader:
+
+```text
+User-agent: *
+Content-Signal: ai-input=no
+```
+
+[Test your robots.txt](../tools/robots-txt-tester/) with the same code that the crawler uses.
+
+## Contact
+
+To report a problem with the software, [open an issue on GitHub](https://github.com/mark1russell7/crawler/issues).

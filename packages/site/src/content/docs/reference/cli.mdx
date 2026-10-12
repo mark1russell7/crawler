@@ -1,0 +1,47 @@
+---
+title: Command line
+description: The polite-crawler command line - fetch, find, read, verify, reindex and mcp, with each option.
+---
+
+```sh
+npx polite-crawler <command> [options]
+```
+
+## Commands
+
+| Command | What it does |
+| --- | --- |
+| `fetch <url...>` | It fetches the pages into the store. robots.txt applies. |
+| `find <query>` | It searches the stored pages. It sends no request. |
+| `read <doc>` | It prints a range of a stored document. |
+| `verify <doc> <quote>` | It finds a quote in a stored document. |
+| `reindex` | It builds the search index again from the capture log. |
+| `mcp` | It starts the MCP server on the standard input and output. |
+
+## Options
+
+| Option | Default | What it does |
+| --- | --- | --- |
+| `--dir <path>` | `$POLITE_CRAWLER_DIR`, or `~/.polite-crawler` | The store. |
+| `--contact <text>` | `$POLITE_CRAWLER_CONTACT` | An email or a URL for the `From` header. |
+| `--render <mode>` | `auto` | `auto`, `never` or `always`. |
+| `--max-age <age>` | `24h` | A stored copy younger than this age answers with no request. |
+| `--limit <n>` | `10` | The number of results of `find`. |
+| `--kind <kind>` | all | Only this kind of document, for example `page` or `pdf`. |
+| `--from <n>` | `0` | The position where `read` starts. |
+| `--length <n>` | `4000` | The number of characters that `read` prints. |
+| `--no-browser` | | Do not open the headless browser. |
+| `--json` | | Print JSON. |
+
+## Examples
+
+```sh
+# two sites at the same time, one request at a time to each
+npx polite-crawler fetch https://example.com/ https://en.wikipedia.org/wiki/Web_crawler
+
+# JSON for a program
+npx polite-crawler find "opening hours" --limit 5 --json
+
+# a store for one project
+npx polite-crawler fetch https://example.com/ --dir ./research
+```

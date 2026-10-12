@@ -416,9 +416,11 @@ th.pc-vth-on span {
   background: var(--color-surface-sunken);
 }
 .pc-vdetail-body {
+  position: sticky; /* it stays in view when the wide table scrolls sideways */
+  left: var(--space-4);
   display: grid;
   gap: var(--space-3);
-  max-width: 46rem;
+  max-width: min(46rem, calc(100vw - 5rem));
 }
 .pc-vdetail-body .pc-facts dd code {
   display: block;

@@ -5,6 +5,7 @@
 import { useState, type ReactElement } from "react";
 import type { Outcome } from "polite-crawler/classify";
 import { STOPS_HOST, classify } from "polite-crawler/classify";
+import { DEFAULT_POLICY } from "polite-crawler/politeness";
 
 const EXAMPLES: ReadonlyArray<{ readonly name: string; readonly status: string; readonly headers: string }> = [
   { name: "200", status: "200", headers: "content-type: text/html" },
@@ -17,17 +18,29 @@ const EXAMPLES: ReadonlyArray<{ readonly name: string; readonly status: string; 
   { name: "402 Payment Required", status: "402", headers: "crawler-price: USD 0.01" },
 ];
 
+/** The time of a stop in hours, from the policy of the package: "1 hour", "24 hours". */
+const hours = (ms: number): string => {
+  const count = ms / 3_600_000;
+  return `${String(count)} ${count === 1 ? "hour" : "hours"}`;
+};
+
+const STOP_FOR: Readonly<Partial<Record<Outcome, string>>> = {
+  challenge: hours(DEFAULT_POLICY.challengeStopMs),
+  "payment-required": hours(DEFAULT_POLICY.paymentStopMs),
+  blocked: hours(DEFAULT_POLICY.blockedStopMs),
+};
+
 const NEXT: Readonly<Record<Outcome, string>> = {
   ok: "It keeps the body, reads it and rests before the next request to the host.",
   "not-modified": "The stored copy is still correct. It reads the stored body again and downloads nothing.",
   redirect: "It follows the redirect, for a maximum of five steps. Each step is a separate decision.",
-  challenge: "A bot challenge. It stops the host for the run and does not try a different identity.",
-  "payment-required": "The site wants payment or a license. It records the price, pays nothing and stops the host.",
-  blocked: "A refusal. RFC 9110 tells a client not to send the request again, so it stops the host for the run.",
+  challenge: `A bot challenge. It stops the host for ${STOP_FOR.challenge!} and does not try a different identity.`,
+  "payment-required": `The site wants payment or a license. It records the price, pays nothing and stops the host for ${STOP_FOR["payment-required"]!}.`,
+  blocked: `A refusal. RFC 9110 tells a client not to send the request again, so it stops the host for ${STOP_FOR.blocked!}.`,
   "not-found": "The page is not there. It records the result and continues with the next page.",
   "rate-limited": "The site limits the rate. The host waits until Retry-After, or for a backoff with jitter.",
   unavailable: "The server is busy or down. The host waits until Retry-After, or for a backoff with jitter.",
-  error: "An unknown failure. The host waits for a backoff, and five failures in sequence stop it.",
+  error: `An unknown failure. The host waits for a backoff, and ${String(DEFAULT_POLICY.maxFailures)} failures in sequence stop it for ${hours(DEFAULT_POLICY.failureStopMs)}.`,
 };
 
 /** The classifier. */
@@ -79,7 +92,7 @@ export default function ResponseClassifier(): ReactElement {
               <div className={`pc-callout ${STOPS_HOST.has(result.outcome) ? "pc-callout-stop" : result.outcome === "ok" || result.outcome === "not-modified" ? "pc-callout-ok" : "pc-callout-warn"}`}>
                 <strong>
                   <code>{result.outcome}</code>
-                  {STOPS_HOST.has(result.outcome) ? ": the host stops for the run" : ""}
+                  {STOPS_HOST.has(result.outcome) ? `: the host stops for ${STOP_FOR[result.outcome] ?? "a time"}` : ""}
                 </strong>
                 <span>{NEXT[result.outcome]}</span>
               </div>

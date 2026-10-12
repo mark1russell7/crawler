@@ -202,7 +202,7 @@ export const crawlPolitely = (sites: readonly SiteScript[], clock: VirtualClock,
         })
         .catch((error: unknown) => {
           if (!(error instanceof HostStopped)) throw error;
-          timeline.segments.push({ kind: "refused", host: site.host, at: clock.now(), reason: "stopped for the run after a 403" });
+          timeline.segments.push({ kind: "refused", host: site.host, at: clock.now(), reason: "stopped for 1 hour after a 403" });
         });
       work.push(job);
     });

@@ -18,7 +18,7 @@ const STAGES: readonly Stage[] = [
   { name: "robots.txt", file: "robots.ts", text: "For a web page, the robots.txt of the site decides, as RFC 9309 specifies. When the crawler cannot read robots.txt, it fetches nothing, and the record tells why." },
   { name: "Host queue", file: "politeness.ts", text: "Each host gets one request at a time, with a rest between two requests. Many hosts run in parallel, so a crawl is fast across sites and gentle on each one." },
   { name: "Fetch", file: "crawler.ts", text: "The request has an honest User-Agent. When the store has an ETag or a date, the request is conditional, and a 304 uses the stored body. The crawler follows five redirects, at most." },
-  { name: "Classify", file: "classify.ts", text: "The status and the headers become an outcome. A challenge, a 401, a 402 or a 403 stops the host for the run. A 429 or a 503 makes the host wait." },
+  { name: "Classify", file: "classify.ts", text: "The status and the headers become an outcome. A 401 or a 403 stops the host for 1 hour, and a challenge or a 402 stops it for 24 hours. A 429 or a 503 makes the host wait." },
   { name: "Capture", file: "log.ts", text: "Each decision becomes a record in the capture log, and a declined fetch does too. The body goes into the blob store, under its SHA-256 hash." },
   { name: "Extract", file: "html.ts", text: "The extractor turns the body into documents: the text, the JSON-LD and the links of a page, or the text of a PDF." },
   { name: "Render", file: "render.ts", text: "Only for a page that shows almost nothing without its scripts. A headless browser opens it with images and fonts blocked, and the crawler captures the result like any other page." },

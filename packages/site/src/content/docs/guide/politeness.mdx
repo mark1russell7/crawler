@@ -20,9 +20,9 @@ The rest between two requests to one host is the longest of these times:
 
 ## A refusal stops the host
 
-A challenge page, a 401, a 402 or a 403 stops the host for the run. The crawler does not try again with a different identity, a proxy or a browser in disguise.
+A 401 or a 403 stops the host for 1 hour. A challenge page or a 402 stops it for 24 hours. The crawler does not try again with a different identity, a proxy or a browser in disguise. `Crawler.resetHosts()` ends the stops before their time.
 
-Five errors in sequence also stop a host. An error is no response, or a status, for example 500. A 429, 502, 503 or 504 does not stop the host. The host waits, for the time of `Retry-After` or for a backoff of up to 5 minutes.
+Five errors in sequence stop a host for 1 hour. An error is no response, or a status, for example 500. Another 4xx, for example 400 or 422, is an error of the request and not of the host, so it does not count. A 429, 502, 503 or 504 does not stop the host. The host waits, for the time of `Retry-After` or for a backoff of up to 5 minutes. A `Retry-After` of more than 1 hour stops the host for that time, to a maximum of 30 days.
 
 Test what each response means:
 

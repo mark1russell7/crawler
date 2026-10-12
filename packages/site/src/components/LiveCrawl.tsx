@@ -27,7 +27,7 @@ const laneNote = (site: SiteScript, lane: readonly Segment[], mode: Mode, done: 
     return failed > 0 ? `${String(sent)} at once, ${String(failed)} refused` : `${String(sent)} at once`;
   }
   if (site.robots === "disallow") return "robots.txt refuses: no request";
-  if (refused !== undefined) return "a 403: stopped for the run";
+  if (refused !== undefined) return "a 403: stopped for 1 hour";
   const rest = lane.find((segment) => segment.kind === "rest" && segment.reason !== "pace");
   if (rest !== undefined && rest.kind === "rest") {
     const wait = seconds(rest.end - rest.start);

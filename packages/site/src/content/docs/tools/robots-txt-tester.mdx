@@ -43,10 +43,11 @@ The status of the robots.txt request has a meaning of its own:
 | --- | --- | --- |
 | 2xx | The file is there. | It obeys the rules of the file. |
 | 404 or 410 | The file is not there. | It fetches all paths. |
-| 401, 403 or a challenge | The site refuses the request. | It stops the host for the run and fetches nothing more. |
-| 429 | The site limits the rate. | It fetches nothing from the site. |
+| 401 or 403 | The file is not available to this crawler. | It fetches all paths, as RFC 9309 specifies. A 401 or a 403 on a page then stops the host for 1 hour. |
+| A challenge page | The site checks for bots. | It stops the host for 24 hours and fetches nothing more. |
+| 429 | The site limits the rate. | It obeys a good copy of the file from the last 30 days. Without one, it fetches nothing from the site. It tries again after `Retry-After`, or after 5 minutes to 1 hour. |
 | Another 4xx | The file is not available. | It fetches all paths, as RFC 9309 specifies. |
-| 5xx, or no response | The site is unreachable. | It fetches nothing from the site. |
+| 5xx, or no response | The site is unreachable. | It obeys a good copy of the file from the last 30 days. Without one, it fetches nothing from the site. It tries again after 5 minutes to 1 hour. |
 
 A crawler that cannot read the rules does not guess them. polite-crawler records the reason, for example a dead domain or a broken certificate.
 

@@ -3,13 +3,17 @@
  * tells who it is and obeys what a site says. The important rules, each with a test:
  *
  * - A group is one or more `user-agent` lines and the rules after them. A `user-agent` line after
- *   a rule starts a new group. A rule before the first `user-agent` line is in no group.
+ *   an `allow` or `disallow` line starts a new group, as the parser of Google does. A different
+ *   line (`crawl-delay`) between two `user-agent` lines does not split the group. A rule before
+ *   the first `user-agent` line is in no group.
  * - The product token matches with no attention to case. The matching groups merge. The group
  *   `*` applies only when no group names the crawler.
  * - The longest matching rule wins, and `allow` wins a tie. A `*` matches any sequence, and a `$`
- *   at the end anchors the end.
+ *   at the end anchors the end. The matcher uses no regular expression, and its time is linear.
  * - `/robots.txt` is always permitted, and an empty `disallow` matches nothing.
  * - The parser reads at least the first 500 KiB.
+ * - A usage line (`content-signal`, `content-usage`) belongs to its group, with an optional path
+ *   before its value. A line before the first group applies to each crawler.
  *
  * The function `robotsFromStatus` gives the meaning of the status of the fetch. A 4xx is
  * "unavailable", so all paths are permitted. A 5xx or no response is "unreachable", so no path is
@@ -27,6 +31,18 @@ export interface RobotsRule {
   readonly line?: number | undefined;
 }
 
+/** A usage line states a preference about the use of the content (`content-signal`, `content-usage`). */
+export interface RobotsSignal {
+  /** This value is the name of the line, in lowercase. */
+  readonly key: string;
+  /** This text is the value of the line, after the path. */
+  readonly value: string;
+  /** This value is the normalized path pattern of the line. A line with no path applies to each path. */
+  readonly path: string | undefined;
+  /** This value is the number of the line in robots.txt, from 1. */
+  readonly line: number;
+}
+
 export interface RobotsGroup {
   /** These values are the user agents of the group, in lowercase. */
   readonly agents: readonly string[];
@@ -35,13 +51,17 @@ export interface RobotsGroup {
   readonly rules: readonly RobotsRule[];
   /** This value is the nonstandard `crawl-delay` in seconds, when the group sets one. */
   readonly crawlDelaySeconds: number | undefined;
+  /** These usage lines are in the group. They apply when the group applies. */
+  readonly signals?: readonly RobotsSignal[] | undefined;
 }
 
 export interface Robots {
   readonly groups: readonly RobotsGroup[];
   readonly sitemaps: readonly string[];
-  /** These lines state usage preferences (`content-signal: …`, `content-usage: …`), as written. */
+  /** These lines state usage preferences (`content-signal: …`, `content-usage: …`), as written, from each group. */
   readonly signals: readonly string[];
+  /** These usage lines come before the first group, so they apply to each crawler. */
+  readonly fileSignals?: readonly RobotsSignal[] | undefined;
   /**
    * This text tells why the crawler could not read robots.txt: a dead domain, a broken certificate
    * or a server error. Then no path is permitted, and the note of a skip gives this reason. It does
@@ -61,28 +81,40 @@ export const DISALLOW_ALL: Robots = {
 };
 
 const UNRESERVED = /^[A-Za-z0-9\-._~]$/;
+/** The URL parser encodes these ASCII characters in a path or a query. A rule can contain them as written. */
+const ENCODED_ASCII = /^[\u0000- "'<>\\^`{|}\u007f]$/;
+const HEX = /^[0-9A-Fa-f]$/;
+
+const escapeOf = (char: string): string => {
+  const code = char.codePointAt(0)!;
+  if (code <= 0x7f) return `%${code.toString(16).toUpperCase().padStart(2, "0")}`;
+  try {
+    return encodeURIComponent(char);
+  } catch {
+    // a lone surrogate: the URL parser writes the replacement character
+    return "%EF%BF%BD";
+  }
+};
 
 /**
  * This function normalizes a path, or the pattern of a rule, for comparison, as §2.2.2 asks. It
- * encodes the characters outside US-ASCII. It decodes an escape of an unreserved character, so
- * `/%7Efoo` and `/~foo` are equal. The other escapes stay, with uppercase hexadecimal digits.
+ * encodes the characters outside US-ASCII, and the ASCII characters that the URL parser encodes
+ * (a space, `"`, `<`, `{`). It decodes an escape of an unreserved character, so `/%7Efoo` and
+ * `/~foo` are equal. The other escapes stay, with uppercase hexadecimal digits.
  */
 export const normalizePath = (value: string): string => {
   let out = "";
   const chars = [...value];
   for (let index = 0; index < chars.length; index += 1) {
     const char = chars[index]!;
-    if (
-      char === "%" &&
-      /^[0-9A-Fa-f]{2}$/.test(`${chars[index + 1] ?? ""}${chars[index + 2] ?? ""}`)
-    ) {
+    if (char === "%" && HEX.test(chars[index + 1] ?? "") && HEX.test(chars[index + 2] ?? "")) {
       const hex = `${chars[index + 1]!}${chars[index + 2]!}`;
       const decoded = String.fromCharCode(Number.parseInt(hex, 16));
       out += UNRESERVED.test(decoded) ? decoded : `%${hex.toUpperCase()}`;
       index += 2;
       continue;
     }
-    out += char.charCodeAt(0) > 0x7f ? encodeURIComponent(char) : char;
+    out += char.charCodeAt(0) > 0x7f || ENCODED_ASCII.test(char) ? escapeOf(char) : char;
   }
   return out;
 };
@@ -100,15 +132,25 @@ const truncateUtf8 = (text: string, maxBytes: number): string => {
   return lastBreak === -1 ? "" : head.slice(0, lastBreak);
 };
 
+/** This function reads a usage line: an optional path, then the value (`/images/ train-ai=n`). */
+const signalOf = (key: string, value: string, line: number): RobotsSignal => {
+  const path = /^(\/\S*)\s+(.*)$/.exec(value);
+  return path === null
+    ? { key, value, path: undefined, line }
+    : { key, value: path[2]!.trim(), path: normalizePath(path[1]!), line };
+};
+
 export const parseRobots = (input: string): Robots => {
   const groups: Array<{
     agents: string[];
     line: number;
     rules: RobotsRule[];
     crawlDelaySeconds: number | undefined;
+    signals: RobotsSignal[];
   }> = [];
   const sitemaps: string[] = [];
   const signals: string[] = [];
+  const fileSignals: RobotsSignal[] = [];
   let current: (typeof groups)[number] | undefined;
   let collectingAgents = false;
   for (const [index, raw] of truncateUtf8(input, ROBOTS_MAX_BYTES).split(/\r\n|\r|\n/).entries()) {
@@ -119,7 +161,7 @@ export const parseRobots = (input: string): Robots => {
     const value = line.slice(colon + 1).trim();
     if (key === "user-agent") {
       if (current === undefined || !collectingAgents) {
-        current = { agents: [], line: index + 1, rules: [], crawlDelaySeconds: undefined };
+        current = { agents: [], line: index + 1, rules: [], crawlDelaySeconds: undefined, signals: [] };
         groups.push(current);
       }
       current.agents.push(value.toLowerCase());
@@ -133,11 +175,13 @@ export const parseRobots = (input: string): Robots => {
     }
     if (key === "content-signal" || key === "content-usage") {
       signals.push(`${key}: ${value}`);
+      (current?.signals ?? fileSignals).push(signalOf(key, value, index + 1));
       continue;
     }
     if (current === undefined) continue;
-    collectingAgents = false;
     if (key === "allow" || key === "disallow") {
+      // only a rule ends the list of agents, so a crawl-delay between two agents keeps one group
+      collectingAgents = false;
       if (value.length > 0)
         current.rules.push({ allow: key === "allow", pattern: normalizePath(value), line: index + 1 });
     } else if (key === "crawl-delay") {
@@ -145,26 +189,34 @@ export const parseRobots = (input: string): Robots => {
       if (Number.isFinite(seconds) && seconds >= 0) current.crawlDelaySeconds = seconds;
     }
   }
-  return { groups, sitemaps, signals };
+  return { groups, sitemaps, signals, fileSignals };
 };
 
-const compiled = new Map<string, RegExp>();
-const escapeRegex = (text: string): string => text.replace(/[.+?^{}()|[\]\\]/g, "\\$&");
-
-const matches = (pattern: string, path: string): boolean => {
-  let regex = compiled.get(pattern);
-  if (regex === undefined) {
-    const anchored = pattern.endsWith("$");
-    const body = anchored ? pattern.slice(0, -1) : pattern;
-    regex = new RegExp(
-      `^${body
-        .split("*")
-        .map((part) => escapeRegex(part).replace(/\$/g, "\\$"))
-        .join(".*")}${anchored ? "$" : ""}`,
-    );
-    compiled.set(pattern, regex);
+/**
+ * This function tells if a normalized path matches the pattern of a rule. A `*` matches any
+ * sequence, and a `$` at the end anchors the end. The function finds the parts between the stars
+ * in sequence, each at its first position. No pattern makes it slow: its time is linear in the
+ * length of the path for each part, and it uses no regular expression.
+ */
+export const matchesPattern = (pattern: string, path: string): boolean => {
+  const anchored = pattern.endsWith("$");
+  const parts = (anchored ? pattern.slice(0, -1) : pattern).split("*");
+  const first = parts[0]!;
+  if (!path.startsWith(first)) return false;
+  if (parts.length === 1) return !anchored || path.length === first.length;
+  let at = first.length;
+  const last = parts.length - 1;
+  for (let index = 1; index < last; index += 1) {
+    const part = parts[index]!;
+    // two stars in sequence give an empty part, which matches at once
+    if (part.length === 0) continue;
+    const found = path.indexOf(part, at);
+    if (found === -1) return false;
+    at = found + part.length;
   }
-  return regex.test(path);
+  const tail = parts[last]!;
+  if (!anchored) return tail.length === 0 || path.indexOf(tail, at) !== -1;
+  return path.length - tail.length >= at && path.endsWith(tail);
 };
 
 interface Chosen {
@@ -197,7 +249,7 @@ const groupsFor = (robots: Robots, token: string): Chosen => {
 const decidingRule = (rules: readonly RobotsRule[], path: string): RobotsRule | undefined => {
   let best: RobotsRule | undefined;
   for (const rule of rules) {
-    if (!matches(rule.pattern, path)) continue;
+    if (!matchesPattern(rule.pattern, path)) continue;
     if (
       best === undefined ||
       rule.pattern.length > best.pattern.length ||
@@ -233,7 +285,14 @@ export const decide = (
 ): RobotsDecision => {
   const path = normalizePath(pathAndQuery.length === 0 ? "/" : pathAndQuery);
   const primary = groupsFor(robots, tokens[0] ?? "*");
-  const crawlDelaySeconds = primary.crawlDelaySeconds;
+  // the crawl delay of a group that names a further agent applies to the fetches of that agent too
+  const delays = [primary.crawlDelaySeconds];
+  for (const token of tokens.slice(1)) {
+    const extra = groupsFor(robots, token);
+    if (extra.explicit) delays.push(extra.crawlDelaySeconds);
+  }
+  const known = delays.filter((delay): delay is number => delay !== undefined);
+  const crawlDelaySeconds = known.length > 0 ? Math.max(...known) : undefined;
   if (path === "/robots.txt") {
     return { allowed: true, by: undefined, crawlDelaySeconds, rule: undefined, groups: [] };
   }
@@ -249,6 +308,45 @@ export const decide = (
     }
   }
   return { allowed: true, by: undefined, crawlDelaySeconds, rule, groups: primary.groups };
+};
+
+/**
+ * This function gives the usage lines that apply to these tokens and this path, as
+ * `key: value` texts. The lines come from three places:
+ *
+ * - the lines before the first group
+ * - the groups of the first token, or `*`
+ * - the groups that name a further token
+ *
+ * In one group, the line with the longest matching path wins for each key.
+ */
+export const signalsFor = (
+  robots: Robots,
+  tokens: readonly string[],
+  pathAndQuery: string,
+): string[] => {
+  const path = normalizePath(pathAndQuery.length === 0 ? "/" : pathAndQuery);
+  const groups = new Set(groupsFor(robots, tokens[0] ?? "*").groups);
+  for (const token of tokens.slice(1)) {
+    const extra = groupsFor(robots, token);
+    if (extra.explicit) for (const group of extra.groups) groups.add(group);
+  }
+  const chosen: RobotsSignal[] = [];
+  const pick = (lines: readonly RobotsSignal[]): void => {
+    // for each key: the length of the longest matching path, and the lines with that length
+    const best = new Map<string, { length: number; lines: RobotsSignal[] }>();
+    for (const line of lines) {
+      if (line.path !== undefined && !matchesPattern(line.path, path)) continue;
+      const length = line.path?.length ?? 0;
+      const before = best.get(line.key);
+      if (before === undefined || length > before.length) best.set(line.key, { length, lines: [line] });
+      else if (length === before.length) before.lines.push(line);
+    }
+    for (const { lines: kept } of best.values()) chosen.push(...kept);
+  };
+  pick(robots.fileSignals ?? []);
+  for (const group of groups) pick(group.signals ?? []);
+  return chosen.sort((a, b) => a.line - b.line).map((line) => `${line.key}: ${line.value}`);
 };
 
 /** This function gives the robots of a site whose robots.txt the crawler cannot read. No path is permitted, and the reason stays. */

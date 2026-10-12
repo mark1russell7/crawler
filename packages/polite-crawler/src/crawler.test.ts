@@ -337,7 +337,8 @@ describe("the polite fetcher", () => {
       recipe: "page",
     });
     expect(page.outcome).toBe("skipped");
-    expect(page.note).toMatch(/^host stopped this run/);
+    // a challenge stops the host for a day, not for the life of the process
+    expect(page.note).toBe("host stopped until 2026-10-08T12:00:00.000Z: challenge");
     // a request queued behind the one that met the challenge
     agent
       .get("https://busy.example")

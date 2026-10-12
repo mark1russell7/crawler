@@ -270,6 +270,15 @@ describe("the index file", () => {
     expect(second.stale).toBe(false);
   });
 
+  it("joins a transaction that the caller opened on its connection", () => {
+    const index = memory();
+    const db = (index as unknown as { db: DatabaseSync }).db;
+    db.exec("BEGIN");
+    for (let at = 0; at < 50; at += 1) index.upsert(version(`fetch.${String(at)}`, `2026-10-01T00:00:${String(at).padStart(2, "0")}.000Z`, `text ${String(at)}`), "x");
+    db.exec("COMMIT");
+    expect(index.get("url:https://forno.example/")?.capture_count).toBe(50);
+  });
+
   it("closes once, and refuses work after the close", () => {
     const index = new DocIndex(":memory:");
     index.close();

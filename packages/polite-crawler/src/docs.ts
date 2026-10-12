@@ -512,10 +512,13 @@ export class DocIndex {
     return statement;
   }
 
-  /** This method does a write in one transaction. A transaction in progress takes the write in. */
+  /**
+   * This method does a write in one transaction. A transaction in progress takes the write in,
+   * also a transaction that the caller opened on the connection.
+   */
   private write<T>(work: () => T): T {
     if (this.closed) throw new Error("the index is closed");
-    if (this.depth > 0) {
+    if (this.depth > 0 || this.db.isTransaction) {
       this.depth += 1;
       try {
         return work();

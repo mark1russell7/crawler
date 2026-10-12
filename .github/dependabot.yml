@@ -1,0 +1,32 @@
+# Dependabot opens one pull request each week for each group.
+# The cooldown waits 7 days after a release, so that a bad release has time to come to light.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    cooldown:
+      default-days: 7
+    groups:
+      actions:
+        patterns: ["*"]
+    commit-message:
+      prefix: ci
+
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    cooldown:
+      default-days: 7
+    groups:
+      runtime:
+        dependency-type: production
+      development:
+        dependency-type: development
+    commit-message:
+      prefix: deps
+      prefix-development: deps-dev

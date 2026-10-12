@@ -1,0 +1,25 @@
+name: Feature request
+description: A change or a new function for polite-crawler.
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: The problem
+      description: What you want to do, and why polite-crawler does not let you do it now.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: The change you propose
+      description: How the command line, the MCP tools or the library would change.
+    validations:
+      required: true
+  - type: checkboxes
+    id: polite
+    attributes:
+      label: Politeness
+      options:
+        - label: The change keeps the crawler polite. It does not go around robots.txt, a refusal or a rate limit.
+          required: true

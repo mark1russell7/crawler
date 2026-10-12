@@ -2,6 +2,18 @@
 *.png binary
 *.jpg binary
 *.jpeg binary
+*.gif binary
+*.webp binary
 *.ico binary
+*.woff binary
 *.woff2 binary
 *.pdf binary
+*.tgz binary
+*.gz binary
+*.zip binary
+*.sqlite binary
+# Generated files: GitHub folds them in the diff of a pull request.
+pnpm-lock.yaml linguist-generated
+packages/site/src/data/robots-study.json linguist-generated
+# The golden robots.txt files are test data. Their bytes stay as the sites served them.
+packages/polite-crawler/test/corpus/** -text

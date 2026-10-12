@@ -21,17 +21,19 @@ claude mcp add polite-crawler -- npx -y polite-crawler mcp
 
 ## Development
 
-The repository is a pnpm workspace. It needs Node.js 22.13 or later.
+The repository is a pnpm workspace. It needs Node.js 22.19 or later and pnpm 10 or later.
 
 ```sh
 pnpm install
-pnpm typecheck
-pnpm test
-pnpm lint:ste
-pnpm --filter polite-crawler build
+pnpm browser   # the headless shell for the renderer test
+pnpm check     # typecheck, lint, test, lint:ste, build and the smoke test of the package
 ```
 
 The prose of the repository (the README files, the doc comments and the site) follows ASD-STE100 Simplified Technical English. The linter [`ste-lint`](https://github.com/mark1russell7/ste-lint) examines it in CI.
+
+- [`CONTRIBUTING.md`](CONTRIBUTING.md) tells how to set up, test and write a change.
+- [`SECURITY.md`](SECURITY.md) tells how to report a vulnerability privately.
+- [`CHANGELOG.md`](CHANGELOG.md) records the changes in each version.
 
 ## License
 

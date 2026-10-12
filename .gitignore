@@ -12,6 +12,10 @@ _db/
 /*.md
 !/CLAUDE.md
 !/README.md
+!/CHANGELOG.md
+!/CONTRIBUTING.md
+!/SECURITY.md
+!/CODE_OF_CONDUCT.md
 
 # Local ste-lint dictionaries. The ASD-STE100 dictionary is copyrighted: do not commit it.
 .ste/
@@ -69,6 +73,9 @@ venv/
 # Build output
 dist/
 packages/*/build/
+
+# Test output (vitest --coverage)
+coverage/
 
 # Node / JS
 node_modules/

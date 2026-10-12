@@ -20,7 +20,7 @@ The site has interactive demos with the real code: <https://mark1russell7.github
 npm install polite-crawler
 ```
 
-The package needs Node.js 22.13 or later. For pages that need JavaScript, install the optional browser too:
+The package needs Node.js 22.19 or later. Older versions of Node.js 22 have no full-text search (FTS5) in their SQLite. For pages that need JavaScript, install the optional browser too:
 
 ```sh
 npm install playwright-core
@@ -28,6 +28,20 @@ npx playwright-core install chromium-headless-shell
 ```
 
 Without the browser, the crawler reads each page as plain HTML.
+
+The package is an ES module package. It has these entry points:
+
+| Entry point | What it gives | In a browser |
+| --- | --- | --- |
+| `polite-crawler` | `openCrawler`, the MCP server and all the parts | No. It needs Node.js. |
+| `polite-crawler/robots` | The robots.txt parser and matcher | Yes |
+| `polite-crawler/hours` | The opening-hours reader | Yes |
+| `polite-crawler/html` | The page reader: JSON-LD, visible text and links | Yes. It contains linkedom and Readability, so it is the largest. |
+| `polite-crawler/classify` | The outcome of a response | Yes |
+| `polite-crawler/politeness` | The queue that keeps one request in progress for each host | Yes |
+| `polite-crawler/signals` | The reader of usage signals (`Content-Signal`) | Yes |
+
+The entry points that work in a browser import no Node.js module.
 
 ## Use it from the command line
 
@@ -57,6 +71,26 @@ For Claude Desktop and other MCP clients, add this server to the configuration:
   }
 }
 ```
+
+`npx` installs `polite-crawler` without the optional browser. Thus the server reads each page as plain HTML. To let the server render pages that need JavaScript, install the browser one time. Then add `playwright-core` to the `npx` command:
+
+```sh
+npx playwright-core install chromium-headless-shell
+claude mcp add polite-crawler -- npx -y -p polite-crawler -p playwright-core polite-crawler mcp
+```
+
+```json
+{
+  "mcpServers": {
+    "polite-crawler": {
+      "command": "npx",
+      "args": ["-y", "-p", "polite-crawler", "-p", "playwright-core", "polite-crawler", "mcp"]
+    }
+  }
+}
+```
+
+When a new version of `playwright-core` comes out, install its browser again with the first command.
 
 The server gives four tools:
 
@@ -118,6 +152,10 @@ Disallow: /
 | `captures/fetch/<yyyy>/<mm>.ndjson` | The capture log: one line for each fetch decision, and the declined fetches too. |
 | `blobs/` | The bodies of the responses, by SHA-256 hash. |
 | `index.sqlite` | The search index. It is a projection: `polite-crawler reindex` builds it again from the other two. |
+
+## Contributing
+
+[`CONTRIBUTING.md`](https://github.com/mark1russell7/crawler/blob/main/CONTRIBUTING.md) tells how to set up the repository and test a change. [`CHANGELOG.md`](https://github.com/mark1russell7/crawler/blob/main/CHANGELOG.md) records the changes in each version. Report a vulnerability privately, as [`SECURITY.md`](https://github.com/mark1russell7/crawler/blob/main/SECURITY.md) tells.
 
 ## License
 

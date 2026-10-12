@@ -44,7 +44,7 @@ Install it with \`npm install polite-crawler\`. Use \`openCrawler({ dir })\` and
 
 ## Field notes
 
-- [Who lets AI agents in?](${SITE}notes/robots-txt-ai-agents/): the robots.txt files of the top ${String(summary.listSize)} domains (Tranco list ${data.list.id}, read on ${day}). ${String(summary.answered)} sites answered with a file or with no file, ${String(summary.blocked)} blocked the request at the edge, and ${String(summary.unreachable)} were unreachable. Of the sites that answered, ${share("GPTBot")} refuse GPTBot, ${share("ClaudeBot")} refuse ClaudeBot, ${share("ChatGPT-User")} refuse ChatGPT-User, ${share("Claude-User")} refuse Claude-User and ${share("Googlebot")} refuse Googlebot. Of the ${String(summary.withFile)} sites with a robots.txt file, ${fileShare("GPTBot")} refuse GPTBot. The data is under ${DATA_LICENSE.name}: [JSON](${SITE}data/robots-study.json), [CSV](${SITE}data/robots-study.csv)
+- [Who lets AI agents in?](${SITE}notes/robots-txt-ai-agents/): the robots.txt files of the top ${summary.listSize.toLocaleString("en-US")} domains (Tranco list ${data.list.id}, read on ${day}). ${String(summary.answered)} sites answered with a file or with no file, ${String(summary.blocked)} blocked the request at the edge, and ${String(summary.unreachable)} were unreachable. Of the sites that answered, ${share("GPTBot")} refuse GPTBot, ${share("ClaudeBot")} refuse ClaudeBot, ${share("ChatGPT-User")} refuse ChatGPT-User, ${share("Claude-User")} refuse Claude-User and ${share("Googlebot")} refuse Googlebot. Of the ${String(summary.withFile)} sites with a robots.txt file, ${fileShare("GPTBot")} refuse GPTBot. The data is under ${DATA_LICENSE.name}: [JSON](${SITE}data/robots-study.json), [CSV](${SITE}data/robots-study.csv)
 
 ## Optional
 

@@ -1,7 +1,13 @@
 ---
 title: About PoliteCrawler
+seoTitle: "PoliteCrawler bot: what it is, and how to slow it down or block it"
 description: PoliteCrawler visited your site. What it is, what it fetches, how fast it goes, and how to slow it down or block it with robots.txt.
 ---
+
+import study from "../../data/robots-study.json";
+import { formatDay } from "../../lib/study.ts";
+
+export const day = formatDay(study.fetched.from);
 
 You found this page because a request to your site had this header:
 
@@ -21,7 +27,7 @@ Many people can use the software. When the operator gave a contact, the `From` h
 - **It sends one request at a time** to your site, with a rest of 3 seconds or more between two requests.
 - **It fetches the pages that it was asked for.** It does not follow every link of your site.
 - **It obeys `Retry-After`** on a 429 or a 503.
-- **It stops at a refusal.** After a challenge, a 402 or a 403, it sends no more requests to your site in that run.
+- **It stops at a refusal.** After a challenge, a 401, a 402 or a 403, it sends no more requests to your site in that run.
 - **It sends conditional requests.** With an `ETag` or a `Last-Modified` date, your server can answer `304 Not Modified` and send no body.
 
 ## How to control it
@@ -51,9 +57,11 @@ Content-Signal: ai-input=no
 
 [Test your robots.txt](../tools/robots-txt-tester/) with the same code that the crawler uses.
 
+To refuse the crawlers that collect training data and let the AI assistants in, [use this robots.txt](../block-ai-training-crawlers/).
+
 ## The robots.txt study
 
-On 12 October 2026, PoliteCrawler read the robots.txt file of each of the top 1,000 domains of the Tranco list. It sent one request for `/robots.txt` to each domain, with its redirects, and fetched no other page. [Read the study](../notes/robots-txt-ai-agents/).
+On {day}, PoliteCrawler read the robots.txt file of each of the top 1,000 domains of the Tranco list. It sent one request for `/robots.txt` to each domain, with its redirects, and fetched no other page. It did not try again. [Read the study](../notes/robots-txt-ai-agents/).
 
 ## Contact
 

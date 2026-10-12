@@ -1,6 +1,7 @@
 ---
 title: Compare the crawlers
-description: polite-crawler compared with Crawlee, Scrapy, Firecrawl, Crawl4AI and the MCP fetch server - robots.txt, the pace for each site, the store, the citations and the MCP tools. Each tool has jobs that it does best.
+seoTitle: "Crawlee alternative: polite-crawler vs Crawlee, Scrapy, Firecrawl and Crawl4AI"
+description: "polite-crawler compared with Crawlee, Scrapy, Firecrawl, Crawl4AI and the MCP fetch server: robots.txt, the pace for each site, the store and MCP."
 head:
   - tag: meta
     attrs:
@@ -29,7 +30,7 @@ The options are `respectRobotsTxtFile` in Crawlee, `ROBOTSTXT_OBEY` in Scrapy an
 
 A crawl is polite when each site gets a small load. The tools set the pace in different ways:
 
-- **polite-crawler** keeps one request in progress for each site, and waits 3 seconds or more between two requests. A slow site gets a longer wait. It obeys `Retry-After` and `Crawl-delay`, and it stops a site at a 402, a 403 or a challenge. You cannot make it faster than these rules.
+- **polite-crawler** keeps one request in progress for each site, and waits 3 seconds or more between two requests. A slow site gets a longer wait. It obeys `Retry-After` and `Crawl-delay`, and it stops a site at a 401, a 402, a 403 or a challenge. You cannot make it faster than these rules.
 - **Crawlee** waits `sameDomainDelaySecs` between two requests to a domain (the default is 0), and `maxRequestsPerMinute` limits the whole crawl.
 - **Scrapy** has `DOWNLOAD_DELAY` and `CONCURRENT_REQUESTS_PER_DOMAIN` (1 second and 1 request in the current defaults), and the AutoThrottle extension adapts the delay to the latency of the site.
 - **Crawl4AI** has a `RateLimiter` for `arun_many`. It waits a random 1 to 3 seconds between two requests to a domain, and longer after a 429 or a 503.

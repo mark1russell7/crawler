@@ -13,25 +13,25 @@ polite-crawler needs Node.js 22.13 or later. It operates on Linux, macOS and Win
 
 1. Fetch a page. The crawler reads robots.txt first, and then it keeps the page in `~/.polite-crawler`.
 
-   ```sh
+   ```sh title="Fetch a page"
    npx polite-crawler fetch https://en.wikipedia.org/wiki/Web_crawler
    ```
 
 2. Search the store. This step sends no request.
 
-   ```sh
+   ```sh title="Search the store"
    npx polite-crawler find "robots exclusion"
    ```
 
 3. Read a part of the page, with the id from the search.
 
-   ```sh
+   ```sh title="Read a part of a page"
    npx polite-crawler read "url:https://en.wikipedia.org/wiki/Web_crawler" --length 2000
    ```
 
 4. Check a quote. The result gives the exact span and the capture to cite.
 
-   ```sh
+   ```sh title="Check a quote"
    npx polite-crawler verify "url:https://en.wikipedia.org/wiki/Web_crawler" "robots.txt protocol"
    ```
 
@@ -41,11 +41,11 @@ Fetch the page again within 24 hours, and the answer comes from the store with n
 
 ## From your code
 
-```sh
+```sh title="Install the library"
 npm install polite-crawler
 ```
 
-```ts
+```ts title="crawl.ts"
 import { openCrawler } from "polite-crawler";
 
 const crawler = openCrawler({
@@ -72,7 +72,7 @@ Each fetch gives the outcome (`ok`, `not-modified`, `skipped` and others), the H
 
 Some pages show nothing until their scripts run. For these pages, install the optional browser:
 
-```sh
+```sh title="Install the browser"
 npm install playwright-core
 npx playwright-core install chromium-headless-shell
 ```

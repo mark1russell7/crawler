@@ -1,0 +1,34 @@
+{
+  "title": "What 300 restaurant websites taught a crawler",
+  "date": "2026-10-07",
+  "area": "Boston area",
+  "source": "OpenStreetMap: restaurants, cafes, bars and pubs with a website",
+  "population": 1187,
+  "sample": 300,
+  "note": "Counts only. The survey publishes no site, so that no venue can be found from the data.",
+  "outcomes": [
+    { "label": "Read", "sites": 231, "tone": "good", "icon": "✓" },
+    { "label": "robots.txt unreadable", "sites": 35, "tone": "neutral", "icon": "?" },
+    { "label": "Refused by robots.txt", "sites": 13, "tone": "warning", "icon": "!" },
+    { "label": "A bot wall", "sites": 13, "tone": "critical", "icon": "×" },
+    { "label": "Not found", "sites": 8, "tone": "muted", "icon": "–" }
+  ],
+  "builders": [
+    { "name": "Squarespace", "sites": 51, "home": 44, "links": 47 },
+    { "name": "Custom or other", "sites": 56, "home": 23, "links": 35 },
+    { "name": "WordPress", "sites": 33, "home": 23, "links": 28 },
+    { "name": "Wix", "sites": 27, "home": 19, "links": 22 },
+    { "name": "BentoBox", "sites": 23, "home": 5, "links": 18 },
+    { "name": "SpotHopper", "sites": 12, "home": 10, "links": 11 },
+    { "name": "GoDaddy", "sites": 11, "home": 5, "links": 8 },
+    { "name": "Next.js", "sites": 7, "home": 4, "links": 5 },
+    { "name": "Square Online", "sites": 5, "home": 2, "links": 3 },
+    { "name": "Shopify", "sites": 3, "home": 3, "links": 3 },
+    { "name": "Webflow, Duda or Drupal", "sites": 3, "home": 2, "links": 2 }
+  ],
+  "versions": [
+    { "name": "The first run", "read": 168, "suggested": 131 },
+    { "name": "Whole pages, hours in any order", "read": 173, "suggested": 165 },
+    { "name": "Kept robots.txt, paired columns", "read": 182, "suggested": 174 }
+  ]
+}

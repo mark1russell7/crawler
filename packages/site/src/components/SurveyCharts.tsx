@@ -1,37 +1,15 @@
 /**
  * The charts of the survey of 300 restaurant websites. Each chart shows its values as text too, and
- * a table below each chart gives the same numbers.
+ * a table below each chart gives the same numbers. The counts come from src/data/restaurant-survey.json.
  */
 import { useState, type ReactElement } from "react";
+import survey from "../data/restaurant-survey.json";
 
-const OUTCOMES = [
-  { label: "Read", sites: 231, tone: "good", icon: "✓" },
-  { label: "robots.txt unreadable", sites: 35, tone: "neutral", icon: "?" },
-  { label: "Refused by robots.txt", sites: 13, tone: "warning", icon: "!" },
-  { label: "A bot wall", sites: 13, tone: "critical", icon: "×" },
-  { label: "Not found", sites: 8, tone: "muted", icon: "–" },
-] as const;
+const OUTCOMES = survey.outcomes;
+const BUILDERS = survey.builders;
+const VERSIONS = survey.versions;
 
-const BUILDERS = [
-  { name: "Squarespace", sites: 51, home: 44, links: 47 },
-  { name: "Custom or other", sites: 56, home: 23, links: 35 },
-  { name: "WordPress", sites: 33, home: 23, links: 28 },
-  { name: "Wix", sites: 27, home: 19, links: 22 },
-  { name: "BentoBox", sites: 23, home: 5, links: 18 },
-  { name: "SpotHopper", sites: 12, home: 10, links: 11 },
-  { name: "GoDaddy", sites: 11, home: 5, links: 8 },
-  { name: "Next.js", sites: 7, home: 4, links: 5 },
-  { name: "Square Online", sites: 5, home: 2, links: 3 },
-  { name: "Shopify", sites: 3, home: 3, links: 3 },
-] as const;
-
-const VERSIONS = [
-  { name: "The first run", read: 168, suggested: 131 },
-  { name: "Whole pages, hours in any order", read: 173, suggested: 165 },
-  { name: "Kept robots.txt, paired columns", read: 182, suggested: 174 },
-] as const;
-
-const READ_SITES = 231;
+const READ_SITES = OUTCOMES.find((outcome) => outcome.label === "Read")?.sites ?? 0;
 const percent = (part: number, whole: number): string => `${Math.round((part / whole) * 100)}%`;
 
 /** The outcomes of 300 sites as one bar, with the parts in sequence. */
@@ -120,6 +98,7 @@ export function BuildersChart(): ReactElement {
       </div>
       <details className="pc-table-view">
         <summary>The numbers as a table</summary>
+        <div className="pc-table-wrap" tabIndex={0} role="region" aria-label="The sites with hours, by site builder">
         <table className="pc-table">
           <thead>
             <tr>
@@ -139,7 +118,16 @@ export function BuildersChart(): ReactElement {
               </tr>
             ))}
           </tbody>
+          <tfoot>
+            <tr>
+              <th scope="row">All the sites that the crawler read</th>
+              <td>{BUILDERS.reduce((sum, row) => sum + row.sites, 0)}</td>
+              <td>{BUILDERS.reduce((sum, row) => sum + row.home, 0)}</td>
+              <td>{BUILDERS.reduce((sum, row) => sum + row.links, 0)}</td>
+            </tr>
+          </tfoot>
         </table>
+        </div>
       </details>
     </figure>
   );

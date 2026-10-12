@@ -1,9 +1,9 @@
 ---
 title: Library API
-description: The API of polite-crawler - openCrawler and its options, fetch, find, read, verify and reindex, the MCP server, and the parts for robots.txt, HTML, opening hours and scheduling.
+description: "The library API of polite-crawler: openCrawler and its options, fetch, find, read, verify and reindex, and the parts that you can import alone."
 ---
 
-```ts
+```ts title="The import"
 import { openCrawler } from "polite-crawler";
 ```
 
@@ -36,7 +36,7 @@ The method fetches a page, reads it and adds it to the index. It gives a `PageRe
 | `maxAge` | a count of milliseconds, or a text, for example `"30m"`, `"24h"` or `"7d"` | `"24h"` |
 | `onBehalfOf` | `string[]` | `[]` |
 
-```ts
+```ts title="PageResult"
 interface PageResult {
   url: string;
   doc: string | null; // the document id, for read and verify
@@ -74,7 +74,7 @@ The method closes the browser, the log files and the index.
 
 ## The MCP server
 
-```ts
+```ts title="An MCP server in your code"
 import { createMcpServer, openCrawler, startMcpServer } from "polite-crawler";
 
 await startMcpServer({ dir: "./crawl" }); // standard input and output

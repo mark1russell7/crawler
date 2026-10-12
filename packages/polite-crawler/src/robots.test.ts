@@ -264,8 +264,20 @@ describe("the fixes of the review", () => {
     expect(robots.signals).toHaveLength(4);
   });
 
-  it("does not match a product token that has a digit to its own group", () => {
-    // RFC 9309 permits only letters, "_" and "-": the crawler refuses such a token when it starts
-    expect(allowed("User-agent: Crawler9\nDisallow: /\n", "Crawler9", "/")).toBe(true);
+  it("reduces a wanted token to its product token, as the parser reduces a user-agent line", () => {
+    // RFC 9309 permits only letters, "_" and "-": "Crawler9" is the product token "crawler" (W-7b)
+    expect(allowed("User-agent: Crawler9\nDisallow: /\n", "Crawler9", "/")).toBe(false);
+    expect(allowed("User-agent: MyBot\nDisallow: /\n", "MyBot/1.0", "/")).toBe(false);
+    expect(
+      allowed("User-agent: MyBot\nDisallow: /\n", "Mozilla/5.0 (compatible; MyBot/1.0; +https://example.com/bot)", "/"),
+    ).toBe(false);
+    expect(
+      allowed(
+        "User-agent: MyBot\nDisallow: /\n",
+        "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) MyBot/2.0 Safari/537.36",
+        "/",
+      ),
+    ).toBe(false);
+    expect(allowed("User-agent: MyBot\nDisallow: /\n", "OtherBot/1.0", "/")).toBe(true);
   });
 });

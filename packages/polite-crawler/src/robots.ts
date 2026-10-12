@@ -130,6 +130,39 @@ export const normalizePath = (value: string): string => {
 const tokenOf = (value: string): string =>
   (/^[A-Za-z_-]+/.exec(value.trim())?.[0] ?? "").toLowerCase();
 
+/** These names are parts of the header of a browser, not the name of a crawler. */
+const BROWSER_PARTS: ReadonlySet<string> = new Set([
+  "mozilla",
+  "applewebkit",
+  "khtml",
+  "gecko",
+  "chrome",
+  "chromium",
+  "safari",
+  "version",
+  "mobile",
+  "firefox",
+  "edg",
+  "opr",
+  "like",
+]);
+
+/**
+ * This function gives the product token that robots.txt rules match, in lowercase. `MyBot/1.0`
+ * gives `mybot`. The full header `Mozilla/5.0 (compatible; MyBot/1.0; +https://…)` also gives
+ * `mybot`. The token is the name after `compatible;`, or else the first product that is not a part
+ * of a browser.
+ */
+export const productToken = (value: string): string => {
+  const text = value.trim();
+  const first = tokenOf(text);
+  if (first !== "mozilla") return first;
+  const compatible = /compatible;\s*([A-Za-z_-]+)/i.exec(text)?.[1];
+  if (compatible !== undefined) return compatible.toLowerCase();
+  const products = [...text.matchAll(/([A-Za-z][A-Za-z_-]*)\/[\w.]+/g)].map((match) => (match[1] ?? "").toLowerCase());
+  return products.find((product) => !BROWSER_PARTS.has(product)) ?? first;
+};
+
 const truncateUtf8 = (text: string, maxBytes: number): string => {
   const bytes = new TextEncoder().encode(text);
   if (bytes.length <= maxBytes) return text;
@@ -235,7 +268,7 @@ interface Chosen {
 }
 
 const groupsFor = (robots: Robots, token: string): Chosen => {
-  const wanted = token.toLowerCase();
+  const wanted = token === "*" ? "*" : productToken(token);
   const named = robots.groups.filter((group) =>
     group.agents.some((agent) => agent !== "*" && tokenOf(agent) === wanted),
   );
@@ -280,7 +313,8 @@ export interface RobotsDecision {
 }
 
 /**
- * This function tells if these tokens can fetch `pathAndQuery`. The first token is the token of
+ * This function tells if these tokens can fetch `pathAndQuery`. Each token becomes its product
+ * token (`productToken`), so `MyBot/1.0` matches the group `mybot`. The first token is the token of
  * the crawler, and `*` applies when no group names it. A further token, for example `Claude-User`,
  * applies only when the site names it. A site that writes rules for an agent means them for the
  * fetches of that agent.
@@ -361,6 +395,37 @@ export const unreachableRobots = (reason: string): Robots => ({
   ...DISALLOW_ALL,
   unreachable: reason,
 });
+
+/** This text is the reason when a robots.txt that answered 200 is a web page, not a robots.txt file. */
+export const HTML_ROBOTS = "robots.txt is a web page, not a robots.txt file (a login or challenge page)";
+
+/**
+ * This function tells if the body of a robots.txt is a web page. A server can send a challenge, a
+ * login or an error page with a 200. Such a body starts with `<!doctype`, `<html`, `<head` or
+ * `<body`. With the content type `text/html`, a tag of a page in the first 4 KB is enough. A plain
+ * robots.txt that a server sends as `text/html` stays a file.
+ */
+export const isHtmlRobots = (contentType: string | null | undefined, text: string): boolean => {
+  const head = (text.charCodeAt(0) === 0xfeff ? text.slice(1) : text).slice(0, 4096);
+  if (/^\s*<(!doctype|html|head|body)[\s>]/i.test(head)) return true;
+  return /html/i.test(contentType ?? "") && /<(html|head|body|script|meta|title|div|form)[\s>/]/i.test(head);
+};
+
+/**
+ * This function reads the answer of a robots.txt fetch: the status, the content type and the body.
+ * A 2xx with a web page in place of the file is unreadable. Thus no path is permitted (fail
+ * closed), as for a body that does not decode. The other statuses follow `robotsFromStatus`.
+ */
+export const robotsFromResponse = (
+  status: number,
+  contentType: string | null | undefined,
+  body: Uint8Array | string,
+): Robots => {
+  if (status < 200 || status >= 300) return robotsFromStatus(status, undefined);
+  const text = typeof body === "string" ? body : new TextDecoder("utf-8").decode(body);
+  if (isHtmlRobots(contentType, text)) return unreachableRobots(HTML_ROBOTS);
+  return parseRobots(text);
+};
 
 /** This function gives the meaning of the status of a robots.txt fetch (RFC 9309 §2.3.1). */
 export const robotsFromStatus = (status: number, body: string | undefined): Robots => {

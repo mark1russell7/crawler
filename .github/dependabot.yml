@@ -22,6 +22,10 @@ updates:
       day: monday
     cooldown:
       default-days: 7
+    ignore:
+      # The Node.js types follow the oldest Node.js release in engines, not the newest one.
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
     groups:
       runtime:
         dependency-type: production

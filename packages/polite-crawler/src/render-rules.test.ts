@@ -1,5 +1,3 @@
-import { mkdtemp, rm } from "node:fs/promises";
-import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { MockAgent } from "undici";
 import { afterEach, describe, expect, it } from "vitest";
@@ -11,6 +9,7 @@ import { CaptureLog } from "./log.ts";
 import type { Clock } from "./politeness.ts";
 import type { CaptureRecord } from "./record.ts";
 import type { RenderOptions, Rendered, Renderer } from "./render.ts";
+import { removeDir, tempDir } from "./test-helpers.ts";
 
 const cleanups: Array<() => Promise<void>> = [];
 afterEach(async () => {
@@ -50,7 +49,7 @@ const browser = (
 };
 
 const make = async (renderer: Renderer, options: Partial<CrawlerOptions> = {}) => {
-  const dir = await mkdtemp(join(tmpdir(), "polite-crawler-render-"));
+  const dir = await tempDir("render");
   const agent = new MockAgent();
   agent.disableNetConnect();
   const log = new CaptureLog(join(dir, "crawl"));
@@ -74,7 +73,7 @@ const make = async (renderer: Renderer, options: Partial<CrawlerOptions> = {}) =
   cleanups.push(async () => {
     await crawler.close();
     index.close();
-    await rm(dir, { recursive: true, force: true });
+    await removeDir(dir);
   });
   const robots = (origin: string, text: string): void => {
     agent.get(origin).intercept({ path: "/robots.txt", method: "GET" }).reply(200, text).persist();

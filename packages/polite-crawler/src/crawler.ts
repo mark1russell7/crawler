@@ -1513,6 +1513,7 @@ export class Crawler {
           let body: Uint8Array | undefined;
           let blob: string | undefined;
           let truncated = false;
+          let cut = false;
           let next: string | undefined;
           let result: HostResult | undefined;
           if (outcome === "ok") {
@@ -1520,6 +1521,7 @@ export class Crawler {
               const read = await readBody(response.body, header("content-encoding"), maxBytes);
               body = read.bytes;
               truncated = read.truncated;
+              cut = read.cut;
               if (read.cut) note = `the compressed body ended early, so the crawler keeps the ${String(read.bytes.length)} bytes before the end`;
               else if (truncated) note = `truncated at ${String(maxBytes)} bytes`;
             } catch (error) {
@@ -1620,6 +1622,7 @@ export class Crawler {
               ...(check !== undefined ? { robots_check: check } : {}),
               signals,
               ...(truncated ? { truncated: true } : {}),
+              ...(cut ? { cut: true } : {}),
               ...cacheHeaders,
               ...(freshness !== null ? { fresh_until: freshness } : {}),
               ...(varyKey !== null ? { vary_key: varyKey } : {}),
@@ -1630,7 +1633,8 @@ export class Crawler {
             marks,
           );
           const fetchedIso = new Date(fetchedAt).toISOString();
-          if (capture !== undefined && (outcome === "ok" || outcome === "not-modified") && blob !== undefined) {
+          // a body that the server cut is not a copy to keep: the next request asks for the whole body
+          if (capture !== undefined && (outcome === "ok" || outcome === "not-modified") && blob !== undefined && !cut) {
             this.store({
               url,
               capture,

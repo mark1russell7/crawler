@@ -1,8 +1,8 @@
-import { mkdtemp, rm } from "node:fs/promises";
+import { rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import type { IncomingHttpHeaders, IncomingMessage, Server, ServerResponse } from "node:http";
 import { createServer } from "node:http";
 import type { AddressInfo } from "node:net";
-import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { brotliCompressSync, deflateRawSync, deflateSync, gzipSync } from "node:zlib";
 import { afterEach, describe, expect, it } from "vitest";
@@ -13,6 +13,7 @@ import { DocIndex } from "./docs.ts";
 import { CaptureLog } from "./log.ts";
 import type { Clock } from "./politeness.ts";
 import type { CaptureRecord } from "./record.ts";
+import { removeDir, tempDir } from "./test-helpers.ts";
 
 // Each test here talks to a real HTTP server on 127.0.0.1, so the sockets, the streams and the
 // timeouts are the real ones. The clock is real for durations, and a sleep moves it at once.
@@ -60,7 +61,7 @@ const jumpClock = (): Clock & { slept: number[]; advance: (ms: number) => void }
 };
 
 const make = async (options: Partial<CrawlerOptions> = {}) => {
-  const dir = await mkdtemp(join(tmpdir(), "polite-crawler-hazards-"));
+  const dir = await tempDir("hazards");
   const log = new CaptureLog(join(dir, "crawl"));
   const blobs = new FileBlobStore(join(dir, "blobs"));
   const index = new DocIndex(":memory:");
@@ -70,7 +71,7 @@ const make = async (options: Partial<CrawlerOptions> = {}) => {
     await crawler?.close();
     await log.close();
     index.close();
-    await rm(dir, { recursive: true, force: true });
+    await removeDir(dir);
   });
   crawler = new Crawler({
     token: "PoliteCrawler",

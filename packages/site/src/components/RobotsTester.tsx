@@ -1,8 +1,8 @@
 /**
  * The robots.txt tester. It parses the text with `parseRobots` and decides each path with `decide`,
  * the same functions that the crawler uses before each request. It shows the rule that decided, on
- * its line, for each user agent. The last column is the verdict of the MCP server, which obeys the
- * rules for its own token and for `Claude-User`.
+ * its line, for each user agent. A column gives the verdict of the MCP server, which obeys the rules
+ * for its own token and for `Claude-User`.
  */
 import { useEffect, useMemo, useState, type ReactElement } from "react";
 import type { RobotsDecision } from "polite-crawler/robots";
@@ -112,8 +112,8 @@ export default function RobotsTester(): ReactElement {
   const robots = useMemo(() => parseRobots(text), [text]);
   const token = productToken(custom);
   const known = AGENTS.some((agent) => agent.toLowerCase() === token.toLowerCase());
+  // the agent of the reader and the MCP server come first: they are the questions of most readers
   const columns: Column[] = [
-    ...AGENTS.map((agent) => ({ key: agent, label: agent, title: agent, tokens: [agent] })),
     ...(token.length > 0 && !known ? [{ key: "custom", label: token, title: custom.trim(), tokens: [token] }] : []),
     {
       key: "mcp",
@@ -121,6 +121,7 @@ export default function RobotsTester(): ReactElement {
       title: "The MCP server of polite-crawler: the rules for PoliteCrawler and for Claude-User",
       tokens: MCP_TOKENS,
     },
+    ...AGENTS.map((agent) => ({ key: agent, label: agent, title: agent, tokens: [agent] })),
   ];
   const targets = [
     ...new Map(

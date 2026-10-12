@@ -103,7 +103,8 @@ export const STATES: ReadonlyArray<{ readonly state: State; readonly label: stri
   {
     state: "unreachable",
     label: "Unreachable",
-    meaning: "No answer: no address in the DNS, a TLS error, a timeout or a redirect loop.",
+    meaning:
+      "The crawler got no file that it could read: no address in the DNS, a TLS error, a timeout, a redirect loop or a body that it could not decode.",
   },
 ];
 

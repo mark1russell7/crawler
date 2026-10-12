@@ -134,6 +134,9 @@ header.header {
   background: none;
   font-size: var(--text-sm);
 }
+.pc-install-word {
+  white-space: nowrap;
+}
 .pc-install-error {
   grid-column: 1 / -1;
   margin: 0;
@@ -770,6 +773,12 @@ header.header {
 .pc-week-axis span {
   position: absolute;
   white-space: nowrap;
+}
+/* On a phone, a label each 6 hours: the labels each 3 hours touch. */
+@media (max-width: 30rem) {
+  .pc-week-axis span:nth-child(even) {
+    display: none;
+  }
 }
 
 .pc-callout-stop {

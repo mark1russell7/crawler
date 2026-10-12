@@ -1,5 +1,5 @@
 /** The install commands, with a button that copies each one. */
-import { useState, type ReactElement } from "react";
+import { Fragment, useState, type ReactElement } from "react";
 
 const COMMANDS = [
   { label: "Library", command: "npm install polite-crawler" },
@@ -43,7 +43,15 @@ export default function CopyInstall(): ReactElement {
       {COMMANDS.map(({ label, command }) => (
         <div className="pc-install-row" key={command}>
           <span className="pc-install-label">{label}</span>
-          <code>{command}</code>
+          {/* the command wraps only between its words, never inside "-y" */}
+          <code>
+            {command.split(" ").map((word, index) => (
+              <Fragment key={index}>
+                {index > 0 ? " " : null}
+                <span className="pc-install-word">{word}</span>
+              </Fragment>
+            ))}
+          </code>
           <button
             type="button"
             className="pc-button"

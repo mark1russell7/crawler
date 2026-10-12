@@ -56,6 +56,8 @@ export default defineConfig({
         "./src/styles/home.css",
       ],
       components: { Hero: "./src/components/Hero.astro" },
+      // a long line of code wraps, so a code block never scrolls sideways on a phone
+      expressiveCode: { defaultProps: { wrap: true } },
       // the title for search, the structured data and the description of the study (src/routeData.ts)
       routeMiddleware: "./src/routeData.ts",
       // the date of the last commit of each page (the Pages workflow needs the full history for it)

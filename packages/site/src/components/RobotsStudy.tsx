@@ -198,7 +198,10 @@ export function CompanyChart({
   const [hover, setHover] = useState<string | undefined>(undefined);
   return (
     <figure className="pc-chart pc-study-chart not-content">
-      <figcaption>One company, three agents: the share of sites that refuse each</figcaption>
+      <figcaption>
+        One company, three agents: the share of sites that refuse each
+        <span className="pc-chart-muted"> in %, in the sequence of the key</span>
+      </figcaption>
       <ul className="pc-chart-legend">
         {Object.entries(MARKS).map(([role, mark]) => (
           <li key={role}>
@@ -254,7 +257,7 @@ export function CompanyChart({
               })}
             </span>
             <span className="pc-rbar-value pc-chart-muted">
-              {company.agents.map((agent) => `${agent.share.toFixed(1)}%`).join(" · ")}
+              {company.agents.map((agent) => agent.share.toFixed(1)).join(" · ")}
             </span>
           </div>
         ))}

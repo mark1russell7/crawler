@@ -69,7 +69,10 @@
   background: var(--verdict-name);
 }
 .pc-teaser-grid .S {
-  background: var(--verdict-star);
+  background: repeating-linear-gradient(135deg, var(--verdict-name) 0 1.5px, var(--verdict-star-bg) 1.5px 3.5px);
+}
+.pc-teaser-grid .B {
+  background: var(--verdict-blocked);
 }
 .pc-teaser-grid .n {
   background: var(--verdict-welcome);
@@ -143,7 +146,7 @@
   gap: 2px;
   height: 10px;
   background-image: linear-gradient(90deg, var(--chart-grid) 1px, transparent 1px);
-  background-size: 25% 100%;
+  background-size: calc(100% / var(--ticks, 4)) 100%;
 }
 .pc-teaser-track span:last-child {
   border-radius: 0 3px 3px 0;
@@ -154,6 +157,11 @@
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   text-align: right;
+}
+.pc-teaser-note {
+  margin: 0;
+  font-size: var(--text-xs);
+  color: var(--color-ink-muted);
 }
 .pc-teaser-more {
   justify-self: start;

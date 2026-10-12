@@ -1,24 +1,21 @@
 // This script renders the share cards (1200 by 630): scripts/og-card.html to public/og.png, and
 // scripts/og-study.html to public/og-robots-study.png with the verdicts of the robots.txt study.
 // Start it after a change of a card or of the study: pnpm --filter @crawler/site og
+// The numbers come from src/lib/study.ts, the module that gives the numbers of the page (Node.js 23.6
+// or later reads the TypeScript of that module).
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { chromium } from "playwright-core";
+import { formatDay, headline } from "../src/lib/study.ts";
 
 const study = JSON.parse(readFileSync(new URL("../src/data/robots-study.json", import.meta.url), "utf8"));
 const gpt = study.agents.findIndex((agent) => agent.token === "GPTBot");
-const answered = study.sites.filter((site) => site.state !== "unreachable");
-const refused = answered.filter((site) => site.p[gpt] === "N" || site.p[gpt] === "S").length;
-const date = new Date(study.fetched.from).toLocaleDateString("en-US", {
-  day: "numeric",
-  month: "long",
-  year: "numeric",
-  timeZone: "UTC",
-});
+const { gpt: row, summary } = headline(study);
 const facts = {
-  date,
-  share: `${String(Math.round((refused / answered.length) * 100))}%`,
-  codes: study.sites.map((site) => (site.state === "unreachable" ? "U" : site.p[gpt])),
+  date: formatDay(study.fetched.from),
+  share: `${String(Math.round(row.share))}%`,
+  answered: String(summary.answered),
+  codes: study.sites.map((site) => site.p[gpt]),
 };
 
 const cards = [

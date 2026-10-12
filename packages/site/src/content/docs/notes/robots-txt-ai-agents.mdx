@@ -1,6 +1,7 @@
 ---
 title: Who lets AI agents in?
-description: polite-crawler read the robots.txt files of the top 1,000 domains in October 2026. Approximately one site in six refuses the AI training crawlers, and fewer sites refuse the agents that fetch a page for a person. See the rule that decided each verdict, for GPTBot, ClaudeBot, Claude-User and 12 more agents.
+seoTitle: "Which sites block GPTBot? The robots.txt rules of the top 1,000 domains"
+description: Which of the top 1,000 domains block GPTBot, ClaudeBot and Claude-User in robots.txt, with the rule that decided each verdict.
 head:
   - tag: meta
     attrs:
@@ -14,46 +15,56 @@ head:
     attrs:
       name: twitter:image
       content: https://mark1russell7.github.io/crawler/og-robots-study.png
-  - tag: script
-    attrs:
-      type: application/ld+json
-    content: '{"@context":"https://schema.org","@type":"Dataset","name":"The robots.txt rules for AI agents of the top 1,000 domains","description":"For each of the top 1,000 domains of the Tranco list 4672X: the robots.txt verdict for 15 user agents (GPTBot, ClaudeBot, Google-Extended, CCBot, Applebot-Extended, Bytespider, meta-externalagent, OAI-SearchBot, Claude-SearchBot, PerplexityBot, ChatGPT-User, Claude-User, Perplexity-User, Googlebot and PoliteCrawler), the lines that decided, the content signals and the crawl delays. Read by polite-crawler on 12 October 2026.","url":"https://mark1russell7.github.io/crawler/notes/robots-txt-ai-agents/","keywords":["robots.txt","AI crawlers","GPTBot","ClaudeBot","Claude-User","ChatGPT-User","Google-Extended","CCBot","content signals","RFC 9309"],"creator":{"@type":"Person","name":"Mark Russell","url":"https://github.com/mark1russell7"},"datePublished":"2026-10-12","temporalCoverage":"2026-10-12","isBasedOn":"https://tranco-list.eu/list/4672X/1000","license":"https://opensource.org/licenses/MIT","isAccessibleForFree":true,"distribution":[{"@type":"DataDownload","encodingFormat":"application/json","contentUrl":"https://mark1russell7.github.io/crawler/data/robots-study.json"}],"measurementTechnique":"One request for /robots.txt for each domain, decided with RFC 9309 by polite-crawler"}'
 ---
 
 import study from "../../../data/robots-study.json";
-import { agentRows, companies, pack, summarize } from "../../../lib/study.ts";
+import { DATA_LICENSE, STUDY_AUTHOR, agentRows, companies, formatDay, oneIn, pack, summarize } from "../../../lib/study.ts";
+import StudyData from "../../../components/StudyData.astro";
 import {
   AnswerChart,
   CompanyChart,
   RefusalChart,
   StudyGrid,
   StudyTable,
+  provideStudy,
 } from "../../../components/RobotsStudy.tsx";
 
 export const s = summarize(study);
 export const rows = agentRows(study);
 export const row = (token) => rows.find((entry) => entry.token === token);
-export const packed = pack(study);
-export const dataUrl = `${import.meta.env.BASE_URL.replace(/\/$/, "")}/data/robots-study.json`;
-export const day = new Date(study.fetched.from).toLocaleDateString("en-US", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" });
+export const packed = provideStudy(pack(study));
+export const base = import.meta.env.BASE_URL.replace(/\/$/, "");
+export const dataUrl = `${base}/data/robots-study.json`;
+export const csvUrl = `${base}/data/robots-study.csv`;
+export const day = formatDay(study.fetched.from);
+export const blocked403 = s.blockedStatuses.find((entry) => entry.status === 403)?.sites ?? 0;
+export const pageUrl = "https://mark1russell7.github.io/crawler/notes/robots-txt-ai-agents/";
 
-On {day}, polite-crawler read the robots.txt file of each of the top {s.listSize.toLocaleString("en-US")} domains of the [Tranco list]({study.list.url}). Of these domains, {s.answered} answered. This page shows which of these sites let 15 agents in, from GPTBot and ClaudeBot to Claude-User and Googlebot. For each verdict, it also shows the rule that decided it.
+<p class="pc-byline">
+  By <a href={STUDY_AUTHOR.url}>{STUDY_AUTHOR.name}</a>. The crawler read the files on <time datetime={s.fetchedOn}>{day}</time>. The data is under <a href={DATA_LICENSE.url}>{DATA_LICENSE.name}</a>.
+</p>
+
+On {day}, polite-crawler read the robots.txt file of each of the top {s.listSize.toLocaleString("en-US")} domains of the <a href={study.list.url}>Tranco list</a>. This page shows which sites let 15 agents in, from GPTBot and ClaudeBot to Claude-User and Googlebot. For each verdict, it also shows the rule that decided it.
+
+Of the {s.listSize.toLocaleString("en-US")} domains, {s.answered} answered with a robots.txt file or with no file. {s.blocked} sites blocked the request at the edge, and {s.unreachable} domains were unreachable. The shares on this page count only the {s.answered} sites that answered.
 
 ## The findings
 
-- **Approximately one site in six refuses the training crawlers.** {row("GPTBot").refused} sites ({row("GPTBot").share}%) refuse GPTBot, and {row("ClaudeBot").refused} sites refuse ClaudeBot. CCBot and Bytespider get the most refusals: {row("CCBot").share}% and {row("Bytespider").share}%.
+- **Approximately {oneIn(row("GPTBot").share)} refuses the training crawlers.** {row("GPTBot").refused} of the {s.answered} sites ({row("GPTBot").share}%) refuse GPTBot, and {row("ClaudeBot").refused} sites refuse ClaudeBot. Of the {s.withFile} sites with a robots.txt file, {row("GPTBot").fileShare}% refuse GPTBot. CCBot and Bytespider get the most refusals: {row("CCBot").share}% and {row("Bytespider").share}%.
 - **Fewer sites refuse an agent that acts for a person.** Of the sites, {row("ChatGPT-User").share}% refuse ChatGPT-User and {row("Claude-User").share}% refuse Claude-User. {s.trainingNotUser.OpenAI} sites refuse GPTBot but let ChatGPT-User in.
 - **Most refusals name the agent.** Of the {row("GPTBot").refused} sites that refuse GPTBot, {row("GPTBot").byName} write a group for GPTBot. The other {row("GPTBot").byStar} refuse all bots with the group `*`.
+- **{s.blocked} sites blocked the request before the file.** They gave a 403, a challenge page or a different error. A block does not tell the rules of a site for each agent, so the shares do not count these sites.
 - **Few sites refuse Googlebot.** Only {row("Googlebot").refused} sites ({row("Googlebot").share}%) refuse it. A site that refuses Googlebot goes out of Google Search.
 - **Content signals are rare.** Only {s.signals} sites write a `Content-Signal` line.
 
-<StudyGrid client:visible packed={packed} agents={study.agents} dataUrl={dataUrl} />
+<StudyData packed={packed} />
+<StudyGrid client:visible agents={study.agents} dataUrl={dataUrl} />
 
 ## The refusals for each agent
 
 A site can refuse an agent in two ways. It can write a group for the agent, for example `User-agent: GPTBot` with `Disallow: /`. It can also refuse all bots with the group `*`. Then each agent without a group of its own gets that refusal.
 
-<RefusalChart client:visible rows={rows} answered={s.answered} />
+<RefusalChart client:visible rows={rows} answered={s.answered} files={s.withFile} />
 
 The training crawlers get the most refusals. {s.refusesAllTraining} sites refuse all seven of them. `Google-Extended` and `Applebot-Extended` are not crawlers: they are tokens. Googlebot and Applebot fetch the pages, and a group for the token tells Google or Apple not to use the pages to train its models.
 
@@ -69,7 +80,7 @@ OpenAI and Anthropic each have three agents. One crawler collects training data,
 
 For each company, the sites refuse the agent for a person less than the training crawler. {s.trainingNotUser.OpenAI} sites refuse GPTBot and let ChatGPT-User in. {s.trainingNotUser.Anthropic} sites refuse ClaudeBot and let Claude-User in. These sites refuse the use of their pages for training, but they let an assistant read a page for a person.
 
-polite-crawler obeys the rules for `Claude-User` when it fetches a page for an assistant. [Read how](../../guide/mcp/).
+The MCP server of polite-crawler obeys the rules for `Claude-User` when it fetches a page for an assistant. [Read how](../../guide/mcp/). To write such rules for your own site, [use the recipe](../../block-ai-training-crawlers/).
 
 ## What the 1,000 domains answered
 
@@ -77,33 +88,69 @@ The Tranco list ranks domains, not websites. Many of the top domains serve a con
 
 <AnswerChart client:visible summary={s} />
 
-- **A robots.txt file.** {s.withFile - s.html} sites gave a file. The verdicts come from its rules.
-- **An HTML page.** {s.html} sites gave an HTML page in place of a robots.txt file. A page has no rules, so each path is permitted.
-- **No file.** {s.noFile} sites gave a 4xx status. RFC 9309 says that each path is then permitted.
-- **No answer.** {s.unreachable} domains gave no answer, an error or a 5xx status. RFC 9309 says that a crawler then fetches nothing. The shares on this page do not include these domains.
+The study puts each answer into one of four states:
+
+- **A robots.txt file** ({s.withFile} sites). The verdicts come from the rules of the file.
+- **No file** ({s.noFile} sites). {s.noFile - s.html} sites gave a 404 or a 410. {s.html} sites gave an HTML page in place of the file, for example a home page or a sign-in page. These sites state no rules, so each agent is permitted.
+- **Blocked at the edge** ({s.blocked} sites). The server answered with a refusal, a challenge or an error in place of the file. {blocked403} sites gave a 403, and {s.challenges} gave a challenge, for example a CAPTCHA page. The other sites gave a different 4xx, a 429 or a 5xx.
+- **Unreachable** ({s.unreachable} domains). The crawler got no file that it could read. {s.dns} domains have no address in the DNS. The other domains gave a TLS error, a timeout or a closed connection. {s.redirects} sent more than 5 redirects, and {s.undecodable} sent a body that the crawler could not decode.
+
+The shares on this page count the files and the sites with no file: {s.answered} sites. They do not count the blocked or the unreachable domains.
+
+### A 4xx and a block are two different questions
+
+RFC 9309 tells a crawler what to do when it cannot read robots.txt. A 4xx means that the file is not available, so a crawler can fetch each path. A 5xx or no answer means that the site is unreachable, so a crawler fetches nothing.
+
+This study asks a different question: what does a site tell each AI agent? A 403 to the request of the study does not answer that question. The edge of the site refused one request before it gave the file, so the rules for GPTBot stay unknown. Thus the study counts only a 404 and a 410 as "no file". It counts each other 4xx as a block, not as a site that permits each agent.
+
+The crawler itself also stops at a 403. After a 403, a 401 or a challenge, it sends no more requests to the site in that run.
 
 ## Content signals
 
 A robots.txt file can also tell how the site permits the use of its content. Cloudflare published the `Content-Signal` line in September 2025, for example `Content-Signal: search=yes, ai-train=no`. Only {s.signals} of the {s.answered} sites write it:
 
-| Signal | yes | no |
-| --- | --- | --- |
-| `search`: show the site in search results | {s.signalValues[0].yes} | {s.signalValues[0].no} |
-| `ai-input`: use the pages as input to an AI answer | {s.signalValues[1].yes} | {s.signalValues[1].no} |
-| `ai-train`: use the pages to train a model | {s.signalValues[2].yes} | {s.signalValues[2].no} |
+| Signal | yes | no | Different in two groups |
+| --- | --- | --- | --- |
+| `search`: show the site in search results | {s.signalValues[0].yes} | {s.signalValues[0].no} | {s.signalValues[0].mixed} |
+| `ai-input`: use the pages as input to an AI answer | {s.signalValues[1].yes} | {s.signalValues[1].no} | {s.signalValues[1].mixed} |
+| `ai-train`: use the pages to train a model | {s.signalValues[2].yes} | {s.signalValues[2].no} | {s.signalValues[2].mixed} |
 
 When a page refuses AI input, polite-crawler keeps the page but holds back its text from the AI reader. [Test a robots.txt with signals](../../tools/robots-txt-tester/).
 
 ## The method
 
 1. **The list.** The study used the top 1,000 domains of the Tranco list <code>{study.list.id}</code>, from {study.list.date}. Tranco makes the list from the ranks of five sources across 30 days.
-2. **The requests.** The crawler sent one request for `https://<domain>/robots.txt` to each domain, and followed the redirects. When a domain had no web server, it asked `www.<domain>`. All requests went out from one computer, on {day}.
-3. **The User-Agent.** Each request sent <code>{study.userAgent}</code>. The address in it goes to [the page for site owners](../../bot/).
+2. **The requests.** The crawler sent one request for `https://<domain>/robots.txt` to each domain, and followed a maximum of 5 redirects. It did not try again, and it did not try `www.<domain>`. All requests went out from one computer on {day}, with a new, empty store.
+3. **The User-Agent.** Each request sent <code>{study.userAgent}</code>, with no contact. The address in it goes to [the page for site owners](../../bot/).
 4. **The verdicts.** The function `decide` of polite-crawler decided each agent alone, as RFC 9309 specifies. The path was <code>{study.pagePath}</code>, a page path that no site names. Thus a refusal of this path is a refusal of the pages of the site.
-5. **The limits.** This data is a snapshot. A site can change its robots.txt at any time, and some sites give a different file to different countries. A robots.txt is also only a request: it does not stop a crawler that ignores it.
+5. **Redirects.** RFC 9309 lets a crawler read more than 5 redirects as "no file". The study, as the crawler, reads them as unreachable.
+6. **One file for two domains.** Two domains can redirect to the same file. The crawler then asks for the file a second time with its `ETag`, and the server can answer `304 Not Modified`. The study uses the stored copy of the file, as the crawler does.
 
-The [dataset]({dataUrl}) has each domain with its verdicts and the lines that decided them, as JSON. [The script](https://github.com/mark1russell7/crawler/blob/main/packages/site/scripts/robots-study.ts) is in the repository.
+## The limits
+
+- **Edge blocking.** A block can depend on the details of the request, for example the TLS connection of the client, and not only on the User-Agent. A different client can get the file. Some unreachable domains closed the connection, and this can also be a block.
+- **One User-Agent.** Some sites give a different robots.txt to a different User-Agent. The study sent only the User-Agent of polite-crawler, not the User-Agent of each agent.
+- **One try.** The crawler sent one request to each domain and did not try again. A timeout or a closed connection on that day puts a domain in "Unreachable".
+- **Content signals.** A file can write a different `Content-Signal` line for each group. The table counts such a site in "Different in two groups", not by its first line.
+- **Domains, not websites.** The list includes domains for content delivery networks, APIs and the DNS. Such a domain with no file counts as a site that states no rules.
+- **A snapshot.** A site can change its robots.txt at any time, and some sites give a different file to different countries.
+- **A request only.** A robots.txt does not stop a crawler that ignores it.
+
+## Get the data
+
+- <a href={dataUrl}>The dataset as JSON</a>: each domain, its state, its verdicts and the lines that decided them.
+- <a href={csvUrl}>The dataset as CSV</a>: each domain, its state and its verdicts, with one column for each agent.
+- <a href="https://github.com/mark1russell7/crawler/blob/main/packages/site/scripts/robots-study.ts">The script</a> that sent the requests and wrote the dataset.
+
+The data and the text of this study are under the <a href={DATA_LICENSE.url}>{DATA_LICENSE.name}</a> license. You can use them for any purpose when you name the source. The code of polite-crawler and the script are under the MIT license.
+
+## How to cite
+
+<figure class="pc-cite not-content">
+  <figcaption>Name the author, the title, the date and the address:</figcaption>
+  <p>{STUDY_AUTHOR.name}. "Who lets AI agents in? The robots.txt rules of the top 1,000 domains." polite-crawler field notes, {day}. <a href={pageUrl}>{pageUrl}</a>. Data: {DATA_LICENSE.name}.</p>
+</figure>
 
 ## Find a site
 
-<StudyTable client:idle packed={packed} agents={study.agents} dataUrl={dataUrl} />
+<StudyTable client:visible agents={study.agents} dataUrl={dataUrl} />

@@ -1,0 +1,1001 @@
+rank,domain,host,state,status,html,reason,bytes,groups,crawl_delay_s,content_signals,GPTBot,ClaudeBot,Google-Extended,CCBot,Applebot-Extended,Bytespider,meta-externalagent,OAI-SearchBot,Claude-SearchBot,PerplexityBot,ChatGPT-User,Claude-User,Perplexity-User,Googlebot,PoliteCrawler
+1,google.com,www.google.com,file,200,,,6624,4,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+2,cloudflare.com,www.cloudflare.com,file,200,,,1099,9,,"content-signal: ai-train=yes, search=yes, ai-input=yes",permitted-named,permitted,permitted-named,permitted-named,permitted,permitted,permitted,permitted,permitted,permitted-named,permitted-named,permitted,permitted,permitted,permitted
+3,gstatic.com,www.gstatic.com,file,200,,,5105,1,,,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star
+4,facebook.com,facebook.com,file,200,,,35223,36,,,permitted-named,permitted-named,permitted-named,refused-star,permitted-named,refused-star,refused-star,refused-star,refused-star,permitted-named,refused-star,refused-star,refused-star,permitted-named,refused-star
+5,amazonaws.com,aws.amazon.com,file,200,,,13822,2,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+6,akamai.net,akamai.net,unreachable,0,,no response: getaddrinfo ENOTFOUND akamai.net,,,,,,,,,,,,,,,,,,,
+7,googleapis.com,googleapis.com,none,404,,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+8,microsoft.com,www.microsoft.com,file,200,,,9126,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+9,apple.com,www.apple.com,file,200,,,1018,6,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+10,youtube.com,www.youtube.com,file,200,,,792,2,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+11,instagram.com,www.instagram.com,file,200,,,7528,36,,,permitted-named,permitted-named,permitted-named,refused-star,permitted-named,refused-star,refused-star,refused-star,refused-star,permitted-named,refused-star,refused-star,refused-star,permitted-named,refused-star
+12,fbcdn.net,fbcdn.net,file,200,,,3355,36,,,refused-named,refused-named,refused-named,refused-star,refused-named,refused-star,refused-star,refused-star,refused-star,refused-named,refused-star,refused-star,refused-star,refused-named,refused-star
+13,mail.ru,mail.ru,file,200,,,433,4,,,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,permitted-named,refused-star
+14,ezviz7.com,ezviz7.com,unreachable,0,,no response: getaddrinfo ENOTFOUND ezviz7.com,,,,,,,,,,,,,,,,,,,
+15,domaincontrol.com,domaincontrol.com,unreachable,0,,no response: getaddrinfo ENOTFOUND domaincontrol.com,,,,,,,,,,,,,,,,,,,
+16,twitter.com,twitter.com,file,200,,,2678,10,1,,refused-star,refused-star,refused-named,refused-star,refused-star,refused-star,refused-named,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,permitted-named,refused-star
+17,dzen.ru,dzen.ru,unreachable,200,,"undecodable body: unsupported content-encoding ""aws-chunked""",,,,,,,,,,,,,,,,,,,
+18,linkedin.com,linkedin.com,blocked,200,yes,"a CAPTCHA page in place of the file, status 200",,,,,,,,,,,,,,,,,,,
+19,akamaiedge.net,akamaiedge.net,unreachable,0,,no response: getaddrinfo ENOTFOUND akamaiedge.net,,,,,,,,,,,,,,,,,,,
+20,googlevideo.com,googlevideo.com,unreachable,0,,no response: Hostname/IP does not match certificate's altnames: Host: googlevideo.com. is not in the cert's altnames: DNS:www.google.com,,,,,,,,,,,,,,,,,,,
+21,hicloudcam.com,hicloudcam.com,unreachable,0,,no response: getaddrinfo ENOTFOUND hicloudcam.com,,,,,,,,,,,,,,,,,,,
+22,googletagmanager.com,googletagmanager.com,none,404,,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+23,akadns.net,akadns.net,unreachable,0,,no response: getaddrinfo ENOTFOUND akadns.net,,,,,,,,,,,,,,,,,,,
+24,office.com,login.microsoftonline.com,none,200,yes,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+25,live.com,outlook.live.com,none,200,yes,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+26,azure.com,azure.microsoft.com,none,200,yes,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+27,amazon.com,www.amazon.com,file,200,,,7947,101,,,refused-named,refused-named,refused-named,refused-named,permitted,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,permitted,permitted
+28,gtld-servers.net,gtld-servers.net,unreachable,0,,no response: getaddrinfo ENOTFOUND gtld-servers.net,,,,,,,,,,,,,,,,,,,
+29,github.com,github.com,file,200,,,16739,8,,,permitted-named,permitted-named,permitted,permitted,permitted,refused-named,permitted,permitted-named,permitted,permitted-named,permitted,permitted,permitted,permitted,permitted
+30,appsflyersdk.com,appsflyersdk.com,blocked,403,,status 403,,,,,,,,,,,,,,,,,,,
+31,wikipedia.org,en.wikipedia.org,file,200,,,28275,34,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+32,aaplimg.com,aaplimg.com,unreachable,0,,no response: getaddrinfo ENOTFOUND aaplimg.com,,,,,,,,,,,,,,,,,,,
+33,whatsapp.net,www.whatsapp.com,file,200,,,1180,17,,,refused-named,refused-named,refused-named,permitted,refused-named,permitted,permitted,permitted,permitted,refused-named,permitted,permitted,permitted,permitted,permitted
+34,cloudfront.net,cloudfront.net,unreachable,0,,no response: getaddrinfo ENOTFOUND cloudfront.net,,,,,,,,,,,,,,,,,,,
+35,bing.com,www.bing.com,file,200,,,2676,3,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+36,fastly.net,www.fastly.com,file,200,,,398,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+37,apple-dns.net,apple-dns.net,unreachable,0,,no response: getaddrinfo ENOTFOUND apple-dns.net,,,,,,,,,,,,,,,,,,,
+38,cloud.microsoft,m365.cloud.microsoft,none,200,yes,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+39,trafficmanager.net,trafficmanager.net,unreachable,0,,no response: getaddrinfo ENOTFOUND trafficmanager.net,,,,,,,,,,,,,,,,,,,
+40,office.net,office.net,unreachable,0,,no response: getaddrinfo ENOTFOUND office.net,,,,,,,,,,,,,,,,,,,
+41,googleusercontent.com,googleusercontent.com,none,404,,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+42,sharepoint.com,www.microsoft.com,unreachable,302,,more than 5 redirects,,,,,,,,,,,,,,,,,,,
+43,gandi.net,www.gandi.net,file,200,,,9023,212,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+44,doubleclick.net,doubleclick.net,file,200,,,6624,4,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+45,microsoftonline.com,microsoftonline.com,unreachable,0,,no response: getaddrinfo ENOTFOUND microsoftonline.com,,,,,,,,,,,,,,,,,,,
+46,netflix.com,www.netflix.com,file,200,,,3790,4,,,permitted-named,permitted-named,permitted-named,refused-star,refused-star,refused-star,refused-star,permitted-named,permitted-named,permitted-named,permitted-named,permitted-named,refused-star,permitted-named,refused-star
+47,youtu.be,youtu.be,file,200,,,511,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+48,x.com,x.com,file,200,,,2678,10,1,,refused-star,refused-star,refused-named,refused-star,refused-star,refused-star,refused-named,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,permitted-named,refused-star
+49,wordpress.org,wordpress.org,file,200,,,976,12,,,permitted-named,permitted-named,permitted-named,permitted-named,permitted-named,permitted-named,permitted,permitted,permitted,permitted-named,permitted,permitted,permitted,permitted,permitted
+50,skype.com,teams.live.com,none,200,yes,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+51,icloud.com,www.icloud.com,file,200,,,1289,3,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted-named,permitted
+52,digicert.com,www.digicert.com,file,200,,,2657,23,,,permitted-named,permitted-named,permitted-named,permitted,permitted,permitted,permitted,permitted-named,permitted-named,permitted-named,permitted-named,permitted-named,permitted-named,permitted,permitted
+53,pinterest.com,www.pinterest.com,file,200,,,40982,8,,,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,permitted-named,refused-star
+54,googledomains.com,domains.google,none,200,yes,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+55,googlesyndication.com,googlesyndication.com,none,404,,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+56,cloudflare.net,cloudflare.net,file,200,,,207,4,10,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+57,whatsapp.com,www.whatsapp.com,file,200,,,1180,17,,,refused-named,refused-named,refused-named,permitted,refused-named,permitted,permitted,permitted,permitted,refused-named,permitted,permitted,permitted,permitted,permitted
+58,tiktok.com,www.tiktok.com,file,200,,,1567,3,,,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,permitted,permitted
+59,goo.gl,goo.gl,blocked,400,,status 400,,,,,,,,,,,,,,,,,,,
+60,gvt1.com,gvt1.com,unreachable,0,,no response: getaddrinfo ENOTFOUND gvt1.com,,,,,,,,,,,,,,,,,,,
+61,yahoo.com,www.yahoo.com,file,200,,,1464,3,,,refused-named,refused-named,refused-named,refused-named,permitted,refused-named,permitted,permitted-named,permitted-named,refused-named,refused-named,permitted,permitted,permitted,permitted
+62,windowsupdate.com,windowsupdate.com,unreachable,0,,no response: getaddrinfo ENOTFOUND windowsupdate.com,,,,,,,,,,,,,,,,,,,
+63,adobe.com,www.adobe.com,file,200,,,10199,7,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted-named,permitted
+64,windows.net,windows.net,unreachable,0,,no response: Hostname/IP does not match certificate's altnames: Host: windows.net. is not in the cert's altnames: DNS:reroute443.microsoft.com,,,,,,,,,,,,,,,,,,,
+65,endpoints.news,endpoints.news,blocked,403,,status 403,,,,,,,,,,,,,,,,,,,
+66,roblox.com,www.roblox.com,file,200,,,2181,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+67,pv-cdn.net,pv-cdn.net,unreachable,0,,no response: getaddrinfo ENOTFOUND pv-cdn.net,,,,,,,,,,,,,,,,,,,
+68,wa.me,wa.me,file,200,,,1525,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+69,zoom.us,zoom.us,file,200,,,2005,13,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted-named,permitted
+70,spotify.com,www.spotify.com,file,200,,,592,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+71,myfritz.net,myfritz.net,file,200,,,269,2,,,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star
+72,tiktokcdn.com,tiktokcdn.com,unreachable,0,,no response: getaddrinfo ENOTFOUND tiktokcdn.com,,,,,,,,,,,,,,,,,,,
+73,edgekey.net,edgekey.net,unreachable,0,,no response: getaddrinfo ENOTFOUND edgekey.net,,,,,,,,,,,,,,,,,,,
+74,akam.net,akam.net,unreachable,0,,no response: getaddrinfo ENOTFOUND akam.net,,,,,,,,,,,,,,,,,,,
+75,opera.com,www.opera.com,file,200,,,994,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+76,msn.com,www.msn.com,file,200,,,5245,11,,,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,permitted,permitted
+77,ntp.org,www.ntp.org,file,200,,,16,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+78,nginx.org,nginx.org,file,200,,,72,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+79,root-servers.net,root-servers.net,unreachable,0,,no response: getaddrinfo ENOTFOUND root-servers.net,,,,,,,,,,,,,,,,,,,
+80,baidu.com,www.baidu.com,file,200,,,2814,16,,,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,permitted-named,refused-star
+81,qq.com,www.qq.com,file,200,,,71,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+82,workers.dev,www.cloudflare.com,none,200,yes,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+83,tiktokv.com,tiktokv.com,none,404,,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+84,yandex.net,yandex.net,none,404,,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+85,vimeo.com,vimeo.com,file,200,,,22615,20,2,,refused-named,refused-named,refused-named,refused-named,permitted,refused-named,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+86,f5.com,www.f5.com,file,200,,,156,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+87,gwfb.net,gwfb.net,unreachable,0,,no response: getaddrinfo ENOTFOUND gwfb.net,,,,,,,,,,,,,,,,,,,
+88,a2z.com,a2z.com,unreachable,0,,no response: getaddrinfo ENOTFOUND a2z.com,,,,,,,,,,,,,,,,,,,
+89,mozilla.org,www.mozilla.org,file,200,,,66,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+90,chatgpt.com,chatgpt.com,file,200,,,4390,14,,,refused-star,refused-star,refused-named,refused-named,refused-star,refused-named,refused-star,refused-star,refused-star,refused-named,refused-star,refused-star,refused-star,refused-star,refused-star
+91,nginx.com,www.f5.com,none,200,yes,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+92,gvt2.com,gvt2.com,unreachable,0,,no response: getaddrinfo ENOTFOUND gvt2.com,,,,,,,,,,,,,,,,,,,
+93,blogspot.com,www.blogger.com,file,200,,,572,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+94,highwebmedia.com,highwebmedia.com,unreachable,0,,no response: getaddrinfo ENOTFOUND highwebmedia.com,,,,,,,,,,,,,,,,,,,
+95,yandex.ru,yandex.ru,file,200,,,40638,5,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted-named,permitted,permitted,permitted,permitted,permitted,permitted-named,permitted
+96,b-cdn.net,bunny.net,none,200,yes,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+97,yccdn.ru,yccdn.ru,unreachable,0,,no response: getaddrinfo ENOTFOUND yccdn.ru,,,,,,,,,,,,,,,,,,,
+98,yuga.com,yuga.com,file,200,,,40,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+99,sentry.io,sentry.io,file,200,,,140,1,,"content-signal: search=yes, ai-input=yes, ai-train=yes",permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+100,wordpress.com,wordpress.com,file,200,,,1387,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+101,t.me,t.me,none,404,,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+102,cloudflare-dns.com,one.one.one.one,file,200,,,1248,0,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+103,reddit.com,www.reddit.com,file,200,,,538,1,,,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star
+104,cdninstagram.com,cdninstagram.com,unreachable,0,,no response: getaddrinfo ENOTFOUND cdninstagram.com,,,,,,,,,,,,,,,,,,,
+105,amazonvideo.com,www.primevideo.com,file,200,,,4348,94,,,permitted,permitted,permitted,refused-named,permitted,refused-named,refused-named,permitted,permitted,refused-named,refused-named,refused-named,refused-named,permitted,permitted
+106,edgesuite.net,edgesuite.net,unreachable,0,,no response: getaddrinfo ENOTFOUND edgesuite.net,,,,,,,,,,,,,,,,,,,
+107,openai.com,openai.com,file,200,,,98,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+108,nic.ru,nic.ru,blocked,200,yes,"a JavaScript challenge in place of the file, status 200",,,,,,,,,,,,,,,,,,,
+109,triplinkintl.com,www.triplinkintl.com,none,200,yes,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+110,ui.com,ui.com,file,200,,,367,10,,,permitted-named,permitted-named,permitted-named,permitted-named,permitted-named,permitted,permitted,permitted-named,permitted,permitted-named,permitted-named,permitted,permitted,permitted,permitted
+111,samsung.com,www.samsung.com,file,200,,,10085,4,,,permitted-named,permitted,permitted-named,permitted,permitted,permitted,permitted,permitted-named,permitted,permitted-named,permitted-named,permitted,permitted,permitted-named,permitted
+112,office365.com,office365.com,blocked,403,,status 403,,,,,,,,,,,,,,,,,,,
+113,epicgames.com,www.epicgames.com,blocked,403,,"Cloudflare challenge, status 403",,,,,,,,,,,,,,,,,,,
+114,ytimg.com,ytimg.com,unreachable,0,,no response: getaddrinfo ENOTFOUND ytimg.com,,,,,,,,,,,,,,,,,,,
+115,windows.com,www.microsoft.com,none,200,yes,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+116,europa.eu,europa.eu,file,200,,,4930,2,10,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+117,aws.dev,aws.dev,unreachable,0,,no response: getaddrinfo ENOTFOUND aws.dev,,,,,,,,,,,,,,,,,,,
+118,3gppnetwork.org,3gppnetwork.org,unreachable,0,,no response: getaddrinfo ENOTFOUND 3gppnetwork.org,,,,,,,,,,,,,,,,,,,
+119,bit.ly,bit.ly,file,200,,,123,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+120,registrar-servers.com,registrar-servers.com,file,200,,,26,1,,,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star
+121,okcdn.ru,st.okcdn.ru,none,404,,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+122,outlook.com,outlook.live.com,none,200,yes,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+123,trbcdn.net,trbcdn.net,unreachable,0,,no response: Hostname/IP does not match certificate's altnames: Host: trbcdn.net. is not in the cert's altnames: DNS:cdnvideo.ru,,,,,,,,,,,,,,,,,,,
+124,reg.ru,reg.ru,blocked,200,yes,"a JavaScript challenge in place of the file, status 200",,,,,,,,,,,,,,,,,,,
+125,cdn77.org,cdn77.org,unreachable,0,,no response: getaddrinfo ENOTFOUND cdn77.org,,,,,,,,,,,,,,,,,,,
+126,dnsowl.com,dnsowl.com,unreachable,0,,no response: getaddrinfo ENOTFOUND dnsowl.com,,,,,,,,,,,,,,,,,,,
+127,lencr.org,letsencrypt.org,none,200,yes,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+128,github.io,pages.github.com,none,200,yes,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+129,dropbox.com,www.dropbox.com,file,200,,,801,3,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+130,shiabank.com,shiabank.com,unreachable,0,,no response: Client network socket disconnected before secure TLS connection was established,,,,,,,,,,,,,,,,,,,
+131,intuit.com,www.intuit.com,file,200,,,3086,16,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+132,aliyuncs.com,aliyuncs.com,none,404,,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+133,apache.org,apache.org,file,200,,,47,1,4,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+134,amazon.dev,amazon.dev,unreachable,0,,no response: getaddrinfo ENOTFOUND amazon.dev,,,,,,,,,,,,,,,,,,,
+135,google-analytics.com,google-analytics.com,file,200,,,78,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+136,dns-parking.com,dns-parking.com,unreachable,0,,no response: getaddrinfo ENOTFOUND dns-parking.com,,,,,,,,,,,,,,,,,,,
+137,snapchat.com,www.snapchat.com,file,200,,,3997,51,,,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,permitted-named,permitted-named,permitted-named,permitted-named,permitted-named,permitted-named,permitted-named,permitted
+138,static.microsoft,static.microsoft,unreachable,0,,no response: getaddrinfo ENOTFOUND static.microsoft,,,,,,,,,,,,,,,,,,,
+139,nih.gov,www.nih.gov,blocked,403,,status 403,,,,,,,,,,,,,,,,,,,
+140,discord.gg,discord.gg,file,200,,,23,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+141,vk.com,vk.com,file,200,,,6175,3,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted-named,permitted
+142,afternic.com,www.afternic.com,file,200,,,85,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+143,archive.org,archive.org,file,200,,,238,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+144,fastly-edge.com,fastly-edge.com,unreachable,0,,no response: getaddrinfo ENOTFOUND fastly-edge.com,,,,,,,,,,,,,,,,,,,
+145,azurefd.net,azurefd.net,unreachable,0,,no response: getaddrinfo ENOTFOUND azurefd.net,,,,,,,,,,,,,,,,,,,
+146,kaspersky.com,www.kaspersky.com,file,200,,,1929,18,,,permitted-named,permitted-named,permitted-named,permitted-named,permitted-named,permitted,permitted,permitted-named,permitted,permitted-named,permitted-named,permitted-named,permitted-named,permitted,permitted
+147,adobe.io,developer.adobe.com,file,200,,,92,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+148,forms.gle,forms.gle,blocked,400,,status 400,,,,,,,,,,,,,,,,,,,
+149,2mdn.net,2mdn.net,unreachable,0,,no response: getaddrinfo ENOTFOUND 2mdn.net,,,,,,,,,,,,,,,,,,,
+150,godaddy.com,www.godaddy.com,blocked,403,,status 403,,,,,,,,,,,,,,,,,,,
+151,amazon-adsystem.com,amazon-adsystem.com,unreachable,0,,no response: other side closed,,,,,,,,,,,,,,,,,,,
+152,gravatar.com,gravatar.com,file,200,,,1022,11,,,refused-named,permitted,refused-named,refused-named,permitted,refused-named,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+153,ipify.org,www.ipify.org,file,200,,,24,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+154,app-measurement.com,app-measurement.com,none,404,,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+155,tumblr.com,www.tumblr.com,file,200,,,3452,19,1,,permitted,refused-named,refused-named,refused-named,refused-named,permitted,refused-named,permitted,permitted,permitted,permitted,permitted,permitted,permitted-named,permitted
+156,nytimes.com,www.nytimes.com,file,200,,,8547,63,,,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,permitted-named,permitted
+157,unity3d.com,unity.com,file,200,,,264,5,,,permitted,permitted,permitted,permitted,permitted,refused-named,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+158,iiko.it,iiko.it,unreachable,0,,no response: getaddrinfo ENOTFOUND iiko.it,,,,,,,,,,,,,,,,,,,
+159,jomodns.com,jomodns.com,unreachable,0,,no response: getaddrinfo ENOTFOUND jomodns.com,,,,,,,,,,,,,,,,,,,
+160,criteo.com,criteo.com,file,200,,,2056,2,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+161,akamaized.net,akamaized.net,unreachable,0,,no response: getaddrinfo ENOTFOUND akamaized.net,,,,,,,,,,,,,,,,,,,
+162,webex.com,www.webex.com,file,200,,,4824,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+163,android.com,www.android.com,file,200,,,1890,15,,,permitted-named,permitted-named,permitted-named,permitted-named,permitted-named,permitted,permitted,permitted-named,permitted-named,permitted-named,permitted,permitted,permitted,permitted,permitted
+164,tm-azurefd.net,tm-azurefd.net,unreachable,0,,no response: getaddrinfo ENOTFOUND tm-azurefd.net,,,,,,,,,,,,,,,,,,,
+165,app-analytics-services.com,app-analytics-services.com,none,404,,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+166,mts.ru,moskva.mts.ru,file,200,,,6839,2,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+167,hichina.com,hichina.com,unreachable,0,,no response: getaddrinfo ENOTFOUND hichina.com,,,,,,,,,,,,,,,,,,,
+168,example.com,example.com,none,404,,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+169,paypal.com,www.paypal.com,file,200,,,2628,2,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+170,shopify.com,shopify.com,file,200,,,62,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+171,azurewebsites.net,azurewebsites.net,unreachable,0,,no response: getaddrinfo ENOTFOUND azurewebsites.net,,,,,,,,,,,,,,,,,,,
+172,ax-msedge.net,ax-msedge.net,unreachable,0,,no response: getaddrinfo ENOTFOUND ax-msedge.net,,,,,,,,,,,,,,,,,,,
+173,nflxso.net,nflxso.net,unreachable,0,,no response: getaddrinfo ENOTFOUND nflxso.net,,,,,,,,,,,,,,,,,,,
+174,yandexcloud.net,yandexcloud.net,unreachable,0,,no response: getaddrinfo ENOTFOUND yandexcloud.net,,,,,,,,,,,,,,,,,,,
+175,vk.ru,vk.ru,file,200,,,6175,3,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted-named,permitted
+176,discord.com,discord.com,file,200,,,1774,3,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+177,xiaomi.com,www.mi.com,file,200,,,145,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+178,hosting24.com,www.hostinger.com,none,200,yes,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+179,macromedia.com,macromedia.com,unreachable,0,,"no response: Connect Timeout Error (attempted address: macromedia.com:443, timeout: 10000ms)",,,,,,,,,,,,,,,,,,,
+180,doctolib.net,doctolib.net,unreachable,0,,no response: getaddrinfo ENOTFOUND doctolib.net,,,,,,,,,,,,,,,,,,,
+181,w3.org,www.w3.org,file,200,,,3844,2,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+182,paytmfirstgames.com,paytmfirstgames.com,unreachable,0,,no response: getaddrinfo ENOTFOUND paytmfirstgames.com,,,,,,,,,,,,,,,,,,,
+183,lsrelayaccess.com,lsrelayaccess.com,unreachable,0,,no response: read ECONNRESET,,,,,,,,,,,,,,,,,,,
+184,flickr.com,flickr.com,file,200,,,2210,3,,,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,permitted-named,permitted-named,permitted-named,permitted-named,permitted-named,refused-star,permitted-named,refused-star
+185,msftconnecttest.com,msftconnecttest.com,unreachable,0,,no response: getaddrinfo ENOTFOUND msftconnecttest.com,,,,,,,,,,,,,,,,,,,
+186,vkuserphoto.ru,ps.userapi.com,blocked,418,,status 418,,,,,,,,,,,,,,,,,,,
+187,pki.goog,pki.goog,file,200,,,69,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+188,duckdns.org,www.duckdns.org,none,404,,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+189,t-online.de,www.t-online.de,file,200,,,2206,6,,,refused-named,refused-named,permitted-named,refused-named,refused-named,refused-named,refused-named,permitted,permitted,refused-named,permitted,permitted,permitted,permitted,permitted
+190,soundcloud.com,soundcloud.com,file,200,,,1441,2,,,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,permitted,refused-named,refused-named,permitted,permitted,permitted,permitted
+191,namebrightdns.com,namebrightdns.com,unreachable,0,,no response: getaddrinfo ENOTFOUND namebrightdns.com,,,,,,,,,,,,,,,,,,,
+192,creativecommons.org,creativecommons.org,file,200,,,177,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+193,vedcdnlb.com,vedcdnlb.com,unreachable,0,,no response: getaddrinfo ENOTFOUND vedcdnlb.com,,,,,,,,,,,,,,,,,,,
+194,ubuntu.com,ubuntu.com,file,200,,,5511,2,1,,permitted-named,permitted-named,permitted-named,permitted,permitted-named,permitted-named,permitted-named,permitted-named,permitted-named,permitted-named,permitted-named,permitted,permitted-named,permitted,permitted
+195,crashlytics.com,firebase.google.com,none,200,yes,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+196,applovin.com,applovin.com,file,200,,,218,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+197,adtrafficquality.google,adtrafficquality.google,none,404,,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+198,theguardian.com,www.theguardian.com,file,200,,,2873,3,,,permitted,refused-named,permitted,refused-named,refused-named,refused-named,refused-named,permitted,refused-named,refused-named,permitted,refused-named,permitted,permitted,permitted
+199,medium.com,medium.com,file,200,,,884,2,,,refused-named,refused-named,permitted,permitted,refused-named,refused-named,refused-named,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+200,cnn.com,www.cnn.com,file,200,,,3498,3,,,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,permitted,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,permitted,permitted
+201,scorecardresearch.com,scorecardresearch.com,none,404,,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+202,ebay.com,www.ebay.com,file,200,,,24164,9,,,refused-named,refused-named,permitted,refused-named,refused-named,refused-named,refused-named,permitted-named,permitted-named,refused-named,permitted-named,permitted-named,permitted,permitted-named,permitted
+203,ailawandorder.com,ailawandorder.com,unreachable,0,,"no response: Hostname/IP does not match certificate's altnames: Host: ailawandorder.com. is not in the cert's altnames: DNS:ai-lawandorder.com, DNS:www.ai-lawan",,,,,,,,,,,,,,,,,,,
+204,youtube-nocookie.com,youtube-nocookie.com,unreachable,0,,"no response: Hostname/IP does not match certificate's altnames: Host: youtube-nocookie.com. is not in the cert's altnames: DNS:*.google.com, DNS:*.appengine.goo",,,,,,,,,,,,,,,,,,,
+205,msftncsi.com,msftncsi.com,unreachable,0,,no response: getaddrinfo ENOTFOUND msftncsi.com,,,,,,,,,,,,,,,,,,,
+206,telegram.org,telegram.org,none,404,,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+207,googleadservices.com,googleadservices.com,none,404,,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+208,oracle.com,www.oracle.com,file,200,,,2649,2,,,permitted-named,permitted-named,permitted-named,permitted,permitted-named,permitted,permitted,permitted-named,permitted,permitted-named,permitted-named,permitted,permitted-named,permitted,permitted
+209,ksyuncdn.com,ksyuncdn.com,unreachable,0,,no response: getaddrinfo ENOTFOUND ksyuncdn.com,,,,,,,,,,,,,,,,,,,
+210,bytefcdn-oversea.com,bytefcdn-oversea.com,unreachable,0,,no response: getaddrinfo ENOTFOUND bytefcdn-oversea.com,,,,,,,,,,,,,,,,,,,
+211,pages.dev,www.cloudflare.com,none,200,yes,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+212,doi.org,www.doi.org,none,404,,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+213,steamserver.net,steamserver.net,unreachable,0,,no response: getaddrinfo ENOTFOUND steamserver.net,,,,,,,,,,,,,,,,,,,
+214,ttdns2.com,ttdns2.com,unreachable,0,,no response: getaddrinfo ENOTFOUND ttdns2.com,,,,,,,,,,,,,,,,,,,
+215,shifen.com,shifen.com,unreachable,0,,"no response: Connect Timeout Error (attempted address: shifen.com:443, timeout: 10000ms)",,,,,,,,,,,,,,,,,,,
+216,forbes.com,www.forbes.com,file,200,,,33649,23,,,refused-named,refused-named,permitted,refused-named,refused-named,refused-named,refused-named,permitted-named,permitted-named,refused-named,permitted,permitted-named,permitted,permitted,permitted
+217,bbc.com,www.bbc.com,file,200,,,6169,40,,,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,permitted,refused-named,refused-named,permitted,refused-named,permitted,permitted
+218,samsungcloud.com,www.samsungcloud.com,file,200,,,125,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+219,cdn-apple.com,cdn-apple.com,unreachable,0,,no response: getaddrinfo ENOTFOUND cdn-apple.com,,,,,,,,,,,,,,,,,,,
+220,sciencedirect.com,www.sciencedirect.com,blocked,403,,status 403,,,,,,,,,,,,,,,,,,,
+221,cdngslb.com,cdngslb.com,unreachable,0,,"no response: Connect Timeout Error (attempted address: cdngslb.com:443, timeout: 10000ms)",,,,,,,,,,,,,,,,,,,
+222,dns.google,dns.google,none,404,,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+223,mit.edu,web.mit.edu,file,200,,,199,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+224,twitch.tv,www.twitch.tv,file,200,,,1167,5,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+225,researchgate.net,www.researchgate.net,file,200,,,293,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+226,bbc.co.uk,www.bbc.co.uk,file,200,,,4907,40,,,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,permitted,refused-named,refused-named,permitted,refused-named,permitted,permitted
+227,cisco.com,www.cisco.com,file,200,,,16189,5,,,permitted-named,permitted-named,permitted-named,permitted-named,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted-named,permitted
+228,sfx.ms,sfx.ms,unreachable,0,,no response: getaddrinfo ENOTFOUND sfx.ms,,,,,,,,,,,,,,,,,,,
+229,wikimedia.org,www.wikimedia.org,none,404,,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+230,cpanel.net,www.cpanel.net,file,200,,,297,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+231,ggpht.com,ggpht.com,unreachable,0,,no response: getaddrinfo ENOTFOUND ggpht.com,,,,,,,,,,,,,,,,,,,
+232,nist.gov,www.nist.gov,file,200,,,2425,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+233,azureedge.net,azureedge.net,unreachable,0,,no response: getaddrinfo ENOTFOUND azureedge.net,,,,,,,,,,,,,,,,,,,
+234,comcast.net,www.xfinity.com,blocked,403,,status 403,,,,,,,,,,,,,,,,,,,
+235,rbxcdn.com,rbxcdn.com,unreachable,0,,no response: getaddrinfo ENOTFOUND rbxcdn.com,,,,,,,,,,,,,,,,,,,
+236,ozon.ru,ozon.ru,unreachable,307,,more than 5 redirects,,,,,,,,,,,,,,,,,,,
+237,stripe.com,stripe.com,file,200,,,643,3,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+238,spov-msedge.net,spov-msedge.net,unreachable,0,,no response: getaddrinfo ENOTFOUND spov-msedge.net,,,,,,,,,,,,,,,,,,,
+239,mtgglobals.com,mtgglobals.com,unreachable,0,,no response: getaddrinfo ENOTFOUND mtgglobals.com,,,,,,,,,,,,,,,,,,,
+240,alidns.com,alidns.com,file,200,,,64,0,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+241,sourceforge.net,sourceforge.net,file,200,,,5837,3,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+242,t.co,t.co,file,200,,,150,3,,,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,permitted-named,refused-star
+243,meraki.com,meraki.cisco.com,file,200,,,2213,2,,,refused-star,refused-star,refused-star,permitted-named,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,permitted-named,refused-star
+244,canva.com,www.canva.com,file,200,,,6527,5,,,refused-named,refused-named,permitted,refused-named,refused-named,refused-named,refused-named,permitted,permitted,permitted-named,permitted,permitted,permitted-named,permitted,permitted
+245,arubanetworks.com,arubanetworks.com,unreachable,0,,no response: Hostname/IP does not match certificate's altnames: Host: arubanetworks.com. is not in the cert's altnames: DNS:www.arubanetworks.com,,,,,,,,,,,,,,,,,,,
+246,telekom.net,www.telekom.com,none,200,yes,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+247,wsdvs.com,wsdvs.com,unreachable,0,,no response: getaddrinfo ENOTFOUND wsdvs.com,,,,,,,,,,,,,,,,,,,
+248,userapi.com,vk.com,file,304,,,6175,3,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted-named,permitted
+249,msedge.net,msedge.net,unreachable,0,,"no response: Connect Timeout Error (attempted address: msedge.net:443, timeout: 10000ms)",,,,,,,,,,,,,,,,,,,
+250,name-services.com,name-services.com,unreachable,0,,no response: getaddrinfo ENOTFOUND name-services.com,,,,,,,,,,,,,,,,,,,
+251,namecheap.com,www.namecheap.com,file,200,,,1359,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+252,nflximg.com,nflximg.com,unreachable,0,,"no response: Connect Timeout Error (attempted address: nflximg.com:443, timeout: 10000ms)",,,,,,,,,,,,,,,,,,,
+253,playstation.net,playstation.net,unreachable,0,,no response: getaddrinfo ENOTFOUND playstation.net,,,,,,,,,,,,,,,,,,,
+254,omtrdc.net,omtrdc.net,unreachable,0,,no response: getaddrinfo ENOTFOUND omtrdc.net,,,,,,,,,,,,,,,,,,,
+255,vungle.com,vungle.com,file,200,,,82,1,10,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+256,hubspot.com,www.hubspot.com,file,200,,,12606,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+257,rubiconproject.com,www.rubiconproject.com,file,200,,,189,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+258,roku.com,www.roku.com,file,200,,,303,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+259,spo-msedge.net,spo-msedge.net,unreachable,0,,no response: getaddrinfo ENOTFOUND spo-msedge.net,,,,,,,,,,,,,,,,,,,
+260,telecid.ru,telecid.ru,unreachable,0,,"no response: Hostname/IP does not match certificate's altnames: Host: telecid.ru. is not in the cert's altnames: DNS:*.cmediahub.ru, DNS:cmediahub.ru",,,,,,,,,,,,,,,,,,,
+261,who.int,www.who.int,file,200,,,18983,527,,,permitted,permitted,permitted,refused-named,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+262,imdb.com,www.imdb.com,file,200,,,1947,3,,,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,permitted-named,refused-star
+263,aliyuncsslbintl.com,aliyuncsslbintl.com,unreachable,0,,no response: getaddrinfo ENOTFOUND aliyuncsslbintl.com,,,,,,,,,,,,,,,,,,,
+264,awswaf.com,awswaf.com,unreachable,0,,no response: getaddrinfo ENOTFOUND awswaf.com,,,,,,,,,,,,,,,,,,,
+265,licdn.com,licdn.com,unreachable,0,,no response: getaddrinfo ENOTFOUND licdn.com,,,,,,,,,,,,,,,,,,,
+266,spectrum.com,www.spectrum.com,unreachable,0,,no response: Stream closed with error code NGHTTP2_INTERNAL_ERROR,,,,,,,,,,,,,,,,,,,
+267,linktr.ee,linktr.ee,file,200,,,11029,60,,"content-signal: ai-train=no, search=yes",permitted-named,permitted-named,permitted-named,permitted-named,permitted-named,refused-star,refused-star,permitted-named,permitted-named,permitted-named,permitted-named,permitted-named,permitted-named,permitted-named,refused-star
+268,alibabadns.com,alibabadns.com,unreachable,0,,no response: getaddrinfo ENOTFOUND alibabadns.com,,,,,,,,,,,,,,,,,,,
+269,forter.com,forter.com,file,200,,,1253,4,10,"content-signal: search=yes, ai-input=yes, ai-train=yes | content-signal: search=yes, ai-input=yes | content-signal: search=no, ai-input=no, ai-train=no | content-signal: search=yes, ai-input=yes, ai-train=no",permitted-named,permitted-named,permitted-named,refused-named,permitted-named,refused-named,refused-named,permitted-named,permitted-named,permitted-named,permitted-named,permitted-named,permitted-named,permitted,permitted
+270,one.one,www.one.com,file,200,,,450,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+271,media-amazon.com,media-amazon.com,unreachable,0,,no response: getaddrinfo ENOTFOUND media-amazon.com,,,,,,,,,,,,,,,,,,,
+272,taboola.com,www.taboola.com,file,200,,,2350,1,10,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+273,wixsite.com,wixsite.com,unreachable,0,,no response: getaddrinfo ENOTFOUND wixsite.com,,,,,,,,,,,,,,,,,,,
+274,hcaptcha.com,www.hcaptcha.com,file,200,,,109,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+275,imcmdb.net,imcmdb.net,unreachable,0,,"no response: Connect Timeout Error (attempted address: imcmdb.net:443, timeout: 10000ms)",,,,,,,,,,,,,,,,,,,
+276,ttvnw.net,ttvnw.net,unreachable,0,,no response: getaddrinfo ENOTFOUND ttvnw.net,,,,,,,,,,,,,,,,,,,
+277,ibm.com,www.ibm.com,file,200,,,4616,10,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+278,dnsmadeeasy.com,dnsmadeeasy.com,none,404,,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+279,adsafeprotected.com,adsafeprotected.com,file,200,,,43,0,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+280,launchpad.net,launchpad.net,file,200,,,1881,2,,"content-usage: ai=n | content-signal: ai-train=no, search=yes, ai-input=no",refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,permitted,refused-named,permitted,permitted,permitted
+281,miui.com,miui.com,none,404,,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+282,googleblog.com,blog.google,none,200,yes,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+283,gmail.com,gmail.com,file,200,,,129,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+284,adnxs.com,adnxs.com,none,404,,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+285,reuters.com,www.reuters.com,file,200,,,4627,3,,,refused-star,refused-star,refused-star,refused-star,refused-named,refused-star,refused-star,permitted-named,refused-star,refused-star,permitted-named,refused-star,refused-star,permitted-named,refused-star
+286,pubmatic.com,pubmatic.com,blocked,403,,status 403,,,,,,,,,,,,,,,,,,,
+287,workbox.dk,workbox.dk,unreachable,0,,no response: getaddrinfo ENOTFOUND workbox.dk,,,,,,,,,,,,,,,,,,,
+288,amplitude.com,amplitude.com,file,200,,,2385,16,,"content-signal: search=yes, ai-input=yes, ai-train=yes | content-signal: search=no, ai-input=no, ai-train=no",permitted-named,permitted-named,permitted-named,permitted-named,permitted-named,refused-named,permitted-named,permitted-named,permitted,permitted-named,permitted-named,permitted,permitted-named,permitted-named,permitted
+289,weather.com,weather.com,file,200,,,3440,26,10,,permitted,permitted,permitted,refused-named,permitted,refused-named,permitted,permitted,permitted,permitted,permitted-named,permitted,permitted,permitted,permitted
+290,booking.com,booking.com,file,200,,,39491,13,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+291,skybridge.click,skybridge.click,file,200,,,26,1,,,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star
+292,capcutapi.com,capcutapi.com,unreachable,0,,no response: getaddrinfo ENOTFOUND capcutapi.com,,,,,,,,,,,,,,,,,,,
+293,tinyurl.com,tinyurl.com,file,200,,,154,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+294,telegram.me,telegram.org,none,200,yes,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+295,ip-api.com,ip-api.com,file,200,,,213,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+296,nr-data.net,nr-data.net,unreachable,0,,no response: getaddrinfo ENOTFOUND nr-data.net,,,,,,,,,,,,,,,,,,,
+297,ripn.net,ripn.net,unreachable,0,,no response: getaddrinfo ENOTFOUND ripn.net,,,,,,,,,,,,,,,,,,,
+298,springer.com,www.springer.com,file,200,,,286,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+299,w2rt6byl5nf1opmc-a.com,w2rt6byl5nf1opmc-a.com,unreachable,0,,no response: getaddrinfo ENOTFOUND w2rt6byl5nf1opmc-a.com,,,,,,,,,,,,,,,,,,,
+300,mangosip.ru,mangosip.ru,unreachable,0,,"no response: Connect Timeout Error (attempted address: mangosip.ru:443, timeout: 10000ms)",,,,,,,,,,,,,,,,,,,
+301,hp.com,www.hp.com,file,200,,,17151,15,,,permitted-named,permitted-named,permitted-named,permitted,permitted,permitted,permitted,permitted-named,permitted-named,permitted-named,permitted-named,permitted-named,permitted-named,permitted,permitted
+302,www.gov.uk,www.gov.uk,file,200,,,1097,5,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted-named,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+303,salesforce.com,www.salesforce.com,file,200,,,14256,9,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+304,autodesk.com,www.autodesk.com,blocked,403,,status 403,,,,,,,,,,,,,,,,,,,
+305,tiktokcdn-us.com,tiktokcdn-us.com,unreachable,0,,no response: getaddrinfo ENOTFOUND tiktokcdn-us.com,,,,,,,,,,,,,,,,,,,
+306,nature.com,www.nature.com,file,200,,,2780,23,,,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,permitted,permitted,refused-named,refused-named,permitted,permitted,permitted,permitted
+307,steampowered.com,store.steampowered.com,file,200,,,303,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+308,jsdelivr.net,jsdelivr.net,unreachable,0,,"no response: Connect Timeout Error (attempted address: jsdelivr.net:443, timeout: 10000ms)",,,,,,,,,,,,,,,,,,,
+309,inmobi.com,www.inmobi.com,file,200,,,98,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+310,miit.gov.cn,miit.gov.cn,unreachable,0,,no response: getaddrinfo ENOTFOUND miit.gov.cn,,,,,,,,,,,,,,,,,,,
+311,weibo.com,weibo.com,file,200,,,968,4,1,"content-signal: search=yes, ai-input=yes, ai-train=no",refused-star,refused-star,refused-star,refused-star,refused-star,refused-named,refused-named,refused-named,refused-star,refused-star,refused-named,refused-star,refused-named,permitted-named,refused-star
+312,avast.com,www.avast.com,file,200,,,440,9,,"content-signal: ai-train=yes, search=yes, ai-input=yes",permitted-named,permitted-named,permitted,permitted,permitted,permitted,permitted,permitted-named,permitted,permitted-named,permitted-named,permitted-named,permitted-named,permitted,permitted
+313,byteoversea.net,byteoversea.net,unreachable,0,,no response: getaddrinfo ENOTFOUND byteoversea.net,,,,,,,,,,,,,,,,,,,
+314,ok.ru,ok.ru,file,200,,,6051,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+315,harvard.edu,www.harvard.edu,file,200,,,748,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+316,casalemedia.com,www.indexexchange.com,none,200,yes,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+317,alibaba.com,www.alibaba.com,file,200,,,5406,6,,,refused-named,permitted,refused-named,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted-named,permitted
+318,debian.org,www.debian.org,none,404,,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+319,douyincdn.com,douyincdn.com,unreachable,0,,no response: getaddrinfo ENOTFOUND douyincdn.com,,,,,,,,,,,,,,,,,,,
+320,spaceweb.pro,spaceweb.pro,unreachable,0,,"no response: Connect Timeout Error (attempted address: spaceweb.pro:443, timeout: 10000ms)",,,,,,,,,,,,,,,,,,,
+321,heytapmobile.com,heytapmobile.com,unreachable,0,,no response: getaddrinfo ENOTFOUND heytapmobile.com,,,,,,,,,,,,,,,,,,,
+322,mi.com,www.mi.com,file,200,,,145,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+323,wac-msedge.net,wac-msedge.net,unreachable,0,,no response: getaddrinfo ENOTFOUND wac-msedge.net,,,,,,,,,,,,,,,,,,,
+324,appsflyer.com,www.appsflyer.com,file,200,,,3116,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+325,wiley.com,www.wiley.com,file,200,,,1014,9,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+326,clarity.ms,clarity.ms,unreachable,0,,"no response: Hostname/IP does not match certificate's altnames: Host: clarity.ms. is not in the cert's altnames: DNS:*.azurewebsites.net, DNS:*.scm.azurewebsite",,,,,,,,,,,,,,,,,,,
+327,mzstatic.com,www.apple.com,none,200,yes,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+328,etsy.com,www.etsy.com,file,200,,,52819,3,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+329,php.net,www.php.net,file,200,,,292,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+330,statsigapi.net,statsigapi.net,blocked,403,,status 403,,,,,,,,,,,,,,,,,,,
+331,publicnode.com,publicnode.com,file,200,,,189,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+332,avcdn.net,avcdn.net,unreachable,0,,no response: getaddrinfo ENOTFOUND avcdn.net,,,,,,,,,,,,,,,,,,,
+333,amazon.co.uk,www.amazon.co.uk,file,200,,,7258,101,,,refused-named,refused-named,refused-named,refused-named,permitted,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,permitted,permitted
+334,browser-intake-datadoghq.com,browser-intake-datadoghq.com,blocked,403,,status 403,,,,,,,,,,,,,,,,,,,
+335,aliyun.com,www.aliyun.com,file,200,,,316,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+336,crpt.ru,crpt.ru,none,200,yes,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+337,drom.ru,www.drom.ru,file,200,,,10797,6,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted-named,permitted
+338,name.com,www.name.com,file,200,,,1986,3,,,permitted,permitted,permitted,permitted,permitted,permitted,refused-named,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+339,weebly.com,www.weebly.com,file,200,,,777,2,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+340,facebook.net,facebook.net,unreachable,0,,no response: getaddrinfo ENOTFOUND facebook.net,,,,,,,,,,,,,,,,,,,
+341,hostgator.com,www.hostgator.com,blocked,403,,"Cloudflare challenge, status 403",,,,,,,,,,,,,,,,,,,
+342,dell.com,www.dell.com,file,200,,,28897,9,,,permitted,permitted,permitted,permitted,permitted,permitted-named,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+343,smartadserver.com,www.equativ.com,none,200,yes,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+344,netflix.net,www.netflix.com,file,200,,,3790,4,,,permitted-named,permitted-named,permitted-named,refused-star,refused-star,refused-star,refused-star,permitted-named,permitted-named,permitted-named,permitted-named,permitted-named,refused-star,permitted-named,refused-star
+345,gnu.org,www.gnu.org,file,200,,,2862,27,4,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+346,akamaihd.net,akamaihd.net,unreachable,0,,no response: getaddrinfo ENOTFOUND akamaihd.net,,,,,,,,,,,,,,,,,,,
+347,bilibili.com,www.bilibili.com,file,200,,,65,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+348,gamepass.com,gamepass.com,unreachable,0,,no response: Hostname/IP does not match certificate's altnames: Host: gamepass.com. is not in the cert's altnames: DNS:reroute443.microsoft.com,,,,,,,,,,,,,,,,,,,
+349,myshopify.com,myshopify.com,none,404,,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+350,slack.com,slack.com,file,200,,,520,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+351,naver.com,www.naver.com,file,200,,,91,1,,,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star
+352,tbcache.com,tbcache.com,unreachable,0,,"no response: Connect Timeout Error (attempted addresses: 140.205.77.240:443, 140.205.132.250:443, timeout: 10000ms)",,,,,,,,,,,,,,,,,,,
+353,ea.com,www.ea.com,file,200,,,1904,8,,,permitted,permitted,permitted,permitted,permitted,refused-named,refused-named,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+354,trustpilot.com,www.trustpilot.com,file,200,,,25101,46,,,permitted-named,permitted-named,permitted-named,permitted-named,refused-named,refused-named,permitted-named,permitted-named,permitted-named,permitted-named,permitted-named,permitted-named,refused-star,permitted-named,refused-star
+355,onelink.me,www.appsflyer.com,none,200,yes,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+356,nasa.gov,www.nasa.gov,file,200,,,69,2,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+357,mobile.de,www.mobile.de,file,200,,,1142,4,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+358,trueconf.net,trueconf.net,unreachable,0,,"no response: Hostname/IP does not match certificate's altnames: Host: trueconf.net. is not in the cert's altnames: DNS:*.trueconf.com, DNS:trueconf.com",,,,,,,,,,,,,,,,,,,
+359,cdc.gov,www.cdc.gov,file,200,,,1699,4,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+360,worldnic.com,worldnic.com,unreachable,0,,"no response: Connect Timeout Error (attempted address: worldnic.com:443, timeout: 10000ms)",,,,,,,,,,,,,,,,,,,
+361,demdex.net,demdex.net,unreachable,0,,no response: getaddrinfo ENOTFOUND demdex.net,,,,,,,,,,,,,,,,,,,
+362,samsungqbe.com,samsungqbe.com,unreachable,0,,no response: getaddrinfo ENOTFOUND samsungqbe.com,,,,,,,,,,,,,,,,,,,
+363,un.org,maintenance.un.org,none,404,,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+364,tp-link.com,www.tp-link.com,file,200,,,544,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+365,checkpoint.com,www.checkpoint.com,file,200,,,1918,14,,,permitted-named,permitted-named,permitted-named,permitted-named,permitted,permitted,permitted,permitted-named,permitted,permitted-named,permitted-named,permitted,permitted-named,permitted,permitted
+366,adsrvr.org,adsrvr.org,blocked,403,,status 403,,,,,,,,,,,,,,,,,,,
+367,washingtonpost.com,www.washingtonpost.com,file,200,,,5804,35,,,permitted,refused-named,permitted,refused-named,refused-named,refused-named,refused-named,permitted,permitted,refused-named,permitted,permitted,permitted,permitted,permitted
+368,gitlab.com,gitlab.com,file,200,,,3230,4,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+369,googletagservices.com,googletagservices.com,unreachable,0,,no response: getaddrinfo ENOTFOUND googletagservices.com,,,,,,,,,,,,,,,,,,,
+370,brave.com,brave.com,file,200,,,53,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+371,tradingview.com,www.tradingview.com,file,200,,,1153,4,,,permitted,permitted-named,permitted-named,permitted,permitted-named,permitted-named,permitted-named,permitted-named,permitted,permitted-named,permitted-named,permitted,permitted,permitted,permitted
+372,shalltry.com,shalltry.com,blocked,403,,status 403,,,,,,,,,,,,,,,,,,,
+373,allawnos.com,allawnos.com,unreachable,0,,no response: getaddrinfo ENOTFOUND allawnos.com,,,,,,,,,,,,,,,,,,,
+374,cookiedatabase.org,cookiedatabase.org,blocked,403,,"Cloudflare challenge, status 403",,,,,,,,,,,,,,,,,,,
+375,zendesk.com,www.zendesk.com,file,200,,,1028,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+376,selectel.ru,selectel.ru,file,200,,,1664,2,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+377,opendns.com,www.opendns.com,file,200,,,24,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+378,netangels.ru,www.netangels.ru,file,200,,,1992,2,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+379,plesk.com,www.plesk.com,file,200,,,101,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+380,nvidia.com,www.nvidia.com,file,200,,,3725,2,,"content-signal: ai-train=yes, search=yes, ai-input=yes",permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+381,issuu.com,issuu.com,file,200,,,4280,47,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+382,datadoghq.com,www.datadoghq.com,file,200,,,525,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+383,volcfcdndvs.com,volcfcdndvs.com,unreachable,0,,no response: getaddrinfo ENOTFOUND volcfcdndvs.com,,,,,,,,,,,,,,,,,,,
+384,bloomberg.com,www.bloomberg.com,file,200,,,10640,98,,,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,permitted,permitted,permitted
+385,stanford.edu,www.stanford.edu,file,200,,,197,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+386,firefox-portal-detection.com,firefox-portal-detection.com,none,404,,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+387,dnspod.net,dnspod.net,unreachable,0,,"no response: Connect Timeout Error (attempted address: dnspod.net:443, timeout: 10000ms)",,,,,,,,,,,,,,,,,,,
+388,live-video.net,live-video.net,blocked,403,,status 403,,,,,,,,,,,,,,,,,,,
+389,tagomi.com,www.coinbase.com,blocked,403,,"Cloudflare challenge, status 403",,,,,,,,,,,,,,,,,,,
+390,wsj.com,www.wsj.com,file,200,,,4298,2,,,permitted-named,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,permitted-named,refused-star,refused-star,permitted-named,refused-star,refused-star,permitted-named,refused-star
+391,xcal.tv,xcal.tv,unreachable,0,,no response: getaddrinfo ENOTFOUND xcal.tv,,,,,,,,,,,,,,,,,,,
+392,samsungcloudsolution.com,samsungcloudsolution.com,unreachable,0,,no response: getaddrinfo ENOTFOUND samsungcloudsolution.com,,,,,,,,,,,,,,,,,,,
+393,gandi-ns.fr,gandi-ns.fr,unreachable,0,,no response: getaddrinfo ENOTFOUND gandi-ns.fr,,,,,,,,,,,,,,,,,,,
+394,google.cn,google.cn,none,404,,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+395,cdnbuild.net,cdnbuild.net,unreachable,0,,no response: getaddrinfo ENOTFOUND cdnbuild.net,,,,,,,,,,,,,,,,,,,
+396,quickconnect.to,quickconnect.to,file,200,,,1,0,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+397,tiktokv.us,tiktokv.us,unreachable,0,,no response: getaddrinfo ENOTFOUND tiktokv.us,,,,,,,,,,,,,,,,,,,
+398,globo.com,www.globo.com,file,200,,,408,4,,,refused-named,permitted,refused-named,refused-named,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+399,doubleverify.com,doubleverify.com,file,200,,,165,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+400,yandex.com,yandex.com,file,200,,,21167,4,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+401,amazontrust.com,www.amazontrust.com,none,404,,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+402,amazon.de,www.amazon.de,file,200,,,7508,102,,,refused-named,refused-named,refused-named,refused-named,permitted,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,permitted,permitted
+403,bsky.app,bsky.app,file,200,,,441,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+404,icanhazip.com,icanhazip.com,file,200,,,40,0,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+405,espn.com,www.espn.com,file,200,,,3223,11,,,refused-named,permitted,refused-named,refused-named,permitted,refused-named,permitted,permitted,permitted,permitted,refused-named,permitted,permitted,permitted,permitted
+406,calendly.com,calendly.com,file,200,,,335,3,,,permitted,permitted,permitted,refused-named,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+407,online-metrix.net,online-metrix.net,unreachable,0,,no response: getaddrinfo ENOTFOUND online-metrix.net,,,,,,,,,,,,,,,,,,,
+408,nflxvideo.net,nflxvideo.net,unreachable,0,,no response: B4650000:error:0A000438:SSL routines:ssl3_read_bytes:tlsv1 alert internal error:openssl\ssl\record\rec_layer_s3.c:918:SSL alert number 80,,,,,,,,,,,,,,,,,,,
+409,expireddomains.com,expireddomains.com,none,404,,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+410,ibyteimg.com,ibyteimg.com,unreachable,0,,no response: getaddrinfo ENOTFOUND ibyteimg.com,,,,,,,,,,,,,,,,,,,
+411,timeweb.ru,timeweb.com,none,200,yes,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+412,shopifysvc.com,shopifysvc.com,unreachable,0,,no response: getaddrinfo ENOTFOUND shopifysvc.com,,,,,,,,,,,,,,,,,,,
+413,virginm.net,virginm.net,unreachable,0,,no response: getaddrinfo ENOTFOUND virginm.net,,,,,,,,,,,,,,,,,,,
+414,skyhigh.cloud,www.skyhighsecurity.com,blocked,403,,status 403,,,,,,,,,,,,,,,,,,,
+415,whecloud.com,whecloud.com,unreachable,0,,no response: getaddrinfo ENOTFOUND whecloud.com,,,,,,,,,,,,,,,,,,,
+416,indeed.com,www.indeed.com,file,200,,,13731,9,,,permitted-named,permitted-named,permitted-named,permitted-named,permitted-named,permitted-named,permitted-named,permitted-named,permitted-named,permitted-named,permitted-named,permitted-named,permitted-named,permitted-named,permitted
+417,vkuser.net,vkuser.net,unreachable,0,,"no response: Connect Timeout Error (attempted address: vkuser.net:443, timeout: 10000ms)",,,,,,,,,,,,,,,,,,,
+418,unsplash.com,unsplash.com,file,200,,,8706,12,,,permitted,refused-named,permitted,permitted,permitted,refused-named,permitted,permitted,refused-named,permitted,permitted,permitted,permitted,permitted,permitted
+419,scdn.co,scdn.co,unreachable,0,,no response: getaddrinfo ENOTFOUND scdn.co,,,,,,,,,,,,,,,,,,,
+420,bluehost.com,www.bluehost.com,blocked,403,,"Cloudflare challenge, status 403",,,,,,,,,,,,,,,,,,,
+421,kwai-pro.com,kwai-pro.com,unreachable,0,,no response: getaddrinfo ENOTFOUND kwai-pro.com,,,,,,,,,,,,,,,,,,,
+422,dropcatch.com,www.dropcatch.com,none,200,yes,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+423,163.com,www.163.com,file,200,,,225,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+424,go.com,www.go.com,file,200,,,212,3,,,refused-named,permitted,refused-named,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+425,netease.com,netease.com,unreachable,0,,"no response: Connect Timeout Error (attempted address: netease.com:443, timeout: 10000ms)",,,,,,,,,,,,,,,,,,,
+426,duckduckgo.com,duckduckgo.com,file,200,,,757,2,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+427,line.me,line.me,file,200,,,454,3,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+428,claude.ai,claude.ai,file,200,,,281,3,,,refused-named,permitted,refused-named,permitted,permitted,permitted,permitted,refused-named,permitted,permitted,refused-named,permitted,permitted,permitted,permitted
+429,heytapdl.com,heytapdl.com,unreachable,0,,no response: getaddrinfo ENOTFOUND heytapdl.com,,,,,,,,,,,,,,,,,,,
+430,beian.gov.cn,beian.gov.cn,unreachable,0,,no response: getaddrinfo ENOTFOUND beian.gov.cn,,,,,,,,,,,,,,,,,,,
+431,media.net,www.media.net,file,200,,,337,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+432,steamcommunity.com,steamcommunity.com,file,200,,,141,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+433,dailymotion.com,www.dailymotion.com,file,200,,,18276,7,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted-named,permitted
+434,h264.io,h264.io,unreachable,0,,no response: getaddrinfo ENOTFOUND h264.io,,,,,,,,,,,,,,,,,,,
+435,tiktokv.eu,tiktokv.eu,unreachable,0,,no response: getaddrinfo ENOTFOUND tiktokv.eu,,,,,,,,,,,,,,,,,,,
+436,temu.com,www.temu.com,file,200,,,8239,5,,,permitted-named,permitted-named,permitted-named,permitted,permitted,refused-named,permitted,permitted-named,permitted-named,permitted-named,permitted-named,permitted-named,permitted,permitted-named,permitted
+437,launchdarkly.com,launchdarkly.com,file,200,,,251,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+438,tiktokcdn-eu.com,tiktokcdn-eu.com,unreachable,0,,no response: getaddrinfo ENOTFOUND tiktokcdn-eu.com,,,,,,,,,,,,,,,,,,,
+439,vecdnlb.com,vecdnlb.com,unreachable,0,,no response: getaddrinfo ENOTFOUND vecdnlb.com,,,,,,,,,,,,,,,,,,,
+440,supercell.com,supercell.com,file,200,,,66,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+441,tencent-cloud.net,tencent-cloud.net,unreachable,0,,no response: getaddrinfo ENOTFOUND tencent-cloud.net,,,,,,,,,,,,,,,,,,,
+442,intel.com,www.intel.com,file,200,,,4211,31,,,permitted-named,permitted-named,permitted-named,permitted,permitted,permitted,permitted,permitted,permitted,permitted-named,permitted-named,permitted,permitted,permitted,permitted
+443,pangle.io,pangle.io,unreachable,0,,no response: getaddrinfo ENOTFOUND pangle.io,,,,,,,,,,,,,,,,,,,
+444,rocket-cdn.com,rocket-cdn.com,unreachable,0,,no response: getaddrinfo ENOTFOUND rocket-cdn.com,,,,,,,,,,,,,,,,,,,
+445,huawei.com,huawei.com,unreachable,0,,"no response: Connect Timeout Error (attempted addresses: 2407:c080:17ef:ffff::7274:d206:443, 121.37.49.12:443, timeout: 10000ms)",,,,,,,,,,,,,,,,,,,
+446,substack.com,substack.com,file,200,,,585,4,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+447,mozilla.com,www.mozilla.org,file,200,,,66,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+448,paloaltonetworks.com,www.paloaltonetworks.com,file,200,,,7701,3,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted-named,permitted-named,permitted-named,permitted-named,permitted-named,permitted,permitted,permitted
+449,kaspersky-labs.com,kaspersky-labs.com,unreachable,0,,no response: getaddrinfo ENOTFOUND kaspersky-labs.com,,,,,,,,,,,,,,,,,,,
+450,taobao.com,www.taobao.com,file,200,,,71,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+451,dotaplabs.net,dotaplabs.net,unreachable,0,,no response: getaddrinfo ENOTFOUND dotaplabs.net,,,,,,,,,,,,,,,,,,,
+452,awsglobalaccelerator.com,awsglobalaccelerator.com,unreachable,0,,no response: getaddrinfo ENOTFOUND awsglobalaccelerator.com,,,,,,,,,,,,,,,,,,,
+453,duolingo.com,www.duolingo.com,file,200,,,826,3,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+454,vercel-dns-016.com,vercel-dns-016.com,unreachable,0,,no response: getaddrinfo ENOTFOUND vercel-dns-016.com,,,,,,,,,,,,,,,,,,,
+455,adobe.net,adobe.net,unreachable,0,,"no response: Hostname/IP does not match certificate's altnames: Host: adobe.net. is not in the cert's altnames: DNS:redirect.adobe.com, DNS:www.cmo.com, DNS:gen",,,,,,,,,,,,,,,,,,,
+456,g.page,www.google.com,none,200,yes,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+457,businessinsider.com,www.businessinsider.com,file,200,,,2231,13,,,permitted,refused-named,permitted,refused-named,permitted,refused-named,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+458,fandom.com,www.fandom.com,blocked,403,,"Cloudflare challenge, status 403",,,,,,,,,,,,,,,,,,,
+459,aol.com,www.aol.com,file,200,,,2909,44,,,refused-named,refused-named,refused-named,refused-named,permitted,refused-named,permitted,permitted,permitted,permitted-named,permitted-named,permitted,permitted,permitted,permitted
+460,firetvcaptiveportal.com,firetvcaptiveportal.com,unreachable,0,,"no response: Connect Timeout Error (attempted addresses: 2600:1f18:1a46:b101:6e99:539:29f0:f96d:443, 44.195.240.230:443, 2600:1f18:1a46:b100:6919:dab5:83f0:3d81",,,,,,,,,,,,,,,,,,,
+461,pixabay.com,pixabay.com,file,200,,,3248,2,,,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+462,yahoo.co.jp,www.yahoo.co.jp,file,200,,,87,3,,,refused-named,permitted,refused-named,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+463,arxiv.org,arxiv.org,file,200,,,5854,10,15,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted-named,permitted
+464,cloudflareinsights.com,cloudflareinsights.com,none,200,yes,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+465,myqcloud.com,myqcloud.com,unreachable,0,,no response: getaddrinfo ENOTFOUND myqcloud.com,,,,,,,,,,,,,,,,,,,
+466,speedtest.net,www.speedtest.net,file,200,,,247,2,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+467,inner-active.mobi,inner-active.mobi,unreachable,0,,"no response: Connect Timeout Error (attempted addresses: 54.225.119.21:443, 62.219.50.32:443, timeout: 10000ms)",,,,,,,,,,,,,,,,,,,
+468,cloudns.net,www.cloudns.net,file,200,,,25,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+469,aliexpress.com,www.aliexpress.com,file,200,,,2731,3,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted-named,permitted
+470,eye4.cn,eye4.cn,blocked,500,,status 500,,,,,,,,,,,,,,,,,,,
+471,prodregistryv2.org,prodregistryv2.org,none,404,,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+472,byteglb.com,byteglb.com,unreachable,0,,no response: getaddrinfo ENOTFOUND byteglb.com,,,,,,,,,,,,,,,,,,,
+473,ui-dns.com,ui-dns.com,unreachable,0,,no response: getaddrinfo ENOTFOUND ui-dns.com,,,,,,,,,,,,,,,,,,,
+474,edgecdn.ru,edgecdn.ru,unreachable,0,,no response: B4650000:error:0A000438:SSL routines:ssl3_read_bytes:tlsv1 alert internal error:openssl\ssl\record\rec_layer_s3.c:918:SSL alert number 80,,,,,,,,,,,,,,,,,,,
+475,wp.com,wordpress.com,file,200,,,1387,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+476,gcdn.co,gcdn.co,unreachable,0,,no response: B4650000:error:0A000438:SSL routines:ssl3_read_bytes:tlsv1 alert internal error:openssl\ssl\record\rec_layer_s3.c:918:SSL alert number 80,,,,,,,,,,,,,,,,,,,
+477,okta.com,www.okta.com,file,200,,,2518,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+478,branch.io,www.branch.io,file,200,,,1783,8,,,permitted-named,permitted-named,permitted-named,permitted-named,permitted-named,permitted,permitted,permitted,permitted,permitted-named,permitted,permitted,permitted,permitted,permitted
+479,cnbc.com,www.cnbc.com,file,200,,,2477,3,,,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,permitted,refused-named,refused-named,refused-named,permitted,permitted-named,permitted
+480,walmart.com,www.walmart.com,file,200,,,3479,2,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+481,goodreads.com,www.goodreads.com,file,200,,,2647,8,,,refused-named,permitted,permitted,refused-named,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+482,ampproject.org,amp.dev,none,404,,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+483,kwai.net,kwai.net,unreachable,0,,"no response: Connect Timeout Error (attempted address: kwai.net:443, timeout: 10000ms)",,,,,,,,,,,,,,,,,,,
+484,ietf.org,www.ietf.org,file,200,,,51,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+485,wswebcdn.com,wswebcdn.com,unreachable,0,,no response: getaddrinfo ENOTFOUND wswebcdn.com,,,,,,,,,,,,,,,,,,,
+486,statista.com,www.statista.com,file,200,,,11030,5,,,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,permitted,permitted,refused-named,permitted,permitted,refused-named,permitted,permitted
+487,grammarly.com,www.grammarly.com,file,200,,,289,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+488,chinamobile.com,chinamobile.com,unreachable,0,,"no response: Connect Timeout Error (attempted address: chinamobile.com:443, timeout: 10000ms)",,,,,,,,,,,,,,,,,,,
+489,list-manage.com,list-manage.com,unreachable,0,,"no response: Connect Timeout Error (attempted address: list-manage.com:443, timeout: 10000ms)",,,,,,,,,,,,,,,,,,,
+490,quora.com,www.quora.com,file,200,,,18962,29,,,refused-named,refused-named,permitted-named,refused-star,refused-named,refused-named,refused-star,refused-named,refused-named,refused-named,refused-named,refused-named,refused-star,permitted-named,refused-star
+491,amazon.co.jp,www.amazon.co.jp,file,200,,,10234,101,,,refused-named,refused-named,refused-named,refused-named,permitted,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,permitted,permitted
+492,dual-s-msedge.net,dual-s-msedge.net,unreachable,0,,no response: getaddrinfo ENOTFOUND dual-s-msedge.net,,,,,,,,,,,,,,,,,,,
+493,mcafee.com,www.mcafee.com,unreachable,0,,no response: Stream closed with error code NGHTTP2_INTERNAL_ERROR,,,,,,,,,,,,,,,,,,,
+494,markmonitor.com,markmonitor.com,blocked,403,,"Cloudflare challenge, status 403",,,,,,,,,,,,,,,,,,,
+495,addtoany.com,www.addtoany.com,file,200,,,308,2,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+496,shein.com,www.shein.com,file,200,,,279,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+497,on.aws,on.aws,unreachable,0,,no response: getaddrinfo ENOTFOUND on.aws,,,,,,,,,,,,,,,,,,,
+498,impervadns.net,impervadns.net,unreachable,0,,no response: getaddrinfo ENOTFOUND impervadns.net,,,,,,,,,,,,,,,,,,,
+499,dynatrace.com,www.dynatrace.com,file,200,,,319,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+500,npr.org,www.npr.org,file,200,,,4736,47,,,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,permitted,refused-named,refused-named,refused-named,refused-named,refused-named,permitted,permitted-named,permitted
+501,nease.net,nease.net,unreachable,0,,"no response: Connect Timeout Error (attempted address: nease.net:443, timeout: 10000ms)",,,,,,,,,,,,,,,,,,,
+502,run.app,run.app,none,404,,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+503,ezvizlife.com,www.ezviz.com,none,200,yes,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+504,sohu.com,www.sohu.com,file,200,,,3097,4,,,refused-named,refused-named,refused-named,refused-named,refused-named,permitted-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,permitted-named,refused-star
+505,sc-gw.com,sc-gw.com,unreachable,0,,no response: getaddrinfo ENOTFOUND sc-gw.com,,,,,,,,,,,,,,,,,,,
+506,bdydns.com,bdydns.com,unreachable,0,,no response: getaddrinfo ENOTFOUND bdydns.com,,,,,,,,,,,,,,,,,,,
+507,sina.com.cn,www.sina.com.cn,file,200,,,528,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+508,newrelic.com,newrelic.com,file,200,,,2556,5,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+509,ivi.ru,www.ivi.ru,file,200,,,6421,3,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+510,noaa.gov,www.noaa.gov,blocked,403,,status 403,,,,,,,,,,,,,,,,,,,
+511,amzn.to,amzn.to,file,200,,,123,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+512,atlassian.net,atlassian.net,file,200,,,347,2,1,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+513,docker.com,www.docker.com,file,200,,,1055,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+514,kwaipros.com,kwaipros.com,unreachable,0,,no response: getaddrinfo ENOTFOUND kwaipros.com,,,,,,,,,,,,,,,,,,,
+515,enacdn.net,enacdn.net,unreachable,0,,no response: getaddrinfo ENOTFOUND enacdn.net,,,,,,,,,,,,,,,,,,,
+516,behance.net,www.behance.net,file,200,,,1317,2,,,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+517,indiatimes.com,www.indiatimes.com,file,200,,,1143,3,,,permitted,permitted,permitted,permitted,permitted,permitted,refused-named,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+518,scribd.com,www.scribd.com,file,200,,,3518,9,,,permitted,refused-named,permitted,refused-named,permitted,refused-named,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+519,google.de,www.google.de,file,200,,,6624,4,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+520,elasticbeanstalk.com,elasticbeanstalk.com,unreachable,0,,no response: read ECONNRESET,,,,,,,,,,,,,,,,,,,
+521,gosuslugi.ru,www.gosuslugi.ru,file,200,,,8746,3,,,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-named,refused-star
+522,foxnews.com,www.foxnews.com,file,200,,,301,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+523,anthropic.com,www.anthropic.com,file,200,,,71,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+524,stackoverflow.com,stackoverflow.com,blocked,418,,status 418,,,,,,,,,,,,,,,,,,,
+525,mediatek.com,www.mediatek.com,none,200,yes,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+526,twc.com,twc.com,unreachable,0,,"no response: Hostname/IP does not match certificate's altnames: Host: twc.com. is not in the cert's altnames: DNS:spectrum.com, DNS:baedirectsales.spectrum.com,",,,,,,,,,,,,,,,,,,,
+527,squarespacedns.com,squarespacedns.com,unreachable,0,,no response: getaddrinfo ENOTFOUND squarespacedns.com,,,,,,,,,,,,,,,,,,,
+528,ipv4only.arpa,ipv4only.arpa,unreachable,0,,"no response: Connect Timeout Error (attempted addresses: 192.0.0.171:443, 192.0.0.170:443, timeout: 10000ms)",,,,,,,,,,,,,,,,,,,
+529,share.google,share.google,none,200,yes,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+530,eventbrite.com,eventbrite.com,file,200,,,7559,139,,,permitted,permitted,permitted,permitted-named,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+531,mysql.com,www.mysql.com,blocked,403,,status 403,,,,,,,,,,,,,,,,,,,
+532,google.com.hk,www.google.com.hk,file,200,,,6624,4,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+533,tplinkcloud.com,www.tplinkcloud.com,file,200,,,70,1,,,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star
+534,blogger.com,www.blogger.com,file,200,,,572,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+535,wbx2.com,wbx2.com,unreachable,0,,"no response: Connect Timeout Error (attempted addresses: 13.59.223.207:443, 13.59.223.205:443, 13.59.223.206:443, 13.59.223.204:443, timeout: 10000ms)",,,,,,,,,,,,,,,,,,,
+536,exp-tas.com,exp-tas.com,unreachable,0,,no response: getaddrinfo ENOTFOUND exp-tas.com,,,,,,,,,,,,,,,,,,,
+537,azure-dns.com,azure-dns.com,unreachable,0,,no response: getaddrinfo ENOTFOUND azure-dns.com,,,,,,,,,,,,,,,,,,,
+538,slideshare.net,www.slideshare.net,file,200,,,1443,11,,,permitted,refused-named,permitted,refused-named,permitted,refused-named,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+539,xiaomi.net,xiaomi.net,unreachable,0,,"no response: Hostname/IP does not match certificate's altnames: Host: xiaomi.net. is not in the cert's altnames: DNS:www.mi.com, DNS:mi.com",,,,,,,,,,,,,,,,,,,
+540,adobedtm.com,adobedtm.com,unreachable,0,,no response: getaddrinfo ENOTFOUND adobedtm.com,,,,,,,,,,,,,,,,,,,
+541,myhuaweicloud.com,myhuaweicloud.com,unreachable,0,,no response: getaddrinfo ENOTFOUND myhuaweicloud.com,,,,,,,,,,,,,,,,,,,
+542,capcut.com,www.capcut.com,file,200,,,1630,2,,,permitted-named,permitted-named,permitted-named,permitted-named,permitted-named,permitted,permitted,permitted-named,permitted-named,permitted-named,permitted-named,permitted-named,permitted-named,permitted-named,permitted
+543,mikrotik.com,mikrotik.com,file,200,,,66,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+544,squarespace.com,www.squarespace.com,file,200,,,2379,1,,,permitted-named,permitted-named,permitted-named,permitted-named,permitted-named,permitted-named,permitted-named,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+545,gotinder.com,www.gotinder.com,file,200,,,83,2,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+546,bitrix24.ru,www.bitrix24.ru,file,200,,,3594,3,,,permitted-named,permitted-named,permitted-named,permitted,permitted,permitted,permitted,permitted-named,permitted-named,permitted-named,permitted-named,permitted-named,permitted-named,permitted,permitted
+547,avsxappcaptiveportal.com,avsxappcaptiveportal.com,unreachable,0,,"no response: Connect Timeout Error (attempted addresses: 2600:1f18:5cc9:9900:2bf2:a307:3cea:f3d1:443, 100.31.219.67:443, 2600:1f18:5cc9:9901:9881:bda:e37f:7286:",,,,,,,,,,,,,,,,,,,
+548,adriver.ru,adriver.ru,none,404,,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+549,trendmicro.com,www.trendmicro.com,file,200,,,2211,4,,"content-signal: search=yes, ai-input=yes, ai-train=no",permitted,permitted-named,permitted-named,permitted-named,permitted,permitted-named,permitted-named,permitted-named,permitted-named,permitted-named,permitted-named,permitted-named,permitted-named,permitted-named,permitted
+550,oup.com,global.oup.com,blocked,202,,"AWS WAF challenge, status 202",,,,,,,,,,,,,,,,,,,
+551,openstreetmap.org,www.openstreetmap.org,file,200,,,891,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+552,uol.com.br,www.uol.com.br,file,200,,,2515,50,,,permitted,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,permitted,refused-named,refused-named,permitted,refused-named,refused-named,permitted,permitted
+553,firefox.com,www.firefox.com,file,200,,,78,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+554,visualstudio.com,visualstudio.microsoft.com,file,200,,,234,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+555,digitalocean.com,www.digitalocean.com,file,200,,,172,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+556,vivoglobal.com,vivoglobal.com,file,200,,,23,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+557,dreamhost.com,www.dreamhost.com,file,200,,,422,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+558,amazon.co.za,www.amazon.co.za,file,200,,,7257,101,,,refused-named,refused-named,refused-named,refused-named,permitted,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,permitted,permitted
+559,ft.com,www.ft.com,file,200,,,1556,20,1,,permitted,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,permitted,permitted,refused-named,permitted,permitted,refused-named,permitted,permitted
+560,wired.com,www.wired.com,file,200,,,2245,3,,,permitted,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,permitted,refused-named,refused-named,permitted,refused-named,refused-named,permitted,permitted
+561,icloud-content.com,developer.apple.com,none,200,yes,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+562,fast.com,fast.com,file,200,,,41,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+563,share-dns.com,share-dns.com,unreachable,0,,no response: getaddrinfo ENOTFOUND share-dns.com,,,,,,,,,,,,,,,,,,,
+564,openx.net,openx.net,none,404,,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+565,ngenix.net,ngenix.net,blocked,503,,status 503,,,,,,,,,,,,,,,,,,,
+566,jquery.com,jquery.com,file,200,,,111,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+567,adobedc.net,adobedc.net,unreachable,0,,no response: getaddrinfo ENOTFOUND adobedc.net,,,,,,,,,,,,,,,,,,,
+568,free.fr,www.free.fr,file,200,,,1051,15,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted-named,permitted
+569,cornell.edu,www.cornell.edu,file,200,,,1046,5,6,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+570,tandfonline.com,www.tandfonline.com,file,200,,,1379,3,1,,refused-named,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+571,time.com,time.com,file,200,,,2190,3,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted-named,permitted
+572,oraclecloud.com,www.oracle.com,blocked,403,,status 403,,,,,,,,,,,,,,,,,,,
+573,discord.media,discord.media,blocked,520,,status 520,,,,,,,,,,,,,,,,,,,
+574,deviantart.com,www.deviantart.com,file,200,,,524,2,1,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+575,rakuten.co.jp,www.rakuten.co.jp,file,200,,,490,3,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted-named,permitted
+576,vercel-dns-3.com,vercel-dns-3.com,unreachable,0,,no response: getaddrinfo ENOTFOUND vercel-dns-3.com,,,,,,,,,,,,,,,,,,,
+577,vidaahub.com,vidaahub.com,unreachable,0,,no response: getaddrinfo ENOTFOUND vidaahub.com,,,,,,,,,,,,,,,,,,,
+578,live.net,live.net,unreachable,0,,no response: getaddrinfo ENOTFOUND live.net,,,,,,,,,,,,,,,,,,,
+579,amazonalexa.com,www.amazon.com,blocked,503,,status 503,,,,,,,,,,,,,,,,,,,
+580,e2ro.com,e2ro.com,unreachable,0,,no response: getaddrinfo ENOTFOUND e2ro.com,,,,,,,,,,,,,,,,,,,
+581,tripadvisor.com,www.tripadvisor.com,file,200,,,23723,8,,,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,permitted-named,permitted,permitted-named,permitted-named,permitted,permitted,permitted,permitted
+582,sberbank.ru,sberbank.ru,unreachable,0,,no response: self-signed certificate in certificate chain,,,,,,,,,,,,,,,,,,,
+583,nstld.com,nstld.com,unreachable,0,,no response: getaddrinfo ENOTFOUND nstld.com,,,,,,,,,,,,,,,,,,,
+584,eset.com,www.eset.com,file,200,,,6699,2,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+585,qlivecdn.com,qlivecdn.com,unreachable,0,,no response: getaddrinfo ENOTFOUND qlivecdn.com,,,,,,,,,,,,,,,,,,,
+586,vercel-dns-017.com,vercel-dns-017.com,unreachable,0,,no response: getaddrinfo ENOTFOUND vercel-dns-017.com,,,,,,,,,,,,,,,,,,,
+587,aboutads.info,youradchoices.com,none,200,yes,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+588,360yield.com,ssp.improvedigital.com,file,200,,,106,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+589,comcast.com,comcast.com,unreachable,0,,no response: connect ECONNREFUSED 96.99.227.0:443,,,,,,,,,,,,,,,,,,,
+590,teamviewer.com,www.teamviewer.com,file,200,,,581,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+591,dotomi.com,www.epsilon.com,none,200,yes,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+592,svc.ms,svc.ms,unreachable,0,,no response: getaddrinfo ENOTFOUND svc.ms,,,,,,,,,,,,,,,,,,,
+593,braze.com,braze.com,file,200,,,129,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+594,threads.com,www.threads.com,file,200,,,8228,36,,,refused-named,refused-named,refused-named,refused-star,refused-named,refused-star,refused-star,refused-star,refused-star,refused-named,refused-star,refused-star,refused-star,permitted-named,refused-star
+595,ca.gov,www.ca.gov,file,200,,,379,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+596,translate.goog,translate.goog,none,404,,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+597,palmplaystore.com,palmplaystore.com,none,404,,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+598,hicloud.com,hicloud.com,unreachable,0,,no response: getaddrinfo ENOTFOUND hicloud.com,,,,,,,,,,,,,,,,,,,
+599,edgcdn.net,edgcdn.net,unreachable,0,,no response: getaddrinfo ENOTFOUND edgcdn.net,,,,,,,,,,,,,,,,,,,
+600,herokuapp.com,herokuapp.com,unreachable,0,,no response: B4650000:error:0A000458:SSL routines:ssl3_read_bytes:tlsv1 unrecognized name:openssl\ssl\record\rec_layer_s3.c:918:SSL alert number 112,,,,,,,,,,,,,,,,,,,
+601,ovh.net,proof.ovh.net,blocked,429,,status 429,,,,,,,,,,,,,,,,,,,
+602,akamaitech.net,akamaitech.net,unreachable,0,,no response: getaddrinfo ENOTFOUND akamaitech.net,,,,,,,,,,,,,,,,,,,
+603,playstation.com,www.playstation.com,file,200,,,655,8,5,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+604,usatoday.com,www.usatoday.com,file,200,,,16350,288,,,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,permitted,permitted
+605,wps.com,www.wps.com,file,200,,,666,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+606,wildberries.ru,www.wildberries.ru,blocked,498,,status 498,,,,,,,,,,,,,,,,,,,
+607,shop.app,shop.app,file,200,,,2748,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+608,beget.ru,beget.com,file,200,,,6017,2,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+609,bx-msedge.net,bx-msedge.net,unreachable,0,,no response: getaddrinfo ENOTFOUND bx-msedge.net,,,,,,,,,,,,,,,,,,,
+610,klaviyo.com,www.klaviyo.com,file,200,,,3530,2,,,permitted-named,permitted-named,permitted,permitted,permitted,permitted,permitted-named,permitted-named,permitted-named,permitted-named,permitted-named,permitted-named,permitted-named,permitted,permitted
+611,3lift.com,3lift.com,blocked,403,,status 403,,,,,,,,,,,,,,,,,,,
+612,target.com,www.target.com,file,200,,,3226,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+613,avito.ru,www.avito.ru,file,200,,,14700,5,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted-named,permitted
+614,atlassian.com,www.atlassian.com,file,200,,,1292,2,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+615,ipinfo.io,ipinfo.io,file,200,,,793,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+616,grammarly.io,grammarly.io,unreachable,0,,no response: getaddrinfo ENOTFOUND grammarly.io,,,,,,,,,,,,,,,,,,,
+617,rlcdn.com,rlcdn.com,unreachable,0,,no response: getaddrinfo ENOTFOUND rlcdn.com,,,,,,,,,,,,,,,,,,,
+618,usercontent.goog,usercontent.goog,none,404,,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+619,libp2p.direct,libp2p.direct,unreachable,0,,no response: getaddrinfo ENOTFOUND libp2p.direct,,,,,,,,,,,,,,,,,,,
+620,cdn20.com,cdn20.com,unreachable,0,,no response: getaddrinfo ENOTFOUND cdn20.com,,,,,,,,,,,,,,,,,,,
+621,hotjar.com,www.hotjar.com,file,200,,,510,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+622,ieee.org,www.ieee.org,blocked,202,,"AWS WAF challenge, status 202",,,,,,,,,,,,,,,,,,,
+623,vercel.app,vercel.com,file,200,,,1762,0,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+624,mdpi.com,mdpi.com,blocked,403,,status 403,,,,,,,,,,,,,,,,,,,
+625,berkeley.edu,www.berkeley.edu,file,200,,,190,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+626,unesco.org,www.unesco.org,file,200,,,67187,2,,"content-signal: search=yes,ai-input=yes,ai-train=no,use=reference",refused-named,refused-named,permitted,refused-named,refused-named,refused-named,refused-named,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+627,my.com,my.com,unreachable,0,,no response: getaddrinfo ENOTFOUND my.com,,,,,,,,,,,,,,,,,,,
+628,bitdefender.net,www.bitdefender.com,none,200,yes,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+629,wix.com,www.wix.com,file,200,,,2797,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+630,force.com,www.force.com,blocked,403,,status 403,,,,,,,,,,,,,,,,,,,
+631,telegraph.co.uk,www.telegraph.co.uk,file,200,,,3228,3,,,refused-named,refused-named,permitted-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,permitted,permitted
+632,amazon.fr,www.amazon.fr,file,200,,,7161,101,,,refused-named,refused-named,refused-named,refused-named,permitted,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,permitted,permitted
+633,supertms.com,supertms.com,unreachable,0,,no response: getaddrinfo ENOTFOUND supertms.com,,,,,,,,,,,,,,,,,,,
+634,nintendo.com,www.nintendo.com,file,200,,,5596,26,,,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+635,xboxlive.com,xboxlive.com,unreachable,0,,no response: Hostname/IP does not match certificate's altnames: Host: xboxlive.com. is not in the cert's altnames: DNS:reroute443.microsoft.com,,,,,,,,,,,,,,,,,,,
+636,tiktokpangle.us,tiktokpangle.us,unreachable,0,,no response: getaddrinfo ENOTFOUND tiktokpangle.us,,,,,,,,,,,,,,,,,,,
+637,accuweather.com,accuweather.com,blocked,403,,status 403,,,,,,,,,,,,,,,,,,,
+638,linode.com,www.linode.com,file,200,,,499,2,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted-named,permitted
+639,ikea.com,www.ikea.com,file,200,,,4054,4,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+640,onetrust.com,www.onetrust.com,file,200,,,396,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+641,yahoodns.net,yahoodns.net,unreachable,0,,no response: getaddrinfo ENOTFOUND yahoodns.net,,,,,,,,,,,,,,,,,,,
+642,imgsmail.ru,imgsmail.ru,file,200,,,49,1,,,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star
+643,alicdn.com,alicdn.com,unreachable,0,,"no response: Connect Timeout Error (attempted addresses: 140.205.77.240:443, 115.238.23.240:443, timeout: 10000ms)",,,,,,,,,,,,,,,,,,,
+644,ups.com,www.ups.com,blocked,200,yes,"an Akamai block in place of the file, status 200",,,,,,,,,,,,,,,,,,,
+645,t-msedge.net,t-msedge.net,unreachable,0,,no response: getaddrinfo ENOTFOUND t-msedge.net,,,,,,,,,,,,,,,,,,,
+646,verisign.com,www.verisign.com,file,200,,,62,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+647,amazon.ca,www.amazon.ca,file,200,,,6179,101,,,refused-named,refused-named,refused-named,refused-named,permitted,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,permitted,permitted
+648,dyndns.org,account.dyn.com,none,200,yes,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+649,sagepub.com,www.sagepub.com,file,200,,,5472,43,,,permitted-named,permitted-named,permitted-named,refused-named,permitted-named,refused-named,refused-named,permitted,permitted,permitted,permitted-named,permitted,permitted,permitted-named,permitted
+650,resolver.arpa,resolver.arpa,unreachable,0,,no response: getaddrinfo ENOTFOUND resolver.arpa,,,,,,,,,,,,,,,,,,,
+651,techcrunch.com,techcrunch.com,file,200,,,710,13,,,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,permitted,permitted,permitted,permitted,refused-named,permitted,permitted,permitted,permitted
+652,tencent.com,tencent.com,unreachable,0,,"no response: Hostname/IP does not match certificate's altnames: Host: tencent.com. is not in the cert's altnames: DNS:dev.tencent.com, DNS:static.www.tencent.co",,,,,,,,,,,,,,,,,,,
+653,merriam-webster.com,www.merriam-webster.com,file,200,,,708,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+654,jotform.com,www.jotform.com,file,200,,,12312,7,,,permitted-named,permitted-named,permitted,permitted-named,permitted-named,permitted-named,permitted-named,permitted-named,permitted,permitted-named,permitted,permitted,permitted,permitted,permitted
+655,hostgator.com.br,hostgator.com.br,blocked,403,,"Cloudflare challenge, status 403",,,,,,,,,,,,,,,,,,,
+656,bytedns1.com,bytedns1.com,unreachable,0,,no response: getaddrinfo ENOTFOUND bytedns1.com,,,,,,,,,,,,,,,,,,,
+657,msidentity.com,msidentity.com,unreachable,0,,no response: getaddrinfo ENOTFOUND msidentity.com,,,,,,,,,,,,,,,,,,,
+658,0xrpc.io,0xrpc.io,none,404,,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+659,sharethrough.com,sharethrough.com,file,200,,,1194,33,,,refused-named,refused-named,refused-star,refused-named,refused-star,refused-named,refused-named,refused-named,refused-star,refused-named,refused-named,refused-named,refused-star,refused-named,refused-star
+660,ad-tech.ru,ad-tech.ru,unreachable,0,,no response: read ECONNRESET,,,,,,,,,,,,,,,,,,,
+661,loc.gov,www.loc.gov,file,200,,,482,4,5,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+662,telephony.goog,telephony.goog,unreachable,0,,no response: other side closed,,,,,,,,,,,,,,,,,,,
+663,nike.com,www.nike.com,file,200,,,3503,6,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+664,footprintdns.com,footprintdns.com,unreachable,0,,no response: getaddrinfo ENOTFOUND footprintdns.com,,,,,,,,,,,,,,,,,,,
+665,chatgpt.site,chatgpt.com,blocked,403,,"Cloudflare challenge, status 403",,,,,,,,,,,,,,,,,,,
+666,2gis.com,2gis.ae,file,200,,,1193,4,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+667,service.gov.uk,www.gov.uk,none,200,yes,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+668,intercom.io,www.intercom.com,file,200,,,261,1,,"content-signal: ai-train=yes, ai-input=yes, search=yes",permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+669,samsungapps.com,samsungapps.com,unreachable,0,,"no response: Connect Timeout Error (attempted address: samsungapps.com:443, timeout: 10000ms)",,,,,,,,,,,,,,,,,,,
+670,ks-cdn.com,ks-cdn.com,unreachable,0,,no response: getaddrinfo ENOTFOUND ks-cdn.com,,,,,,,,,,,,,,,,,,,
+671,webempresa.eu,webempresa.eu,none,404,,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+672,stackadapt.com,www.stackadapt.com,file,200,,,623,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+673,bidswitch.net,bidswitch.net,unreachable,0,,no response: getaddrinfo ENOTFOUND bidswitch.net,,,,,,,,,,,,,,,,,,,
+674,dailymail.com,www.dailymail.com,file,200,,,5435,7,,,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,permitted,permitted
+675,withgoogle.com,www.google.com,none,200,yes,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+676,primevideo.com,www.primevideo.com,file,200,,,4348,94,,,permitted,permitted,permitted,refused-named,permitted,refused-named,refused-named,permitted,permitted,refused-named,refused-named,refused-named,refused-named,permitted,permitted
+677,redhat.com,www.redhat.com,file,200,,,3368,1,10,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+678,hstgr.net,hstgr.net,unreachable,0,,no response: B4650000:error:0A000438:SSL routines:ssl3_read_bytes:tlsv1 alert internal error:openssl\ssl\record\rec_layer_s3.c:918:SSL alert number 80,,,,,,,,,,,,,,,,,,,
+679,britannica.com,www.britannica.com,file,200,,,834,21,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+680,elpais.com,elpais.com,file,200,,,7777,201,,,permitted,refused-named,permitted,refused-named,permitted,refused-named,permitted,permitted,refused-named,refused-named,permitted,refused-named,refused-named,permitted,permitted
+681,gafg.com,gafg.com,unreachable,0,,"no response: Connect Timeout Error (attempted addresses: 2610:a1:3094::100:443, 204.74.99.100:443, timeout: 10000ms)",,,,,,,,,,,,,,,,,,,
+682,mega.co.nz,mega.co.nz,file,200,,,0,0,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+683,easebar.com,easebar.com,unreachable,0,,no response: getaddrinfo ENOTFOUND easebar.com,,,,,,,,,,,,,,,,,,,
+684,meta.com,www.meta.com,file,200,,,3419,10,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+685,perplexity.ai,www.perplexity.ai,file,200,,,448,2,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted-named,permitted
+686,cdnvideo.ru,cdnvideo.ru,file,200,,,5119,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+687,surveymonkey.com,www.surveymonkey.com,file,200,,,713,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+688,360.cn,360.cn,file,200,,,502,2,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+689,smaato.net,smaato.net,unreachable,0,,no response: getaddrinfo ENOTFOUND smaato.net,,,,,,,,,,,,,,,,,,,
+690,sophos.com,www.sophos.com,file,200,,,1719,22,,,permitted-named,permitted-named,permitted-named,permitted,permitted,permitted,permitted,permitted-named,permitted,permitted-named,permitted-named,permitted,permitted,permitted-named,permitted
+691,iso.org,iso.org,blocked,403,,"Cloudflare challenge, status 403",,,,,,,,,,,,,,,,,,,
+692,bunnyinfra.net,bunnyinfra.net,unreachable,0,,no response: getaddrinfo ENOTFOUND bunnyinfra.net,,,,,,,,,,,,,,,,,,,
+693,cambridge.org,www.cambridge.org,file,200,,,2785,5,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,refused-named,permitted,permitted,permitted,permitted
+694,amazon.in,www.amazon.in,file,200,,,9320,103,,,refused-named,refused-named,refused-named,refused-named,permitted,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,permitted,permitted
+695,warnerbros.com,www.warnerbros.com,none,200,yes,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+696,vkontakte.ru,vkontakte.ru,file,200,,,55,1,,,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star
+697,optimizely.com,www.optimizely.com,file,200,,,207,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+698,spotifycdn.com,spotifycdn.com,unreachable,0,,no response: getaddrinfo ENOTFOUND spotifycdn.com,,,,,,,,,,,,,,,,,,,
+699,parklogic.com,parklogic.com,file,200,,,166,2,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+700,xhamster.com,xhamster.com,file,200,,,13012,2,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+701,anydesk.com,anydesk.com,blocked,403,,"Cloudflare challenge, status 403",,,,,,,,,,,,,,,,,,,
+702,wpguardian.io,wpguardian.com,file,200,,,172,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+703,wpguardian.com,wpguardian.com,file,200,,,172,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+704,shopee.com.br,shopee.com.br,file,200,,,2782,2,1,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted-named,permitted
+705,lemonde.fr,www.lemonde.fr,file,200,,,13226,304,,,permitted,refused-named,refused-named,refused-named,refused-named,refused-named,permitted,permitted,refused-named,permitted,permitted,refused-named,permitted,permitted,permitted
+706,kick.com,kick.com,file,200,,,355,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+707,cbsnews.com,www.cbsnews.com,file,200,,,950,5,,,refused-named,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+708,outbrain.com,www.outbrain.com,file,200,,,2736,8,10,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+709,cookielaw.org,www.cookielaw.org,blocked,421,,status 421,,,,,,,,,,,,,,,,,,,
+710,yelp.com,www.yelp.com,unreachable,200,,undecodable body: unexpected end of file,,,,,,,,,,,,,,,,,,,
+711,twimg.com,twimg.com,unreachable,0,,no response: getaddrinfo ENOTFOUND twimg.com,,,,,,,,,,,,,,,,,,,
+712,viber.com,www.viber.com,file,200,,,181,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+713,hihonorcloud.com,hihonorcloud.com,file,200,,,26,1,,,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star
+714,dailymail.co.uk,www.dailymail.com,file,200,,,5435,7,,,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,permitted,permitted
+715,typekit.net,typekit.net,unreachable,0,,"no response: Connect Timeout Error (attempted addresses: 216.146.46.11:443, 216.146.46.10:443, timeout: 10000ms)",,,,,,,,,,,,,,,,,,,
+716,crcdn.pro,crcdn.pro,unreachable,0,,no response: getaddrinfo ENOTFOUND crcdn.pro,,,,,,,,,,,,,,,,,,,
+717,fb.com,fb.com,file,200,,,26872,36,,,refused-named,refused-named,refused-named,refused-star,refused-named,refused-star,refused-star,refused-star,refused-star,refused-named,refused-star,refused-star,refused-star,permitted-named,refused-star
+718,googlezip.net,googlezip.net,unreachable,0,,no response: getaddrinfo ENOTFOUND googlezip.net,,,,,,,,,,,,,,,,,,,
+719,marriott.com,marriott.com,blocked,403,,status 403,,,,,,,,,,,,,,,,,,,
+720,samsungacr.com,samsungacr.com,unreachable,0,,no response: getaddrinfo ENOTFOUND samsungacr.com,,,,,,,,,,,,,,,,,,,
+721,ring.com,ring.com,file,200,,,1935,2,,,permitted-named,permitted-named,permitted-named,permitted,permitted-named,permitted,permitted,permitted,permitted,permitted-named,permitted-named,permitted,permitted,permitted,permitted
+722,porkbun.com,porkbun.com,file,200,,,882,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+723,oxylabs.io,oxylabs.io,file,200,,,121,1,,"content-signal: search=yes, ai-input=yes, ai-train=yes",permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+724,uk.com,uk.com,file,200,,,0,0,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+725,amazon.es,www.amazon.es,file,200,,,7063,101,,,refused-named,refused-named,refused-named,refused-named,permitted,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,permitted,permitted
+726,pinimg.com,www.pinterest.com,file,200,,,40982,8,,,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,permitted-named,refused-star
+727,consultant.ru,www.consultant.ru,file,200,,,1176,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+728,bandcamp.com,bandcamp.com,file,200,,,1053,20,,,refused-named,refused-named,refused-named,refused-named,permitted,refused-named,refused-named,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+729,ya.ru,ya.ru,file,200,,,29928,5,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted-named,permitted
+730,itch.io,itch.io,file,200,,,249,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+731,airbnb.com,www.airbnb.com,file,200,,,20930,18,,,refused-named,refused-named,permitted,permitted,refused-named,permitted,permitted-named,permitted-named,permitted,permitted-named,permitted-named,permitted,permitted,permitted-named,permitted
+732,nel.goog,nel.goog,unreachable,0,,no response: getaddrinfo ENOTFOUND nel.goog,,,,,,,,,,,,,,,,,,,
+733,cnet.com,www.cnet.com,file,200,,,22989,3,,,refused-named,refused-named,permitted,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,permitted,permitted
+734,independent.co.uk,www.independent.co.uk,file,200,,,1305,2,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+735,uber.com,www.uber.com,file,200,,,904,3,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+736,pushy.io,pushy.me,none,404,,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+737,stripchat.com,stripchat.com,blocked,403,,status 403,,,,,,,,,,,,,,,,,,,
+738,bamgrid.com,bamgrid.com,unreachable,0,,no response: getaddrinfo ENOTFOUND bamgrid.com,,,,,,,,,,,,,,,,,,,
+739,allegro.pl,allegro.pl,file,200,,,1144,2,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+740,bugsnag.com,www.bugsnag.com,file,200,,,1248,0,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+741,geobasket.ru,geobasket.ru,unreachable,0,,no response: getaddrinfo ENOTFOUND geobasket.ru,,,,,,,,,,,,,,,,,,,
+742,amazon.it,www.amazon.it,file,200,,,7450,101,,,refused-named,refused-named,refused-named,refused-named,permitted,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,permitted,permitted
+743,quantserve.com,quantserve.com,file,200,,,155,2,,,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-named,refused-star
+744,shopee.co.id,shopee.co.id,file,200,,,2795,2,1,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted-named,permitted
+745,mailchimp.com,mailchimp.com,file,200,,,101,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+746,asus.com,www.asus.com,file,200,,,480,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+747,globalsign.com,www.globalsign.com,file,200,,,1727,12,,,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,permitted-named,permitted-named,permitted-named,permitted-named,permitted,permitted,permitted,permitted
+748,githubusercontent.com,githubusercontent.com,unreachable,0,,no response: getaddrinfo ENOTFOUND githubusercontent.com,,,,,,,,,,,,,,,,,,,
+749,nodeflix.net,nodeflix.net,unreachable,0,,"no response: Connect Timeout Error (attempted address: nodeflix.net:443, timeout: 10000ms)",,,,,,,,,,,,,,,,,,,
+750,python.org,www.python.org,file,200,,,537,4,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+751,fda.gov,www.fda.gov,none,404,,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+752,alipaydns.com,alipaydns.com,unreachable,0,,"no response: Hostname/IP does not match certificate's altnames: Host: alipaydns.com. is not in the cert's altnames: DNS:*.alipay.com, DNS:alipay.com, DNS:*.alip",,,,,,,,,,,,,,,,,,,
+753,safebrowsing.apple,safebrowsing.apple,unreachable,0,,no response: getaddrinfo ENOTFOUND safebrowsing.apple,,,,,,,,,,,,,,,,,,,
+754,creativecdn.com,creativecdn.com,file,200,,,26,1,,,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star
+755,orderbox-dns.com,orderbox-dns.com,unreachable,0,,no response: getaddrinfo ENOTFOUND orderbox-dns.com,,,,,,,,,,,,,,,,,,,
+756,nmrodam.com,nmrodam.com,unreachable,0,,no response: getaddrinfo ENOTFOUND nmrodam.com,,,,,,,,,,,,,,,,,,,
+757,bidr.io,bidr.io,unreachable,0,,no response: getaddrinfo ENOTFOUND bidr.io,,,,,,,,,,,,,,,,,,,
+758,1rx.io,1rx.io,unreachable,0,,no response: getaddrinfo ENOTFOUND 1rx.io,,,,,,,,,,,,,,,,,,,
+759,agkn.com,agkn.com,unreachable,0,,no response: getaddrinfo ENOTFOUND agkn.com,,,,,,,,,,,,,,,,,,,
+760,dbankcloud.com,dbankcloud.com,unreachable,0,,no response: getaddrinfo ENOTFOUND dbankcloud.com,,,,,,,,,,,,,,,,,,,
+761,mediafire.com,mediafire.com,file,200,,,212,2,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+762,imrworldwide.com,imrworldwide.com,unreachable,0,,no response: getaddrinfo ENOTFOUND imrworldwide.com,,,,,,,,,,,,,,,,,,,
+763,fontawesome.com,fontawesome.com,file,200,,,358,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+764,google.co.uk,www.google.co.uk,file,200,,,6624,4,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+765,g.co,g.co,blocked,400,,status 400,,,,,,,,,,,,,,,,,,,
+766,imgur.com,imgur.com,file,200,,,352,2,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+767,google.com.br,www.google.com.br,file,200,,,6624,4,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+768,homedepot.com,www.homedepot.com,file,200,,,1411,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+769,bild.de,www.bild.de,file,200,,,3053,3,,,permitted,permitted,permitted,refused-named,refused-named,refused-named,permitted,permitted,permitted,refused-named,permitted,permitted,refused-named,permitted,permitted
+770,eeroup.com,eeroup.com,none,404,,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+771,pvp.net,pvp.net,unreachable,0,,no response: getaddrinfo ENOTFOUND pvp.net,,,,,,,,,,,,,,,,,,,
+772,lijit.com,lijit.com,blocked,403,,status 403,,,,,,,,,,,,,,,,,,,
+773,criteo.net,criteo.net,unreachable,0,,no response: getaddrinfo ENOTFOUND criteo.net,,,,,,,,,,,,,,,,,,,
+774,mlb.com,www.mlb.com,file,200,,,2224,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+775,seznam.cz,www.seznam.cz,file,200,,,1024,4,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+776,box.com,www.box.com,file,200,,,1484,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+777,nintendo.net,nintendo.net,unreachable,0,,no response: getaddrinfo ENOTFOUND nintendo.net,,,,,,,,,,,,,,,,,,,
+778,gumgum.com,gumgum.com,file,200,,,694,15,,,permitted-named,permitted-named,permitted-named,permitted,permitted,permitted,permitted,permitted-named,permitted,permitted-named,permitted-named,permitted,permitted,permitted-named,permitted
+779,vedsalb.com,vedsalb.com,unreachable,0,,no response: getaddrinfo ENOTFOUND vedsalb.com,,,,,,,,,,,,,,,,,,,
+780,binance.com,www.binance.com,file,200,,,6722,3,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted-named,permitted
+781,crwdcntrl.net,crwdcntrl.net,unreachable,0,,"no response: Connect Timeout Error (attempted addresses: 199.233.57.17:443, 199.233.57.18:443, 199.233.57.16:443, 199.233.57.19:443, 199.233.57.21:443, 199.233.",,,,,,,,,,,,,,,,,,,
+782,yieldmo.com,yieldmo.com,file,200,,,169,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+783,steamstatic.com,steamstatic.com,unreachable,0,,no response: getaddrinfo ENOTFOUND steamstatic.com,,,,,,,,,,,,,,,,,,,
+784,nikkei.com,www.nikkei.com,none,200,yes,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+785,keenetic.io,keenetic.io,unreachable,0,,no response: getaddrinfo ENOTFOUND keenetic.io,,,,,,,,,,,,,,,,,,,
+786,sedo.com,sedo.com,file,200,,,270,2,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+787,mhverifier.ru,mhverifier.ru,unreachable,0,,"no response: Hostname/IP does not match certificate's altnames: Host: mhverifier.ru. is not in the cert's altnames: DNS:*.telecomid.ru, DNS:telecomid.ru",,,,,,,,,,,,,,,,,,,
+788,mckinsey.com,mckinsey.com,unreachable,0,,"no response: unable to verify the first certificate; if the root CA is installed locally, try running Node.js with --use-system-ca",,,,,,,,,,,,,,,,,,,
+789,shopeemobile.com,shopeemobile.com,unreachable,0,,"no response: Connect Timeout Error (attempted address: shopeemobile.com:443, timeout: 10000ms)",,,,,,,,,,,,,,,,,,,
+790,id5-sync.com,console.id5.io,none,200,yes,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+791,ddnss.de,ddnss.de,file,200,,,286,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+792,zillow.com,www.zillow.com,file,200,,,10524,4,,,permitted,permitted,permitted,permitted,refused-named,permitted,refused-named,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+793,samsungosp.com,samsungosp.com,unreachable,0,,no response: getaddrinfo ENOTFOUND samsungosp.com,,,,,,,,,,,,,,,,,,,
+794,usgovcloudapi.net,usgovcloudapi.net,unreachable,0,,no response: getaddrinfo ENOTFOUND usgovcloudapi.net,,,,,,,,,,,,,,,,,,,
+795,singular.net,www.singular.net,file,200,,,1087,12,10,,permitted-named,permitted-named,permitted-named,permitted-named,permitted-named,permitted-named,permitted,permitted-named,permitted,permitted-named,permitted-named,permitted,permitted,permitted,permitted
+796,recaptcha.net,recaptcha.net,file,200,,,153,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+797,bestbuy.com,www.bestbuy.com,unreachable,0,,no response: Stream closed with error code NGHTTP2_INTERNAL_ERROR,,,,,,,,,,,,,,,,,,,
+798,craigslist.org,craigslist.org,file,200,,,151,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+799,sc-cdn.net,sc-cdn.net,unreachable,0,,no response: getaddrinfo ENOTFOUND sc-cdn.net,,,,,,,,,,,,,,,,,,,
+800,welt.de,www.welt.de,file,200,,,3501,3,,,permitted,permitted,permitted,refused-named,refused-named,refused-named,permitted,permitted,permitted,refused-named,permitted,permitted,refused-named,permitted,permitted
+801,zoom.com,zoom.us,file,200,,,2005,13,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted-named,permitted
+802,wp.pl,www.wp.pl,file,200,,,640,7,,,refused-named,permitted,permitted,refused-named,permitted,permitted,permitted,permitted-named,permitted,permitted-named,permitted-named,permitted,permitted-named,permitted,permitted
+803,wattpad.com,www.wattpad.com,file,200,,,1580,3,,,refused-named,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+804,apnews.com,apnews.com,file,200,,,1315,14,,,refused-named,refused-named,permitted,refused-named,refused-named,permitted,permitted,permitted,refused-named,refused-named,permitted,refused-named,permitted,permitted,permitted
+805,lenovo.com,www.lenovo.com,file,200,,,3633,11,,,permitted-named,permitted-named,permitted-named,permitted,permitted,permitted,permitted,permitted-named,permitted-named,permitted-named,permitted-named,permitted,permitted-named,permitted-named,permitted
+806,cdnhwc1.com,cdnhwc1.com,unreachable,0,,no response: getaddrinfo ENOTFOUND cdnhwc1.com,,,,,,,,,,,,,,,,,,,
+807,fiverr.com,www.fiverr.com,file,200,,,2049,2,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+808,ameblo.jp,ameblo.jp,file,200,,,1964,3,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted-named,permitted
+809,no-ip.com,www.noip.com,file,200,,,611,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+810,herokudns.com,herokudns.com,unreachable,0,,no response: getaddrinfo ENOTFOUND herokudns.com,,,,,,,,,,,,,,,,,,,
+811,ovscdns.com,ovscdns.com,unreachable,0,,no response: getaddrinfo ENOTFOUND ovscdns.com,,,,,,,,,,,,,,,,,,,
+812,ozone.ru,ozone.ru,unreachable,0,,"no response: Hostname/IP does not match certificate's altnames: Host: ozone.ru. is not in the cert's altnames: DNS:*.ozon.ru, DNS:*.ozone.ru, DNS:www.ozon.ru, D",,,,,,,,,,,,,,,,,,,
+813,cmediahub.ru,cmediahub.ru,unreachable,0,,no response: getaddrinfo ENOTFOUND cmediahub.ru,,,,,,,,,,,,,,,,,,,
+814,liadm.com,liadm.com,unreachable,0,,no response: getaddrinfo ENOTFOUND liadm.com,,,,,,,,,,,,,,,,,,,
+815,ted.com,www.ted.com,file,200,,,2552,31,,,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,permitted-named,permitted-named,permitted-named,permitted-named,permitted-named,permitted-named,permitted,permitted
+816,mixpanel.com,mixpanel.com,file,200,,,314,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+817,prnewswire.com,www.prnewswire.com,file,200,,,3353,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+818,hugedomains.com,www.hugedomains.com,file,200,,,606,3,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+819,moloco.com,www.moloco.com,file,200,,,3335,69,,,permitted,permitted,permitted,permitted-named,permitted,refused-named,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+820,disneyplus.com,www.disneyplus.com,file,200,,,2794,2,,,permitted-named,permitted-named,permitted-named,permitted-named,permitted-named,permitted-named,permitted-named,permitted-named,permitted-named,permitted-named,permitted-named,permitted-named,refused-star,permitted-named,refused-star
+821,xvideos.com,xvideos.com,file,200,,,61,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+822,rakuten.com,www.rakuten.com,file,200,,,2621,4,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+823,xbox.com,www.xbox.com,file,200,,,289,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+824,people.com,people.com,file,200,,,3457,6,,,permitted-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,permitted-named,refused-named,refused-named,permitted-named,refused-named,refused-named,permitted,permitted
+825,erome.com,www.erome.com,file,200,,,31,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+826,lwsdns.com,lwsdns.com,file,200,,,79,1,60,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+827,kunluncan.com,kunluncan.com,unreachable,0,,"no response: Connect Timeout Error (attempted address: kunluncan.com:443, timeout: 10000ms)",,,,,,,,,,,,,,,,,,,
+828,allaboutcookies.org,allaboutcookies.org,blocked,403,,status 403,,,,,,,,,,,,,,,,,,,
+829,adform.net,adform.net,file,200,,,139,3,,,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star
+830,33across.com,www.33across.com,blocked,403,,"Cloudflare challenge, status 403",,,,,,,,,,,,,,,,,,,
+831,teads.tv,cdn.teads.tv,none,200,yes,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+832,liftoff.io,liftoff.ai,file,200,,,92,1,30,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+833,lefigaro.fr,www.lefigaro.fr,file,200,,,12666,246,,,refused-named,refused-named,refused-named,refused-named,permitted,permitted,permitted,refused-named,refused-named,permitted,refused-named,refused-named,permitted,permitted,permitted
+834,adjust.com,www.adjust.com,blocked,429,,status 429,,,,,,,,,,,,,,,,,,,
+835,featureassets.org,featureassets.org,blocked,403,,status 403,,,,,,,,,,,,,,,,,,,
+836,att.com,www.att.com,file,200,,,10283,4,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted-named,permitted
+837,zoho.com,www.zoho.com,file,200,,,4653,3,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+838,discordapp.com,discord.com,file,200,,,1774,3,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+839,amagi.tv,amagi.tv,unreachable,0,,no response: read ECONNRESET,,,,,,,,,,,,,,,,,,,
+840,vivo.com.cn,vivo.com.cn,unreachable,0,,"no response: Connect Timeout Error (attempted address: vivo.com.cn:443, timeout: 10000ms)",,,,,,,,,,,,,,,,,,,
+841,ryanair.com,www.ryanair.com,none,200,yes,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+842,grab.co,grab.co,unreachable,0,,no response: getaddrinfo ENOTFOUND grab.co,,,,,,,,,,,,,,,,,,,
+843,goskope.com,goskope.com,unreachable,0,,no response: getaddrinfo ENOTFOUND goskope.com,,,,,,,,,,,,,,,,,,,
+844,a-mo.net,a-mo.net,blocked,403,,status 403,,,,,,,,,,,,,,,,,,,
+845,usps.com,www.usps.com,file,200,,,435,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+846,turn.com,turn.com,unreachable,0,,no response: getaddrinfo ENOTFOUND turn.com,,,,,,,,,,,,,,,,,,,
+847,me.com,www.icloud.com,none,200,yes,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+848,usda.gov,www.usda.gov,blocked,403,,status 403,,,,,,,,,,,,,,,,,,,
+849,unpkg.com,unpkg.com,file,200,,,733,0,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+850,academia.edu,www.academia.edu,file,200,,,57366,63,,,refused-named,refused-star,refused-named,refused-star,refused-named,refused-star,refused-star,permitted-named,permitted-named,permitted-named,permitted-named,permitted-named,refused-star,permitted-named,refused-star
+851,deepl.com,www.deepl.com,file,200,,,1722,3,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted-named,permitted
+852,discogs.com,www.discogs.com,blocked,403,,"Cloudflare challenge, status 403",,,,,,,,,,,,,,,,,,,
+853,agoda.com,www.agoda.com,file,200,,,5086,9,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted-named,permitted
+854,onlyfans.com,onlyfans.com,file,200,,,162,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+855,curseforge.com,www.curseforge.com,blocked,403,,"Cloudflare challenge, status 403",,,,,,,,,,,,,,,,,,,
+856,rt.ru,rt.ru,unreachable,0,,"no response: Connect Timeout Error (attempted address: rt.ru:443, timeout: 10000ms)",,,,,,,,,,,,,,,,,,,
+857,livejournal.com,www.livejournal.com,unreachable,0,,"no response: Connect Timeout Error (attempted addresses: 81.19.74.1:443, timeout: 10000ms)",,,,,,,,,,,,,,,,,,,
+858,blackberry.com,www.blackberry.com,file,200,,,910,2,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+859,cursor.sh,cursor.com,file,200,,,1047,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+860,pexels.com,www.pexels.com,file,200,,,11790,4,,,refused-named,refused-named,permitted,refused-named,refused-named,refused-named,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+861,cdn-vk.ru,cdn-vk.ru,unreachable,0,,no response: getaddrinfo ENOTFOUND cdn-vk.ru,,,,,,,,,,,,,,,,,,,
+862,theverge.com,theverge.com,file,200,,,5650,106,,,permitted-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,permitted,refused-named,refused-named,refused-named,refused-named,refused-named,permitted,permitted
+863,abovedomains.com,abovedomains.com,file,200,,,136,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+864,networkadvertising.org,thenai.org,file,200,,,184,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+865,amazon.com.br,www.amazon.com.br,file,200,,,5764,101,,,refused-named,refused-named,refused-named,refused-named,permitted,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,permitted,permitted
+866,pendo.io,www.pendo.io,file,200,,,646,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+867,cloudsink.net,cloudsink.net,unreachable,0,,no response: getaddrinfo ENOTFOUND cloudsink.net,,,,,,,,,,,,,,,,,,,
+868,wcdnga.com,wcdnga.com,unreachable,0,,no response: getaddrinfo ENOTFOUND wcdnga.com,,,,,,,,,,,,,,,,,,,
+869,onetag-sys.com,onetag-sys.com,none,200,yes,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+870,fbsbx.com,fbsbx.com,none,404,,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+871,appcenter.ms,appcenter.ms,none,404,,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+872,dnse0.com,dnse0.com,unreachable,0,,no response: getaddrinfo ENOTFOUND dnse0.com,,,,,,,,,,,,,,,,,,,
+873,ebay.co.uk,www.ebay.co.uk,file,200,,,20258,8,,,refused-named,refused-named,permitted,refused-named,refused-named,refused-named,refused-named,permitted-named,permitted-named,refused-named,permitted-named,permitted-named,permitted,permitted-named,permitted
+874,life360.com,www.life360.com,blocked,403,,status 403,,,,,,,,,,,,,,,,,,,
+875,rfc-editor.org,www.rfc-editor.org,file,200,,,135,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+876,frontiersin.org,www.frontiersin.org,file,200,,,862,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+877,myspace.com,myspace.com,file,200,,,2489,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+878,chess.com,www.chess.com,file,200,,,2581,5,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+879,www.gov.br,www.gov.br,file,200,,,2102,2,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+880,cloudinary.com,cloudinary.com,file,200,,,673,4,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+881,ssl-images-amazon.com,ssl-images-amazon.com,unreachable,0,,no response: getaddrinfo ENOTFOUND ssl-images-amazon.com,,,,,,,,,,,,,,,,,,,
+882,wb.ru,www.wildberries.ru,blocked,498,,status 498,,,,,,,,,,,,,,,,,,,
+883,synology.com,www.synology.com,file,200,,,127,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+884,biblegateway.com,www.biblegateway.com,file,200,,,743,1,15,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+885,adgrx.com,adgrx.com,unreachable,0,,no response: getaddrinfo ENOTFOUND adgrx.com,,,,,,,,,,,,,,,,,,,
+886,jetbrains.com,www.jetbrains.com,file,200,,,1760,3,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+887,ebay.de,www.ebay.de,file,200,,,15980,7,,,refused-named,refused-named,permitted,refused-named,refused-named,refused-named,refused-named,permitted,permitted,refused-named,permitted,permitted,permitted,permitted-named,permitted
+888,msftauth.net,msftauth.net,unreachable,0,,no response: getaddrinfo ENOTFOUND msftauth.net,,,,,,,,,,,,,,,,,,,
+889,yellowblue.io,yellowblue.io,unreachable,0,,no response: getaddrinfo ENOTFOUND yellowblue.io,,,,,,,,,,,,,,,,,,,
+890,figma.com,www.figma.com,file,200,,,393981,22,,,refused-named,refused-named,refused-named,refused-named,permitted,refused-named,permitted,refused-named,refused-named,refused-named,refused-named,refused-named,permitted,permitted,permitted
+891,pikabu.ru,pikabu.ru,blocked,403,,status 403,,,,,,,,,,,,,,,,,,,
+892,namecheaphosting.com,namecheaphosting.com,unreachable,0,,no response: connect ECONNREFUSED 198.54.117.206:443,,,,,,,,,,,,,,,,,,,
+893,azure-devices.net,azure-devices.net,unreachable,0,,no response: getaddrinfo ENOTFOUND azure-devices.net,,,,,,,,,,,,,,,,,,,
+894,nbcnews.com,www.nbcnews.com,file,200,,,13381,39,,,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,permitted,permitted
+895,amazon.com.au,www.amazon.com.au,file,200,,,6904,101,,,refused-named,refused-named,refused-named,refused-named,permitted,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,permitted,permitted
+896,appspot.com,accounts.google.com,none,200,yes,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+897,disqus.com,disqus.com,file,200,,,49,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+898,dv.tech,dv.tech,unreachable,0,,no response: Client network socket disconnected before secure TLS connection was established,,,,,,,,,,,,,,,,,,,
+899,pornhub.com,www.pornhub.com,file,200,,,5295,3,,,permitted,permitted,permitted,refused-named,permitted,refused-named,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+900,focus.de,www.focus.de,file,200,,,1648,18,,,refused-named,refused-named,permitted,refused-named,permitted,refused-named,refused-named,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+901,netlify.app,netlify.app,file,200,,,147,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+902,hbr.org,hbr.org,file,200,,,1016,6,,,refused-named,permitted,refused-named,refused-named,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+903,worldbank.org,www.worldbank.org,file,200,,,1505,2,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+904,buydomains.com,buydomains.com,blocked,403,,"Cloudflare challenge, status 403",,,,,,,,,,,,,,,,,,,
+905,bytefcdn.com,bytefcdn.com,unreachable,0,,no response: getaddrinfo ENOTFOUND bytefcdn.com,,,,,,,,,,,,,,,,,,,
+906,agora.io,www.agora.io,file,200,,,153,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+907,princeton.edu,www.princeton.edu,file,200,,,2275,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+908,rocketmoney.dev,www.rocketmoney.dev,file,200,,,26,1,,,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star
+909,daum.net,daum.net,file,200,,,167,2,,,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star
+910,immedia-semi.com,immedia-semi.com,unreachable,0,,no response: getaddrinfo ENOTFOUND immedia-semi.com,,,,,,,,,,,,,,,,,,,
+911,arcgis.com,www.arcgis.com,file,200,,,61,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+912,dnse2.com,dnse2.com,unreachable,0,,no response: getaddrinfo ENOTFOUND dnse2.com,,,,,,,,,,,,,,,,,,,
+913,fwmrm.net,www.freewheel.com,file,200,,,191,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+914,it.com,it.com,none,404,,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+915,readthedocs.io,about.readthedocs.com,none,200,yes,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+916,mayoclinic.org,www.mayoclinic.org,blocked,403,,status 403,,,,,,,,,,,,,,,,,,,
+917,coupang.com,www.coupang.com,blocked,403,,status 403,,,,,,,,,,,,,,,,,,,
+918,ys7.com,www.ys7.com,unreachable,0,,"no response: Connect Timeout Error (attempted address: www.ys7.com:443, timeout: 10000ms)",,,,,,,,,,,,,,,,,,,
+919,kleinanzeigen.de,www.kleinanzeigen.de,file,200,,,11141,10,,,permitted-named,permitted,permitted,permitted,permitted,permitted,permitted,permitted-named,permitted,permitted-named,permitted-named,permitted,permitted,permitted,permitted
+920,wyzecam.com,www.wyze.com,file,200,,,6418,16,,,permitted-named,permitted-named,permitted-named,permitted-named,permitted,permitted,permitted-named,permitted-named,permitted,permitted-named,permitted,permitted,permitted,permitted,permitted
+921,lg.com,www.lg.com,file,200,,,8054,4,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+922,thenai.org,thenai.org,file,200,,,184,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+923,latimes.com,www.latimes.com,file,200,,,1768,13,,,refused-named,refused-named,permitted,permitted,permitted,refused-named,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+924,a-msedge.net,a-msedge.net,unreachable,0,,no response: getaddrinfo ENOTFOUND a-msedge.net,,,,,,,,,,,,,,,,,,,
+925,bankofamerica.com,www.bankofamerica.com,file,200,,,3312,4,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+926,epa.gov,www.epa.gov,file,200,,,2035,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+927,stbid.ru,stbid.ru,unreachable,0,,"no response: Hostname/IP does not match certificate's altnames: Host: stbid.ru. is not in the cert's altnames: DNS:*.n0.sync.bumlam.com, DNS:*.n1.sync.bumlam.co",,,,,,,,,,,,,,,,,,,
+928,volcgslb.com,volcgslb.com,unreachable,0,,no response: getaddrinfo ENOTFOUND volcgslb.com,,,,,,,,,,,,,,,,,,,
+929,classlink.com,www.classlink.com,file,200,,,126,2,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+930,eu-1-id5-sync.com,eu-1-id5-sync.com,blocked,522,,status 522,,,,,,,,,,,,,,,,,,,
+931,px-cloud.net,px-cloud.net,none,404,,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+932,qualtrics.com,www.qualtrics.com,file,200,,,30643,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+933,seedtag.com,www.seedtag.com,file,200,,,0,0,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+934,unrulymedia.com,unrulymedia.com,none,404,,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+935,odoo.com,www.odoo.com,file,200,,,1627,2,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+936,360safe.com,360safe.com,unreachable,0,,"no response: Connect Timeout Error (attempted address: 360safe.com:443, timeout: 10000ms)",,,,,,,,,,,,,,,,,,,
+937,flashtalking.com,flashtalking.com,unreachable,0,,"no response: unable to verify the first certificate; if the root CA is installed locally, try running Node.js with --use-system-ca",,,,,,,,,,,,,,,,,,,
+938,mercadolivre.com.br,mercadolivre.com.br,blocked,403,,status 403,,,,,,,,,,,,,,,,,,,
+939,plex.direct,plex.direct,unreachable,0,,no response: getaddrinfo ENOTFOUND plex.direct,,,,,,,,,,,,,,,,,,,
+940,deloitte.com,www.deloitte.com,file,200,,,503,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+941,tiktokw.us,tiktokw.us,unreachable,0,,no response: getaddrinfo ENOTFOUND tiktokw.us,,,,,,,,,,,,,,,,,,,
+942,patreon.com,patreon.com,file,200,,,759,7,,"content-signal: search=yes, ai-input=yes, ai-train=no",permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,refused-named,permitted,permitted,permitted,permitted,permitted
+943,genius.com,genius.com,file,200,,,1149,2,,,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,permitted,permitted,permitted,refused-named,permitted,permitted,permitted,permitted
+944,washington.edu,www.washington.edu,file,200,,,76,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+945,dbankcloud.ru,dbankcloud.ru,unreachable,0,,no response: getaddrinfo ENOTFOUND dbankcloud.ru,,,,,,,,,,,,,,,,,,,
+946,mercadolibre.com.ar,mercadolibre.com.ar,blocked,403,,status 403,,,,,,,,,,,,,,,,,,,
+947,state.gov,www.state.gov,blocked,403,,status 403,,,,,,,,,,,,,,,,,,,
+948,fidelity.com,www.fidelity.com,file,200,,,12403,3,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+949,tailscale.com,tailscale.com,file,200,,,109,2,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+950,docker.io,www.docker.com,file,200,,,1055,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+951,att.net,www.att.net,file,200,,,250,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+952,note.com,note.com,file,200,,,1197,6,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted-named,permitted
+953,go-mpulse.net,go-mpulse.net,unreachable,0,,no response: getaddrinfo ENOTFOUND go-mpulse.net,,,,,,,,,,,,,,,,,,,
+954,chaturbate.com,chaturbate.com,file,200,,,274,2,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+955,youku.com,www.youku.com,none,200,yes,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+956,tbank.ru,tbank.ru,unreachable,0,,no response: self-signed certificate in certificate chain,,,,,,,,,,,,,,,,,,,
+957,leiniao.com,leiniao.com,unreachable,0,,"no response: Connect Timeout Error (attempted address: leiniao.com:443, timeout: 10000ms)",,,,,,,,,,,,,,,,,,,
+958,character.ai,character.ai,file,200,,,159,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+959,eporner.com,eporner.com,file,200,,,4679,2,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+960,miwifi.com,www.miwifi.com,none,404,,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+961,stackexchange.com,stackexchange.com,blocked,418,,status 418,,,,,,,,,,,,,,,,,,,
+962,jd.com,jd.com,file,200,,,786,21,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted-named,permitted
+963,repubblica.it,www.repubblica.it,file,200,,,7531,108,,,refused-named,permitted,refused-named,refused-named,refused-named,refused-named,permitted,permitted,permitted,refused-named,permitted,permitted,permitted,permitted,permitted
+964,webhostbox.net,webhostbox.net,unreachable,0,,no response: getaddrinfo ENOTFOUND webhostbox.net,,,,,,,,,,,,,,,,,,,
+965,otto.de,www.otto.de,file,200,,,2148,3,,,permitted-named,permitted,permitted,permitted,permitted,permitted,permitted,permitted-named,permitted,permitted-named,permitted-named,permitted,permitted-named,permitted,permitted
+966,poki.com,poki.com,file,200,,,1735,2,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+967,hm.com,hm.com,unreachable,0,,no response: Stream closed with error code NGHTTP2_INTERNAL_ERROR,,,,,,,,,,,,,,,,,,,
+968,trendyol.com,www.trendyol.com,file,200,,,16146,4,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted-named,permitted
+969,zpath.net,zpath.net,unreachable,0,,no response: getaddrinfo ENOTFOUND zpath.net,,,,,,,,,,,,,,,,,,,
+970,corriere.it,www.corriere.it,file,200,,,10125,28,,"content-signal: search=yes, ai-train=yes, ai-input=no",refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,permitted-named,permitted,permitted-named,refused-named,permitted,permitted,permitted,permitted
+971,mailchi.mp,mailchi.mp,file,200,,,138,4,,,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star
+972,onet.pl,www.onet.pl,file,200,,,586,15,,,permitted,permitted,permitted,permitted,permitted,refused-named,refused-named,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+973,queniuaa.com,queniuaa.com,unreachable,0,,no response: getaddrinfo ENOTFOUND queniuaa.com,,,,,,,,,,,,,,,,,,,
+974,xiaohongshu.com,www.xiaohongshu.com,file,200,,,492,3,,,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-named,refused-star
+975,flipkart.com,www.flipkart.com,file,200,,,3111,15,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+976,lowes.com,www.lowes.com,blocked,403,,status 403,,,,,,,,,,,,,,,,,,,
+977,cdnhwc2.com,cdnhwc2.com,unreachable,0,,no response: getaddrinfo ENOTFOUND cdnhwc2.com,,,,,,,,,,,,,,,,,,,
+978,app-ads-services.com,app-ads-services.com,file,200,,,6624,4,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+979,sentinelone.net,sentinelone.net,unreachable,0,,"no response: Connect Timeout Error (attempted address: sentinelone.net:443, timeout: 10000ms)",,,,,,,,,,,,,,,,,,,
+980,4dex.io,4dex.io,unreachable,0,,no response: getaddrinfo ENOTFOUND 4dex.io,,,,,,,,,,,,,,,,,,,
+981,xnxx.com,xnxx.com,file,200,,,61,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+982,change.org,www.change.org,file,200,,,5034,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+983,caixa.gov.br,www.caixa.gov.br,unreachable,302,,more than 5 redirects,,,,,,,,,,,,,,,,,,,
+984,akamaitechnologies.com,akamaitechnologies.com,unreachable,0,,no response: getaddrinfo ENOTFOUND akamaitechnologies.com,,,,,,,,,,,,,,,,,,,
+985,dextrodedenda.top,dextrodedenda.top,file,200,,,1520,2,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,refused-named,permitted
+986,nexthink.cloud,nexthink.cloud,unreachable,0,,no response: getaddrinfo ENOTFOUND nexthink.cloud,,,,,,,,,,,,,,,,,,,
+987,hilton.com,www.hilton.com,file,200,,,770,6,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+988,xhamster46.desi,xhamster46.desi,file,200,,,13012,2,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+989,ancestry.com,ancestry.com,blocked,403,,"Cloudflare challenge, status 403",,,,,,,,,,,,,,,,,,,
+990,nexusmods.com,www.nexusmods.com,blocked,403,,"Cloudflare challenge, status 403",,,,,,,,,,,,,,,,,,,
+991,smilewanted.com,www.smilewanted.com,none,200,yes,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+992,shopee.ph,shopee.ph,file,200,,,1834,2,1,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted-named,permitted
+993,ubi.com,www.ubisoft.com,none,200,yes,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+994,presage.io,presage.io,unreachable,0,,no response: certificate has expired,,,,,,,,,,,,,,,,,,,
+995,btloader.com,btloader.com,file,200,,,26,1,,,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star
+996,sofascore.com,sofascore.com,blocked,403,,status 403,,,,,,,,,,,,,,,,,,,
+997,kwai.com,www.kwai.com,file,200,,,231,1,,,permitted,permitted,permitted,permitted,permitted,refused-named,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+998,umich.edu,umich.edu,file,200,,,97,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+999,conviva.com,www.conviva.ai,file,200,,,201,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+1000,elmundo.es,www.elmundo.es,file,200,,,5156,117,,,refused-named,permitted,refused-named,refused-named,permitted,permitted,permitted,refused-named,permitted,refused-named,refused-named,permitted,permitted,permitted,permitted

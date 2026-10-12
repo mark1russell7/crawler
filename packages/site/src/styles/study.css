@@ -1,30 +1,37 @@
 /*
  * The robots.txt study: the grid of the domains, the bars of the refusals and the table.
  *
- * The colors of a verdict: red pencil is a refusal, solid when a group names the agent and pale when
- * the group * refuses all bots. Blue ink is a site that names the agent and permits it. The colors are
- * validated for color vision deficiency on both surfaces, and each verdict also has a glyph and a label.
+ * The marks of a verdict: red pencil is a refusal. It is solid when a group names the agent, and it is
+ * hatched when the group * refuses all bots, so the two differ without color. Blue ink is a site that
+ * names the agent and permits it. A gray fill is a site that blocked the request at the edge, and an
+ * outline is a domain with no answer. Each verdict also has a glyph and a label.
  */
 :root {
   --verdict-name: #c2301f;
   --verdict-star: #ec9a8f;
+  --verdict-star-bg: #f8d9d4;
   --verdict-welcome: #2346c4;
   --verdict-open: #dfe3eb;
+  --verdict-blocked: #8a91a3;
   --verdict-none: #aeb6c7;
 }
 :root[data-theme="dark"] {
   --verdict-name: #e95a49;
   --verdict-star: #9a463e;
+  --verdict-star-bg: #3f2222;
   --verdict-welcome: #6a86e6;
   --verdict-open: #2a3149;
+  --verdict-blocked: #6f7aa3;
   --verdict-none: #46507a;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --verdict-name: #e95a49;
     --verdict-star: #9a463e;
+    --verdict-star-bg: #3f2222;
     --verdict-welcome: #6a86e6;
     --verdict-open: #2a3149;
+    --verdict-blocked: #6f7aa3;
     --verdict-none: #46507a;
   }
 }
@@ -42,8 +49,12 @@
   color: #fff;
 }
 .pc-v-S {
-  background: var(--verdict-star);
+  background: repeating-linear-gradient(135deg, var(--verdict-name) 0 1.5px, var(--verdict-star-bg) 1.5px 3.5px);
   color: var(--color-ink);
+}
+.pc-v-B {
+  background: var(--verdict-blocked);
+  color: var(--color-surface);
 }
 .pc-v-n {
   background: var(--verdict-welcome);
@@ -159,7 +170,11 @@
   align-items: center;
   height: 20px;
   background-image: linear-gradient(90deg, var(--chart-grid) 1px, transparent 1px);
-  background-size: 20% 100%;
+  background-size: calc(100% / var(--ticks, 5)) 100%;
+}
+.pc-rbar-track:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 3px;
 }
 .pc-rbar-part {
   height: 14px;
@@ -180,11 +195,15 @@
 
 .pc-dots-track {
   display: block;
-  background-size: 25% 100%;
+}
+/* The three values can wrap, so the row never makes the page wider. */
+.pc-rbar.pc-dots-row {
+  grid-template-columns: 13rem minmax(0, 1fr) minmax(0, 6.5rem);
 }
 .pc-dots-row .pc-rbar-value {
   font-size: var(--text-xs);
-  white-space: nowrap;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
 }
 .pc-mark {
   position: absolute;
@@ -218,12 +237,14 @@
   bottom: calc(100% + 8px);
   transform: translateX(-50%);
 }
-.pc-mark.pc-hover {
+.pc-mark.pc-hover,
+.pc-mark:focus-visible {
   z-index: 4;
   outline: 2px solid var(--color-ink);
   outline-offset: 2px;
 }
-.pc-mark-search.pc-hover {
+.pc-mark-search.pc-hover,
+.pc-mark-search:focus-visible {
   clip-path: none;
   transform: rotate(45deg) scale(0.8);
 }
@@ -233,20 +254,50 @@
 
 /* ------------------------------------------------ what the domains answered */
 
-.pc-answer-o {
+.pc-answer-file {
   background: var(--color-accent);
 }
-.pc-answer-h {
-  background: var(--color-accent-wash);
-  box-shadow: inset 0 0 0 1px var(--color-accent);
-}
-.pc-answer-m {
+.pc-answer-none {
   background: var(--verdict-open);
   box-shadow: inset 0 0 0 1px var(--color-rule-strong);
 }
-.pc-answer-u {
+.pc-answer-blocked {
+  background: var(--verdict-blocked);
+}
+.pc-answer-unreachable {
   background: transparent;
   box-shadow: inset 0 0 0 1px var(--verdict-none);
+}
+.pc-answer-key {
+  display: grid;
+  gap: var(--space-3) var(--space-5);
+  margin: 0;
+}
+@media (min-width: 44rem) {
+  .pc-answer-key {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+.pc-answer-key > div {
+  display: grid;
+  gap: 0.15rem;
+}
+.pc-answer-key dt {
+  display: flex;
+  gap: 0.45rem;
+  align-items: center;
+  font-size: var(--text-sm);
+}
+.pc-answer-key dt strong {
+  font-variant-numeric: tabular-nums;
+}
+.pc-answer-key dd {
+  margin: 0 0 0 calc(1.15rem + 0.45rem);
+  font-size: var(--text-xs);
+  color: var(--color-ink-muted);
+}
+.pc-answer-key .pc-hover dt span:nth-child(2) {
+  text-decoration: underline;
 }
 
 /* ------------------------------------------------ the grid of the domains */
@@ -290,9 +341,15 @@
   transition: background-color 0.3s ease;
   transition-delay: calc(var(--i) * 0.45ms);
 }
-.pc-cell:hover {
+.pc-cell:hover,
+.pc-cell-focus {
   outline: 2px solid var(--color-ink);
   outline-offset: 1px;
+}
+.pc-site-grid:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 4px;
+  border-radius: 2px;
 }
 @media (prefers-reduced-motion: reduce) {
   .pc-cell {
@@ -411,6 +468,29 @@ th.pc-vth-on span {
 .pc-vglyph.pc-v-o {
   background: transparent;
 }
+.pc-vstate {
+  font-size: var(--text-xs);
+  color: var(--color-ink-muted);
+  white-space: nowrap;
+}
+.pc-vstate::before {
+  content: "";
+  display: inline-block;
+  width: 0.7rem;
+  height: 0.7rem;
+  margin-inline-end: 0.4rem;
+  border-radius: 2px;
+  vertical-align: -0.05rem;
+}
+.pc-vstate-b::before {
+  background: var(--verdict-blocked);
+}
+.pc-vstate-u::before {
+  box-shadow: inset 0 0 0 1px var(--verdict-none);
+}
+.pc-verdict-table th[scope="row"] {
+  font-weight: 400;
+}
 .pc-vdetail td {
   padding: var(--space-3) var(--space-4);
   background: var(--color-surface-sunken);
@@ -458,7 +538,7 @@ th.pc-vth-on span {
     grid-template-columns: minmax(0, 1fr) 3.2rem;
   }
   .pc-rbar.pc-dots-row {
-    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 6.5rem);
   }
   .pc-rbar-name {
     grid-column: 1 / -1;
@@ -486,4 +566,27 @@ th.pc-vth-on span {
   grid-template-columns: max-content minmax(0, 1fr);
   gap: 0.25rem var(--space-4);
   align-items: baseline;
+}
+
+/* ------------------------------------------------ the byline and the citation */
+
+.pc-byline {
+  font-size: var(--text-sm);
+  color: var(--color-ink-muted);
+}
+.pc-cite {
+  margin: var(--space-4) 0;
+  padding: var(--space-3) var(--space-4);
+  border-left: 3px solid var(--color-accent);
+  border-radius: var(--radius-small);
+  background: var(--color-surface-sunken);
+}
+.pc-cite figcaption {
+  font-size: var(--text-xs);
+  color: var(--color-ink-muted);
+}
+.pc-cite p {
+  margin: 0.25rem 0 0;
+  font-size: var(--text-sm);
+  overflow-wrap: anywhere;
 }

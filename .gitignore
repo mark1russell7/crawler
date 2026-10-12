@@ -99,3 +99,6 @@ temp/
 
 # Astro
 .astro/
+
+# npm pack output
+*.tgz

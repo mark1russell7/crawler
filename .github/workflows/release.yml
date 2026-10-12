@@ -39,5 +39,13 @@ jobs:
       - run: pnpm --filter polite-crawler build
       # Trusted publishing needs npm 11.5.1 or later
       - run: npm install --global npm@latest
-      # pnpm applies the publishConfig fields (the build/ entry points) that npm ignores
-      - run: pnpm --filter polite-crawler publish --provenance --access public --no-git-checks
+      # pnpm applies the publishConfig fields (the build/ entry points) that npm ignores. A tag for
+      # a version that is already on npm (0.1.0 went out by hand) only marks the release.
+      - name: Publish
+        run: |
+          version="$(node -p 'require("./packages/polite-crawler/package.json").version')"
+          if npm view "polite-crawler@$version" version >/dev/null 2>&1; then
+            echo "polite-crawler $version is already on npm. Nothing to publish."
+          else
+            pnpm --filter polite-crawler publish --provenance --access public --no-git-checks
+          fi

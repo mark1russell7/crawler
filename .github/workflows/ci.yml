@@ -115,3 +115,19 @@ jobs:
         env:
           SITE_BASE: /crawler
           ASTRO_TELEMETRY_DISABLED: "1"
+      # The site check opens each page of the build in a browser: the links, the width on a phone, the console.
+      - name: The version of playwright-core
+        id: playwright
+        run: echo "version=$(node -p "require('./packages/site/node_modules/playwright-core/package.json').version")" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}
+      - name: Install the headless shell
+        run: pnpm --filter @crawler/site exec playwright-core install --with-deps chromium-headless-shell
+        env:
+          PLAYWRIGHT_BROWSERS_PATH: ${{ github.workspace }}/.cache/ms-playwright
+      - name: Check the site
+        run: pnpm --filter @crawler/site run check
+        env:
+          PLAYWRIGHT_BROWSERS_PATH: ${{ github.workspace }}/.cache/ms-playwright

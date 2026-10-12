@@ -1,0 +1,87 @@
+---
+title: Compare the crawlers
+description: polite-crawler compared with Crawlee, Scrapy, Firecrawl, Crawl4AI and the MCP fetch server - robots.txt, the pace for each site, the store, the citations and the MCP tools. Each tool has jobs that it does best.
+head:
+  - tag: meta
+    attrs:
+      name: keywords
+      content: crawlee alternative, scrapy alternative, firecrawl alternative, crawl4ai alternative, mcp fetch server, mcp web fetch, polite web crawler, robots.txt crawler, web crawler for AI agents
+---
+
+polite-crawler is a small tool with one job. It collects sources for research, keeps them, and gives an AI agent the text with the capture to cite. The other tools on this page do more, and for many jobs they are the better choice. This page tells which tool to use for which job.
+
+The facts come from the documentation of each project in October 2026. The [sources](#sources) are at the end of the page.
+
+## The tools side by side
+
+| Tool | Language, license | robots.txt | Keeps the pages | MCP |
+| --- | --- | --- | --- | --- |
+| **polite-crawler** | TypeScript, MIT | Always, and the rules for `Claude-User` | Captures, bodies, a search index | Fetch, find, read, verify |
+| **Crawlee** | TypeScript and Python, Apache-2.0 | An option | Datasets and queues | Not in the library |
+| **Scrapy** | Python, BSD-3-Clause | On in a new project | Pipelines, an HTTP cache | Not in the framework |
+| **Firecrawl** | A service, AGPL-3.0 | On by default | In the service | A separate server |
+| **Crawl4AI** | Python, Apache-2.0 | An option, off by default | A page cache | In its Docker server |
+| **MCP fetch server** | Python, MIT | For the model, not for the person | No | One tool: `fetch` |
+
+The options are `respectRobotsTxtFile` in Crawlee, `ROBOTSTXT_OBEY` in Scrapy and `check_robots_txt` in Crawl4AI. The fetch server obeys robots.txt when the model asks for a page, and not when the person gives the URL.
+
+## The pace for each site
+
+A crawl is polite when each site gets a small load. The tools set the pace in different ways:
+
+- **polite-crawler** keeps one request in progress for each site, and waits 3 seconds or more between two requests. A slow site gets a longer wait. It obeys `Retry-After` and `Crawl-delay`, and it stops a site at a 402, a 403 or a challenge. You cannot make it faster than these rules.
+- **Crawlee** waits `sameDomainDelaySecs` between two requests to a domain (the default is 0), and `maxRequestsPerMinute` limits the whole crawl.
+- **Scrapy** has `DOWNLOAD_DELAY` and `CONCURRENT_REQUESTS_PER_DOMAIN` (1 second and 1 request in the current defaults), and the AutoThrottle extension adapts the delay to the latency of the site.
+- **Crawl4AI** has a `RateLimiter` for `arun_many`. It waits a random 1 to 3 seconds between two requests to a domain, and longer after a 429 or a 503.
+- **Firecrawl** sets the pace in its service.
+- **The MCP fetch server** fetches one page for each call.
+
+## When to use each tool
+
+### polite-crawler
+
+Use it when an assistant or a research script reads the same sources many times. The crawler fetches a page one time, and the next questions read the store with no request. Each answer can cite the capture that holds the text, and `verify` finds the exact span of a quote.
+
+It does not hide what it is. It sends its name in the `User-Agent`, and it has no proxies and no browser fingerprints. When a site refuses it, it stops. Thus it is not a tool to get past a bot wall.
+
+### Crawlee
+
+Use Crawlee for a large crawl in Node.js or Python. It has crawlers for plain HTTP, Playwright and Puppeteer, pools of sessions and proxies, and queues that continue after a restart. The same code can also operate in the cloud, on the Apify platform.
+
+### Scrapy
+
+Use Scrapy for a large crawl in Python with a mature framework. Spiders, item pipelines, middlewares and many extensions make it the standard tool for structured data at scale.
+
+### Firecrawl
+
+Use Firecrawl when you want an API that turns a page or a site into markdown or JSON. Then you do not operate a crawler. You can also operate Firecrawl yourself under the AGPL-3.0.
+
+### Crawl4AI
+
+Use Crawl4AI for Python work that starts from a browser. It gives markdown for a language model, with many strategies to select and extract the content.
+
+### The MCP fetch server
+
+Use the fetch server when an assistant must read one URL as markdown, and nothing must stay after the answer. It is the smallest step from a URL to the text.
+
+## Move from the fetch server
+
+The fetch server and polite-crawler both give an assistant the text of a page. To change, replace the server in the configuration of your client:
+
+```json
+{
+  "mcpServers": {
+    "polite-crawler": { "command": "npx", "args": ["-y", "polite-crawler", "mcp"] }
+  }
+}
+```
+
+The assistant then gets `crawl_fetch` in place of `fetch`. It also gets `crawl_find`, `crawl_read` and `crawl_verify`, which read the store with no request. [Set up the MCP server](../mcp/).
+
+## Sources
+
+- Crawlee: [`BasicCrawlerOptions`](https://crawlee.dev/js/api/basic-crawler/interface/BasicCrawlerOptions) (`respectRobotsTxtFile`, `sameDomainDelaySecs`, `maxRequestsPerMinute`).
+- Scrapy: [Settings](https://docs.scrapy.org/en/latest/topics/settings.html) (`ROBOTSTXT_OBEY`, `DOWNLOAD_DELAY`, `CONCURRENT_REQUESTS_PER_DOMAIN`) and [AutoThrottle](https://docs.scrapy.org/en/latest/topics/autothrottle.html).
+- Firecrawl: [the README](https://github.com/firecrawl/firecrawl) (the license, robots.txt and the MCP server).
+- Crawl4AI: [the parameters](https://docs.crawl4ai.com/api/parameters/) (`check_robots_txt`, `cache_mode`), [multi-URL crawling](https://docs.crawl4ai.com/advanced/multi-url-crawling/) (`RateLimiter`) and [the README](https://github.com/unclecode/crawl4ai).
+- The MCP fetch server: [the README](https://github.com/modelcontextprotocol/servers/tree/main/src/fetch) (robots.txt, the User-Agent and the license).

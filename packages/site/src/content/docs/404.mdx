@@ -1,0 +1,28 @@
+---
+title: No page at this address
+description: The page is not on this site. Go to the home page of polite-crawler, the robots.txt tester or the study of AI agents.
+template: splash
+editUrl: false
+pagefind: false
+hero:
+  title: "404: no page here"
+  tagline: The crawler asked for this address, and the site gave status 404. For a robots.txt file, a 404 permits each path. For a page, it means that the page is not here.
+  actions:
+    - text: Go to the home page
+      link: /crawler/
+      icon: right-arrow
+    - text: Test a robots.txt
+      link: /crawler/tools/robots-txt-tester/
+      variant: minimal
+    - text: Who lets AI agents in?
+      link: /crawler/notes/robots-txt-ai-agents/
+      variant: minimal
+---
+
+```json title="What the crawler wrote in its capture log"
+{
+  "source": "fetch",
+  "kind": "capture",
+  "payload": { "recipe": "page", "status": 404, "outcome": "not-found" }
+}
+```

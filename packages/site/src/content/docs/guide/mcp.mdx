@@ -1,25 +1,32 @@
 ---
 title: Use it from Claude
-description: Give Claude, Claude Desktop, Cursor or any MCP client a polite web crawler with four tools - fetch, find, read and verify - over the Model Context Protocol.
+description: Give Claude Code, Claude Desktop, Cursor, VS Code, Windsurf, Codex or any MCP client a polite web crawler with four tools - fetch, find, read and verify - over the Model Context Protocol. The setup for each client, and a replay of a real session.
 ---
 
 import { Tabs, TabItem } from "@astrojs/starlight/components";
+import AgentReplay from "../../../components/AgentReplay.tsx";
 
 The package includes an MCP server, and it gives an AI assistant four tools. The assistant fetches pages politely and searches the pages that it fetched before. It also reads a range of a page, and it checks a quote before it cites it.
 
+<AgentReplay client:visible />
+
 ## Set up the server
 
-<Tabs>
+The server needs Node.js 22.13 or later. Each client starts it with `npx`, so you do not install it first.
+
+<Tabs syncKey="mcp-client">
   <TabItem label="Claude Code">
 
   ```sh
   claude mcp add polite-crawler -- npx -y polite-crawler mcp
   ```
 
+  To make the server available in each project, add `--scope user`.
+
   </TabItem>
   <TabItem label="Claude Desktop">
 
-  Add the server to `claude_desktop_config.json`:
+  Open **Settings**, then **Developer**, then **Edit Config**. Add the server to `claude_desktop_config.json`, and start Claude Desktop again:
 
   ```json
   {
@@ -33,6 +40,66 @@ The package includes an MCP server, and it gives an AI assistant four tools. The
   ```
 
   </TabItem>
+  <TabItem label="Cursor">
+
+  Add the server to `~/.cursor/mcp.json`, or to `.cursor/mcp.json` in a project:
+
+  ```json
+  {
+    "mcpServers": {
+      "polite-crawler": {
+        "command": "npx",
+        "args": ["-y", "polite-crawler", "mcp"]
+      }
+    }
+  }
+  ```
+
+  </TabItem>
+  <TabItem label="VS Code">
+
+  Add the server to `.vscode/mcp.json` in a project:
+
+  ```json
+  {
+    "servers": {
+      "polite-crawler": {
+        "type": "stdio",
+        "command": "npx",
+        "args": ["-y", "polite-crawler", "mcp"]
+      }
+    }
+  }
+  ```
+
+  </TabItem>
+  <TabItem label="Windsurf">
+
+  Add the server to `~/.codeium/windsurf/mcp_config.json`:
+
+  ```json
+  {
+    "mcpServers": {
+      "polite-crawler": {
+        "command": "npx",
+        "args": ["-y", "polite-crawler", "mcp"]
+      }
+    }
+  }
+  ```
+
+  </TabItem>
+  <TabItem label="Codex">
+
+  Add the server to `~/.codex/config.toml`:
+
+  ```toml
+  [mcp_servers.polite-crawler]
+  command = "npx"
+  args = ["-y", "polite-crawler", "mcp"]
+  ```
+
+  </TabItem>
   <TabItem label="Other clients">
 
   Start the server with standard input and output:
@@ -41,10 +108,18 @@ The package includes an MCP server, and it gives an AI assistant four tools. The
   npx -y polite-crawler mcp
   ```
 
-  Use `--dir` to choose the store, and `--contact` to send an address in the `From` header.
-
   </TabItem>
 </Tabs>
+
+### The options
+
+Add an option after `mcp`, for example `npx -y polite-crawler mcp --dir ~/research`.
+
+| Option | What it does |
+| --- | --- |
+| `--dir <path>` | The folder of the store. The default is `~/.polite-crawler`, or the variable `POLITE_CRAWLER_DIR`. |
+| `--contact <text>` | An email address or a URL. The crawler sends it in the `From` header and in the `User-Agent`. |
+| `--no-browser` | The crawler does not open a headless browser. |
 
 ## The tools
 

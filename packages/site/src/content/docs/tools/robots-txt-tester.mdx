@@ -8,7 +8,7 @@ import RobotsTester from "../../../components/RobotsTester.tsx";
 
 Paste a robots.txt and the paths to test. The tester shows if each user agent can fetch each path. Select a result to see the group and the rule that decided it.
 
-The tester runs `parseRobots` and `decide` from [`polite-crawler`](../../guide/quick-start/), the same code that the crawler uses before each request. Your text stays in your browser.
+The tester uses `parseRobots` and `decide` from [`polite-crawler`](../../guide/quick-start/), the same code that the crawler uses before each request. Your text stays in your browser.
 
 <RobotsTester client:visible />
 
@@ -20,7 +20,7 @@ RFC 9309 is the standard for robots.txt since September 2022. The crawler applie
 2. **Merge the groups.** When two groups name the same token, their rules apply together.
 3. **Find the longest match.** The rule with the longest path pattern that matches the path wins. When an `Allow` and a `Disallow` have the same length, `Allow` wins.
 4. **Read the wildcards.** A `*` matches any sequence of characters. A `$` at the end of a pattern matches the end of the path.
-5. **Permit by default.** When no rule matches, the path is permitted. The file `/robots.txt` is always permitted.
+5. **Permit by default.** When no rule matches, the crawler can fetch the path. The crawler can always fetch the file `/robots.txt`.
 
 The match of the token ignores case, and it uses only the product token: `Googlebot/2.1` matches the group `googlebot`.
 

@@ -1,0 +1,307 @@
+/*
+ * The home page: the hero in two columns, the study beside the install commands, the agent replay
+ * and the cards of the tools.
+ */
+
+.pc-hero-top {
+  display: grid;
+  gap: var(--space-6);
+  align-items: start;
+}
+@media (min-width: 64rem) {
+  .pc-hero-top {
+    grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
+    gap: var(--space-8);
+  }
+  .pc-hero .hero h1 {
+    font-size: clamp(2.75rem, 4.4vw, 4rem);
+  }
+}
+
+/* ------------------------------------------------ the study, in the hero */
+
+.pc-teaser {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0;
+  padding: var(--space-4);
+  border: 1px solid var(--color-rule-strong);
+  border-top: 3px solid var(--color-ink);
+  border-radius: 0 0 var(--radius) var(--radius);
+  background: var(--color-surface);
+}
+@media (min-width: 64rem) {
+  .pc-teaser {
+    margin-top: var(--space-6);
+  }
+}
+.pc-teaser figcaption {
+  display: grid;
+  gap: 0.2rem;
+}
+.pc-teaser figcaption a {
+  font-size: var(--text-lg);
+  font-weight: 700;
+  color: var(--color-ink);
+  text-decoration: none;
+}
+.pc-teaser figcaption a:hover {
+  color: var(--color-accent);
+  text-decoration: underline;
+}
+.pc-teaser figcaption span {
+  font-size: var(--text-sm);
+  color: var(--color-ink-muted);
+}
+.pc-teaser-grid {
+  display: grid;
+  grid-template-columns: repeat(40, minmax(0, 1fr));
+  gap: 2px;
+  /* The rows appear one after another, as the crawler reads the ranks: one moment at load. */
+  animation: pc-scan 1.4s steps(25, end) both;
+}
+.pc-teaser-grid i {
+  aspect-ratio: 1;
+  border-radius: 1.5px;
+  background: var(--verdict-open);
+}
+.pc-teaser-grid .N {
+  background: var(--verdict-name);
+}
+.pc-teaser-grid .S {
+  background: var(--verdict-star);
+}
+.pc-teaser-grid .n {
+  background: var(--verdict-welcome);
+}
+.pc-teaser-grid .U {
+  background: transparent;
+  box-shadow: inset 0 0 0 1px var(--verdict-none);
+}
+@keyframes pc-scan {
+  from {
+    clip-path: inset(0 0 100% 0);
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pc-teaser-grid {
+    animation: none;
+  }
+}
+.pc-teaser-key {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.2rem var(--space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--text-xs);
+  color: var(--color-ink-secondary);
+}
+.pc-teaser-key li {
+  display: inline-flex;
+  gap: 0.4rem;
+  align-items: center;
+  margin: 0;
+}
+.pc-teaser-key .pc-verdict-key {
+  width: 0.7rem;
+  height: 0.7rem;
+}
+.pc-teaser-bars {
+  display: grid;
+  gap: 0.35rem;
+  margin: 0;
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--color-rule);
+}
+.pc-teaser-bars > div {
+  display: grid;
+  grid-template-columns: 7rem minmax(0, 1fr);
+  gap: var(--space-3);
+  align-items: center;
+}
+.pc-teaser-bars dt {
+  font-size: var(--text-xs);
+}
+.pc-teaser-bars dt code {
+  background: none;
+  padding: 0;
+}
+.pc-teaser-bars dd {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+  margin: 0;
+}
+.pc-teaser-track {
+  display: flex;
+  flex: 1;
+  gap: 2px;
+  height: 10px;
+  background-image: linear-gradient(90deg, var(--chart-grid) 1px, transparent 1px);
+  background-size: 25% 100%;
+}
+.pc-teaser-track span:last-child {
+  border-radius: 0 3px 3px 0;
+}
+.pc-teaser-value {
+  min-width: 2.5rem;
+  font-size: var(--text-sm);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+.pc-teaser-more {
+  justify-self: start;
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+/* ------------------------------------------------ the agent replay */
+
+.pc-replay {
+  margin-block: var(--space-5);
+  border: 1px solid var(--color-rule-strong);
+  border-top: 3px solid var(--color-ink);
+  border-radius: 0 0 var(--radius) var(--radius);
+  background: var(--color-surface);
+}
+.pc-replay .pc-crawl-head {
+  border-bottom: 1px solid var(--color-rule);
+}
+.pc-replay-counts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
+  align-items: center;
+  font-size: var(--text-sm);
+  color: var(--color-ink-secondary);
+}
+.pc-replay-counts strong {
+  font-family: var(--font-mono);
+  font-size: var(--text-lg);
+  color: var(--color-ink);
+  font-variant-numeric: tabular-nums;
+}
+.pc-replay-steps {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.pc-replay-step {
+  display: grid;
+  grid-template-columns: 8.5rem minmax(0, 1fr);
+  gap: var(--space-4);
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  border-left: 3px solid transparent;
+  transition:
+    opacity 0.3s,
+    background-color 0.3s,
+    border-color 0.3s;
+}
+.pc-replay-step + .pc-replay-step {
+  border-top: 1px solid var(--color-rule);
+}
+.pc-replay-on {
+  border-left-color: var(--color-accent);
+  background: var(--color-accent-wash);
+}
+.pc-replay-later {
+  opacity: 0.35;
+}
+.pc-replay-who {
+  padding-top: 0.15rem;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-ink-secondary);
+}
+.pc-replay-who code {
+  font-size: var(--text-xs);
+  color: var(--color-accent);
+  background: none;
+  padding: 0;
+}
+.pc-replay-body {
+  display: grid;
+  gap: var(--space-2);
+  min-width: 0;
+}
+.pc-replay-body p {
+  margin: 0;
+}
+.pc-replay-ask {
+  font-size: var(--text-base);
+}
+.pc-replay-step pre {
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  overflow-x: auto;
+  border: 1px solid var(--color-rule);
+  border-radius: var(--radius-small);
+  background: var(--color-surface-sunken);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.pc-replay-step pre code {
+  background: none;
+  padding: 0;
+  font-size: inherit;
+}
+.pc-replay-input {
+  border-left: 3px solid var(--color-accent) !important;
+}
+.pc-replay-note {
+  font-size: var(--text-sm);
+  color: var(--color-ink-muted);
+}
+.pc-replay-net {
+  color: var(--color-ink);
+}
+.pc-replay-answer {
+  display: grid;
+  gap: var(--space-2);
+  font-size: var(--text-base);
+}
+.pc-replay-answer q {
+  font-weight: 600;
+}
+.pc-replay-cite {
+  display: flex;
+  gap: var(--space-2);
+  align-items: baseline;
+  font-size: var(--text-sm);
+  color: var(--color-ink-secondary);
+}
+.pc-replay-check {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: 1.1rem;
+  height: 1.1rem;
+  border-radius: 50%;
+  background: var(--status-good-ink);
+  color: var(--color-surface);
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+@media (max-width: 44rem) {
+  .pc-replay-step {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-2);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pc-replay-step {
+    transition: none;
+  }
+}
+

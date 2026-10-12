@@ -16,10 +16,11 @@ head:
   - tag: script
     attrs:
       type: application/ld+json
-    content: '{"@context":"https://schema.org","@type":"SoftwareSourceCode","name":"polite-crawler","description":"A polite web crawler for research and AI agents: robots.txt obeyed, one request per site, a local full-text index and an MCP server.","codeRepository":"https://github.com/mark1russell7/crawler","programmingLanguage":"TypeScript","runtimePlatform":"Node.js","license":"https://opensource.org/licenses/MIT","url":"https://mark1russell7.github.io/crawler/","author":{"@type":"Person","name":"Mark Russell","url":"https://github.com/mark1russell7"}}'
+    content: '{"@context":"https://schema.org","@graph":[{"@type":"SoftwareSourceCode","name":"polite-crawler","description":"A polite web crawler for research and AI agents: robots.txt obeyed, one request per site, a local full-text index and an MCP server.","codeRepository":"https://github.com/mark1russell7/crawler","programmingLanguage":"TypeScript","runtimePlatform":"Node.js","license":"https://opensource.org/licenses/MIT","url":"https://mark1russell7.github.io/crawler/","author":{"@type":"Person","name":"Mark Russell","url":"https://github.com/mark1russell7"}},{"@type":"SoftwareApplication","name":"polite-crawler","applicationCategory":"DeveloperApplication","operatingSystem":"Windows, macOS, Linux","softwareVersion":"0.1.0","downloadUrl":"https://www.npmjs.com/package/polite-crawler","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"url":"https://mark1russell7.github.io/crawler/"}]}'
 ---
 
-import { Card, CardGrid } from "@astrojs/starlight/components";
+import { Card, CardGrid, LinkCard } from "@astrojs/starlight/components";
+import AgentReplay from "../../components/AgentReplay.tsx";
 
 ## Why a polite crawler
 
@@ -35,6 +36,9 @@ Research reads the same sources again and again. A plain web fetch goes back to 
   <Card title="It answers from the disk" icon="seti:db">
     Each response goes into a capture log. A full-text index finds passages, and a quote check finds the exact text to cite. [How it works](guide/how-it-works/).
   </Card>
+  <Card title="It tells its name" icon="information">
+    Each request sends the User-Agent `PoliteCrawler` with a link to [a page for site owners](bot/). A site can refuse it by name, and the crawler obeys.
+  </Card>
 </CardGrid>
 
 ## For AI agents
@@ -45,7 +49,9 @@ One command gives Claude four tools. The tools fetch pages politely, search the 
 claude mcp add polite-crawler -- npx -y polite-crawler mcp
 ```
 
-The same server works in Claude Desktop, Cursor and each MCP client. [Set up the MCP server](guide/mcp/).
+<AgentReplay client:visible />
+
+The same server works in Claude Desktop, Cursor, VS Code and each MCP client. [Set up the MCP server](guide/mcp/).
 
 ## As a library
 
@@ -59,10 +65,44 @@ crawler.find("robots exclusion"); // ranked passages, with no request
 crawler.verify(page.doc!, "robots.txt protocol"); // the exact span and the capture to cite
 ```
 
+## Field notes
+
+<CardGrid>
+  <LinkCard
+    title="Who lets AI agents in?"
+    description="The robots.txt files of the top 1,000 domains: which sites refuse GPTBot, ClaudeBot and Claude-User, and the rule that decided each verdict."
+    href="notes/robots-txt-ai-agents/"
+  />
+  <LinkCard
+    title="What 300 restaurant websites taught a crawler"
+    description="How many sites a polite crawler can read, which site builders hide their opening hours, and how many pages need JavaScript."
+    href="notes/restaurant-websites/"
+  />
+</CardGrid>
+
 ## Tools to try
 
-These tools run the code of the package in your browser. Nothing goes to a server.
+These tools start the code of the package in your browser. Nothing goes to a server.
 
-- [robots.txt tester](tools/robots-txt-tester/): paste a robots.txt, and find the rule that permits or refuses each path, for each user agent.
-- [What the crawler sees](tools/page-reader/): paste HTML, and get the JSON-LD, the visible text and the decision about JavaScript.
-- [Opening-hours parser](tools/opening-hours/): paste the hours from a page, and get the week that the crawler reads.
+<CardGrid>
+  <LinkCard
+    title="robots.txt tester"
+    description="Paste a robots.txt, and find the rule that permits or refuses each path, for GPTBot, Claude-User and more."
+    href="tools/robots-txt-tester/"
+  />
+  <LinkCard
+    title="What the crawler sees"
+    description="Paste HTML, and get the JSON-LD, the visible text and the decision about JavaScript."
+    href="tools/page-reader/"
+  />
+  <LinkCard
+    title="Opening-hours parser"
+    description="Paste the hours from a page, and get the week that the crawler reads."
+    href="tools/opening-hours/"
+  />
+  <LinkCard
+    title="Compare the crawlers"
+    description="polite-crawler, Crawlee, Scrapy, Firecrawl, Crawl4AI and the fetch server of MCP: what each one does best."
+    href="guide/compare/"
+  />
+</CardGrid>

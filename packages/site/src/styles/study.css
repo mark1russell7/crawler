@@ -1,0 +1,487 @@
+/*
+ * The robots.txt study: the grid of the domains, the bars of the refusals and the table.
+ *
+ * The colors of a verdict: red pencil is a refusal, solid when a group names the agent and pale when
+ * the group * refuses all bots. Blue ink is a site that names the agent and permits it. The colors are
+ * validated for color vision deficiency on both surfaces, and each verdict also has a glyph and a label.
+ */
+:root {
+  --verdict-name: #c2301f;
+  --verdict-star: #ec9a8f;
+  --verdict-welcome: #2346c4;
+  --verdict-open: #dfe3eb;
+  --verdict-none: #aeb6c7;
+}
+:root[data-theme="dark"] {
+  --verdict-name: #e95a49;
+  --verdict-star: #9a463e;
+  --verdict-welcome: #6a86e6;
+  --verdict-open: #2a3149;
+  --verdict-none: #46507a;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --verdict-name: #e95a49;
+    --verdict-star: #9a463e;
+    --verdict-welcome: #6a86e6;
+    --verdict-open: #2a3149;
+    --verdict-none: #46507a;
+  }
+}
+
+.pc-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.pc-v-N {
+  background: var(--verdict-name);
+  color: #fff;
+}
+.pc-v-S {
+  background: var(--verdict-star);
+  color: var(--color-ink);
+}
+.pc-v-n {
+  background: var(--verdict-welcome);
+  color: #fff;
+}
+.pc-v-o {
+  background: var(--verdict-open);
+  color: var(--color-ink-muted);
+}
+.pc-v-U {
+  background: transparent;
+  box-shadow: inset 0 0 0 1px var(--verdict-none);
+  color: var(--color-ink-muted);
+}
+.pc-verdict-key {
+  display: inline-block;
+  flex: none;
+  width: 0.9rem;
+  height: 0.9rem;
+  border-radius: 3px;
+}
+.pc-tip {
+  position: absolute;
+  z-index: 5;
+  display: grid;
+  gap: 0.15rem;
+  width: max-content;
+  max-width: min(22rem, 80vw);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-rule-strong);
+  border-radius: var(--radius-small);
+  background: var(--color-surface);
+  color: var(--color-ink);
+  font-size: var(--text-xs);
+  font-weight: 400;
+  line-height: 1.45;
+  text-align: left;
+  pointer-events: none;
+}
+.pc-tip pre {
+  margin: 0.2rem 0 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+/* ------------------------------------------------ the bars of the refusals, in groups */
+
+.pc-rbars {
+  display: grid;
+  gap: 0.3rem;
+}
+.pc-rbar {
+  display: grid;
+  grid-template-columns: 13rem minmax(0, 1fr) 3.5rem;
+  gap: var(--space-3);
+  align-items: center;
+  font-size: var(--text-sm);
+  transition: opacity 0.15s;
+}
+.pc-rbar.pc-dim {
+  opacity: 0.55;
+}
+.pc-rbar-axis > div {
+  position: relative;
+  height: 1.1rem;
+  font-size: var(--text-xs);
+  color: var(--color-ink-muted);
+  font-variant-numeric: tabular-nums;
+}
+.pc-rbar-axis > div span {
+  position: absolute;
+  transform: translateX(-50%);
+}
+.pc-rbar-axis > div span:first-child {
+  transform: none;
+}
+.pc-rbar-axis > div span:last-child {
+  transform: translateX(-100%);
+}
+.pc-rbar-group {
+  display: grid;
+  gap: 0.3rem;
+  padding-top: var(--space-2);
+}
+.pc-rbar-role {
+  padding-bottom: 0.15rem;
+  border-bottom: 1px solid var(--color-rule);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--color-ink-secondary);
+}
+.pc-rbar-name {
+  display: flex;
+  gap: 0.5rem;
+  align-items: baseline;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.pc-rbar-name code {
+  font-size: var(--text-xs);
+}
+.pc-rbar-track {
+  position: relative;
+  display: flex;
+  gap: 2px;
+  align-items: center;
+  height: 20px;
+  background-image: linear-gradient(90deg, var(--chart-grid) 1px, transparent 1px);
+  background-size: 20% 100%;
+}
+.pc-rbar-part {
+  height: 14px;
+}
+.pc-rbar-part:last-of-type {
+  border-radius: 0 4px 4px 0;
+}
+.pc-rbar-tip {
+  left: 0;
+  bottom: calc(100% + 6px);
+}
+.pc-rbar-value {
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+/* ------------------------------------------------ the dots of one company */
+
+.pc-dots-track {
+  display: block;
+  background-size: 25% 100%;
+}
+.pc-dots-row .pc-rbar-value {
+  font-size: var(--text-xs);
+  white-space: nowrap;
+}
+.pc-mark {
+  position: absolute;
+  top: 3px;
+  width: 14px;
+  height: 14px;
+  margin-left: -7px;
+  box-shadow: 0 0 0 2px var(--color-surface);
+}
+.pc-chart-legend .pc-mark {
+  position: static;
+  flex: none;
+  margin: 0;
+}
+.pc-mark-training {
+  border-radius: 50%;
+  background: var(--verdict-name);
+}
+.pc-mark-search {
+  background: var(--series-4);
+  clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
+  box-shadow: none;
+}
+.pc-mark-user {
+  border: 3px solid var(--verdict-welcome);
+  border-radius: 50%;
+  background: var(--color-surface);
+}
+.pc-mark .pc-tip {
+  left: 50%;
+  bottom: calc(100% + 8px);
+  transform: translateX(-50%);
+}
+.pc-mark.pc-hover {
+  z-index: 4;
+  outline: 2px solid var(--color-ink);
+  outline-offset: 2px;
+}
+.pc-mark-search.pc-hover {
+  clip-path: none;
+  transform: rotate(45deg) scale(0.8);
+}
+.pc-mark-search.pc-hover .pc-tip {
+  transform: rotate(-45deg) translate(-10%, -40%);
+}
+
+/* ------------------------------------------------ what the domains answered */
+
+.pc-answer-o {
+  background: var(--color-accent);
+}
+.pc-answer-h {
+  background: var(--color-accent-wash);
+  box-shadow: inset 0 0 0 1px var(--color-accent);
+}
+.pc-answer-m {
+  background: var(--verdict-open);
+  box-shadow: inset 0 0 0 1px var(--color-rule-strong);
+}
+.pc-answer-u {
+  background: transparent;
+  box-shadow: inset 0 0 0 1px var(--verdict-none);
+}
+
+/* ------------------------------------------------ the grid of the domains */
+
+.pc-study {
+  display: grid;
+  gap: var(--space-5);
+  margin-block: var(--space-5);
+}
+.pc-study .pc-tool {
+  margin: 0;
+}
+.pc-agent-picker {
+  display: grid;
+  gap: var(--space-2);
+}
+.pc-agent-role {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  align-items: center;
+}
+.pc-agent-role-label {
+  min-width: 8.5rem;
+  font-size: var(--text-xs);
+  color: var(--color-ink-muted);
+}
+.pc-grid-frame {
+  position: relative;
+}
+.pc-site-grid {
+  display: grid;
+  grid-template-columns: repeat(40, minmax(0, 1fr));
+  gap: 2px;
+  cursor: crosshair;
+  touch-action: manipulation;
+}
+.pc-cell {
+  aspect-ratio: 1;
+  border-radius: 2px;
+  transition: background-color 0.3s ease;
+  transition-delay: calc(var(--i) * 0.45ms);
+}
+.pc-cell:hover {
+  outline: 2px solid var(--color-ink);
+  outline-offset: 1px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .pc-cell {
+    transition: none;
+  }
+}
+.pc-grid-tip {
+  transform: translate(-50%, calc(-100% - 8px));
+}
+.pc-grid-legend strong {
+  font-variant-numeric: tabular-nums;
+}
+@media (max-width: 40rem) {
+  .pc-site-grid {
+    grid-template-columns: repeat(25, minmax(0, 1fr));
+    gap: 1px;
+  }
+  .pc-agent-role-label {
+    min-width: 100%;
+  }
+}
+
+/* ------------------------------------------------ the table of the sites */
+
+.pc-study-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3) var(--space-5);
+  align-items: end;
+}
+.pc-study-filters .pc-field {
+  flex: 1 1 14rem;
+}
+.pc-study-filters .pc-toggle {
+  flex-wrap: wrap;
+}
+.pc-study-count {
+  margin: 0;
+  font-size: var(--text-sm);
+}
+.pc-scroll {
+  position: relative; /* the hidden labels of the cells stay inside the frame that scrolls */
+  overflow-x: auto;
+}
+.pc-verdict-table {
+  font-size: var(--text-sm);
+}
+.pc-verdict-table th,
+.pc-verdict-table td {
+  padding: 0.3rem 0.35rem;
+}
+.pc-verdict-table thead th.pc-vth {
+  height: 8.5rem;
+  padding-inline: 0.15rem;
+  vertical-align: bottom;
+}
+.pc-vth span {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  font-weight: 400;
+  white-space: nowrap;
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+}
+.pc-vth-on {
+  background: var(--color-accent-wash);
+}
+th.pc-vth-on span {
+  font-weight: 700;
+  color: var(--color-ink);
+}
+.pc-vrow {
+  cursor: pointer;
+}
+.pc-vrow:hover td,
+.pc-vrow-open td {
+  background: var(--color-surface-sunken);
+}
+.pc-vrank {
+  color: var(--color-ink-muted);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+.pc-vsite {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-ink);
+  font: inherit;
+  text-align: left;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.pc-vsite:hover {
+  color: var(--color-accent);
+  text-decoration: underline;
+}
+.pc-vsite:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+.pc-vcell {
+  text-align: center;
+}
+.pc-vglyph {
+  display: inline-grid;
+  place-items: center;
+  width: 1.15rem;
+  height: 1.15rem;
+  border-radius: 3px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 1;
+}
+.pc-vglyph.pc-v-o {
+  background: transparent;
+}
+.pc-vdetail td {
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-surface-sunken);
+}
+.pc-vdetail-body {
+  display: grid;
+  gap: var(--space-3);
+  max-width: 46rem;
+}
+.pc-vdetail-body .pc-facts dd code {
+  display: block;
+  font-size: var(--text-xs);
+}
+.pc-vlines {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.pc-vlines li {
+  display: grid;
+  grid-template-columns: auto 10rem minmax(0, 1fr);
+  gap: var(--space-2);
+  align-items: start;
+  margin: 0;
+}
+.pc-vlines-agent {
+  font-size: var(--text-xs);
+}
+.pc-vlines pre {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+@media (max-width: 44rem) {
+  .pc-rbar {
+    grid-template-columns: minmax(0, 1fr) 3.2rem;
+  }
+  .pc-rbar.pc-dots-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+  .pc-rbar-name {
+    grid-column: 1 / -1;
+  }
+  .pc-rbar-axis > span {
+    display: none;
+  }
+  .pc-vlines li {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+  .pc-vlines pre {
+    grid-column: 1 / -1;
+  }
+}
+
+/* A grid item takes the width of its content by default: the wide table must scroll in its frame. */
+.pc-study-table,
+.pc-study-grid-tool {
+  grid-template-columns: minmax(0, 1fr);
+}
+.pc-study-chart > * {
+  min-width: 0;
+}
+.pc-vdetail-body .pc-facts {
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: 0.25rem var(--space-4);
+  align-items: baseline;
+}

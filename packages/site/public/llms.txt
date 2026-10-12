@@ -12,6 +12,7 @@ Use `openCrawler({ dir })` and its methods `fetch(url, { maxAge, render })`, `fi
 - [How the crawler is polite](https://mark1russell7.github.io/crawler/guide/politeness/): rests, refusals, the User-Agent, content signals
 - [Library API](https://mark1russell7.github.io/crawler/reference/api/): each option, method and part
 - [Command line](https://mark1russell7.github.io/crawler/reference/cli/): each command and option
+- [Compare the crawlers](https://mark1russell7.github.io/crawler/guide/compare/): polite-crawler, Crawlee, Scrapy, Firecrawl, Crawl4AI and the MCP fetch server
 - [About PoliteCrawler](https://mark1russell7.github.io/crawler/bot/): for site owners, how to slow or block the crawler
 
 ## Tools
@@ -19,6 +20,10 @@ Use `openCrawler({ dir })` and its methods `fetch(url, { maxAge, render })`, `fi
 - [robots.txt tester](https://mark1russell7.github.io/crawler/tools/robots-txt-tester/): which rule permits or refuses a path, for each user agent
 - [What the crawler sees](https://mark1russell7.github.io/crawler/tools/page-reader/): JSON-LD, visible text, links and the JavaScript decision for pasted HTML
 - [Opening-hours parser](https://mark1russell7.github.io/crawler/tools/opening-hours/): the week that page text, schema.org or OpenStreetMap hours give
+
+## Field notes
+
+- [Who lets AI agents in?](https://mark1russell7.github.io/crawler/notes/robots-txt-ai-agents/): the robots.txt files of the top 1,000 domains (Tranco list 4672X, read on 2026-10-12). Of 724 sites that answered, 17.1% refuse GPTBot and ClaudeBot, 11.9% refuse Claude-User, 12.2% refuse ChatGPT-User, and 4.0% refuse Googlebot. The verdicts and the deciding lines for 15 agents: [dataset (JSON)](https://mark1russell7.github.io/crawler/data/robots-study.json)
 
 ## Optional
 

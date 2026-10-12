@@ -11,9 +11,9 @@ User-Agent: PoliteCrawler/0.1.0 (+https://mark1russell7.github.io/crawler/bot/)
 
 ## What PoliteCrawler is
 
-PoliteCrawler is the user agent of [polite-crawler](../), open-source software for research and for AI assistants. A person runs it on their own computer to read pages that they or their assistant asked for. It is not a search engine, and it does not collect training data.
+PoliteCrawler is the user agent of [polite-crawler](../), open-source software for research and for AI assistants. A person starts it on their own computer to read pages that they or their assistant asked for. It is not a search engine, and it does not collect training data.
 
-Many people can run the software. When the operator gave a contact, the `From` header and the `User-Agent` include it.
+Many people can use the software. When the operator gave a contact, the `From` header and the `User-Agent` include it.
 
 ## What it does on your site
 
@@ -50,6 +50,10 @@ Content-Signal: ai-input=no
 ```
 
 [Test your robots.txt](../tools/robots-txt-tester/) with the same code that the crawler uses.
+
+## The robots.txt study
+
+On 12 October 2026, PoliteCrawler read the robots.txt file of each of the top 1,000 domains of the Tranco list. It sent one request for `/robots.txt` to each domain, with its redirects, and fetched no other page. [Read the study](../notes/robots-txt-ai-agents/).
 
 ## Contact
 

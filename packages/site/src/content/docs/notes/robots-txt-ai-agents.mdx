@@ -1,0 +1,109 @@
+---
+title: Who lets AI agents in?
+description: polite-crawler read the robots.txt files of the top 1,000 domains in October 2026. Approximately one site in six refuses the AI training crawlers, and fewer sites refuse the agents that fetch a page for a person. See the rule that decided each verdict, for GPTBot, ClaudeBot, Claude-User and 12 more agents.
+head:
+  - tag: meta
+    attrs:
+      property: og:image
+      content: https://mark1russell7.github.io/crawler/og-robots-study.png
+  - tag: meta
+    attrs:
+      property: og:image:alt
+      content: "Who lets AI agents in? One square for each of the top 1,000 domains, red where the site refuses GPTBot."
+  - tag: meta
+    attrs:
+      name: twitter:image
+      content: https://mark1russell7.github.io/crawler/og-robots-study.png
+  - tag: script
+    attrs:
+      type: application/ld+json
+    content: '{"@context":"https://schema.org","@type":"Dataset","name":"The robots.txt rules for AI agents of the top 1,000 domains","description":"For each of the top 1,000 domains of the Tranco list 4672X: the robots.txt verdict for 15 user agents (GPTBot, ClaudeBot, Google-Extended, CCBot, Applebot-Extended, Bytespider, meta-externalagent, OAI-SearchBot, Claude-SearchBot, PerplexityBot, ChatGPT-User, Claude-User, Perplexity-User, Googlebot and PoliteCrawler), the lines that decided, the content signals and the crawl delays. Read by polite-crawler on 12 October 2026.","url":"https://mark1russell7.github.io/crawler/notes/robots-txt-ai-agents/","keywords":["robots.txt","AI crawlers","GPTBot","ClaudeBot","Claude-User","ChatGPT-User","Google-Extended","CCBot","content signals","RFC 9309"],"creator":{"@type":"Person","name":"Mark Russell","url":"https://github.com/mark1russell7"},"datePublished":"2026-10-12","temporalCoverage":"2026-10-12","isBasedOn":"https://tranco-list.eu/list/4672X/1000","license":"https://opensource.org/licenses/MIT","isAccessibleForFree":true,"distribution":[{"@type":"DataDownload","encodingFormat":"application/json","contentUrl":"https://mark1russell7.github.io/crawler/data/robots-study.json"}],"measurementTechnique":"One request for /robots.txt for each domain, decided with RFC 9309 by polite-crawler"}'
+---
+
+import study from "../../../data/robots-study.json";
+import { agentRows, companies, pack, summarize } from "../../../lib/study.ts";
+import {
+  AnswerChart,
+  CompanyChart,
+  RefusalChart,
+  StudyGrid,
+  StudyTable,
+} from "../../../components/RobotsStudy.tsx";
+
+export const s = summarize(study);
+export const rows = agentRows(study);
+export const row = (token) => rows.find((entry) => entry.token === token);
+export const packed = pack(study);
+export const dataUrl = `${import.meta.env.BASE_URL.replace(/\/$/, "")}/data/robots-study.json`;
+export const day = new Date(study.fetched.from).toLocaleDateString("en-US", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" });
+
+On {day}, polite-crawler read the robots.txt file of each of the top {s.listSize.toLocaleString("en-US")} domains of the [Tranco list]({study.list.url}). Of these domains, {s.answered} answered. This page shows which of these sites let 15 agents in, from GPTBot and ClaudeBot to Claude-User and Googlebot. For each verdict, it also shows the rule that decided it.
+
+## The findings
+
+- **Approximately one site in six refuses the training crawlers.** {row("GPTBot").refused} sites ({row("GPTBot").share}%) refuse GPTBot, and {row("ClaudeBot").refused} sites refuse ClaudeBot. CCBot and Bytespider get the most refusals: {row("CCBot").share}% and {row("Bytespider").share}%.
+- **Fewer sites refuse an agent that acts for a person.** Of the sites, {row("ChatGPT-User").share}% refuse ChatGPT-User and {row("Claude-User").share}% refuse Claude-User. {s.trainingNotUser.OpenAI} sites refuse GPTBot but let ChatGPT-User in.
+- **Most refusals name the agent.** Of the {row("GPTBot").refused} sites that refuse GPTBot, {row("GPTBot").byName} write a group for GPTBot. The other {row("GPTBot").byStar} refuse all bots with the group `*`.
+- **Few sites refuse Googlebot.** Only {row("Googlebot").refused} sites ({row("Googlebot").share}%) refuse it. A site that refuses Googlebot goes out of Google Search.
+- **Content signals are rare.** Only {s.signals} sites write a `Content-Signal` line.
+
+<StudyGrid client:visible packed={packed} agents={study.agents} dataUrl={dataUrl} />
+
+## The refusals for each agent
+
+A site can refuse an agent in two ways. It can write a group for the agent, for example `User-agent: GPTBot` with `Disallow: /`. It can also refuse all bots with the group `*`. Then each agent without a group of its own gets that refusal.
+
+<RefusalChart client:visible rows={rows} answered={s.answered} />
+
+The training crawlers get the most refusals. {s.refusesAllTraining} sites refuse all seven of them. `Google-Extended` and `Applebot-Extended` are not crawlers: they are tokens. Googlebot and Applebot fetch the pages, and a group for the token tells Google or Apple not to use the pages to train its models.
+
+The crawlers for AI search get fewer refusals than the training crawlers. A site that refuses a search crawler goes out of the answers of that search.
+
+`PoliteCrawler` is a crawler that no site names. It thus gets the rules of the group `*`: {row("PoliteCrawler").refused} sites ({row("PoliteCrawler").share}%) refuse all bots that they do not name.
+
+## One company, three agents
+
+OpenAI and Anthropic each have three agents. One crawler collects training data, and one crawler collects pages for search. The third agent fetches a page when a person asks for it. Perplexity has a search crawler and an agent for a person.
+
+<CompanyChart client:visible companies={companies(study)} />
+
+For each company, the sites refuse the agent for a person less than the training crawler. {s.trainingNotUser.OpenAI} sites refuse GPTBot and let ChatGPT-User in. {s.trainingNotUser.Anthropic} sites refuse ClaudeBot and let Claude-User in. These sites refuse the use of their pages for training, but they let an assistant read a page for a person.
+
+polite-crawler obeys the rules for `Claude-User` when it fetches a page for an assistant. [Read how](../../guide/mcp/).
+
+## What the 1,000 domains answered
+
+The Tranco list ranks domains, not websites. Many of the top domains serve a content delivery network, the DNS or an API, and have no website. {s.dns} of the domains have no address in the DNS.
+
+<AnswerChart client:visible summary={s} />
+
+- **A robots.txt file.** {s.withFile - s.html} sites gave a file. The verdicts come from its rules.
+- **An HTML page.** {s.html} sites gave an HTML page in place of a robots.txt file. A page has no rules, so each path is permitted.
+- **No file.** {s.noFile} sites gave a 4xx status. RFC 9309 says that each path is then permitted.
+- **No answer.** {s.unreachable} domains gave no answer, an error or a 5xx status. RFC 9309 says that a crawler then fetches nothing. The shares on this page do not include these domains.
+
+## Content signals
+
+A robots.txt file can also tell how the site permits the use of its content. Cloudflare published the `Content-Signal` line in September 2025, for example `Content-Signal: search=yes, ai-train=no`. Only {s.signals} of the {s.answered} sites write it:
+
+| Signal | yes | no |
+| --- | --- | --- |
+| `search`: show the site in search results | {s.signalValues[0].yes} | {s.signalValues[0].no} |
+| `ai-input`: use the pages as input to an AI answer | {s.signalValues[1].yes} | {s.signalValues[1].no} |
+| `ai-train`: use the pages to train a model | {s.signalValues[2].yes} | {s.signalValues[2].no} |
+
+When a page refuses AI input, polite-crawler keeps the page but holds back its text from the AI reader. [Test a robots.txt with signals](../../tools/robots-txt-tester/).
+
+## The method
+
+1. **The list.** The study used the top 1,000 domains of the Tranco list <code>{study.list.id}</code>, from {study.list.date}. Tranco makes the list from the ranks of five sources across 30 days.
+2. **The requests.** The crawler sent one request for `https://<domain>/robots.txt` to each domain, and followed the redirects. When a domain had no web server, it asked `www.<domain>`. All requests went out from one computer, on {day}.
+3. **The User-Agent.** Each request sent <code>{study.userAgent}</code>. The address in it goes to [the page for site owners](../../bot/).
+4. **The verdicts.** The function `decide` of polite-crawler decided each agent alone, as RFC 9309 specifies. The path was <code>{study.pagePath}</code>, a page path that no site names. Thus a refusal of this path is a refusal of the pages of the site.
+5. **The limits.** This data is a snapshot. A site can change its robots.txt at any time, and some sites give a different file to different countries. A robots.txt is also only a request: it does not stop a crawler that ignores it.
+
+The [dataset]({dataUrl}) has each domain with its verdicts and the lines that decided them, as JSON. [The script](https://github.com/mark1russell7/crawler/blob/main/packages/site/scripts/robots-study.ts) is in the repository.
+
+## Find a site
+
+<StudyTable client:idle packed={packed} agents={study.agents} dataUrl={dataUrl} />

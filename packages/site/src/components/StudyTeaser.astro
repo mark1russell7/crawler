@@ -1,0 +1,58 @@
+---
+/**
+ * The study in the hero: one square for each of the top 1,000 domains, red where the site refuses
+ * GPTBot, and three agents to compare. The build reads the dataset, so the panel needs no script.
+ */
+import study from "../data/robots-study.json";
+import type { Study } from "../lib/study.ts";
+import { agentRows, summarize } from "../lib/study.ts";
+
+const data = study as unknown as Study;
+const rows = agentRows(data);
+const summary = summarize(data);
+const gpt = data.agents.findIndex((agent) => agent.token === "GPTBot");
+const cells = data.sites.map((site) => (site.state === "unreachable" ? "U" : (site.p[gpt] ?? ".")));
+const compare = ["GPTBot", "Claude-User", "Googlebot"].map((token) => rows.find((row) => row.token === token)!);
+const day = new Date(data.fetched.from).toLocaleDateString("en-US", {
+  day: "numeric",
+  month: "long",
+  year: "numeric",
+  timeZone: "UTC",
+});
+const base = import.meta.env.BASE_URL.replace(/\/$/, "");
+const max = 20;
+---
+
+<figure class="pc-teaser not-content" aria-labelledby="pc-teaser-title">
+  <figcaption>
+    <a id="pc-teaser-title" href={`${base}/notes/robots-txt-ai-agents/`}>Who lets AI agents in?</a>
+    <span>The crawler read the robots.txt of the top {data.sites.length.toLocaleString("en-US")} domains on {day}. One square is one domain.</span>
+  </figcaption>
+  <div class="pc-teaser-grid" role="img" aria-label={`${String(compare[0]?.refused)} of ${String(summary.answered)} sites refuse GPTBot.`}>
+    {cells.map((code) => <i class={code === "." ? "o" : code} />)}
+  </div>
+  <ul class="pc-teaser-key" aria-hidden="true">
+    <li><span class="pc-verdict-key pc-v-N"></span>refuses GPTBot by name</li>
+    <li><span class="pc-verdict-key pc-v-S"></span>refuses all bots</li>
+    <li><span class="pc-verdict-key pc-v-n"></span>names it and permits it</li>
+  </ul>
+  <dl class="pc-teaser-bars">
+    {
+      compare.map((row) => (
+        <div>
+          <dt>
+            <code>{row.token}</code>
+          </dt>
+          <dd>
+            <span class="pc-teaser-track">
+              <span class="pc-v-N" style={`width:${String((row.byName / summary.answered / (max / 100)) * 100)}%`} />
+              <span class="pc-v-S" style={`width:${String((row.byStar / summary.answered / (max / 100)) * 100)}%`} />
+            </span>
+            <span class="pc-teaser-value">{row.share.toFixed(0)}%</span>
+          </dd>
+        </div>
+      ))
+    }
+  </dl>
+  <a class="pc-teaser-more" href={`${base}/notes/robots-txt-ai-agents/`}>Read the study, with each site and its rules</a>
+</figure>

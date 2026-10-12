@@ -1,18 +1,32 @@
 ---
 /**
- * The hero of the home page: the hero of Starlight with the install commands, and the live crawl
- * below them. The site config sets this component as the override of the Starlight hero, so only the
- * home page uses it.
+ * The hero of the home page: the hero of Starlight with the install commands, the study of the top
+ * sites beside them, and the live crawl below. The site config sets this component as the override of
+ * the Starlight hero. Another page with a hero (the 404 page) gets the hero of Starlight only.
  */
 import Default from "@astrojs/starlight/components/Hero.astro";
 import CopyInstall from "./CopyInstall.tsx";
 import LiveCrawl from "./LiveCrawl.tsx";
+import StudyTeaser from "./StudyTeaser.astro";
+
+const home = Astro.locals.starlightRoute.id === "" || Astro.locals.starlightRoute.id === "index";
 ---
 
-<div class="pc-hero">
-  <div class="pc-hero-copy">
-    <Default />
-    <CopyInstall client:idle />
-  </div>
-  <LiveCrawl client:load />
-</div>
+{
+  home ? (
+    <div class="pc-hero">
+      <div class="pc-hero-top">
+        <div class="pc-hero-copy">
+          <Default />
+          <CopyInstall client:idle />
+        </div>
+        <StudyTeaser />
+      </div>
+      <LiveCrawl client:load />
+    </div>
+  ) : (
+    <div class="pc-hero pc-hero-plain">
+      <Default />
+    </div>
+  )
+}

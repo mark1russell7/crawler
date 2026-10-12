@@ -1,51 +1,238 @@
+# Publishes polite-crawler when the owner pushes a version tag (for example v0.2.0) on main.
+#
+#   preflight       The tag is on main and agrees with the version, and CHANGELOG.md has its section.
+#   verify          The gates of ci.yml: each OS and Node.js version, and the smoke test.
+#   build           Builds and packs the tarball, tests that tarball, and uploads it with the notes.
+#   publish         Publishes that tarball to npm. Only this job and mcp-registry hold "id-token: write",
+#                   and they run no code of the repository: no checkout, no install, no build.
+#   mcp-registry    Publishes server.json to the MCP registry, after npm has the version.
+#   github-release  Makes the GitHub release with the section of CHANGELOG.md and the tarball.
+#
+# npm trusted publishing uses the OIDC token of GitHub Actions, so the workflow needs no npm token,
+# and the package gets a provenance statement. On npmjs.com the trusted publisher of polite-crawler
+# names the repository mark1russell7/crawler, the workflow file release.yml and the environment npm.
+# A tag for a version that is already on npm (the first version goes out by hand) skips the npm publish
+# and does the other steps.
 name: Release
-
-# Publishes polite-crawler to npm when a version tag (for example v0.2.0) is pushed.
-# npm trusted publishing uses the OIDC token of GitHub Actions, so the workflow needs no npm
-# token, and the package gets a provenance statement. The owner sets the trusted publisher one
-# time on npmjs.com: the repository mark1russell7/crawler and the workflow file release.yml.
 
 on:
   push:
     tags: ["v*"]
 
-permissions:
-  contents: read
-  id-token: write
+permissions: {}
 
 concurrency:
   group: release
   cancel-in-progress: false
 
 jobs:
-  publish:
-    name: Test and publish to npm
+  preflight:
+    name: The tag, the version and the notes
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      dist-tag: ${{ steps.version.outputs.dist-tag }}
     steps:
-      - uses: actions/checkout@v7
-      - uses: pnpm/action-setup@v6
-      - uses: actions/setup-node@v7
+      # fetch-depth 0 fetches the history of all branches, so origin/main is there.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          node-version: 24
-          cache: pnpm
-          registry-url: "https://registry.npmjs.org"
+          persist-credentials: false
+          fetch-depth: 0
+      - name: The tag is on main
+        run: |
+          if ! git merge-base --is-ancestor "$GITHUB_SHA" origin/main; then
+            echo "::error::The tag $GITHUB_REF_NAME points at $GITHUB_SHA, which is not on main."
+            exit 1
+          fi
       - name: The tag agrees with the version of the package
-        run: test "v$(node -p 'require("./packages/polite-crawler/package.json").version')" = "$GITHUB_REF_NAME"
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm typecheck
-      - run: pnpm test
-      - run: pnpm lint:ste
-      - run: pnpm --filter polite-crawler build
-      # Trusted publishing needs npm 11.5.1 or later
-      - run: npm install --global npm@latest
-      # pnpm applies the publishConfig fields (the build/ entry points) that npm ignores. A tag for
-      # a version that is already on npm (0.1.0 went out by hand) only marks the release.
-      - name: Publish
+        id: version
         run: |
           version="$(node -p 'require("./packages/polite-crawler/package.json").version')"
-          if npm view "polite-crawler@$version" version >/dev/null 2>&1; then
-            echo "polite-crawler $version is already on npm. Nothing to publish."
-          else
-            pnpm --filter polite-crawler publish --provenance --access public --no-git-checks
+          if [ "v$version" != "$GITHUB_REF_NAME" ]; then
+            echo "::error::The tag is $GITHUB_REF_NAME, and package.json has the version $version."
+            exit 1
           fi
+          # A prerelease (0.2.0-beta.1) goes to the npm tag "next", and each other version to "latest".
+          case "$version" in
+            *-*) dist_tag=next ;;
+            *) dist_tag=latest ;;
+          esac
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "dist-tag=$dist_tag" >> "$GITHUB_OUTPUT"
+      - name: CHANGELOG.md has a section for the version
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: node scripts/changelog.mjs "$VERSION"
+
+  verify:
+    name: CI
+    needs: preflight
+    uses: ./.github/workflows/ci.yml
+    permissions:
+      contents: read
+
+  build:
+    name: Build and pack
+    needs: [preflight, verify]
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    env:
+      VERSION: ${{ needs.preflight.outputs.version }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      # No dependency cache: a release installs from the registry and the lockfile only.
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .nvmrc
+          package-manager-cache: false
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter polite-crawler build
+      # pnpm writes the publishConfig entry points (build/) into the packed package.json.
+      - run: pnpm --filter polite-crawler pack --pack-destination "$RUNNER_TEMP/release"
+      - name: Test the tarball that goes to npm
+        run: node scripts/smoke.mjs --tarball "$RUNNER_TEMP/release/polite-crawler-$VERSION.tgz"
+      # The registry examines server.json before npm gets the version. This step needs no token.
+      - name: Validate server.json
+        env:
+          MCP_PUBLISHER_VERSION: 1.8.1
+          MCP_PUBLISHER_SHA256: a06c9096dcb9727c13555b6be26c7effa707b01f06a4c561ba7a3635443cf2cc
+        run: |
+          curl -fsSL -o "$RUNNER_TEMP/mcp-publisher.tar.gz" "https://github.com/modelcontextprotocol/registry/releases/download/v${MCP_PUBLISHER_VERSION}/mcp-publisher_linux_amd64.tar.gz"
+          echo "${MCP_PUBLISHER_SHA256}  $RUNNER_TEMP/mcp-publisher.tar.gz" | sha256sum --check
+          tar -xzf "$RUNNER_TEMP/mcp-publisher.tar.gz" -C "$RUNNER_TEMP" mcp-publisher
+          "$RUNNER_TEMP/mcp-publisher" validate
+      - name: The release notes and server.json
+        run: |
+          node scripts/changelog.mjs "$VERSION" > "$RUNNER_TEMP/release/notes.md"
+          cp server.json "$RUNNER_TEMP/release/server.json"
+          ls -l "$RUNNER_TEMP/release"
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: release
+          path: ${{ runner.temp }}/release/
+          if-no-files-found: error
+          retention-days: 30
+
+  publish:
+    name: Publish to npm
+    needs: [preflight, build]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: npm
+      url: https://www.npmjs.com/package/polite-crawler
+    permissions:
+      id-token: write
+    env:
+      VERSION: ${{ needs.preflight.outputs.version }}
+      DIST_TAG: ${{ needs.preflight.outputs.dist-tag }}
+    steps:
+      # The npm of Node.js 24 is 11.5.1 or later, which trusted publishing needs. No other npm is installed.
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "24"
+          package-manager-cache: false
+      - name: npm is 11.5.1 or later
+        run: |
+          npm_version="$(npm --version)"
+          if ! node -e 'const [a, b, c] = process.argv[1].split(".").map(Number); process.exit(a > 11 || (a === 11 && (b > 5 || (b === 5 && c >= 1))) ? 0 : 1)' "$npm_version"; then
+            echo "::error::npm $npm_version cannot do trusted publishing. It must be 11.5.1 or later."
+            exit 1
+          fi
+          echo "npm $npm_version"
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: release
+          path: release
+      # npm publishes the tarball as it is, with no package scripts.
+      - name: Publish
+        run: |
+          if npm view "polite-crawler@$VERSION" version >/dev/null 2>&1; then
+            echo "polite-crawler $VERSION is already on npm. Nothing to publish."
+            exit 0
+          fi
+          npm publish "release/polite-crawler-$VERSION.tgz" --provenance --tag "$DIST_TAG"
+
+  mcp-registry:
+    name: Publish to the MCP registry
+    needs: [preflight, publish]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      id-token: write
+    env:
+      VERSION: ${{ needs.preflight.outputs.version }}
+      SERVER: io.github.mark1russell7%2Fpolite-crawler
+      # To update: take the version and the sha256 of mcp-publisher_linux_amd64.tar.gz from
+      # https://github.com/modelcontextprotocol/registry/releases
+      MCP_PUBLISHER_VERSION: 1.8.1
+      MCP_PUBLISHER_SHA256: a06c9096dcb9727c13555b6be26c7effa707b01f06a4c561ba7a3635443cf2cc
+    steps:
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: release
+          path: release
+      - name: The registry does not have the version
+        id: registry
+        run: |
+          status="$(curl -s -o /dev/null -w '%{http_code}' "https://registry.modelcontextprotocol.io/v0.1/servers/$SERVER/versions/$VERSION")"
+          echo "The registry answers $status for $VERSION."
+          echo "listed=$([ "$status" = 200 ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+      - name: Install mcp-publisher
+        if: steps.registry.outputs.listed == 'false'
+        run: |
+          curl -fsSL -o mcp-publisher.tar.gz "https://github.com/modelcontextprotocol/registry/releases/download/v${MCP_PUBLISHER_VERSION}/mcp-publisher_linux_amd64.tar.gz"
+          echo "${MCP_PUBLISHER_SHA256}  mcp-publisher.tar.gz" | sha256sum --check
+          tar -xzf mcp-publisher.tar.gz mcp-publisher
+      # The registry reads "mcpName" from the package on npm, so it waits until npm serves the version.
+      - name: npm serves the version
+        if: steps.registry.outputs.listed == 'false'
+        run: |
+          for attempt in 1 2 3 4 5 6 7 8 9 10; do
+            if curl -fsS -o /dev/null "https://registry.npmjs.org/polite-crawler/$VERSION"; then exit 0; fi
+            echo "npm does not serve polite-crawler $VERSION yet (attempt $attempt)."
+            sleep 30
+          done
+          exit 1
+      - name: Publish server.json
+        if: steps.registry.outputs.listed == 'false'
+        working-directory: release
+        run: |
+          ../mcp-publisher login github-oidc
+          ../mcp-publisher publish
+
+  github-release:
+    name: GitHub release
+    needs: [preflight, publish]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    env:
+      VERSION: ${{ needs.preflight.outputs.version }}
+      DIST_TAG: ${{ needs.preflight.outputs.dist-tag }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: release
+          path: release
+      - name: Make the release
+        run: |
+          if gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "The release $GITHUB_REF_NAME exists. Nothing to do."
+            exit 0
+          fi
+          prerelease=()
+          if [ "$DIST_TAG" = next ]; then prerelease=(--prerelease); fi
+          gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --verify-tag \
+            --title "polite-crawler $VERSION" --notes-file release/notes.md "${prerelease[@]}" \
+            "release/polite-crawler-$VERSION.tgz"

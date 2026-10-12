@@ -1,11 +1,8 @@
 import { mkdir, symlink } from "node:fs/promises";
 import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
-import { Client } from "@modelcontextprotocol/sdk/client/index.js";
-import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { MockAgent } from "undici";
 import { afterEach, describe, expect, it } from "vitest";
-import { createMcpServer } from "./mcp.ts";
 import type { PoliteCrawler } from "./open.ts";
 import { defaultUserAgent, durationMs, openCrawler } from "./open.ts";
 import { fakeClock, removeDir, tempDir } from "./test-helpers.ts";
@@ -50,17 +47,17 @@ describe("openCrawler", () => {
     const again = await polite.fetch("https://bakery.example/");
     expect(again.captures).toEqual(page.captures);
 
-    const [hit] = polite.find("wood fired bread");
+    const [hit] = await polite.find("wood fired bread");
     expect(hit?.doc).toBe(page.doc);
     const read = await polite.read(page.doc!, { length: 200 });
     expect(read.text).toContain("Forno Esempio");
     expect(read.held_back).toBe(false);
-    expect(polite.verify(page.doc!, "Tuesday to Sunday 7am–3pm").found).toBe(true);
-    expect(polite.verify(page.doc!, "Monday").found).toBe(false);
+    expect((await polite.verify(page.doc!, "Tuesday to Sunday 7am–3pm")).found).toBe(true);
+    expect((await polite.verify(page.doc!, "Monday")).found).toBe(false);
 
     const rebuilt = await polite.reindex();
     expect(rebuilt).toMatchObject({ docs: 1 });
-    expect(polite.find("dawn")[0]?.doc).toBe(page.doc);
+    expect((await polite.find("dawn"))[0]?.doc).toBe(page.doc);
   });
 
   it("obeys robots.txt, and says so", async () => {
@@ -104,7 +101,8 @@ describe("openCrawler", () => {
     await polite.close();
     await expect(polite.fetch("https://bakery.example/")).rejects.toThrow(/closed/);
     await expect(polite.read(page.doc!)).rejects.toThrow(/closed/);
-    expect(() => polite.find("bread")).toThrow(/closed/);
+    await expect(polite.find("bread")).rejects.toThrow(/closed/);
+    await expect(polite.verify(page.doc!, "bread")).rejects.toThrow(/closed/);
   });
 
   it("rebuilds an index of an earlier version when it opens", async () => {
@@ -132,39 +130,5 @@ describe("openCrawler", () => {
     await mkdir(elsewhere);
     await symlink(elsewhere, join(root, "store", "blobs"));
     expect(() => openCrawler({ dir: join(root, "store"), renderer: false })).toThrow(/symbolic link/);
-  });
-});
-
-describe("the MCP server", () => {
-  it("offers four tools, and its fetch and find work over the protocol", async () => {
-    const polite = await setup();
-    const server = createMcpServer(polite);
-    const [clientSide, serverSide] = InMemoryTransport.createLinkedPair();
-    await server.connect(serverSide);
-    const client = new Client({ name: "test", version: "0" });
-    await client.connect(clientSide);
-    try {
-      const tools = await client.listTools();
-      expect(tools.tools.map((tool) => tool.name).sort()).toEqual([
-        "crawl_fetch",
-        "crawl_find",
-        "crawl_read",
-        "crawl_verify",
-      ]);
-      const fetched = await client.callTool({
-        name: "crawl_fetch",
-        arguments: { urls: ["https://bakery.example/"] },
-      });
-      const [page] = JSON.parse((fetched.content as Array<{ text: string }>)[0]!.text) as Array<{
-        doc: string;
-        outcome: string;
-      }>;
-      expect(page?.outcome).toBe("ok");
-      const found = await client.callTool({ name: "crawl_find", arguments: { q: "bread" } });
-      expect((found.content as Array<{ text: string }>)[0]!.text).toContain(page!.doc);
-    } finally {
-      await client.close();
-      await server.close();
-    }
   });
 });

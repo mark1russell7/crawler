@@ -23,8 +23,15 @@ The function opens a crawler on a folder and gives a `PoliteCrawler`.
 | `maxActive` | `number` | `16` | The number of hosts that get requests at one time. |
 | `onBehalfOf` | `string[]` | `[]` | More product tokens whose robots.txt rules apply, for example `["Claude-User"]`. |
 | `dispatcher` | `Dispatcher` | an `undici` agent | The dispatcher for the requests, for a proxy or a test. |
+| `egress` | `EgressOptions` | public addresses only | The addresses that the crawler fetches. `{ allowPrivate: true }` permits loopback and private addresses. |
+| `politeness` | `PolicyOptions` | `DEFAULT_POLICY` | The limits of the policy, for each host or for some hosts. |
+| `hostState` | `HostStateStore` | the file `hosts.sqlite` in `dir` | The pace, the counts and the stops of each host. The processes on one store share the file. |
+| `clock` | `Clock` | the real clock | The time of the crawler and the index, for a test. |
+| `scope` | `string` | none | A label for each capture record. |
+| `onEvent` | `(event) => void` | none | A function that gets each request, response, wait, stop and skip. |
+| `extractors` | `Record<string, Extractor>` | the recipe `page` | The readers of the recipes of an application. |
 
-{/* TODO(core): openCrawler passes egress, politeness and hostState to the Crawler after the core change. Add them to this table then. */}
+`createRuntime(options)` takes the same options, and your own `log`, `blobs` and `index` in place of `dir`. It gives the parts of the runtime that `openCrawler` uses.
 
 ## `PoliteCrawler`
 
@@ -37,6 +44,10 @@ The method fetches a page, reads it and adds it to the index. It gives a `PageRe
 | `render` | `"auto" \| "never" \| "always"` | `"auto"` |
 | `maxAge` | a count of milliseconds, or a text, for example `"30m"`, `"24h"` or `"7d"` | `"24h"` |
 | `onBehalfOf` | `string[]` | `[]` |
+| `signal` | `AbortSignal` | none |
+| `scope`, `labels` | a text, and a record of texts | none |
+
+The value `"0"` of `maxAge` asks the site again, and `"auto"` uses the freshness that the server gave.
 
 ```ts title="PageResult"
 interface PageResult {
@@ -49,32 +60,50 @@ interface PageResult {
   rendered: boolean;
   structured: string[]; // the schema.org types of the JSON-LD
   links: number;
-  captures: string[]; // the capture ids to cite
+  captures: string[]; // the capture ids behind the text, 10 or fewer
+  capture: string | null; // the capture of the text to cite
+  capture_count: number;
+  fetched_at: string | null; // when the crawler fetched this text
+  from_cache: boolean; // true when the store answered with no request
+  held_back: boolean; // true when the page asked not to be AI input
   note: string | null; // for example "robots.txt disallows it for PoliteCrawler"
 }
 ```
 
-{/* TODO(core): find and verify become asynchronous, and read and verify can pin a capture. Complete these sections after the core change. */}
-
 ### `find(q, options?)`
 
-The method searches the stored documents with SQLite FTS5 and BM25. It sends no request. The options are `limit` (default 10) and `kind` (for example `"page"` or `"pdf"`). Each result has `doc`, `kind`, `title`, `url`, `snippet`, `score` and `ai_input`.
+The method searches the stored documents with SQLite FTS5 and BM25, and gives a promise. It sends no request. The options are `limit` (default 10) and `kind` (for example `"page"` or `"pdf"`). Each result has `doc`, `kind`, `title`, `url`, `snippet`, `score`, `ai_input`, `capture` and `fetched_at`.
+
+- Text in double quotes is a phrase, and `bake*` is a prefix.
+- The documents that hold each word come first, then the documents that hold one word.
+- Case, accents and Unicode forms do not change a match. Chinese, Japanese and Thai words match too.
+- A page that refuses AI input is not in the results.
 
 ### `read(doc, options?)`
 
-The method gives a range of the text of a document. The options are `from` (default 0), `length` (default 4000) and `userProvided`. When a page refuses AI input, the text is empty and `held_back` is true, unless `userProvided` is true. The crawler records each `userProvided` read. The MCP server sets it only with a signal from a person: [read the rule](../../guide/mcp/#pages-that-refuse-ai-input).
+The method gives a range of the text of a document. The options are `from` (default 0), `length` (default 4000), `capture` and `userProvided`. A `from` or a `length` less than 0 is an error. The result names the `capture` and the `fetched_at` of its text. With `capture`, the method reads the text of that capture, not the current text.
 
-### `verify(doc, quote)`
+When a page refuses AI input, the title and the text are empty, and `held_back` is true, unless `userProvided` is true. The crawler records each `userProvided` read. The MCP server sets it only with a signal from a person: [read the rule](../../guide/mcp/#pages-that-refuse-ai-input).
 
-The method finds a quote in a stored document. It ignores case, spaces and typographic punctuation. It gives `found`, the `start` and `end` positions, an `excerpt` and the `captures` to cite.
+### `verify(doc, quote, options?)`
+
+The method finds a quote in a stored document, and gives a promise. It ignores case, spaces, typographic punctuation, soft hyphens and Unicode forms. It gives `found`, the `start` and `end` positions, an `excerpt`, and the `capture`, `blob` and `fetched_at` of the text that holds the quote.
+
+- With no option, it examines the current text first, then the earlier texts. `stale` is true when only an earlier capture holds the quote.
+- With `capture`, it examines the text of that capture only. A citation of that capture thus stays true after a new fetch.
+- A page that refuses AI input gives `found: false` and `held_back: true`, unless `userProvided` is true.
+
+### `versions(doc)`
+
+The method gives the versions of a document, the newest first: the capture, the blob, the fetch time and the length of each text.
 
 ### `reindex()`
 
-The method builds the index again from the capture log and the blobs, with no request. It gives the counts of the captures, the documents and the URLs.
+The method builds the index again from the capture log and the blobs, with no request. It builds a new index beside the old one, so a rebuild that fails keeps the old index. It gives the counts of the captures, the documents and the URLs, the damaged lines, the missing bodies and the readers that failed. The documents of a recipe that it cannot read stay.
 
 ### `close()`
 
-The method closes the browser, the log files and the index.
+The method closes the browser, the log files and the index. A second close does nothing, and a method after the close rejects.
 
 ## The MCP server
 
@@ -105,11 +134,11 @@ The package is ESM only. These are its entry points:
 | --- | --- |
 | `polite-crawler` | `openCrawler`, and the parts of the runtime for an application. It needs Node.js. |
 | `polite-crawler/mcp` | `createMcpServer` and `startMcpServer`. It needs Node.js. |
-| `polite-crawler/robots` | `parseRobots`, `decide`, `robotsFromStatus`: robots.txt as RFC 9309 specifies it. `decide` gives the rule that decided and its line. |
+| `polite-crawler/robots` | `parseRobots`, `decide`, `robotsFromStatus`, `robotsFromResponse`, `productToken`: robots.txt as RFC 9309 specifies it. `decide` gives the rule that decided and its line. A robots.txt that is a web page is unreadable. |
 | `polite-crawler/html` | `extractPage`: the JSON-LD, the visible text, the links and the decision about JavaScript. It also gives the canonical URL, a quick redirect, the name of a bot check and notes about what it left out. |
 | `polite-crawler/hours` | `fromText`, `fromSchemaOrg`, `fromCompact`, `describeWeek`: opening hours. A reading tells its season and if it left out a rule (`season`, `partial`). |
 | `polite-crawler/classify` | `classify`, `parseRetryAfter`: the outcome of a response. |
-| `polite-crawler/politeness` | `HostScheduler`, `backoffMs`: one request in progress for each host. |
+| `polite-crawler/politeness` | `HostScheduler`, `backoffMs`, `restAfter`: one request in progress for each host, and the rest of a host after a request. |
 | `polite-crawler/signals` | `readSignals`: content signals for AI input. |
 
 The entry points below `polite-crawler/mcp` have no Node.js dependency, so they operate in a browser too.

@@ -58,7 +58,7 @@ The store is in `~/.polite-crawler`. Use `--dir` or `POLITE_CRAWLER_DIR` for a d
 - `--allow-private` (or `POLITE_CRAWLER_ALLOW_PRIVATE=1`) lets the crawler fetch loopback, private and link-local addresses. By default, the crawler refuses them.
 - `read --user-provided` reads a page that asked not to be AI input. Use it only for a URL that you gave yourself. The crawler records each such read.
 - `--max-age 0` fetches a page again, also when the store has a copy.
-- `reindex` stops when the capture log has captures that another application wrote, because the command cannot read them. `reindex --force` builds only the pages again, and the documents of the other application go away until it reindexes.
+- `reindex` builds the index again. The documents of a recipe that the command cannot read (the recipes of another application) stay. The output counts them, and the captures that it skipped.
 
 The command gives these exit codes:
 
@@ -155,23 +155,34 @@ The crawler records each release in the capture log.
 
 ## Use it as a library
 
-<!-- TODO(core): find and verify become asynchronous (await them), and read and verify can pin a capture. Complete this example and the list below after the core change. -->
-
 ```ts
 import { openCrawler } from "polite-crawler";
 
 const crawler = openCrawler({ dir: "./crawl", contact: "ops@example.com" });
 
 const page = await crawler.fetch("https://example.com/", { maxAge: "24h" });
-console.log(page.outcome, page.title, page.structured);
+console.log(page.outcome, page.title, page.capture, page.fetched_at, page.from_cache);
 
-for (const hit of crawler.find("documentation examples")) console.log(hit.doc, hit.snippet);
+for (const hit of await crawler.find('"documentation examples"')) console.log(hit.doc, hit.snippet);
 
 const read = await crawler.read(page.doc!, { length: 2000 });
-const check = crawler.verify(page.doc!, "for use in documentation examples");
+const check = await crawler.verify(page.doc!, "for use in documentation examples");
+
+// later, after a new fetch: the quote is still in the capture that the citation names
+const cited = await crawler.verify(page.doc!, "for use in documentation examples", {
+  capture: check.capture!,
+});
 
 await crawler.close();
 ```
+
+- Each method gives a promise, `find` and `verify` too.
+- A result of `fetch` gives `capture`, `fetched_at` and `from_cache`. A result of `read` gives the `capture` and the `fetched_at` of its text.
+- `verify` gives the `capture`, the `blob` and the `fetched_at` of the text that holds the quote, with the positions in that text. `stale` is true when only an earlier capture holds the quote.
+- `read` and `verify` take `capture`: they then use the text of that capture, not the current text. A citation of a capture thus stays true after the page changes.
+- `versions(doc)` gives the versions of a document, the newest first.
+- `find` reads a query syntax. Text in double quotes is a phrase, and `bake*` is a prefix. The documents that hold each word come first. Case, accents and Unicode forms do not change a match, and Chinese, Japanese and Thai words match too.
+- A page that asks not to be AI input is held back in each result. `fetch` gives no title, and `read` gives no title, no text and only the structural metadata. `verify` gives `found: false`, and `find` leaves the page out. Only `userProvided` lifts the hold, and the crawler logs it.
 
 The MCP server is in its own entry point:
 
@@ -188,7 +199,9 @@ const server = createMcpServer(openCrawler({ dir: "./crawl" }), { onBehalfOf: ["
 
 The root entry point also exports the parts of the runtime, for an application that builds its own:
 
-- `Crawler`, `CaptureLog`, `DocIndex`, `FileBlobStore`, `Extractors`, `fetchAndIndex`, `fetchPage` and `reindex`.
+- `createRuntime`: the parts of a store, made in one place. `openCrawler` uses it. Give `dir`, or your own `log`, `blobs` and `index`.
+- `Crawler`, `CaptureLog`, `DocIndex`, `FileBlobStore`, `SqliteHostStateStore`, `Extractors`, `fetchAndIndex`, `fetchPage` and `reindex`.
+- `readDocument`, `verifyQuote`, `findDocuments`, `isHeldBack`, `heldBackMeta` and `recordOverride`: the read, the verification and the rule for a held-back page, over a runtime.
 - `extractPage`, `typesOf`, `decodeBody` and `bodyEncoding`: the page reader and the decoder of a body in its declared encoding.
 - `readPdf` and `isPdf`: the PDF reader. `PdfOptions` sets limits on the pages, the characters, the time and the inflated bytes.
 - `fromText`, `fromSchemaOrg`, `fromCompact` and `describeWeek`: the opening-hours reader.
@@ -206,9 +219,10 @@ The readers give more facts than before:
 
 - `egress`: the addresses that the crawler fetches. By default, the crawler fetches only public addresses. Set `allowPrivate: true` for loopback, private and link-local addresses, or name hosts and ranges in `allowHosts`. With a dispatcher of your own, put `egressLookup` in its connection options.
 - `politeness`: the limits of the policy, for each host or for some hosts (`hosts: { "*.example.org": { pageIntervalMs: 10_000 } }`). `DEFAULT_POLICY` has the defaults. A value that is not valid throws a `RangeError`.
-- `hostState`: the store of the pace, the counts and the stops of each host (`HostStateStore`). The default keeps them in memory (`MemoryHostStateStore`).
+- `hostState`: the store of the pace, the counts and the stops of each host (`HostStateStore`). The default keeps them in memory (`MemoryHostStateStore`). `SqliteHostStateStore` keeps them in a file that processes share.
+- `onEvent`: a function that gets an event for each request, response, wait, stop and skip.
 
-<!-- TODO(core): openCrawler passes egress, politeness and hostState to the Crawler after the core change. Name them in the options of openCrawler then. -->
+`openCrawler` takes `egress`, `politeness` and `hostState` too, and also `clock`, `scope`, `onEvent` and `extractors`. Its default `hostState` is the file `hosts.sqlite` in the store. Thus the processes on one store share the pace and the stops of each host.
 
 `FetchRequest.maxAgeMs` can be `"auto"`: the crawler then uses the freshness that the server gave (`Cache-Control`, `Expires`, or 10 percent of the age of `Last-Modified`). `crawler.resetHosts(host?)` removes the stops and the failure counts of one host or of each host, for a process that runs for a long time.
 
@@ -231,13 +245,18 @@ Disallow: /
 
 ## The store
 
-<!-- TODO(core): the index keeps versions of a document, and a citation can pin a capture. Describe them here after the core change. -->
-
 | Path | What it holds |
 | --- | --- |
 | `captures/fetch/<yyyy>/<mm>.ndjson` | The capture log: one line for each fetch decision, and the declined fetches too. |
 | `blobs/` | The bodies of the responses, by SHA-256 hash. |
 | `index.sqlite` | The search index. It is a projection: `polite-crawler reindex` builds it again from the other two. |
+| `hosts.sqlite` | The pace, the counts and the stops of each host. The processes on one store share it. |
+
+- The index keeps each capture of a document as a version. The current version is the latest capture by fetch time, or a render of the same page body. The earlier versions stay, so a citation that names a capture stays true after the page changes.
+- The capture log and the bodies go to the disk before a fetch finishes. `reindex` skips a damaged line of the log and a damaged body, and it counts them.
+- `reindex` builds a new index beside the old one and changes to it at the end. A rebuild that fails keeps the old index. The documents of a recipe that the runtime cannot read stay.
+- An index of an earlier version of the package opens empty, and `openCrawler` builds it again from the log.
+- Two or more processes can use one store. The index waits for the lock of a different process.
 
 - A capture does not hold the secrets of a URL. The crawler writes `REDACTED` in place of a user name and a password. It does the same for the values of the usual secret query parameters (`DEFAULT_SECRET_PARAMS`) and of each name in `secretParams`.
 - The crawler keeps no more than `maxBytes` of a body (5 MiB by default) after decompression. A longer body keeps its first part, and the capture says `truncated`. A body that does not download or decode gives the outcome `error`.

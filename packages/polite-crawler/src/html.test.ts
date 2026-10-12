@@ -271,6 +271,12 @@ describe("what a page needs", () => {
       needsRender: false,
       links: [{ href: "https://venue.example/home", text: "" }],
     });
+    // an anchor to the same target gives the link its text
+    const moved = extractPage(
+      `<html><head><meta http-equiv="refresh" content="0; url=/new"><title>Moved</title></head><body><p>This page moved. <a href="/new">Go to the new page</a>.</p><a href="/new">again</a></body></html>`,
+      "https://venue.example/old",
+    );
+    expect(moved.links).toEqual([{ href: "https://venue.example/new", text: "Go to the new page" }]);
   });
 
   it("knows an application root without quotes, and Angular's root element", () => {

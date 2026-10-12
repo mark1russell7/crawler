@@ -13,7 +13,6 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { MockAgent } from "undici";
-import type { OpenOptions } from "./open.ts";
 import { openCrawler } from "./open.ts";
 import type { Extractor } from "./runtime.ts";
 import { fetchAndIndex } from "./runtime.ts";
@@ -94,31 +93,6 @@ export const localSite = async (
 
 /** A plain page of the local site. */
 export const PLAIN_PAGE: string = `<!doctype html><html lang="en"><head><title>Plain page</title></head><body><p>${"Plain words on a plain page. ".repeat(20)}</p></body></html>`;
-
-/**
- * This function tells if `openCrawler` passes the `egress` option to the crawler. The core change
- * adds it. Until then, a test that needs `allowPrivate` is skipped.
- */
-export const egressPassesThrough = async (): Promise<boolean> => {
-  const dir = await tempDir("egress-probe");
-  const site = await localSite((request, response) => {
-    if (request.url === "/robots.txt") response.writeHead(404).end();
-    else response.writeHead(200, { "content-type": "text/html" }).end(PLAIN_PAGE);
-  });
-  const options: OpenOptions & { readonly egress?: { readonly allowPrivate: boolean } } = {
-    dir,
-    renderer: false,
-    egress: { allowPrivate: true },
-  };
-  const crawler = openCrawler(options);
-  try {
-    return (await crawler.fetch(`${site.origin}/`)).outcome === "ok";
-  } finally {
-    await crawler.close();
-    await site.close();
-    await removeDir(dir);
-  }
-};
 
 /** The page of the mock bakery. */
 export const BAKERY: string = `<!doctype html><html lang="en"><head><title>Forno Esempio</title>

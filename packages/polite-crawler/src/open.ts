@@ -24,7 +24,14 @@ import type {
   VerifyOptions,
   VerifyResult,
 } from "./runtime.ts";
-import { Extractors, checkQuote, fetchPage, readDocument, recordOverride, reindex } from "./runtime.ts";
+import {
+  Extractors,
+  fetchPage,
+  findDocuments,
+  readDocument,
+  reindex,
+  verifyQuote,
+} from "./runtime.ts";
 import { VERSION } from "./version.ts";
 
 export type { ReadOptions, ReadResult, VerifyOptions, VerifyResult } from "./runtime.ts";
@@ -230,8 +237,8 @@ export const createRuntime = (options: RuntimeOptions): StoreRuntime => {
 };
 
 /** These options open a crawler on a folder. Only `dir` is necessary. */
-export interface OpenOptions extends RuntimeOptions {
-  /** This folder keeps the capture log, the response bodies and the search index. */
+export interface OpenOptions extends Omit<RuntimeOptions, "dir" | "log" | "blobs" | "index"> {
+  /** This folder keeps the capture log, the response bodies, the search index and the state of each host. */
   readonly dir: string;
   /** These agents get their robots.txt rules applied to each fetch, for example `Claude-User`. */
   readonly onBehalfOf?: readonly string[] | undefined;
@@ -274,14 +281,14 @@ export interface PoliteCrawler {
    * This method searches the stored documents. It sends no request. A held-back document is not
    * in the results. The syntax of the query is the syntax of `parseQuery`.
    */
-  find(q: string, options?: FindOptions): Found[];
+  find(q: string, options?: FindOptions): Promise<Found[]>;
   /** This method reads a range of characters of one stored document, the current version or the version of one capture. */
   read(doc: string, options?: ReadOptions): Promise<ReadResult>;
   /**
    * This method finds a quote in a stored document. It ignores case, spaces, typographic
    * punctuation and Unicode forms. It tells which capture holds the quote.
    */
-  verify(doc: string, quote: string, options?: VerifyOptions): VerifyResult;
+  verify(doc: string, quote: string, options?: VerifyOptions): Promise<VerifyResult>;
   /** This method gives the versions of a stored document, the newest first. */
   versions(doc: string, options?: { readonly limit?: number }): Promise<DocVersion[]>;
   /** This method builds the index again from the capture log and the stored bodies, with no request. */
@@ -326,23 +333,17 @@ export const openCrawler = (options: OpenOptions): PoliteCrawler => {
         labels: fetchOptions.labels,
       });
     },
-    find(q, findOptions = {}) {
-      if (closed) throw new Error("the crawler is closed");
-      return runtime.index.find(q, { limit: findOptions.limit ?? 10, kind: findOptions.kind ?? null });
+    async find(q, findOptions = {}) {
+      await live();
+      return findDocuments(runtime, q, findOptions);
     },
     async read(id, readOptions = {}) {
       await live();
       return readDocument(runtime, id, readOptions);
     },
-    verify(id, quote, verifyOptions = {}) {
-      if (closed) throw new Error("the crawler is closed");
-      const result = checkQuote(runtime, id, quote, verifyOptions);
-      const doc = runtime.index.get(id);
-      if (verifyOptions.userProvided === true && doc?.ai_input === "no") {
-        // the override goes into the log in the background; verifyQuote waits for it
-        void recordOverride(runtime, doc, "verify").catch(() => undefined);
-      }
-      return result;
+    async verify(id, quote, verifyOptions = {}) {
+      await live();
+      return verifyQuote(runtime, id, quote, verifyOptions);
     },
     async versions(id, versionOptions = {}) {
       await live();

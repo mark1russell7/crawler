@@ -883,15 +883,20 @@ export const extractPage = (html: string, pageUrl: string): PageExtract => {
     const url = resolve(anchor.getAttribute("href") ?? "");
     if (url === undefined) continue;
     const href = canonicalUrl(url.href);
-    // a link to the page itself ("#menu") is no link
-    if (seen.has(href)) continue;
-    seen.add(href);
     const text =
       (anchor.textContent ?? "").replace(/\s+/g, " ").trim() ||
       anchor.getAttribute("aria-label")?.trim() ||
       anchor.getAttribute("title")?.trim() ||
       anchor.querySelector("img[alt]")?.getAttribute("alt")?.trim() ||
       "";
+    // the link to the target of a meta refresh gets the text of the first anchor that names it
+    if (href === redirect && links[0]?.href === redirect && links[0].text === "") {
+      links[0] = { href, text: text.slice(0, 120) };
+      continue;
+    }
+    // a link to the page itself ("#menu") is no link
+    if (seen.has(href)) continue;
+    seen.add(href);
     links.push({ href, text: text.slice(0, 120) });
   }
 

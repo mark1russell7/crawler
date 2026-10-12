@@ -2,9 +2,8 @@
 import { homedir } from "node:os";
 import { join, resolve } from "node:path";
 import { parseArgs } from "node:util";
-import type { EgressOptions } from "./egress.ts";
 import type { OpenOptions, PoliteCrawler } from "./open.ts";
-import type { CapturePayload, PageResult } from "./runtime.ts";
+import type { PageResult } from "./runtime.ts";
 import { VERSION } from "./version.ts";
 
 // This file imports only Node.js and the version at start. A command loads the crawler, and only
@@ -36,7 +35,7 @@ Options:
   read     --from <n>        where the range starts (default 0)
            --length <n>      how many characters (default 4000)
            --user-provided   you gave this URL yourself: read a page that refuses AI input (logged)
-  reindex  --force           rebuild, and lose the documents of recipes that this command cannot read
+  reindex                    rebuild; the documents of recipes that this command cannot read stay
   mcp      --allow-user-provided   let user_provided work when the client cannot ask you
                                    ($POLITE_CRAWLER_ALLOW_USER_PROVIDED=1)
 
@@ -65,7 +64,6 @@ const OPTIONS = {
   from: { type: "string" },
   length: { type: "string" },
   "user-provided": { type: "boolean" },
-  force: { type: "boolean" },
   "allow-user-provided": { type: "boolean" },
 } as const;
 
@@ -78,7 +76,6 @@ const OWNER: Readonly<Record<string, string>> = {
   from: "read",
   length: "read",
   "user-provided": "read",
-  force: "reindex",
   "allow-user-provided": "mcp",
 };
 
@@ -159,24 +156,13 @@ const failedPage = (url: string, note: string): PageResult => ({
   structured: [],
   links: 0,
   captures: [],
+  capture: null,
+  capture_count: 0,
+  fetched_at: null,
+  from_cache: false,
+  held_back: false,
   note,
 });
-
-/** This function counts the captures that a reindex replays, for each recipe that has no extractor here. */
-const unknownRecipes = async (crawler: PoliteCrawler): Promise<Map<string, number>> => {
-  const unknown = new Map<string, number>();
-  const { captures, extractors } = crawler.runtime;
-  for await (const envelope of captures.scan({ source: "fetch" })) {
-    if (envelope.kind !== "capture" && envelope.kind !== "revisit") continue;
-    const payload = envelope.payload as CapturePayload;
-    if (typeof payload.blob !== "string") continue;
-    if (payload.outcome !== "ok" && payload.outcome !== "not-modified") continue;
-    // the crawler writes robots.txt captures for itself; they give no document
-    if (payload.recipe === "robots.txt" || extractors.get(payload.recipe) !== undefined) continue;
-    unknown.set(payload.recipe, (unknown.get(payload.recipe) ?? 0) + 1);
-  }
-  return unknown;
-};
 
 /** This function does the command of the command line, and gives the exit code. */
 const main = async (args: readonly string[]): Promise<number> => {
@@ -211,11 +197,10 @@ const main = async (args: readonly string[]): Promise<number> => {
   const allowUserProvided =
     values["allow-user-provided"] === true ||
     (command === "mcp" && envFlag("POLITE_CRAWLER_ALLOW_USER_PROVIDED"));
-  const options: OpenOptions & { readonly egress?: EgressOptions } = {
+  const options: OpenOptions = {
     dir,
     contact: values.contact ?? (process.env["POLITE_CRAWLER_CONTACT"] || undefined),
     ...(values["no-browser"] === true ? { renderer: false as const } : {}),
-    // TODO(core): OpenOptions passes `egress` to the crawler; until then the flag has no effect
     ...(allowPrivate ? { egress: { allowPrivate: true } } : {}),
   };
 
@@ -226,14 +211,11 @@ const main = async (args: readonly string[]): Promise<number> => {
   }
 
   const { durationMs, openCrawler } = await import("./open.ts");
-  const age = values["max-age"] ?? "24h";
-  let maxAge = 0;
-  if (!/^\s*0+\s*$/.test(age)) {
-    try {
-      maxAge = durationMs(age);
-    } catch (error) {
-      throw new UsageError(`--max-age: ${(error as Error).message}`, { cause: error });
-    }
+  let maxAge: number;
+  try {
+    maxAge = durationMs(values["max-age"] ?? "24h");
+  } catch (error) {
+    throw new UsageError(`--max-age: ${(error as Error).message}`, { cause: error });
   }
   // only fetch renders; a missing browser turns rendering off one time, before the first page
   let renderOff: string | undefined;
@@ -280,8 +262,7 @@ const main = async (args: readonly string[]): Promise<number> => {
         return pages.every(ok) ? 0 : 1;
       }
       case "find": {
-        // TODO(core): `find` becomes asynchronous; Promise.resolve accepts both forms
-        const found = await Promise.resolve(crawler.find(rest.join(" "), { limit, kind: values.kind ?? null }));
+        const found = await crawler.find(rest.join(" "), { limit, kind: values.kind ?? null });
         print(found, () =>
           found.length === 0
             ? "nothing stored matches"
@@ -301,31 +282,31 @@ const main = async (args: readonly string[]): Promise<number> => {
       }
       case "verify": {
         const [doc, ...quote] = rest;
-        // TODO(core): `verify` becomes asynchronous; Promise.resolve accepts both forms
-        const verified = await Promise.resolve(crawler.verify(doc!, quote.join(" ")));
+        const verified = await crawler.verify(doc!, quote.join(" "));
         print(verified, () =>
           verified.found
-            ? `found at ${String(verified.start)}–${String(verified.end)}: ${verified.excerpt ?? ""}`
-            : "not found",
+            ? `found at ${String(verified.start)}–${String(verified.end)} in ${verified.capture ?? ""}${verified.stale ? " (an earlier capture)" : ""}: ${verified.excerpt ?? ""}`
+            : verified.held_back
+              ? (verified.note ?? "held back")
+              : "not found",
         );
         return verified.found ? 0 : 1;
       }
       default: {
-        if (values.force !== true) {
-          const unknown = await unknownRecipes(crawler);
-          if (unknown.size > 0) {
-            const list = [...unknown].map(([recipe, count]) => `${recipe} (${String(count)})`).join(", ");
-            process.stderr.write(
-              `polite-crawler: the capture log has captures of recipes that this command cannot read: ${list}.\n` +
-                "A reindex here deletes their documents. Let the application that wrote them reindex the store,\n" +
-                "or add --force to rebuild only the pages.\n",
-            );
-            return 1;
-          }
-        }
+        // the documents of a recipe that this command cannot read stay, from the old index
         const counts = await crawler.reindex();
         print(counts, () =>
-          `${String(counts.captures)} captures replayed, ${String(counts.docs)} documents, ${String(counts.urls)} URLs`,
+          [
+            `${String(counts.captures)} captures replayed, ${String(counts.docs)} documents, ${String(counts.urls)} URLs`,
+            ...(counts.carried > 0
+              ? [`${String(counts.carried)} documents of other recipes kept: ${counts.unknown_recipes.join(", ")}`]
+              : []),
+            ...(counts.failed + counts.missing + counts.damaged > 0
+              ? [
+                  `skipped: ${String(counts.failed)} captures whose reader failed, ${String(counts.missing)} with no stored body, ${String(counts.damaged)} damaged lines of the log`,
+                ]
+              : []),
+          ].join("\n"),
         );
         return 0;
       }

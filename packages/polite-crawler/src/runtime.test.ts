@@ -88,15 +88,16 @@ describe("a page that changes", () => {
     expect(read.text).toContain("CLOSED PERMANENTLY");
     expect(read.text).not.toContain("Tuesday to Sunday");
     expect(read.capture).toBe(second.captures[0]);
-    expect(crawler.find("permanently")).toHaveLength(1);
+    expect(await crawler.find("permanently")).toHaveLength(1);
     // the removed sentence is only in the earlier capture
-    const stale = crawler.verify(second.doc!, "We also cater weddings");
+    const stale = await crawler.verify(second.doc!, "We also cater weddings");
     expect(stale).toMatchObject({ found: true, stale: true, capture: first.captures[0] });
     // a citation of the first capture stays true after the new fetch
-    const pinned = crawler.verify(second.doc!, "We also cater weddings", { capture: first.captures[0] });
+    const pinned = await crawler.verify(second.doc!, "We also cater weddings", { capture: first.captures[0] });
     expect(pinned).toMatchObject({ found: true, stale: false, capture: first.captures[0] });
     expect(pinned.blob).toMatch(/^[0-9a-f]{64}$/);
-    expect(crawler.verify(second.doc!, "We also cater weddings", { capture: second.captures[0] }).found).toBe(false);
+    expect((await crawler.verify(second.doc!, "We also cater weddings", { capture: second.captures[0] })).found).toBe(false);
+    expect(second.capture).toBe(second.captures[0]);
     const old = await crawler.read(second.doc!, { capture: first.captures[0], length: 20_000 });
     expect(old.text).toContain("Tuesday to Sunday");
     expect((await crawler.versions(second.doc!)).map((row) => row.capture)).toEqual([
@@ -195,7 +196,7 @@ describe("a rebuild", () => {
     };
     await expect(reindex(failing)).rejects.toThrow("disk error");
     expect(crawler.runtime.index.counts()).toEqual(before);
-    expect(crawler.find("bread")).toHaveLength(1);
+    expect(await crawler.find("bread")).toHaveLength(1);
   });
 
   it("skips and counts a damaged line, and reads a month of 130,000 records", async () => {
@@ -221,7 +222,7 @@ describe("a rebuild", () => {
     );
     const rebuilt = await crawler.reindex();
     expect(rebuilt.carried).toBe(1);
-    expect(crawler.find("rye")[0]?.doc).toBe("menu:rye");
+    expect((await crawler.find("rye"))[0]?.doc).toBe("menu:rye");
   });
 });
 
@@ -303,14 +304,14 @@ describe("a page that asked not to be AI input", () => {
     expect(read).toMatchObject({ held_back: true, text: "", title: "" });
     expect(JSON.stringify(read.meta)).not.toMatch(/LEAK/);
     expect(read.meta["jsonld_types"]).toEqual(["Article"]);
-    expect(crawler.find("vault")).toEqual([]);
+    expect(await crawler.find("vault")).toEqual([]);
     expect(crawler.runtime.index.rankWithin("vault", [page.doc!])).toEqual([]);
-    expect(crawler.verify(page.doc!, "the access code is 7319")).toMatchObject({ found: false, held_back: true, start: null });
-    expect(crawler.verify(page.doc!, "the access code is 0000")).toMatchObject({ found: false, held_back: true, start: null });
+    expect(await crawler.verify(page.doc!, "the access code is 7319")).toMatchObject({ found: false, held_back: true, start: null });
+    expect(await crawler.verify(page.doc!, "the access code is 0000")).toMatchObject({ found: false, held_back: true, start: null });
     const unlocked = await crawler.read(page.doc!, { userProvided: true });
     expect(unlocked.text).toContain("BODY-ONLY");
     expect(unlocked.meta["description"]).toBe("DESCRIPTION-LEAK");
-    expect(crawler.verify(page.doc!, "the access code is 7319", { userProvided: true }).found).toBe(true);
+    expect((await crawler.verify(page.doc!, "the access code is 7319", { userProvided: true })).found).toBe(true);
     await crawler.runtime.log.flush();
     const overrides = (await records()).filter((row) => row.kind === "override");
     expect(overrides.length).toBeGreaterThanOrEqual(1);

@@ -441,6 +441,9 @@ export class DocIndex {
   ) {
     if (path !== ":memory:") mkdirSync(dirname(path), { recursive: true, mode: 0o700 });
     this.db = new DatabaseSync(path);
+    // the wait for the lock of a different process comes first, before any statement that writes
+    const wait = Math.max(0, Math.floor(options.busyTimeoutMs ?? 10_000));
+    this.db.exec(`PRAGMA busy_timeout = ${String(wait)};`);
     try {
       this.db.exec(
         "CREATE VIRTUAL TABLE temp.polite_fts5_probe USING fts5(x, content = '', contentless_delete = 1); DROP TABLE temp.polite_fts5_probe;",
@@ -452,8 +455,6 @@ export class DocIndex {
         { cause },
       );
     }
-    const wait = Math.max(0, Math.floor(options.busyTimeoutMs ?? 10_000));
-    this.db.exec(`PRAGMA busy_timeout = ${String(wait)};`);
     if (path !== ":memory:") this.db.exec("PRAGMA journal_mode = WAL;");
     // the index is a projection, so a power cut can cost its last transactions and nothing else
     this.db.exec("PRAGMA synchronous = NORMAL;");

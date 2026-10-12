@@ -391,6 +391,8 @@ export interface PageResult {
   readonly links: number;
   /** These ids are the captures behind the current text, the newest first, 10 or fewer. */
   readonly captures: readonly string[];
+  /** This id is the capture of the text that the document shows. A citation names it. */
+  readonly capture: string | null;
   /** This value is the number of captures of the document. */
   readonly capture_count: number;
   /** This time (ISO 8601) is the fetch time of the text that the document shows. */
@@ -505,6 +507,7 @@ export const fetchPage = async (
     structured: Array.isArray(types) ? (types as string[]) : [],
     links: Array.isArray(links) ? links.length : 0,
     captures: doc === undefined ? [] : [...doc.captures],
+    capture: doc?.capture ?? null,
     capture_count: doc?.capture_count ?? 0,
     fetched_at: doc?.fetched_at ?? plain.fetched.fetchedAt ?? null,
     from_cache: fromCache,
@@ -951,7 +954,8 @@ export const reindex = async (
       replayLatest(build, envelope, payload);
       const extractor = runtime.extractors.get(payload.recipe);
       if (extractor === undefined) {
-        unknown.add(payload.recipe);
+        // the crawler reads robots.txt for itself; it gives no document
+        if (payload.recipe !== "robots.txt") unknown.add(payload.recipe);
         continue;
       }
       const body = await runtime.blobs.get(payload.blob);

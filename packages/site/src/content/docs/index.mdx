@@ -1,6 +1,6 @@
 ---
-title: polite-crawler
-description: A polite web crawler for research and AI agents. It fetches a source once, keeps it, and reads it many times. It obeys robots.txt, sends one request at a time to each site, and gives full-text search and an MCP server.
+title: "polite-crawler: a polite web crawler and MCP server for AI agents"
+description: A polite web crawler and MCP server for AI agents. It obeys robots.txt, sends one request at a time to each site, and keeps each page for search and citations.
 template: splash
 hero:
   title: Fetch once. Read many times.
@@ -12,11 +12,6 @@ hero:
     - text: Try the robots.txt tester
       link: tools/robots-txt-tester/
       variant: minimal
-head:
-  - tag: script
-    attrs:
-      type: application/ld+json
-    content: '{"@context":"https://schema.org","@graph":[{"@type":"SoftwareSourceCode","name":"polite-crawler","description":"A polite web crawler for research and AI agents: robots.txt obeyed, one request per site, a local full-text index and an MCP server.","codeRepository":"https://github.com/mark1russell7/crawler","programmingLanguage":"TypeScript","runtimePlatform":"Node.js","license":"https://opensource.org/licenses/MIT","url":"https://mark1russell7.github.io/crawler/","author":{"@type":"Person","name":"Mark Russell","url":"https://github.com/mark1russell7"}},{"@type":"SoftwareApplication","name":"polite-crawler","applicationCategory":"DeveloperApplication","operatingSystem":"Windows, macOS, Linux","softwareVersion":"0.1.0","downloadUrl":"https://www.npmjs.com/package/polite-crawler","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"url":"https://mark1russell7.github.io/crawler/"}]}'
 ---
 
 import { Card, CardGrid, LinkCard } from "@astrojs/starlight/components";
@@ -28,7 +23,7 @@ Research reads the same sources again and again. A plain web fetch goes back to 
 
 <CardGrid>
   <Card title="It obeys the site" icon="approve-check">
-    The crawler reads robots.txt as RFC 9309 specifies. It obeys `Retry-After`, and it stops at a challenge, a 402 or a 403. [Test a robots.txt](tools/robots-txt-tester/).
+    The crawler reads robots.txt as RFC 9309 specifies. It obeys `Retry-After`, and it stops at a challenge, a 401, a 402 or a 403. [Test a robots.txt](tools/robots-txt-tester/).
   </Card>
   <Card title="It reads the cheap way" icon="document">
     The crawler reads the JSON-LD, the visible text and the links with no browser. It opens a headless browser only for a page that needs JavaScript. [See what it reads](tools/page-reader/).
@@ -72,6 +67,11 @@ crawler.verify(page.doc!, "robots.txt protocol"); // the exact span and the capt
     title="Who lets AI agents in?"
     description="The robots.txt files of the top 1,000 domains: which sites refuse GPTBot, ClaudeBot and Claude-User, and the rule that decided each verdict."
     href="notes/robots-txt-ai-agents/"
+  />
+  <LinkCard
+    title="Block AI training crawlers, let AI assistants in"
+    description="A robots.txt for site owners: it refuses GPTBot, ClaudeBot and CCBot, and it lets Claude-User and ChatGPT-User read a page for a person."
+    href="block-ai-training-crawlers/"
   />
   <LinkCard
     title="What 300 restaurant websites taught a crawler"

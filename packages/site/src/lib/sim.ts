@@ -248,6 +248,30 @@ export const askAgain = (sites: readonly SiteScript[], timeline: Timeline, at: n
   }
 };
 
+/**
+ * This function measures the most requests in progress at the same time to one host, from the
+ * requests that the lanes show. A request in progress ends at the time of the clock.
+ */
+export const peakOf = (segments: readonly Segment[], now: number): number => {
+  let peak = 0;
+  const hosts = new Set(segments.map((segment) => segment.host));
+  for (const host of hosts) {
+    const events: Array<readonly [number, number]> = [];
+    for (const segment of segments) {
+      if (segment.kind !== "request" || segment.host !== host || segment.start > now) continue;
+      events.push([segment.start, 1], [segment.end ?? now, -1]);
+    }
+    // an end before a start at the same time: two requests in sequence do not overlap
+    events.sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+    let open = 0;
+    for (const [, step] of events) {
+      open += step;
+      peak = Math.max(peak, open);
+    }
+  }
+  return peak;
+};
+
 /** This function gives the end of the crawl: the end of the last request or rest. */
 export const endOf = (timeline: Timeline): number =>
   timeline.segments.reduce((end, segment) => {

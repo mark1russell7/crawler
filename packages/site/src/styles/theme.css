@@ -127,11 +127,18 @@ header.header {
   font-size: var(--text-sm);
   color: var(--color-ink-muted);
 }
+/* The whole command stays in view: it wraps at a narrow width and does not scroll. */
 .pc-install-row code {
-  overflow-x: auto;
-  white-space: nowrap;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
   background: none;
   font-size: var(--text-sm);
+}
+.pc-install-error {
+  grid-column: 1 / -1;
+  margin: 0;
+  font-size: var(--text-xs);
+  color: var(--status-critical-ink);
 }
 @media (max-width: 40rem) {
   .pc-install-row {

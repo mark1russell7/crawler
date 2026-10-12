@@ -5,7 +5,7 @@
  */
 import { useCallback, useEffect, useRef, useState, type ReactElement } from "react";
 import type { Segment, SiteScript } from "../lib/sim.ts";
-import { SITES, Timeline, VirtualClock, askAgain, crawlImpolitely, crawlPolitely, endOf } from "../lib/sim.ts";
+import { SITES, Timeline, VirtualClock, askAgain, crawlImpolitely, crawlPolitely, endOf, peakOf } from "../lib/sim.ts";
 
 type Mode = "polite" | "impolite";
 
@@ -151,7 +151,9 @@ export default function LiveCrawl(): ReactElement {
   const segments = timeline?.segments ?? [];
   const end = timeline === undefined ? 0 : endOf(timeline);
   const ticks = Array.from({ length: DOMAIN / 2000 + 1 }, (_, index) => index * 2000);
-  const peak = mode === "impolite" ? Math.max(...SITES.map((site) => site.pages.length)) : 1;
+  // the rows of a lane: an impolite crawl stacks all the pages of a site
+  const rows = mode === "impolite" ? Math.max(...SITES.map((site) => site.pages.length)) : 1;
+  const peak = peakOf(segments, now);
 
   const refusals = segments.filter((segment) => segment.kind === "request" && (segment.status ?? 200) >= 400).length;
   const verdict =
@@ -222,7 +224,7 @@ export default function LiveCrawl(): ReactElement {
                 <code>{site.host}</code>
                 <span>{laneNote(site, lane, mode, done)}</span>
               </div>
-              <div className="pc-track" style={{ height: `${String(10 + peak * 9)}px` }}>
+              <div className="pc-track" style={{ height: `${String(10 + rows * 9)}px` }}>
                 {lane.map((segment, index) => (
                   <Mark key={index} segment={segment} now={now} />
                 ))}

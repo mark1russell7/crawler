@@ -22,7 +22,7 @@ const home = Astro.locals.starlightRoute.id === "" || Astro.locals.starlightRout
         </div>
         <StudyTeaser />
       </div>
-      <LiveCrawl client:load />
+      <LiveCrawl client:visible />
     </div>
   ) : (
     <div class="pc-hero pc-hero-plain">

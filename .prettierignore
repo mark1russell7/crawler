@@ -1,0 +1,9 @@
+# Prettier formats the code, the JSON and the YAML. The prose has its own linter (ste-lint).
+*.md
+*.mdx
+pnpm-lock.yaml
+packages/site/src/data/
+packages/*/build/
+packages/*/dist/
+packages/*/coverage/
+packages/polite-crawler/test/corpus/

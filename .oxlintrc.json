@@ -1,0 +1,15 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": ["typescript", "unicorn", "oxc", "import", "node", "promise", "vitest"],
+  "categories": {
+    "correctness": "error"
+  },
+  "rules": {
+    "typescript/await-thenable": "error",
+    "typescript/no-floating-promises": "error",
+    "typescript/no-misused-promises": "error",
+    "typescript/no-misused-spread": "warn",
+    "unicorn/no-useless-spread": "warn"
+  },
+  "ignorePatterns": ["**/build/**", "**/dist/**", "**/.astro/**", "**/coverage/**"]
+}

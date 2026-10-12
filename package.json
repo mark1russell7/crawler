@@ -10,13 +10,25 @@
   "scripts": {
     "package": "tsx packages/cli/src/index.ts package",
     "template": "tsx packages/cli/src/index.ts repo",
+    "browser": "pnpm --filter polite-crawler exec playwright-core install chromium-headless-shell",
+    "build": "pnpm --filter polite-crawler build",
+    "check": "pnpm typecheck && pnpm lint && pnpm test && pnpm lint:ste && pnpm build && pnpm smoke",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "lint": "oxlint --type-aware",
+    "lint:ste": "ste-lint",
+    "smoke": "node scripts/smoke.mjs",
     "test": "pnpm -r run test",
-    "typecheck": "pnpm -r run typecheck",
-    "lint:ste": "ste-lint"
+    "typecheck": "pnpm -r run typecheck"
   },
   "devDependencies": {
+    "@arethetypeswrong/cli": "^0.18.5",
     "@mark1russell7/cue": "github:mark1russell7/cue",
     "@mark1russell7/ste-lint": "github:mark1russell7/ste-lint",
+    "oxlint": "^1.87.0",
+    "oxlint-tsgolint": "^7.0.2004",
+    "prettier": "^3.9.10",
+    "publint": "^0.3.25",
     "tsx": "^4.23.15",
     "typescript": "^7.0.2"
   }

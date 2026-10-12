@@ -1,6 +1,7 @@
 ---
 title: Use it from Claude
-description: Give Claude Code, Claude Desktop, Cursor, VS Code, Windsurf, Codex or any MCP client a polite web crawler with four tools - fetch, find, read and verify - over the Model Context Protocol. The setup for each client, and a replay of a real session.
+seoTitle: "MCP web fetch server for Claude Code, Cursor and VS Code"
+description: A polite MCP web fetch server for Claude Code, Claude Desktop, Cursor and VS Code. Four tools fetch, find, read and verify, with the setup for each client.
 ---
 
 import { Tabs, TabItem } from "@astrojs/starlight/components";
@@ -21,7 +22,11 @@ The server needs Node.js 22.13 or later. Each client starts it with `npx`, so yo
   claude mcp add polite-crawler -- npx -y polite-crawler mcp
   ```
 
-  To make the server available in each project, add `--scope user`.
+  To make the server available in each project, put `--scope user` before the name:
+
+  ```sh
+  claude mcp add --scope user polite-crawler -- npx -y polite-crawler mcp
+  ```
 
   </TabItem>
   <TabItem label="Claude Desktop">
@@ -118,7 +123,7 @@ Add an option after `mcp`, for example `npx -y polite-crawler mcp --dir ~/resear
 | Option | What it does |
 | --- | --- |
 | `--dir <path>` | The folder of the store. The default is `~/.polite-crawler`, or the variable `POLITE_CRAWLER_DIR`. |
-| `--contact <text>` | An email address or a URL. The crawler sends it in the `From` header and in the `User-Agent`. |
+| `--contact <text>` | An email address or a URL. The crawler sends it in the `From` header and in the `User-Agent`. The default is the variable `POLITE_CRAWLER_CONTACT`. |
 | `--no-browser` | The crawler does not open a headless browser. |
 
 ## The tools

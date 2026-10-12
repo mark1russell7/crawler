@@ -1,12 +1,15 @@
 ---
 title: robots.txt tester
-description: Test a robots.txt file against paths and user agents, including GPTBot, ClaudeBot and Claude-User. See the rule that permits or refuses each path, on its line, as RFC 9309 specifies.
+seoTitle: "robots.txt tester for AI crawlers: GPTBot, ClaudeBot and Claude-User"
+description: Test a robots.txt for GPTBot, ClaudeBot, Claude-User and your own bot. Paste a path or a URL, and see the rule that permits or refuses it.
 tableOfContents: false
 ---
 
 import RobotsTester from "../../../components/RobotsTester.tsx";
 
 Paste a robots.txt and the paths to test. The tester shows if each user agent can fetch each path. Select a result to see the group and the rule that decided it.
+
+A line can be a path or a full URL. The tester reads a URL as its path and its query, and it adds a missing `/` to a path. For your own user agent, write a token, for example `MyBot`, or paste a full `User-Agent` header. The tester then matches the product token, as RFC 9309 specifies.
 
 The tester uses `parseRobots` and `decide` from [`polite-crawler`](../../guide/quick-start/), the same code that the crawler uses before each request. Your text stays in your browser.
 
@@ -28,7 +31,9 @@ The match of the token ignores case, and it uses only the product token: `Google
 
 An AI assistant can fetch a page because a person asked for it. Anthropic names this agent `Claude-User`, and OpenAI names it `ChatGPT-User`. These agents are different from the crawlers that collect training data, for example `ClaudeBot` and `GPTBot`.
 
-When the crawler fetches a page for an assistant, it obeys two sets of rules. It obeys the rules for its own token, and the rules that a site writes for `Claude-User`. A site that writes no group for `Claude-User` gets the rules for the crawler.
+When the crawler fetches a page for an assistant, it obeys two sets of rules. It obeys the rules for its own token, and the rules that a site writes for `Claude-User`. A site that writes no group for `Claude-User` gets the rules for the crawler. The column "MCP server" of the tester shows this verdict.
+
+To refuse the training crawlers and let the assistants in, [use this robots.txt](../../block-ai-training-crawlers/).
 
 ## When the crawler cannot read robots.txt
 
@@ -37,8 +42,10 @@ The status of the robots.txt request has a meaning of its own:
 | Status | Meaning | What the crawler does |
 | --- | --- | --- |
 | 2xx | The file is there. | It obeys the rules of the file. |
-| 4xx | The file is not there. | It fetches all paths. |
+| 404 or 410 | The file is not there. | It fetches all paths. |
+| 401, 403 or a challenge | The site refuses the request. | It stops the host for the run and fetches nothing more. |
 | 429 | The site limits the rate. | It fetches nothing from the site. |
+| Another 4xx | The file is not available. | It fetches all paths, as RFC 9309 specifies. |
 | 5xx, or no response | The site is unreachable. | It fetches nothing from the site. |
 
 A crawler that cannot read the rules does not guess them. polite-crawler records the reason, for example a dead domain or a broken certificate.

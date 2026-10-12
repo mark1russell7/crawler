@@ -1,16 +1,21 @@
 ---
 title: What the crawler sees
-description: Paste the HTML of a web page and see what a crawler reads with no browser - the JSON-LD structured data, the visible text, the links - and if the page needs JavaScript to show its content.
+seoTitle: "What a crawler sees in HTML: JSON-LD, visible text and links"
+description: Paste the HTML of a web page and see what a crawler reads with no browser, the JSON-LD, the text and the links, and if the page needs JavaScript.
 tableOfContents: false
 ---
 
 import PageReader from "../../../components/PageReader.tsx";
+import { readPage } from "../../../lib/page-read.ts";
+import { PAGE_SAMPLES } from "../../../lib/page-samples.ts";
+
+export const initial = readPage(PAGE_SAMPLES[0].html, PAGE_SAMPLES[0].url);
 
 A crawler reads a page the cheap way first: it parses the HTML and opens no browser. This tool shows the result. Paste the HTML of a page, or select an example.
 
 The tool uses `extractPage` from polite-crawler, the same code that reads each page that the crawler fetches. Your HTML stays in your browser.
 
-<PageReader client:visible />
+<PageReader client:visible initial={initial} />
 
 ## What the crawler reads
 

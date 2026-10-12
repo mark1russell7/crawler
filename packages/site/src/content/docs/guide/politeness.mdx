@@ -1,6 +1,6 @@
 ---
 title: How the crawler is polite
-description: The rules polite-crawler keeps - robots.txt, one request at a time for each host, Retry-After and backoff, refusals that stop a host, an honest User-Agent, and content signals for AI input.
+description: "The rules that polite-crawler keeps: robots.txt, one request at a time for each host, Retry-After, refusals that stop a host, and an honest User-Agent."
 ---
 
 import ResponseClassifier from "../../../components/ResponseClassifier.tsx";
@@ -20,7 +20,9 @@ The rest between two requests to one host is the longest of these times:
 
 ## A refusal stops the host
 
-A challenge page, a 402 or a 403 stops the host for the run. The crawler does not try again with a different identity, a proxy or a browser in disguise. Five failures in sequence stop a host too.
+A challenge page, a 401, a 402 or a 403 stops the host for the run. The crawler does not try again with a different identity, a proxy or a browser in disguise.
+
+Five errors in sequence also stop a host. An error is no response, or a status, for example 500. A 429, 502, 503 or 504 does not stop the host. The host waits, for the time of `Retry-After` or for a backoff of up to 5 minutes.
 
 Test what each response means:
 

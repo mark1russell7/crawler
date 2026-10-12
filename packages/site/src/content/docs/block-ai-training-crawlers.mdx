@@ -1,0 +1,61 @@
+---
+title: Block AI training crawlers, let AI assistants in
+seoTitle: Block AI training crawlers in robots.txt, but allow AI assistants
+description: A ready robots.txt that blocks GPTBot, ClaudeBot, CCBot and the other AI training crawlers, and lets Claude-User and ChatGPT-User read a page for a person.
+---
+
+import { Code } from "@astrojs/starlight/components";
+import study from "../../data/robots-study.json";
+import { summarize } from "../../lib/study.ts";
+import { TRAINING_BLOCK_ROBOTS } from "../../lib/recipes.ts";
+
+export const s = summarize(study);
+
+Many sites refuse the crawlers that collect training data for AI models. Some of these sites also refuse the AI assistants by accident, with the group `*` or with a long list of agents. An assistant agent fetches one page when a person asks for it. It does not collect the site for a model.
+
+This page gives a robots.txt that refuses the training crawlers and lets the assistants in. In [the study of the top 1,000 domains](../notes/robots-txt-ai-agents/), {s.trainingNotUser.OpenAI} sites do this for OpenAI: they refuse `GPTBot` and let `ChatGPT-User` in.
+
+## The robots.txt
+
+Put this file at `/robots.txt` on your site. Change `/account/` to the paths that no bot must fetch, and change the address of the sitemap.
+
+<Code code={TRAINING_BLOCK_ROBOTS} lang="text" title="robots.txt" />
+
+<a href="../tools/robots-txt-tester/?example=training">Open this file in the robots.txt tester</a> to see the verdict for each agent and each path.
+
+## The agents
+
+| Agent | What it does | In this file |
+| --- | --- | --- |
+| `GPTBot` | OpenAI: collects pages to train models | Refused |
+| `ClaudeBot` | Anthropic: collects pages to train models | Refused |
+| `CCBot` | Common Crawl: collects pages for an open dataset that many models use | Refused |
+| `Google-Extended` | Google: a token that controls the use of the pages of Googlebot for training | Refused |
+| `Applebot-Extended` | Apple: a token that controls the use of the pages of Applebot for training | Refused |
+| `Bytespider` | ByteDance: collects pages to train models | Refused |
+| `meta-externalagent` | Meta: collects pages to train models | Refused |
+| `ChatGPT-User` | OpenAI: fetches a page when a person asks ChatGPT | Permitted |
+| `Claude-User` | Anthropic: fetches a page when a person asks Claude | Permitted |
+| `Perplexity-User` | Perplexity: fetches a page when a person asks Perplexity | Permitted |
+| `OAI-SearchBot` | OpenAI: collects pages for ChatGPT search | Permitted |
+| `Claude-SearchBot` | Anthropic: collects pages for search in Claude | Permitted |
+| `PerplexityBot` | Perplexity: collects pages for Perplexity search | Permitted |
+
+## How the file works
+
+1. **One group refuses the training crawlers.** The group names each crawler, and `Disallow: /` refuses each path. The two tokens `Google-Extended` and `Applebot-Extended` do not refuse Googlebot or Applebot. The site stays in Google Search and in Apple search, and the pages do not go into training.
+2. **One group permits the assistants.** A group that names an agent replaces the group `*` for that agent. Thus copy each rule of the group `*` that must apply to the assistants too, for example `Disallow: /account/`.
+3. **One group permits the search crawlers.** These crawlers show your pages in AI search answers, with a link to the page. To keep the site out of AI search, change `Allow: /` to `Disallow: /` in this group.
+4. **The group `*` applies to all other crawlers.** Googlebot and Bingbot get these rules.
+5. **The content signal tells the use of the content.** `ai-train=no` refuses training, and `ai-input=yes` permits an assistant to use a page in an answer. Cloudflare publishes this format. A crawler that does not know the line ignores it.
+
+## Before you publish it
+
+- **Test the file.** Paste it into [the robots.txt tester](../tools/robots-txt-tester/) with the paths of your site. The tester uses the parser of polite-crawler, which follows RFC 9309.
+- **Read the documentation of each company.** The companies tell how each agent reads robots.txt. Some state that an agent that acts for a person does not always obey it.
+- **Know the limits.** A robots.txt is a request. It does not stop a crawler that ignores it. To stop such a crawler, block it on the server or at the edge.
+- **Add new agents.** Companies start new crawlers. Read your server logs, and add a new training crawler to the first group.
+
+## How polite-crawler reads this file
+
+The MCP server of polite-crawler fetches a page for an assistant. It obeys the group for its own token, `PoliteCrawler`, and the group for `Claude-User`. With this file, both groups permit each page except `/account/`, so the server reads each of these pages. [About PoliteCrawler](../bot/).

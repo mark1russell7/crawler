@@ -2,6 +2,7 @@
  * This diagram shows the path of a request through the crawler. Select a stage to read what it does
  * and where its code is. The dashed paths are the branches. A fresh copy answers from the store, and
  * a refusal makes a record with no request. A page that needs JavaScript goes through the browser.
+ * On a narrow screen, the stages are a numbered list, and each branch is a line of text.
  */
 import { useState, type ReactElement } from "react";
 
@@ -17,13 +18,20 @@ const STAGES: readonly Stage[] = [
   { name: "robots.txt", file: "robots.ts", text: "For a web page, the robots.txt of the site decides, as RFC 9309 specifies. When the crawler cannot read robots.txt, it fetches nothing, and the record tells why." },
   { name: "Host queue", file: "politeness.ts", text: "Each host gets one request at a time, with a rest between two requests. Many hosts run in parallel, so a crawl is fast across sites and gentle on each one." },
   { name: "Fetch", file: "crawler.ts", text: "The request has an honest User-Agent. When the store has an ETag or a date, the request is conditional, and a 304 uses the stored body. The crawler follows five redirects, at most." },
-  { name: "Classify", file: "classify.ts", text: "The status and the headers become an outcome. A challenge, a 402 or a 403 stops the host for the run. A 429 or a 503 makes the host wait." },
+  { name: "Classify", file: "classify.ts", text: "The status and the headers become an outcome. A challenge, a 401, a 402 or a 403 stops the host for the run. A 429 or a 503 makes the host wait." },
   { name: "Capture", file: "log.ts", text: "Each decision becomes a record in the capture log, and a declined fetch does too. The body goes into the blob store, under its SHA-256 hash." },
   { name: "Extract", file: "html.ts", text: "The extractor turns the body into documents: the text, the JSON-LD and the links of a page, or the text of a PDF." },
   { name: "Render", file: "render.ts", text: "Only for a page that shows almost nothing without its scripts. A headless browser opens it with images and fonts blocked, and the crawler captures the result like any other page." },
   { name: "Index", file: "docs.ts", text: "The documents go into a SQLite FTS5 index. The index is a projection: reindex builds it again from the capture log and the blobs, with no request." },
   { name: "Read", file: "open.ts", text: "find gives ranked passages, read gives a range of a document, and verify finds the exact span of a quote, with the capture to cite." },
 ];
+
+/** The branches of each stage, as the list on a narrow screen tells them. */
+const BRANCH_TEXT: Readonly<Record<number, string>> = {
+  1: "A fresh copy goes to Read, with no request.",
+  2: "A refusal goes to Capture, with no request.",
+  7: "A page that needs JavaScript goes to Render, and then to Capture.",
+};
 
 /** The branches that leave the main path. */
 const BRANCHES = [
@@ -51,6 +59,16 @@ export default function Pipeline(): ReactElement {
   const stage = STAGES[selected]!;
   return (
     <div className="pc-pipe not-content">
+      <ol className="pc-pipe-list" aria-label="The path of a request through the crawler">
+        {STAGES.map((item, index) => (
+          <li key={item.name} className={index === 8 ? "pc-pipe-list-detour" : undefined}>
+            <button type="button" className="pc-pipe-list-stage" aria-pressed={index === selected} onClick={() => setSelected(index)}>
+              {item.name}
+            </button>
+            {BRANCH_TEXT[index] !== undefined ? <span className="pc-pipe-list-branch">{BRANCH_TEXT[index]}</span> : null}
+          </li>
+        ))}
+      </ol>
       <svg viewBox={`0 0 ${String(W)} ${String(height)}`} role="group" aria-label="The path of a request through the crawler">
         <defs>
           <marker id="pc-arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
@@ -127,7 +145,7 @@ export default function Pipeline(): ReactElement {
         <p className="pc-pipe-step">
           Stage {selected + 1} of {STAGES.length}
         </p>
-        <h3>{stage.name}</h3>
+        <p className="pc-pipe-name">{stage.name}</p>
         <p>{stage.text}</p>
         <p className="pc-pipe-file">
           The code:{" "}

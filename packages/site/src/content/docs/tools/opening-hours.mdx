@@ -1,6 +1,7 @@
 ---
 title: Opening-hours parser
-description: Paste the opening hours from a restaurant or shop page and see the week that a parser reads. It reads page text in many layouts, schema.org openingHours and the OpenStreetMap opening_hours notation.
+seoTitle: "Opening hours parser: page text, schema.org and OpenStreetMap"
+description: Paste the opening hours from a restaurant or shop page, and see the week that the parser reads. It reads page text, schema.org and OpenStreetMap hours.
 tableOfContents: false
 ---
 
@@ -23,6 +24,8 @@ The parser is `fromText` from polite-crawler, compiled into this page. Your text
 - **A heading with one range.** One range below "Hours" or after "Open", with no day, applies to each day. The parser marks the result as a guess.
 
 When a time has no am or pm, for example "11-9", the parser chooses the likely meaning and marks the result as a guess. A guess does not look like a fact.
+
+The parser reads English text only. For example, it reads "Mon-Fri" and "Monday to Friday", but not "Lunes a viernes".
 
 ## Structured hours
 

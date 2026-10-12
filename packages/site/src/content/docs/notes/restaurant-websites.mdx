@@ -1,11 +1,18 @@
 ---
 title: What 300 restaurant websites taught a crawler
-description: A survey of 300 restaurant, cafe and bar websites in the Boston area - how many a polite crawler can read, which site builders hide their opening hours, how many pages need JavaScript, and what each fix changed.
+description: "A survey of 300 restaurant websites in the Boston area: how many a polite crawler can read, which site builders hide the hours, and which need JavaScript."
 ---
 
 import { BuildersChart, OutcomesChart, ProgressChart } from "../../../components/SurveyCharts.tsx";
+import survey from "../../../data/restaurant-survey.json";
+import { formatDay } from "../../../lib/study.ts";
 
-A restaurant website answers one question for most visitors: is it open? We measured how well a polite crawler answers that question. We took 300 of the 1,187 restaurant, cafe and bar websites that OpenStreetMap lists in the Boston area, and we used polite-crawler on each one.
+export const day = formatDay(`${survey.date}T12:00:00Z`);
+export const dataUrl = `${import.meta.env.BASE_URL.replace(/\/$/, "")}/data/restaurant-survey.json`;
+
+<p class="pc-byline">The crawler read the sites on <time datetime={survey.date}>{day}</time>. The counts are under CC BY 4.0.</p>
+
+A restaurant website answers one question for most visitors: is it open? We measured how well a polite crawler answers that question. We took {survey.sample} of the {survey.population.toLocaleString("en-US")} restaurant, cafe and bar websites that OpenStreetMap lists in the Boston area, and we used polite-crawler on each one.
 
 ## What the crawler could do
 
@@ -25,6 +32,8 @@ Only 13 of the 231 homepages needed a browser to show their text. A plain reques
 Most restaurants build their sites with a builder: Squarespace, Wix, WordPress, or a builder for restaurants, for example BentoBox. We expected each builder to need an adapter of its own. It did not.
 
 <BuildersChart client:visible />
+
+The survey found the builder from the marks that it leaves in the HTML, for example the address of its scripts. For 56 sites, the survey found no mark that it knows.
 
 The homepage alone gives the hours for some builders and not for others. BentoBox sites give the hours on the homepage for only 5 of 23 sites. But each builder puts the hours one link away, on a page with a name like "Hours & Location". The venue recipe of the crawler follows the three links that most likely lead to the hours. Then BentoBox goes from 5 of 23 to 18 of 23. Then no builder is much worse than the others.
 
@@ -47,3 +56,18 @@ The hours "suggested" are the hours that the crawler offers as the hours of the 
 ## The sites with no hours
 
 49 of the 231 sites still give no hours that the crawler reads. 2 of them link the hours as a PDF or an image. A crawl of eight pages for each site, not three, finds 4 more. The other sites do not state their hours on a page at all.
+
+## The method
+
+1. **The list.** OpenStreetMap gave the restaurants, cafes, bars and pubs with a website in the Boston area: {survey.population.toLocaleString("en-US")} websites. A random sample with a fixed seed took {survey.sample} of them.
+2. **The requests.** On {day}, the crawler fetched the homepage of each site. It read robots.txt first, sent one request at a time to each site, and opened no browser.
+3. **The hours.** The reader looked for the hours in the JSON-LD and in the text of the page. The later versions of the reader also followed the three links that most likely lead to the hours, with the same rules.
+4. **The builder.** The survey found the site builder from the marks in the HTML of the homepage.
+
+## The limits
+
+- **One area and one day.** Restaurants in a different area can use different builders, and a site can change at any time.
+- **A sample.** The survey read {survey.sample} sites, not each site of the list.
+- **Counts only.** The survey publishes no site and no venue. Thus a reader cannot check each site, but the counts add up: the builders total {survey.builders.reduce((sum, row) => sum + row.sites, 0)} sites.
+
+<a href={dataUrl}>The counts as JSON</a>: the outcomes, the builders and the versions of the reader.

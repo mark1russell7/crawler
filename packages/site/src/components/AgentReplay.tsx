@@ -182,7 +182,9 @@ export default function AgentReplay(): ReactElement {
                     <span className="pc-replay-check" aria-hidden="true">
                       ✓
                     </span>
-                    The quote is in capture <code>{CAPTURE}</code>, characters 14,464 to 14,505.
+                    <span>
+                      The quote is in capture <code>{CAPTURE}</code>, characters 14,464 to 14,505.
+                    </span>
                   </p>
                 </div>
               ) : null}

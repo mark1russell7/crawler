@@ -1,0 +1,15 @@
+---
+/**
+ * The packed sites of the study, one time in the page. The grid and the table read this element in
+ * the browser, so the props of the islands do not carry the data.
+ */
+import { STUDY_DATA_ID } from "../lib/study.ts";
+
+interface Props {
+  readonly packed: string;
+}
+
+const json = JSON.stringify(Astro.props.packed).replace(/</g, "\\u003c");
+---
+
+<script type="application/json" id={STUDY_DATA_ID} is:inline set:html={json} />

@@ -3,37 +3,79 @@
  * build time, so each chart is in the HTML of the page. The explorer loads the full dataset only when a
  * reader asks for the lines that decided.
  */
-import { useEffect, useMemo, useRef, useState, type CSSProperties, type PointerEvent, type ReactElement } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+  type KeyboardEvent,
+  type PointerEvent,
+  type ReactElement,
+} from "react";
 import type { AgentRow, PackedSite, Role, StudyAgent, StudySite, Summary } from "../lib/study.ts";
-import { ROLES, percent, refused, unpack } from "../lib/study.ts";
+import { ROLES, STATES, STUDY_DATA_ID, niceMax, percent, refused, ticks, unpack, verdictOf } from "../lib/study.ts";
 
 const VERDICTS = [
   { code: "N", label: "Refused by name", glyph: "✕" },
   { code: "S", label: "Refused, with all bots", glyph: "✕" },
   { code: "n", label: "Permitted by name", glyph: "✓" },
   { code: ".", label: "Permitted", glyph: "·" },
-  { code: "U", label: "No answer", glyph: "–" },
+  { code: "B", label: "Blocked at the edge", glyph: "!" },
+  { code: "U", label: "Unreachable", glyph: "–" },
 ] as const;
 
-const verdictOf = (site: PackedSite, index: number): string =>
-  site.state === "u" ? "U" : (site.codes[index] ?? ".");
-
 const label = (code: string): string => VERDICTS.find((verdict) => verdict.code === code)?.label ?? "";
+const cellClass = (code: string): string => `pc-v-${code === "." ? "o" : code}`;
+
+/* ---------------------------------------------------------------------------------------------- */
+/* The packed sites: one copy in the page for the grid and the table                              */
+/* ---------------------------------------------------------------------------------------------- */
+
+let provided: string | undefined;
+let cache: readonly PackedSite[] | undefined;
+
+/**
+ * The page starts this function at build time with the packed sites. The grid and the table then
+ * render them on the server. In the browser, both read the one copy in the script element of the page.
+ */
+export const provideStudy = (packed: string): string => {
+  provided = packed;
+  cache = undefined;
+  return packed;
+};
+
+const packedSites = (): readonly PackedSite[] => {
+  if (cache !== undefined) return cache;
+  let text = provided ?? "";
+  if (typeof document !== "undefined") {
+    const element = document.getElementById(STUDY_DATA_ID);
+    if (element?.textContent) text = JSON.parse(element.textContent) as string;
+  }
+  cache = text.length > 0 ? unpack(text) : [];
+  return cache;
+};
+
+/* ---------------------------------------------------------------------------------------------- */
+/* The charts                                                                                     */
+/* ---------------------------------------------------------------------------------------------- */
 
 /** The share of the answered sites that refuse each agent, in the groups of their roles. */
 export function RefusalChart({
   rows,
   answered,
+  files,
 }: {
   readonly rows: readonly AgentRow[];
   readonly answered: number;
+  readonly files: number;
 }): ReactElement {
-  const max = 25;
+  const max = niceMax(Math.max(...rows.map((row) => row.share)));
   const [hover, setHover] = useState<string | undefined>(undefined);
   return (
     <figure className="pc-chart pc-study-chart not-content">
       <figcaption>
-        The share of {answered} sites that refuse each agent
+        The share of the {answered} sites that answered that refuse each agent
         <span className="pc-chart-muted"> for a page of the site</span>
       </figcaption>
       <ul className="pc-chart-legend">
@@ -50,7 +92,7 @@ export function RefusalChart({
         <div className="pc-rbar pc-rbar-axis" aria-hidden="true">
           <span />
           <div>
-            {[0, 5, 10, 15, 20, 25].map((tick) => (
+            {ticks(max).map((tick) => (
               <span key={tick} style={{ left: `${String((tick / max) * 100)}%` }}>
                 {tick}%
               </span>
@@ -78,7 +120,11 @@ export function RefusalChart({
                   <span
                     className="pc-rbar-track"
                     role="img"
-                    aria-label={`${row.token}: ${String(row.refused)} sites refuse it, ${String(row.byName)} by name and ${String(row.byStar)} with all bots`}
+                    tabIndex={0}
+                    style={{ "--ticks": String(max / 5) } as CSSProperties}
+                    aria-label={`${row.token}: ${String(row.refused)} of ${String(answered)} sites refuse it, ${String(row.byName)} by name and ${String(row.byStar)} with all bots`}
+                    onFocus={() => setHover(row.token)}
+                    onBlur={() => setHover(undefined)}
                   >
                     <span className="pc-rbar-part pc-v-N" style={{ width: `${String((percent(row.byName, answered) / max) * 100)}%` }} />
                     <span className="pc-rbar-part pc-v-S" style={{ width: `${String((percent(row.byStar, answered) / max) * 100)}%` }} />
@@ -98,29 +144,31 @@ export function RefusalChart({
       </div>
       <details className="pc-table-view">
         <summary>Show the numbers as a table</summary>
-        <div className="pc-table-wrap">
+        <div className="pc-table-wrap" tabIndex={0} role="region" aria-label="The refusals for each agent">
           <table className="pc-table">
             <thead>
               <tr>
-                <th>Agent</th>
-                <th>Company</th>
-                <th>Refused by name</th>
-                <th>Refused with all bots</th>
-                <th>Permitted by name</th>
-                <th>Share refused</th>
+                <th scope="col">Agent</th>
+                <th scope="col">Company</th>
+                <th scope="col">Refused by name</th>
+                <th scope="col">Refused with all bots</th>
+                <th scope="col">Permitted by name</th>
+                <th scope="col">Of {answered} that answered</th>
+                <th scope="col">Of {files} with a file</th>
               </tr>
             </thead>
             <tbody>
               {rows.map((row) => (
                 <tr key={row.token}>
-                  <td>
+                  <th scope="row">
                     <code>{row.token}</code>
-                  </td>
+                  </th>
                   <td>{row.owner}</td>
                   <td>{row.byName}</td>
                   <td>{row.byStar}</td>
                   <td>{row.welcomed}</td>
                   <td>{row.share.toFixed(1)}%</td>
+                  <td>{row.fileShare.toFixed(1)}%</td>
                 </tr>
               ))}
             </tbody>
@@ -146,11 +194,14 @@ export function CompanyChart({
     readonly agents: ReadonlyArray<{ readonly token: string; readonly role: Role; readonly share: number }>;
   }>;
 }): ReactElement {
-  const max = 20;
+  const max = niceMax(Math.max(...companies.flatMap((company) => company.agents.map((agent) => agent.share))));
   const [hover, setHover] = useState<string | undefined>(undefined);
   return (
     <figure className="pc-chart pc-study-chart not-content">
-      <figcaption>One company, three agents: the share of sites that refuse each</figcaption>
+      <figcaption>
+        One company, three agents: the share of sites that refuse each
+        <span className="pc-chart-muted"> in %, in the sequence of the key</span>
+      </figcaption>
       <ul className="pc-chart-legend">
         {Object.entries(MARKS).map(([role, mark]) => (
           <li key={role}>
@@ -160,10 +211,10 @@ export function CompanyChart({
         ))}
       </ul>
       <div className="pc-rbars">
-        <div className="pc-rbar pc-rbar-axis" aria-hidden="true">
+        <div className="pc-rbar pc-dots-row pc-rbar-axis" aria-hidden="true">
           <span />
           <div>
-            {[0, 5, 10, 15, 20].map((tick) => (
+            {ticks(max).map((tick) => (
               <span key={tick} style={{ left: `${String((tick / max) * 100)}%` }}>
                 {tick}%
               </span>
@@ -176,8 +227,9 @@ export function CompanyChart({
             <span className="pc-rbar-name">{company.owner}</span>
             <span
               className="pc-rbar-track pc-dots-track"
-              role="img"
-              aria-label={company.agents.map((agent) => `${agent.token} ${agent.share.toFixed(1)}%`).join(", ")}
+              role="group"
+              aria-label={company.owner}
+              style={{ "--ticks": String(max / 5) } as CSSProperties}
             >
               {company.agents.map((agent) => {
                 const mark = MARKS[agent.role as Exclude<Role, "control">];
@@ -187,8 +239,13 @@ export function CompanyChart({
                     key={agent.token}
                     className={`pc-mark ${mark.className}${hover === key ? " pc-hover" : ""}`}
                     style={{ left: `${String((agent.share / max) * 100)}%` }}
+                    role="img"
+                    tabIndex={0}
+                    aria-label={`${agent.token}, ${mark.label.toLowerCase()}: ${agent.share.toFixed(1)}%`}
                     onMouseEnter={() => setHover(key)}
                     onMouseLeave={() => setHover(undefined)}
+                    onFocus={() => setHover(key)}
+                    onBlur={() => setHover(undefined)}
                   >
                     {hover === key ? (
                       <span className="pc-tip" role="tooltip">
@@ -200,27 +257,27 @@ export function CompanyChart({
               })}
             </span>
             <span className="pc-rbar-value pc-chart-muted">
-              {company.agents.map((agent) => agent.share.toFixed(1)).join(" / ")}
+              {company.agents.map((agent) => agent.share.toFixed(1)).join(" · ")}
             </span>
           </div>
         ))}
       </div>
       <details className="pc-table-view">
         <summary>Show the numbers as a table</summary>
-        <div className="pc-table-wrap">
+        <div className="pc-table-wrap" tabIndex={0} role="region" aria-label="The refusals for each company">
           <table className="pc-table">
             <thead>
               <tr>
-                <th>Company</th>
-                <th>Training crawler</th>
-                <th>Search crawler</th>
-                <th>Acts for a person</th>
+                <th scope="col">Company</th>
+                <th scope="col">Training crawler</th>
+                <th scope="col">Search crawler</th>
+                <th scope="col">Acts for a person</th>
               </tr>
             </thead>
             <tbody>
               {companies.map((company) => (
                 <tr key={company.owner}>
-                  <td>{company.owner}</td>
+                  <th scope="row">{company.owner}</th>
                   {(["training", "search", "user"] as const).map((role) => {
                     const agent = company.agents.find((candidate) => candidate.role === role);
                     return (
@@ -243,14 +300,14 @@ export function CompanyChart({
   );
 }
 
-/** What the domains of the list answered to the request for /robots.txt. */
+/** What the domains of the list answered to the request for /robots.txt, in four states. */
 export function AnswerChart({ summary }: { readonly summary: Summary }): ReactElement {
-  const parts = [
-    { key: "o", label: "A robots.txt file", sites: summary.withFile - summary.html },
-    { key: "h", label: "An HTML page in its place", sites: summary.html },
-    { key: "m", label: "No file (4xx): each path permitted", sites: summary.noFile },
-    { key: "u", label: "No answer: no web server, or an error", sites: summary.unreachable },
-  ];
+  const count: Record<string, number> = {
+    file: summary.withFile,
+    none: summary.noFile,
+    blocked: summary.blocked,
+    unreachable: summary.unreachable,
+  };
   const [hover, setHover] = useState<string | undefined>(undefined);
   return (
     <figure className="pc-chart pc-study-chart not-content">
@@ -258,31 +315,37 @@ export function AnswerChart({ summary }: { readonly summary: Summary }): ReactEl
       <div
         className="pc-stack"
         role="img"
-        aria-label={parts.map((part) => `${part.label}: ${String(part.sites)}`).join(", ")}
+        aria-label={STATES.map((part) => `${part.label}: ${String(count[part.state])}`).join(", ")}
       >
-        {parts.map((part) => (
+        {STATES.map((part) => (
           <span
-            key={part.key}
-            className={`pc-stack-part pc-answer-${part.key}${hover === part.key ? " pc-hover" : ""}`}
-            style={{ flexGrow: part.sites }}
-            title={`${part.label}: ${String(part.sites)} domains`}
-            onMouseEnter={() => setHover(part.key)}
+            key={part.state}
+            className={`pc-stack-part pc-answer-${part.state}${hover === part.state ? " pc-hover" : ""}`}
+            style={{ flexGrow: count[part.state] }}
+            onMouseEnter={() => setHover(part.state)}
             onMouseLeave={() => setHover(undefined)}
           />
         ))}
       </div>
-      <ul className="pc-chart-legend">
-        {parts.map((part) => (
-          <li key={part.key} className={hover === part.key ? "pc-hover" : undefined}>
-            <span className={`pc-swatch pc-answer-${part.key}`} aria-hidden="true" />
-            <span>{part.label}</span>
-            <strong>{part.sites}</strong>
-          </li>
+      <dl className="pc-answer-key">
+        {STATES.map((part) => (
+          <div key={part.state} className={hover === part.state ? "pc-hover" : undefined}>
+            <dt>
+              <span className={`pc-swatch pc-answer-${part.state}`} aria-hidden="true" />
+              <span>{part.label}</span>
+              <strong>{count[part.state]}</strong>
+            </dt>
+            <dd>{part.meaning}</dd>
+          </div>
         ))}
-      </ul>
+      </dl>
     </figure>
   );
 }
+
+/* ---------------------------------------------------------------------------------------------- */
+/* The grid and the table                                                                         */
+/* ---------------------------------------------------------------------------------------------- */
 
 /** The full dataset, loaded one time when a reader asks for the lines that decided. */
 let full: Promise<ReadonlyMap<string, StudySite>> | undefined;
@@ -318,19 +381,19 @@ const TABLE_ID = "pc-study-table";
 
 /** The grid of the domains: one square for each domain, in the order of rank, for one agent. */
 export function StudyGrid({
-  packed,
   agents,
   dataUrl,
 }: {
-  readonly packed: string;
   readonly agents: readonly StudyAgent[];
   readonly dataUrl: string;
 }): ReactElement {
-  const sites = useMemo(() => unpack(packed), [packed]);
+  const sites = packedSites();
   const [agent, setAgent] = useState(0);
   const [tip, setTip] = useState<{ index: number; x: number; y: number } | undefined>(undefined);
+  const [focus, setFocus] = useState<number | undefined>(undefined);
   const [details, setDetails] = useState<ReadonlyMap<string, StudySite> | undefined>(undefined);
   const gridRef = useRef<HTMLDivElement>(null);
+  const frameRef = useRef<HTMLDivElement>(null);
 
   const want = (): void => {
     if (details === undefined) void loadFull(dataUrl).then(setDetails);
@@ -341,41 +404,88 @@ export function StudyGrid({
   };
 
   const counts = useMemo(() => {
-    const result: Record<string, number> = { N: 0, S: 0, n: 0, ".": 0, U: 0 };
+    const result: Record<string, number> = { N: 0, S: 0, n: 0, ".": 0, B: 0, U: 0 };
     for (const site of sites) {
       const code = verdictOf(site, agent);
       result[code] = (result[code] ?? 0) + 1;
     }
     return result;
   }, [sites, agent]);
-  const answered = sites.length - (counts["U"] ?? 0);
+  const answered = (counts["N"] ?? 0) + (counts["S"] ?? 0) + (counts["n"] ?? 0) + (counts["."] ?? 0);
   const refusing = (counts["N"] ?? 0) + (counts["S"] ?? 0);
   const token = agents[agent]?.token ?? "";
 
-  const onMove = (event: PointerEvent<HTMLDivElement>): void => {
-    const target = (event.target as HTMLElement).closest<HTMLElement>("[data-i]");
-    const grid = gridRef.current;
-    if (target === null || grid === null) {
-      setTip(undefined);
-      return;
-    }
-    const box = target.getBoundingClientRect();
-    const outer = grid.getBoundingClientRect();
+  /** This function puts the tip over one square. */
+  const tipAt = (index: number): void => {
+    const cell = gridRef.current?.children[index];
+    const frame = frameRef.current;
+    if (cell === undefined || frame === null) return;
+    const box = cell.getBoundingClientRect();
+    const outer = frame.getBoundingClientRect();
     setTip({
-      index: Number(target.dataset["i"]),
+      index,
       x: Math.min(Math.max(box.left - outer.left + box.width / 2, 90), outer.width - 90),
       y: box.top - outer.top,
     });
   };
 
+  const onMove = (event: PointerEvent<HTMLDivElement>): void => {
+    const target = (event.target as HTMLElement).closest<HTMLElement>("[data-i]");
+    if (target === null) {
+      setTip(undefined);
+      return;
+    }
+    tipAt(Number(target.dataset["i"]));
+  };
+
+  const pick = (index: number): void => {
+    const site = sites[index];
+    if (site === undefined) return;
+    publish({ pick: site.domain, picks: shared.picks + 1 });
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    document.getElementById(TABLE_ID)?.scrollIntoView({ behavior: reduced ? "auto" : "smooth", block: "start" });
+  };
+
+  const move = (index: number): void => {
+    const next = Math.min(Math.max(index, 0), sites.length - 1);
+    setFocus(next);
+    tipAt(next);
+  };
+
+  const onKey = (event: KeyboardEvent<HTMLDivElement>): void => {
+    const grid = gridRef.current;
+    const columns = grid === null ? 40 : getComputedStyle(grid).gridTemplateColumns.split(" ").length;
+    const at = focus ?? 0;
+    const step: Record<string, number> = { ArrowRight: 1, ArrowLeft: -1, ArrowDown: columns, ArrowUp: -columns };
+    if (event.key in step) {
+      event.preventDefault();
+      move(at + (step[event.key] ?? 0));
+    } else if (event.key === "Home") {
+      event.preventDefault();
+      move(0);
+    } else if (event.key === "End") {
+      event.preventDefault();
+      move(sites.length - 1);
+    } else if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      pick(at);
+    } else if (event.key === "Escape") {
+      setTip(undefined);
+    }
+  };
+
   const tipSite = tip === undefined ? undefined : sites[tip.index];
   const tipLines = tipSite === undefined ? undefined : decidingLines(details?.get(tipSite.domain), agent);
+  const focused = focus === undefined ? undefined : sites[focus];
 
   return (
     <section className="pc-tool pc-study-grid-tool not-content" aria-label="The domains, one square each">
       <div className="pc-crawl-title">
         <strong>The top {sites.length.toLocaleString("en-US")} domains, one square each</strong>
-        <span>Select an agent. The squares go in the sequence of rank, from the top left. Select a square to find its site in the table.</span>
+        <span>
+          Select an agent. The squares go in the sequence of rank, from the top left. Select a square, or use the arrow
+          keys and Enter, to find its site in the table.
+        </span>
       </div>
       <div className="pc-agent-picker">
         {ROLES.map(({ role, label: roleLabel }) => (
@@ -398,33 +508,38 @@ export function StudyGrid({
           </div>
         ))}
       </div>
-      <div className="pc-grid-frame" ref={gridRef}>
+      <div className="pc-grid-frame" ref={frameRef}>
         <div
           className="pc-site-grid"
-          role="img"
-          aria-label={`${token}: ${String(counts["N"])} sites refuse it by name, ${String(counts["S"])} with all bots, ${String(counts["n"])} permit it by name, ${String(counts["."])} permit it, and ${String(counts["U"])} gave no answer.`}
+          ref={gridRef}
+          role="group"
+          tabIndex={0}
+          aria-label={`${token}: ${String(counts["N"])} sites refuse it by name, ${String(counts["S"])} with all bots, ${String(counts["n"])} permit it by name, ${String(counts["."])} permit it. ${String(counts["B"])} blocked the request at the edge, and ${String(counts["U"])} were unreachable. Use the arrow keys to move from square to square.`}
           onPointerMove={onMove}
           onPointerEnter={want}
           onPointerLeave={() => setTip(undefined)}
+          onFocus={() => {
+            want();
+            move(focus ?? 0);
+          }}
+          onBlur={() => {
+            setFocus(undefined);
+            setTip(undefined);
+          }}
+          onKeyDown={onKey}
           onClick={(event) => {
             const target = (event.target as HTMLElement).closest<HTMLElement>("[data-i]");
-            const site = target === null ? undefined : sites[Number(target.dataset["i"])];
-            if (site === undefined) return;
-            publish({ pick: site.domain, picks: shared.picks + 1 });
-            document.getElementById(TABLE_ID)?.scrollIntoView({ behavior: "smooth", block: "start" });
+            if (target !== null) pick(Number(target.dataset["i"]));
           }}
         >
-          {sites.map((site, index) => {
-            const code = verdictOf(site, agent);
-            return (
-              <span
-                key={site.domain}
-                data-i={index}
-                className={`pc-cell pc-v-${code === "." ? "o" : code}`}
-                style={{ "--i": index } as CSSProperties}
-              />
-            );
-          })}
+          {sites.map((site, index) => (
+            <span
+              key={site.domain}
+              data-i={index}
+              className={`pc-cell ${cellClass(verdictOf(site, agent))}${index === focus ? " pc-cell-focus" : ""}`}
+              style={{ "--i": index } as CSSProperties}
+            />
+          ))}
         </div>
         {tip !== undefined && tipSite !== undefined ? (
           <div className="pc-tip pc-grid-tip" role="tooltip" style={{ left: `${String(tip.x)}px`, top: `${String(tip.y)}px` }}>
@@ -437,11 +552,14 @@ export function StudyGrid({
             {tipLines !== undefined ? <pre>{tipLines}</pre> : null}
           </div>
         ) : null}
+        <p className="pc-sr" aria-live="polite">
+          {focused === undefined ? "" : `${String(focused.rank)}. ${focused.domain}: ${label(verdictOf(focused, agent)).toLowerCase()}`}
+        </p>
       </div>
       <ul className="pc-chart-legend pc-grid-legend">
         {VERDICTS.map((verdict) => (
           <li key={verdict.code}>
-            <span className={`pc-verdict-key pc-v-${verdict.code === "." ? "o" : verdict.code}`} aria-hidden="true" />
+            <span className={`pc-verdict-key ${cellClass(verdict.code)}`} aria-hidden="true" />
             {verdict.label}
             <strong>{counts[verdict.code] ?? 0}</strong>
           </li>
@@ -449,27 +567,27 @@ export function StudyGrid({
       </ul>
       <p className="pc-crawl-verdict" aria-live="polite">
         <code>{token}</code>: {refusing} of the {answered} sites that answered refuse it ({percent(refusing, answered).toFixed(1)}%), and{" "}
-        {counts["N"]} of them name it.
+        {counts["N"]} of them name it. The share does not count the sites that blocked the request or were unreachable.
       </p>
     </section>
   );
 }
 
+type Filter = "all" | "refuses" | "names" | "blocked" | "none";
+
 /** The table of the sites, with a search and the lines that decided each verdict. */
 export function StudyTable({
-  packed,
   agents,
   dataUrl,
 }: {
-  readonly packed: string;
   readonly agents: readonly StudyAgent[];
   readonly dataUrl: string;
 }): ReactElement {
-  const sites = useMemo(() => unpack(packed), [packed]);
+  const sites = packedSites();
   const [agent, setAgent] = useState(0);
   const [details, setDetails] = useState<ReadonlyMap<string, StudySite> | undefined>(undefined);
   const [query, setQuery] = useState("");
-  const [filter, setFilter] = useState<"all" | "refuses" | "names" | "none">("all");
+  const [filter, setFilter] = useState<Filter>("all");
   const [shown, setShown] = useState(PAGE);
   const [open, setOpen] = useState<string | undefined>(undefined);
   const token = agents[agent]?.token ?? "";
@@ -504,8 +622,9 @@ export function StudyTable({
       if (filter === "refuses") return refused(verdictOf(site, agent));
       if (filter === "names")
         return agents.some(
-          (candidate, index) => candidate.role !== "control" && (site.codes[index] === "N" || site.codes[index] === "n"),
+          (candidate, index) => candidate.role !== "control" && (verdictOf(site, index) === "N" || verdictOf(site, index) === "n"),
         );
+      if (filter === "blocked") return site.state === "b";
       if (filter === "none") return site.state === "u";
       return true;
     });
@@ -518,6 +637,14 @@ export function StudyTable({
     want();
   };
 
+  const filters: ReadonlyArray<readonly [Filter, string]> = [
+    ["all", "All"],
+    ["refuses", `Refuse ${token}`],
+    ["names", "Name an AI agent"],
+    ["blocked", "Blocked at the edge"],
+    ["none", "Unreachable"],
+  ];
+
   return (
     <section className="pc-tool pc-study-table not-content" id={TABLE_ID} aria-label="Each site and its verdicts">
       <div className="pc-study-filters">
@@ -526,24 +653,17 @@ export function StudyTable({
           <input type="search" value={query} placeholder="for example wikipedia" onChange={(event) => setQuery(event.target.value)} />
         </label>
         <div className="pc-toggle" role="group" aria-label="Show">
-          {(
-            [
-              ["all", "All"],
-              ["refuses", `Refuse ${token}`],
-              ["names", "Name an AI agent"],
-              ["none", "No answer"],
-            ] as const
-          ).map(([key, text]) => (
+          {filters.map(([key, text]) => (
             <button key={key} type="button" aria-pressed={filter === key} onClick={() => setFilter(key)}>
               {text}
             </button>
           ))}
         </div>
       </div>
-      <p className="pc-chart-muted pc-study-count">
+      <p className="pc-chart-muted pc-study-count" aria-live="polite">
         {rows.length.toLocaleString("en-US")} {rows.length === 1 ? "domain" : "domains"}. Select a domain to see the lines that decided.
       </p>
-      <div className="pc-table-wrap pc-scroll">
+      <div className="pc-table-wrap pc-scroll" tabIndex={0} role="region" aria-label="The verdicts of each domain">
         <table className="pc-table pc-verdict-table">
           <thead>
             <tr>
@@ -564,10 +684,11 @@ export function StudyTable({
           <tbody>
             {rows.slice(0, shown).flatMap((site) => {
               const isOpen = open === site.domain;
+              const counted = site.state !== "b" && site.state !== "u";
               const row = (
                 <tr key={site.domain} className={`pc-vrow${isOpen ? " pc-vrow-open" : ""}`} onClick={() => toggle(site.domain)}>
                   <td className="pc-vrank">{site.rank}</td>
-                  <td>
+                  <th scope="row">
                     <button
                       type="button"
                       className="pc-vsite"
@@ -579,19 +700,29 @@ export function StudyTable({
                     >
                       {site.domain}
                     </button>
-                  </td>
-                  {agents.map((candidate, index) => {
-                    const code = verdictOf(site, index);
-                    const verdict = VERDICTS.find((entry) => entry.code === code);
-                    return (
-                      <td key={candidate.token} className={`pc-vcell${index === agent ? " pc-vth-on" : ""}`} title={`${candidate.token}: ${verdict?.label ?? ""}`}>
-                        <span className={`pc-vglyph pc-v-${code === "." ? "o" : code}`}>
-                          {verdict?.glyph}
-                          <span className="pc-sr">{verdict?.label}</span>
-                        </span>
-                      </td>
-                    );
-                  })}
+                  </th>
+                  {counted ? (
+                    agents.map((candidate, index) => {
+                      const code = verdictOf(site, index);
+                      const verdict = VERDICTS.find((entry) => entry.code === code);
+                      return (
+                        <td
+                          key={candidate.token}
+                          className={`pc-vcell${index === agent ? " pc-vth-on" : ""}`}
+                          title={`${candidate.token}: ${verdict?.label ?? ""}`}
+                        >
+                          <span className={`pc-vglyph ${cellClass(code)}`}>
+                            {verdict?.glyph}
+                            <span className="pc-sr">{verdict?.label}</span>
+                          </span>
+                        </td>
+                      );
+                    })
+                  ) : (
+                    <td colSpan={agents.length} className={`pc-vstate pc-vstate-${site.state}`}>
+                      {site.state === "b" ? "Blocked at the edge: the rules are not known" : "Unreachable: no answer"}
+                    </td>
+                  )}
                 </tr>
               );
               return isOpen
@@ -617,6 +748,25 @@ export function StudyTable({
   );
 }
 
+/** The text of the answer of one site, for the detail of the table. */
+const answerText = (site: PackedSite, detail: StudySite): string => {
+  const status = `Status ${String(detail.status)}`;
+  switch (site.state) {
+    case "u":
+      return `Unreachable: ${detail.reason ?? "no response"}`;
+    case "b":
+      return `Blocked at the edge: ${detail.reason ?? status}. The study cannot tell the rules of the site.`;
+    case "m":
+      return `${status}: no file. The site states no rules, so each agent is permitted.`;
+    case "h":
+      return `${status}, but an HTML page and not a robots.txt file. The page states no rules, so each agent is permitted.`;
+    case "f":
+      return detail.status === 304
+        ? `Status 304: the file is the copy that the same run fetched before, through a different domain. ${String(detail.bytes ?? 0)} bytes, ${String(detail.groups ?? 0)} groups.`
+        : `${status}, ${String(detail.bytes ?? 0)} bytes, ${String(detail.groups ?? 0)} groups.`;
+  }
+};
+
 function SiteDetail({
   site,
   detail,
@@ -635,15 +785,7 @@ function SiteDetail({
     <div className="pc-vdetail-body">
       <dl className="pc-facts">
         <dt>Answer</dt>
-        <dd>
-          {site.state === "u"
-            ? `No answer: ${detail.reason ?? "no response"}`
-            : site.state === "m"
-              ? `Status ${String(detail.status)}: no file, so each path is permitted`
-              : site.state === "h"
-                ? `Status ${String(detail.status)}, but an HTML page and not a robots.txt`
-                : `Status ${String(detail.status)}, ${String(detail.bytes ?? 0)} bytes, ${String(detail.groups ?? 0)} groups`}
-        </dd>
+        <dd>{answerText(site, detail)}</dd>
         {detail.delay !== undefined ? (
           <>
             <dt>Crawl-delay</dt>
@@ -675,17 +817,17 @@ function SiteDetail({
         <ul className="pc-vlines">
           {decided.map(({ agent, index, lines }) => (
             <li key={agent.token}>
-              <span className={`pc-vglyph pc-v-${(site.codes[index] ?? ".") === "." ? "o" : (site.codes[index] ?? ".")}`} aria-hidden="true">
-                {VERDICTS.find((entry) => entry.code === site.codes[index])?.glyph}
+              <span className={`pc-vglyph ${cellClass(verdictOf(site, index))}`} aria-hidden="true">
+                {VERDICTS.find((entry) => entry.code === verdictOf(site, index))?.glyph}
               </span>
               <code className="pc-vlines-agent">{agent.token}</code>
               <pre>{lines}</pre>
             </li>
           ))}
         </ul>
-      ) : site.state === "u" ? null : (
+      ) : site.state === "f" ? (
         <p className="pc-chart-muted">No rule of the file applies to a page path for these agents.</p>
-      )}
+      ) : null}
     </div>
   );
 }

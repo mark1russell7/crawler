@@ -69,7 +69,10 @@
   background: var(--verdict-name);
 }
 .pc-teaser-grid .S {
-  background: var(--verdict-star);
+  background: repeating-linear-gradient(135deg, var(--verdict-name) 0 1.5px, var(--verdict-star-bg) 1.5px 3.5px);
+}
+.pc-teaser-grid .B {
+  background: var(--verdict-blocked);
 }
 .pc-teaser-grid .n {
   background: var(--verdict-welcome);
@@ -143,7 +146,7 @@
   gap: 2px;
   height: 10px;
   background-image: linear-gradient(90deg, var(--chart-grid) 1px, transparent 1px);
-  background-size: 25% 100%;
+  background-size: calc(100% / var(--ticks, 4)) 100%;
 }
 .pc-teaser-track span:last-child {
   border-radius: 0 3px 3px 0;
@@ -154,6 +157,11 @@
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   text-align: right;
+}
+.pc-teaser-note {
+  margin: 0;
+  font-size: var(--text-xs);
+  color: var(--color-ink-muted);
 }
 .pc-teaser-more {
   justify-self: start;
@@ -201,7 +209,7 @@
   padding: var(--space-3) var(--space-4);
   border-left: 3px solid transparent;
   transition:
-    opacity 0.3s,
+    color 0.3s,
     background-color 0.3s,
     border-color 0.3s;
 }
@@ -212,8 +220,26 @@
   border-left-color: var(--color-accent);
   background: var(--color-accent-wash);
 }
+/*
+ * A later step stays readable while the replay plays. Its text is the muted ink at full opacity
+ * (4.5:1 or more), and its border is dashed.
+ */
 .pc-replay-later {
-  opacity: 0.35;
+  border-left: 3px dashed var(--color-rule-strong);
+  color: var(--color-ink-muted);
+}
+.pc-replay-later .pc-replay-who,
+.pc-replay-later .pc-replay-who code,
+.pc-replay-later .pc-replay-net,
+.pc-replay-later .pc-replay-cite {
+  color: var(--color-ink-muted);
+}
+.pc-replay-later .pc-replay-check {
+  background: var(--color-ink-muted);
+}
+.pc-replay-later pre {
+  border-color: var(--color-rule);
+  color: var(--color-ink-muted);
 }
 .pc-replay-who {
   padding-top: 0.15rem;
@@ -269,15 +295,21 @@
 .pc-replay-answer {
   display: grid;
   gap: var(--space-2);
+  min-width: 0;
   font-size: var(--text-base);
+  overflow-wrap: anywhere;
 }
 .pc-replay-answer q {
   font-weight: 600;
+}
+.pc-replay-cite > span:last-child {
+  min-width: 0;
 }
 .pc-replay-cite {
   display: flex;
   gap: var(--space-2);
   align-items: baseline;
+  min-width: 0;
   font-size: var(--text-sm);
   color: var(--color-ink-secondary);
 }

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Segment } from "./sim.ts";
-import { SITES, Timeline, VirtualClock, askAgain, crawlImpolitely, crawlPolitely, endOf } from "./sim.ts";
+import { SITES, Timeline, VirtualClock, askAgain, crawlImpolitely, crawlPolitely, endOf, peakOf } from "./sim.ts";
 
 const run = async (crawl: typeof crawlPolitely) => {
   const clock = new VirtualClock();
@@ -48,6 +48,11 @@ describe("the polite crawl", () => {
     expect(endOf(timeline)).toBeLessThan(25_000);
   });
 
+  it("measures one request at a time to each host", async () => {
+    const timeline = await run(crawlPolitely);
+    expect(peakOf(timeline.segments, endOf(timeline))).toBe(1);
+  });
+
   it("answers the second time from the store, with no request", async () => {
     const timeline = await run(crawlPolitely);
     const sent = timeline.requests;
@@ -63,5 +68,15 @@ describe("the impolite crawl", () => {
     const wiki = requests(timeline.lane("en.wikipedia.org"));
     expect(new Set(wiki.map((request) => request.start))).toEqual(new Set([0]));
     expect(requests(timeline.lane("members.example"))).toHaveLength(3);
+  });
+
+  it("measures the requests at once to one host from the lanes", async () => {
+    const timeline = await run(crawlImpolitely);
+    expect(peakOf(timeline.segments, endOf(timeline))).toBe(Math.max(...SITES.map((site) => site.pages.length)));
+    // two requests in sequence do not overlap
+    expect(peakOf([
+      { kind: "request", host: "a", start: 0, end: 100, status: 200, row: 0 },
+      { kind: "request", host: "a", start: 100, end: 200, status: 200, row: 0 },
+    ], 300)).toBe(1);
   });
 });

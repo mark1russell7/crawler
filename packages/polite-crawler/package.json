@@ -2,6 +2,7 @@
   "$schema": "https://json.schemastore.org/package",
   "name": "polite-crawler",
   "version": "0.1.0",
+  "mcpName": "io.github.mark1russell7/polite-crawler",
   "description": "A polite web crawler for research and AI agents. It fetches a source once, keeps it, and reads it many times: robots.txt obeyed, one request per site, full-text search, an MCP server.",
   "keywords": [
     "crawler",
@@ -59,18 +60,20 @@
   },
   "files": [
     "build",
+    "!build/cli.d.mts",
     "README.md",
     "LICENSE"
   ],
   "engines": {
-    "node": ">=22.13"
+    "node": ">=22.19"
   },
   "scripts": {
     "build": "tsdown",
     "test": "vitest run",
     "test:watch": "vitest",
-    "typecheck": "tsc -p tsconfig.json && tsc -p tsconfig.test.json",
-    "prepublishOnly": "pnpm build"
+    "test:coverage": "vitest run --coverage",
+    "typecheck": "tsc -p tsconfig.json --noEmit --emitDeclarationOnly false && tsc -p tsconfig.test.json",
+    "prepublishOnly": "node ../../scripts/publish-guard.mjs && pnpm build"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.32.1",
@@ -90,7 +93,8 @@
   },
   "devDependencies": {
     "@mark1russell7/cue": "github:mark1russell7/cue",
-    "@types/node": "^26.6.4",
+    "@types/node": "^22.19.0",
+    "@vitest/coverage-v8": "5.0.3",
     "playwright-core": "^1.64.0",
     "tsdown": "^0.23.1",
     "typescript": "^7.0.2",

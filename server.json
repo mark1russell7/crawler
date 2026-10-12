@@ -1,0 +1,44 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.mark1russell7/polite-crawler",
+  "title": "polite-crawler",
+  "description": "A polite crawler for agents: obeys robots.txt, fetches each page once, finds and verifies quotes.",
+  "version": "0.1.0",
+  "websiteUrl": "https://mark1russell7.github.io/crawler/",
+  "repository": {
+    "url": "https://github.com/mark1russell7/crawler",
+    "source": "github",
+    "subfolder": "packages/polite-crawler"
+  },
+  "packages": [
+    {
+      "registryType": "npm",
+      "registryBaseUrl": "https://registry.npmjs.org",
+      "identifier": "polite-crawler",
+      "version": "0.1.0",
+      "runtimeHint": "npx",
+      "transport": {
+        "type": "stdio"
+      },
+      "packageArguments": [
+        {
+          "type": "positional",
+          "value": "mcp"
+        }
+      ],
+      "environmentVariables": [
+        {
+          "name": "POLITE_CRAWLER_DIR",
+          "description": "The folder of the store. The default is ~/.polite-crawler.",
+          "format": "filepath",
+          "isRequired": false
+        },
+        {
+          "name": "POLITE_CRAWLER_CONTACT",
+          "description": "An email address or URL for the From header of each request.",
+          "isRequired": false
+        }
+      ]
+    }
+  ]
+}

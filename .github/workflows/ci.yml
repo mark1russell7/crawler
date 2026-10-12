@@ -25,6 +25,12 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm typecheck
+      # The browser for the renderer test. Without one, the test skips and proves nothing.
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+      - run: pnpm --filter polite-crawler exec playwright-core install --with-deps chromium-headless-shell
       - run: pnpm test
       # The writing rules (ASD-STE100) of the README files and the doc comments
       - run: pnpm lint:ste

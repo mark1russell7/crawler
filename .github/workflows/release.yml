@@ -1,0 +1,43 @@
+name: Release
+
+# Publishes polite-crawler to npm when a version tag (for example v0.2.0) is pushed.
+# npm trusted publishing uses the OIDC token of GitHub Actions, so the workflow needs no npm
+# token, and the package gets a provenance statement. The owner sets the trusted publisher one
+# time on npmjs.com: the repository mark1russell7/crawler and the workflow file release.yml.
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Test and publish to npm
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+          registry-url: "https://registry.npmjs.org"
+      - name: The tag agrees with the version of the package
+        run: test "v$(node -p 'require("./packages/polite-crawler/package.json").version')" = "$GITHUB_REF_NAME"
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck
+      - run: pnpm test
+      - run: pnpm lint:ste
+      - run: pnpm --filter polite-crawler build
+      # Trusted publishing needs npm 11.5.1 or later
+      - run: npm install --global npm@latest
+      # pnpm applies the publishConfig fields (the build/ entry points) that npm ignores
+      - run: pnpm --filter polite-crawler publish --provenance --access public --no-git-checks

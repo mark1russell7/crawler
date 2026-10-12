@@ -1,0 +1,108 @@
+{
+  "$schema": "https://json.schemastore.org/package",
+  "name": "polite-crawler",
+  "version": "0.1.0",
+  "description": "A polite web crawler for research and AI agents. It fetches a source once, keeps it, and reads it many times: robots.txt obeyed, one request per site, full-text search, an MCP server.",
+  "keywords": [
+    "crawler",
+    "web-crawler",
+    "polite-crawler",
+    "robots.txt",
+    "rfc9309",
+    "scraper",
+    "web-scraping",
+    "fetch",
+    "cache",
+    "mcp",
+    "mcp-server",
+    "model-context-protocol",
+    "claude",
+    "ai-agent",
+    "llm",
+    "research",
+    "full-text-search",
+    "sqlite",
+    "fts5",
+    "playwright",
+    "headless",
+    "json-ld",
+    "schema.org",
+    "opening-hours",
+    "content-signals",
+    "aipref"
+  ],
+  "homepage": "https://mark1russell7.github.io/crawler/",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mark1russell7/crawler.git",
+    "directory": "packages/polite-crawler"
+  },
+  "bugs": {
+    "url": "https://github.com/mark1russell7/crawler/issues"
+  },
+  "license": "MIT",
+  "author": "Mark Russell (https://github.com/mark1russell7)",
+  "type": "module",
+  "main": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./package.json": "./package.json"
+  },
+  "bin": {
+    "polite-crawler": "./src/cli.ts"
+  },
+  "files": [
+    "build",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=22.13"
+  },
+  "scripts": {
+    "build": "tsdown",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc -p tsconfig.json && tsc -p tsconfig.test.json",
+    "prepublishOnly": "pnpm build"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.32.1",
+    "@mozilla/readability": "^0.6.0",
+    "linkedom": "^0.18.13",
+    "undici": "^8.11.2",
+    "unpdf": "^1.8.1",
+    "zod": "^4.6.6"
+  },
+  "peerDependencies": {
+    "playwright-core": ">=1.40"
+  },
+  "peerDependenciesMeta": {
+    "playwright-core": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@mark1russell7/cue": "github:mark1russell7/cue",
+    "@types/node": "^26.6.4",
+    "playwright-core": "^1.64.0",
+    "tsdown": "^0.23.1",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.3"
+  },
+  "publishConfig": {
+    "access": "public",
+    "main": "./build/index.mjs",
+    "types": "./build/index.d.mts",
+    "bin": {
+      "polite-crawler": "./build/cli.mjs"
+    },
+    "exports": {
+      ".": {
+        "types": "./build/index.d.mts",
+        "default": "./build/index.mjs"
+      },
+      "./package.json": "./package.json"
+    }
+  }
+}

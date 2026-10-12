@@ -129,13 +129,28 @@ export const bodyEncoding = (bytes: Uint8Array, contentType: string | null): str
 };
 
 /**
+ * These are the characters of the bytes 0x80 to 0x9F in windows-1252, from the WHATWG index.
+ * Node.js 22 decodes windows-1252 as ISO-8859-1, which gives a control character for each of
+ * these bytes. A later runtime gives the correct characters, and then the map changes nothing.
+ */
+const WINDOWS_1252_HIGH = [
+  0x20ac, 0x81, 0x201a, 0x192, 0x201e, 0x2026, 0x2020, 0x2021, 0x2c6, 0x2030, 0x160, 0x2039, 0x152, 0x8d,
+  0x17d, 0x8f, 0x90, 0x2018, 0x2019, 0x201c, 0x201d, 0x2022, 0x2013, 0x2014, 0x2dc, 0x2122, 0x161, 0x203a,
+  0x153, 0x9d, 0x17e, 0x178,
+];
+const C1_CONTROLS = new RegExp(`[${String.fromCharCode(0x80)}-${String.fromCharCode(0x9f)}]`, "g");
+const repairWindows1252 = (text: string): string =>
+  text.replace(C1_CONTROLS, (char) => String.fromCharCode(WINDOWS_1252_HIGH[char.charCodeAt(0) - 0x80]!));
+
+/**
  * This function decodes the body of a response. It reads the encoding from the byte order mark,
  * the `Content-Type` header and the document, with `bodyEncoding`. It does not throw.
  */
 export const decodeBody = (bytes: Uint8Array, contentType: string | null): string => {
   const encoding = bodyEncoding(bytes, contentType);
   try {
-    return new TextDecoder(encoding, { fatal: false }).decode(bytes);
+    const text = new TextDecoder(encoding, { fatal: false }).decode(bytes);
+    return encoding === "windows-1252" ? repairWindows1252(text) : text;
   } catch {
     // a runtime with a small ICU knows only a few encodings
     return new TextDecoder("utf-8", { fatal: false }).decode(bytes);

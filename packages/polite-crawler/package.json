@@ -47,6 +47,7 @@
   "main": "./src/index.ts",
   "exports": {
     ".": "./src/index.ts",
+    "./mcp": "./src/mcp.ts",
     "./robots": "./src/robots.ts",
     "./hours": "./src/hours.ts",
     "./html": "./src/html.ts",
@@ -112,6 +113,10 @@
       ".": {
         "types": "./build/index.d.mts",
         "default": "./build/index.mjs"
+      },
+      "./mcp": {
+        "types": "./build/mcp.d.mts",
+        "default": "./build/mcp.mjs"
       },
       "./robots": {
         "types": "./build/robots.d.mts",

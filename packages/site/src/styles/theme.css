@@ -687,6 +687,14 @@ header.header {
   font-size: var(--text-sm);
   color: var(--color-ink-muted);
 }
+.pc-notes {
+  margin: 0;
+  padding-left: 1.2rem;
+  font-size: var(--text-sm);
+}
+.pc-notes li {
+  margin: 0;
+}
 
 /* the opening-hours playground */
 .pc-readings {

@@ -53,4 +53,30 @@ export const PAGE_SAMPLES: ReadonlyArray<{ readonly name: string; readonly url: 
 </body>
 </html>`,
   },
+  {
+    name: "A bot check",
+    url: "https://shop.example/product/7",
+    html: `<!doctype html>
+<html lang="en">
+<head><title>Just a moment...</title></head>
+<body>
+  <h1>shop.example</h1>
+  <p>Checking your browser before you access shop.example.</p>
+  <script src="/cdn-cgi/challenge-platform/h/b/orchestrate/chl_page/v1"></script>
+</body>
+</html>`,
+  },
+  {
+    name: "A page that moved",
+    url: "https://old.example/menu",
+    html: `<!doctype html>
+<html lang="en">
+<head>
+  <title>Our menu moved</title>
+  <meta http-equiv="refresh" content="0; url=https://old.example/food/menu">
+  <link rel="canonical" href="https://old.example/food/menu">
+</head>
+<body><p>The menu moved. <a href="/food/menu">Open the new menu</a>.</p></body>
+</html>`,
+  },
 ];

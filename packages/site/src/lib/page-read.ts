@@ -22,6 +22,14 @@ export interface PageRead {
   readonly needsRender: boolean;
   readonly renderReason: string | null;
   readonly visibleChars: number;
+  /** the canonical URL of the page, when it is on the same site */
+  readonly canonical: string | null;
+  /** the target of a meta refresh that sends the reader on at once */
+  readonly redirect: string | null;
+  /** the bot check or the firewall that sent its page in place of the content */
+  readonly blocked: string | null;
+  /** what the reader left out */
+  readonly notes: readonly string[];
 }
 
 const BLOCKS = /<script\b[^>]*type\s*=\s*["']?application\/ld\+json["']?[^>]*>([\s\S]*?)<\/script>/gi;
@@ -52,6 +60,10 @@ export const readPage = (html: string, url: string): PageRead => {
       needsRender: page.needsRender,
       renderReason: page.renderReason ?? null,
       visibleChars: page.visibleChars,
+      canonical: page.canonical,
+      redirect: page.redirect,
+      blocked: page.blocked,
+      notes: page.notes,
     };
   } catch (error) {
     return {
@@ -69,6 +81,10 @@ export const readPage = (html: string, url: string): PageRead => {
       needsRender: false,
       renderReason: null,
       visibleChars: 0,
+      canonical: null,
+      redirect: null,
+      blocked: null,
+      notes: [],
     };
   }
 };

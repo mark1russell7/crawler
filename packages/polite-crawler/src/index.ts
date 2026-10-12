@@ -33,7 +33,7 @@ export type { Clock, Paced } from "./politeness.ts";
 export { HostScheduler, HostStopped, backoffMs, realClock } from "./politeness.ts";
 export type { CaptureRecord, RecordInput } from "./record.ts";
 export { makeRecord, sha256, stableStringify } from "./record.ts";
-export type { PlaywrightRenderer, Renderer, Rendered } from "./render.ts";
+export type { PlaywrightRenderer, RenderOptions, Renderer, Rendered } from "./render.ts";
 export { playwrightRenderer } from "./render.ts";
 export type { Robots, RobotsDecision, RobotsGroup, RobotsRule } from "./robots.ts";
 export {

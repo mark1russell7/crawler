@@ -22,11 +22,23 @@ export interface Rendered {
   readonly headers: Readonly<Record<string, string>>;
 }
 
+/** These are the options of one render. */
+export interface RenderOptions {
+  readonly userAgent: string;
+  /** This value is the deadline of the whole render, in milliseconds. */
+  readonly timeoutMs: number;
+  /** These headers go with each request of the page, for example the `From` header. */
+  readonly headers?: Readonly<Record<string, string>> | undefined;
+  /**
+   * This function decides each request that the page makes, the first navigation included. When
+   * it gives false, the browser does not send the request. The crawler uses it to apply the
+   * egress policy and robots.txt to the requests of the page.
+   */
+  readonly allowRequest?: ((url: string) => Promise<boolean> | boolean) | undefined;
+}
+
 export interface Renderer {
-  render(
-    url: string,
-    options: { readonly userAgent: string; readonly timeoutMs: number },
-  ): Promise<Rendered>;
+  render(url: string, options: RenderOptions): Promise<Rendered>;
   close(): Promise<void>;
 }
 
@@ -127,7 +139,7 @@ export const playwrightRenderer = (
 
   async function renderPage(
     url: string,
-    { userAgent, timeoutMs }: { readonly userAgent: string; readonly timeoutMs: number },
+    { userAgent, timeoutMs }: RenderOptions,
   ): Promise<Rendered> {
     browser ??= launch().catch((error: unknown) => {
       // a failed launch is not kept, so the next page tries again

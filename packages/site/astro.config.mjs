@@ -16,7 +16,7 @@ export default defineConfig({
     starlight({
       title: "polite-crawler",
       description:
-        "A polite web crawler for research and AI agents. It fetches a source once, keeps it, and reads it many times: robots.txt obeyed, one request per site, full-text search and an MCP server.",
+        "A polite web crawler and MCP server for AI agents. It obeys robots.txt, sends one request at a time to each site, and keeps each page for search and citations.",
       head: [
         { tag: "meta", attrs: { property: "og:image", content: card } },
         { tag: "meta", attrs: { property: "og:image:width", content: "1200" } },
@@ -56,12 +56,16 @@ export default defineConfig({
         "./src/styles/home.css",
       ],
       components: { Hero: "./src/components/Hero.astro" },
+      // the title for search, the structured data and the description of the study (src/routeData.ts)
+      routeMiddleware: "./src/routeData.ts",
+      // the date of the last commit of each page (the Pages workflow needs the full history for it)
+      lastUpdated: true,
       sidebar: [
         { label: "Start", items: ["guide/quick-start", "guide/mcp", "guide/how-it-works", "guide/politeness", "guide/compare"] },
         { label: "Tools", items: ["tools/robots-txt-tester", "tools/page-reader", "tools/opening-hours"] },
         { label: "Field notes", items: ["notes/robots-txt-ai-agents", "notes/restaurant-websites"] },
         { label: "Reference", items: ["reference/api", "reference/cli"] },
-        { label: "For site owners", items: ["bot"] },
+        { label: "For site owners", items: ["bot", "block-ai-training-crawlers"] },
       ],
     }),
     react(),

@@ -437,6 +437,63 @@ export const equalJitterMs = (
   return Math.floor(step / 2 + random() * (step / 2));
 };
 
+/** These are the facts of one request that set the rest of its host. */
+export interface RestInput {
+  /** This value is the kind of the request: a web page, a documented API, or a render in the browser. */
+  readonly kind: "page" | "api" | "render";
+  /** This value is the duration of the request, in milliseconds. */
+  readonly elapsedMs: number;
+  /** This value is the `crawl-delay` of robots.txt, in seconds. */
+  readonly crawlDelaySeconds?: number | undefined;
+  /** This value is the documented pace of the source. It replaces the interval of the policy for the kind. */
+  readonly minIntervalMs?: number | undefined;
+  /** This value is the wait that the server asked for (`Retry-After`). */
+  readonly retryAfterMs?: number | undefined;
+}
+
+/** The rest of a host after a request, and the reason for its length. */
+export interface Rest {
+  readonly ms: number;
+  readonly reason: "pace" | "slow" | "retry-after" | "crawl-delay";
+}
+
+/**
+ * This function gives the rest of a host after one request, as the crawler calculates it. These
+ * are the parts:
+ *
+ * - The interval of the kind (3 seconds for a page), or the documented pace of the source.
+ * - The `crawl-delay` of robots.txt, up to `crawlDelayCapMs`, when it is longer.
+ * - After a page or a render, `elapsedFactor` times the duration of the request, up to `elapsedCapMs`.
+ * - The `Retry-After` of the server, when it is longer.
+ *
+ * The backoff after an error or a request to wait comes on top, with jitter. The function is
+ * pure, so a simulation and a study can use the pace of the crawler.
+ */
+export const restAfter = (policy: PolitenessPolicy, input: RestInput): Rest => {
+  const interval =
+    input.minIntervalMs ??
+    (input.kind === "page"
+      ? policy.pageIntervalMs
+      : input.kind === "api"
+        ? policy.apiIntervalMs
+        : policy.renderIntervalMs);
+  const crawlDelay = Math.min(policy.crawlDelayCapMs, Math.max(0, (input.crawlDelaySeconds ?? 0) * 1000));
+  let ms = Math.max(interval, crawlDelay);
+  let reason: Rest["reason"] = crawlDelay > interval ? "crawl-delay" : "pace";
+  if (input.kind !== "api") {
+    const slow = Math.min(policy.elapsedCapMs, policy.elapsedFactor * Math.max(0, input.elapsedMs));
+    if (slow > ms) {
+      ms = slow;
+      reason = "slow";
+    }
+  }
+  if (input.retryAfterMs !== undefined && input.retryAfterMs > ms) {
+    ms = input.retryAfterMs;
+    reason = "retry-after";
+  }
+  return { ms, reason };
+};
+
 /**
  * The politeness policy holds each limit of the crawler. Each value has a default, and a host can
  * have values of its own. The times are in milliseconds.

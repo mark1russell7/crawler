@@ -35,6 +35,18 @@ afterAll(async () => {
   await removeDir(work);
 });
 
+describe("the command line: warnings", () => {
+  it("removes only the experimental warning of node:sqlite from the standard error", async () => {
+    // a different warning at the end of the run, after the command started, still shows
+    const other =
+      'let shown = false; process.on("beforeExit", () => { if (!shown) { shown = true; process.emitWarning("OTHER-WARNING", "ExperimentalWarning"); } });';
+    const options = `${process.env["NODE_OPTIONS"] ?? ""} --import=data:text/javascript,${encodeURIComponent(other)}`.trim();
+    const ran = await runCli(["find", "bread", "--dir", store], { env: childEnv({ NODE_OPTIONS: options }) });
+    expect(ran.stderr).not.toContain("SQLite is an experimental feature");
+    expect(ran.stderr).toContain("OTHER-WARNING");
+  }, SLOW);
+});
+
 describe("the command line: help and usage errors", () => {
   it("prints the version and the help, with exit code 0", async () => {
     const [long, short, help] = await Promise.all([runCli(["--version"]), runCli(["-v"]), runCli(["--help"])]);

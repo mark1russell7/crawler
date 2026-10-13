@@ -126,6 +126,9 @@ export const normalizePath = (value: string): string => {
   return out;
 };
 
+/** This function tells if a text is a product token: letters, `_` and `-` only, and one or more (RFC 9309, section 2.2.1). */
+export const isProductToken = (value: string): boolean => /^[A-Za-z_-]+$/.test(value);
+
 /** This function gives the first product token of a user agent: `Googlebot/2.1` gives `googlebot`. */
 const tokenOf = (value: string): string =>
   (/^[A-Za-z_-]+/.exec(value.trim())?.[0] ?? "").toLowerCase();

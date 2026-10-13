@@ -34,7 +34,7 @@ import type { Rendered, Renderer } from "./render.ts";
 import type { RefusedReason } from "./render.ts";
 import { NO_PLAYWRIGHT, RenderRefused } from "./render.ts";
 import type { Robots, RobotsDecision } from "./robots.ts";
-import { decide, robotsFromResponse, robotsFromStatus, signalsFor, unreachableRobots } from "./robots.ts";
+import { decide, isProductToken, robotsFromResponse, robotsFromStatus, signalsFor, unreachableRobots } from "./robots.ts";
 import type { AiInput, Signals } from "./signals.ts";
 import { NO_SIGNALS, metaSignals, readSignals } from "./signals.ts";
 import { cacheKeyOf } from "./urls.ts";
@@ -295,7 +295,6 @@ const ROBOTS_BYTES = 512 * 1024;
 const MAX_STOP_MS = 30 * 24 * 60 * 60 * 1000;
 const LAST_DATE_MS = 8.64e15;
 const WEB_PROTOCOLS: ReadonlySet<string> = new Set(["http:", "https:"]);
-const PRODUCT_TOKEN = /^[A-Za-z_-]+$/;
 const HEADER_TEXT = /^[\t -~]*$/;
 const PERMANENT_REDIRECTS: ReadonlySet<number> = new Set([301, 308]);
 const HEURISTIC_STATUSES: ReadonlySet<number> = new Set([
@@ -842,7 +841,7 @@ export class Crawler {
   private renderOff: string | undefined;
 
   constructor(private readonly options: CrawlerOptions) {
-    if (!PRODUCT_TOKEN.test(options.token)) {
+    if (!isProductToken(options.token)) {
       throw new Error(
         `the token "${options.token}" is not a product token: use only letters, "_" and "-" (RFC 9309)`,
       );
@@ -1170,7 +1169,7 @@ export class Crawler {
     const refused = egressRefusal(this.egress, target.hostname);
     if (refused !== undefined) return answer(refused);
     const tokens = [this.options.token, ...(spec.onBehalfOf ?? [])];
-    const badToken = tokens.find((token) => !PRODUCT_TOKEN.test(token));
+    const badToken = tokens.find((token) => !isProductToken(token));
     if (spec.mode === "page" && badToken !== undefined) return answer(`not a valid product token: "${badToken}"`);
     const host = hostKey(target);
     const policy = this.policyOf(target);

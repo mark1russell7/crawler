@@ -31,7 +31,7 @@ The function opens a crawler on a folder and gives a `PoliteCrawler`.
 | `onEvent` | `(event) => void` | none | A function that gets each request, response, wait, stop and skip. |
 | `extractors` | `Record<string, Extractor>` | the recipe `page` | The readers of the recipes of an application. |
 
-`createRuntime(options)` takes the same options, and your own `log`, `blobs` and `index` in place of `dir`. It gives the parts of the runtime that `openCrawler` uses.
+`createRuntime(options)` takes the same options, and your own `log`, `blobs` and `index` in place of `dir`. It gives the parts of the runtime that `openCrawler` uses. Then use `catchUpIndex(runtime)`, as `openCrawler` does at open. It rebuilds a stale index. It also gives an index that is behind the log the captures that it missed.
 
 ## `PoliteCrawler`
 

@@ -5,7 +5,7 @@ import type { BlobStore } from "./blobs.ts";
 import { FileBlobStore } from "./blobs.ts";
 import type { CrawlEvent } from "./crawler.ts";
 import { Crawler } from "./crawler.ts";
-import type { DocVersion, Found } from "./docs.ts";
+import type { DocVersion, Found, ReadingIndex } from "./docs.ts";
 import { DocIndex } from "./docs.ts";
 import type { EgressOptions } from "./egress.ts";
 import { SqliteHostStateStore } from "./hoststate.ts";
@@ -26,6 +26,7 @@ import type {
 } from "./runtime.ts";
 import {
   Extractors,
+  catchUpIndex,
   fetchPage,
   findDocuments,
   readDocument,
@@ -93,8 +94,8 @@ export interface RuntimeOptions {
   readonly log?: CaptureLog | undefined;
   /** This blob store replaces `<dir>/blobs`. */
   readonly blobs?: BlobStore | undefined;
-  /** This index replaces `<dir>/index.sqlite`. */
-  readonly index?: DocIndex | undefined;
+  /** This index replaces `<dir>/index.sqlite`. A runtime takes any `ReadingIndex`. */
+  readonly index?: ReadingIndex | undefined;
   /**
    * This store keeps the pace and the stops of each host. The default with `dir` is a SQLite file
    * (`hosts.sqlite`), so the processes on one store share the pace. With no `dir`, it is in memory.
@@ -291,7 +292,11 @@ export interface PoliteCrawler {
   verify(doc: string, quote: string, options?: VerifyOptions): Promise<VerifyResult>;
   /** This method gives the versions of a stored document, the newest first. A held-back version shows no title. */
   versions(doc: string, options?: { readonly limit?: number }): Promise<DocVersion[]>;
-  /** This method builds the index again from the capture log and the stored bodies, with no request. */
+  /**
+   * This method builds the index again from the capture log and the stored bodies, with no request.
+   * When the crawler rebuilt a stale index at open, the first reindex gives the counts of that
+   * rebuild, unless a fetch came before it.
+   */
   reindex(): Promise<ReindexResult>;
   /** This method closes the browser, the log files and the index. A second close does nothing. */
   close(): Promise<void>;
@@ -301,7 +306,8 @@ export interface PoliteCrawler {
  * This function opens a crawler on a folder. The folder keeps the capture log (`captures/`), the
  * response bodies (`blobs/`), the search index (`index.sqlite`) and the state of each host
  * (`hosts.sqlite`). The index is a projection: `reindex` makes it again from the log and the bodies.
- * An index of an earlier version opens empty, and the crawler rebuilds it first.
+ * At open, `catchUpIndex` rebuilds an index of an earlier version, and gives an index that is
+ * behind the log the captures that it missed.
  *
  * Each method gives a promise, and none throws before its promise. After `close`, each method
  * rejects.
@@ -309,11 +315,19 @@ export interface PoliteCrawler {
 export const openCrawler = (options: OpenOptions): PoliteCrawler => {
   const runtime = createRuntime(options);
   let closed = false;
-  // an index that opened empty (a new schema, or a deleted file) is rebuilt from a log that exists
-  const ready: Promise<unknown> =
-    runtime.index.stale && existsSync(join(options.dir, "captures"))
-      ? reindex(runtime).catch(() => undefined)
-      : Promise.resolve();
+  // the rebuild at open, which the first reindex() gives when no fetch came before it
+  let rebuilt: ReindexResult | undefined;
+  const ready: Promise<unknown> = existsSync(join(options.dir, "captures"))
+    ? catchUpIndex(runtime).then(
+        (done) => {
+          if (done?.mode === "rebuild") {
+            const { mode, ...counts } = done;
+            rebuilt = mode === "rebuild" ? counts : undefined;
+          }
+        },
+        () => undefined,
+      )
+    : Promise.resolve();
   const live = async (): Promise<void> => {
     if (closed) throw new Error("the crawler is closed");
     await ready;
@@ -323,6 +337,7 @@ export const openCrawler = (options: OpenOptions): PoliteCrawler => {
     runtime,
     async fetch(url, fetchOptions = {}) {
       await live();
+      rebuilt = undefined;
       const maxAge = fetchOptions.maxAge ?? "24h";
       return fetchPage(runtime, url, {
         render: fetchOptions.render ?? "auto",
@@ -355,7 +370,10 @@ export const openCrawler = (options: OpenOptions): PoliteCrawler => {
     },
     async reindex() {
       await live();
-      return reindex(runtime);
+      // the index that the open rebuilt is the index that a second replay of the log makes
+      const done = rebuilt;
+      rebuilt = undefined;
+      return done ?? reindex(runtime);
     },
     async close() {
       closed = true;

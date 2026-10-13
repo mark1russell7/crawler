@@ -418,22 +418,52 @@ const toVersion = (row: VersionRow): DocVersion => ({
 
 const messageOf = (error: unknown): string => (error instanceof Error ? error.message : String(error));
 
+/**
+ * A reading index keeps the documents, their versions, the search and the cache entries. `DocIndex`
+ * is the SQLite index. A runtime takes any object with these methods, for example a search index
+ * of a different kind that wraps a `DocIndex`.
+ */
+export interface ReadingIndex {
+  /** This value is true when the index opened empty and a rebuild did not fill it yet. */
+  readonly stale: boolean;
+  get(doc: string): Doc | undefined;
+  upsert(input: DocInput, now: string): Doc;
+  versions(doc: string, options?: { readonly limit?: number }): DocVersion[];
+  versionText(doc: string, capture?: string): VersionText | undefined;
+  earlierTexts(doc: string, options?: { readonly limit?: number }): VersionText[];
+  docsOfCapture(capture: string): Doc[];
+  /** This method tells if a capture gave a version of a document. */
+  hasVersion(capture: string): boolean;
+  find(q: string, options: { readonly limit: number; readonly kind?: string | null }): Found[];
+  rankWithin(q: string, docs: readonly string[]): Array<{ readonly doc: string; readonly score: number }>;
+  latest(url: string, variant?: Variant): Latest | undefined;
+  setLatest(entry: Latest): void;
+  /** This method gives the newest fetch time of the cache entries, or undefined for an empty index. */
+  newestFetch(): string | undefined;
+  counts(): Counts;
+  beginRebuild(options?: { readonly batch?: number }): IndexBuild;
+}
+
 /** These are the options of a reading index. */
 export interface DocIndexOptions {
   /** This value is the time in milliseconds that a write waits for the lock of a different process. The default is 10 seconds. */
   readonly busyTimeoutMs?: number | undefined;
 }
 
-export class DocIndex {
+export class DocIndex implements ReadingIndex {
   private readonly db: DatabaseSync;
   private readonly statements = new Map<string, StatementSync>();
   private depth = 0;
   private closed = false;
+  private empty: boolean;
+
   /**
    * This value is true when the file had a different schema, or no tables, so the index opened
-   * empty. A store with captures then needs `reindex`.
+   * empty. A store with captures then needs `reindex`. The commit of a rebuild makes it false.
    */
-  readonly stale: boolean;
+  get stale(): boolean {
+    return this.empty;
+  }
 
   constructor(
     readonly path: string,
@@ -458,7 +488,7 @@ export class DocIndex {
     if (path !== ":memory:") this.db.exec("PRAGMA journal_mode = WAL;");
     // the index is a projection, so a power cut can cost its last transactions and nothing else
     this.db.exec("PRAGMA synchronous = NORMAL;");
-    this.stale = this.write(() => this.prepareSchema());
+    this.empty = this.write(() => this.prepareSchema());
   }
 
   /** This method makes the tables of the schema. It gives true when the index opened empty. */
@@ -895,6 +925,22 @@ export class DocIndex {
     });
   }
 
+  /** This method tells if a capture gave a version of a document. */
+  hasVersion(capture: string): boolean {
+    return this.live(
+      (n) => this.stmt(`SELECT 1 AS found FROM ${n.versions} WHERE capture = ? LIMIT 1`).get(capture) !== undefined,
+    );
+  }
+
+  /** This method gives the newest fetch time of the cache entries, or undefined for an empty index. */
+  newestFetch(): string | undefined {
+    return this.live(
+      (n) =>
+        (this.stmt(`SELECT max(fetched_at) AS newest FROM ${n.latest}`).get() as { newest: string | null } | undefined)
+          ?.newest ?? undefined,
+    );
+  }
+
   /** This method gives the current documents that a capture gave. */
   docsOfCapture(capture: string): Doc[] {
     return this.live((n) =>
@@ -1159,6 +1205,7 @@ export class DocIndex {
           this.setMeta("generation", String(generation));
           this.db.prepare("DELETE FROM index_meta WHERE key = ?").run(`building:${String(generation)}`);
           this.dropGeneration(current);
+          this.empty = false;
           return {
             docs: (this.db.prepare(`SELECT count(*) AS n FROM ${n.docs}`).get() as { n: number }).n,
             urls: (this.db.prepare(`SELECT count(*) AS n FROM ${n.latest}`).get() as { n: number }).n,

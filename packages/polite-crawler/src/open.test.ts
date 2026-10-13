@@ -3,8 +3,10 @@ import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { MockAgent } from "undici";
 import { afterEach, describe, expect, it } from "vitest";
+import { DocIndex } from "./docs.ts";
 import type { PoliteCrawler } from "./open.ts";
-import { defaultUserAgent, durationMs, openCrawler } from "./open.ts";
+import { createRuntime, defaultUserAgent, durationMs, openCrawler } from "./open.ts";
+import { catchUpIndex, fetchPage } from "./runtime.ts";
 import { fakeClock, removeDir, tempDir } from "./test-helpers.ts";
 
 const HTML = `<!doctype html><html lang="en"><head><title>Forno Esempio</title>
@@ -120,6 +122,77 @@ describe("openCrawler", () => {
     crawler = openCrawler({ dir: dir!, renderer: false, clock: fakeClock() });
     const read = await crawler.read(page.doc!);
     expect(read.text).toContain("Forno Esempio");
+  });
+
+  it("gives the first reindex the counts of the rebuild at open, and replays the log one time", async () => {
+    const polite = await setup();
+    await polite.fetch("https://bakery.example/");
+    await polite.close();
+    const path = join(dir!, "index.sqlite");
+    for (const suffix of ["-wal", "-shm", ""]) await removeDir(`${path}${suffix}`);
+    crawler = openCrawler({ dir: dir!, renderer: false, clock: fakeClock() });
+    // the rebuild at open began its scan already: count the scans after it
+    let scans = 0;
+    const captures = crawler.runtime.captures;
+    const scan = captures.scan.bind(captures);
+    (captures as { scan: typeof scan }).scan = (...args) => {
+      scans += 1;
+      return scan(...args);
+    };
+    const first = await crawler.reindex();
+    expect(first).toMatchObject({ docs: 1, urls: 2 });
+    expect(first).not.toHaveProperty("mode");
+    expect(scans).toBe(0);
+    // a later reindex replays the log
+    expect(await crawler.reindex()).toEqual(first);
+    expect(scans).toBe(1);
+  });
+
+  it("gives an index at open the captures that a different writer logged and did not index", async () => {
+    dir = await tempDir("open");
+    const agent = new MockAgent();
+    agent.disableNetConnect();
+    const site = agent.get("https://bakery.example");
+    site.intercept({ path: "/robots.txt" }).reply(200, "User-agent: *\nAllow: /\n").persist();
+    site
+      .intercept({ path: (path) => path !== "/robots.txt" })
+      .reply(200, HTML, { headers: { "content-type": "text/html; charset=utf-8" } })
+      .persist();
+    const clock = fakeClock();
+    const first = createRuntime({ dir, renderer: false, dispatcher: agent, clock });
+    await fetchPage(first, "https://bakery.example/", { render: "never" });
+    await first.close();
+    // a second writer logs a capture and stops before the index of the store has it: its index is in memory
+    const lost = createRuntime({ dir, index: new DocIndex(":memory:"), renderer: false, dispatcher: agent, clock });
+    const menu = await fetchPage(lost, "https://bakery.example/menu", { render: "never" });
+    await lost.close();
+
+    const store = createRuntime({ dir, renderer: false, clock });
+    try {
+      expect(store.index.get(menu.doc!)).toBeUndefined();
+      const caught = await catchUpIndex(store);
+      expect(caught).toMatchObject({ mode: "tail", failed: 0, missing: 0 });
+      expect(caught!.captures).toBeGreaterThanOrEqual(1);
+      expect(store.index.get(menu.doc!)?.text).toContain("Forno Esempio");
+      expect(store.index.latest("https://bakery.example/menu")).toMatchObject({ capture: menu.capture });
+      // the index missed nothing now
+      expect(await catchUpIndex(store)).toBeUndefined();
+    } finally {
+      await store.close();
+    }
+
+    // an application with createRuntime rebuilds a stale index with the same call, one time
+    const path = join(dir, "index.sqlite");
+    for (const suffix of ["-wal", "-shm", ""]) await removeDir(`${path}${suffix}`);
+    const fresh = createRuntime({ dir, renderer: false, clock });
+    try {
+      expect(fresh.index.stale).toBe(true);
+      expect(await catchUpIndex(fresh)).toMatchObject({ mode: "rebuild", docs: 2 });
+      expect(fresh.index.stale).toBe(false);
+      expect(await catchUpIndex(fresh)).toBeUndefined();
+    } finally {
+      await fresh.close();
+    }
   });
 
   it.skipIf(process.platform === "win32")("refuses a part of the store that is a symbolic link", async () => {

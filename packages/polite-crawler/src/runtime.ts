@@ -1,6 +1,6 @@
 import type { BlobStore } from "./blobs.ts";
 import type { Crawler, FetchRequest, Fetched, RenderRequest } from "./crawler.ts";
-import type { Doc, DocIndex, ExtractedDoc, Found, IndexBuild, Variant } from "./docs.ts";
+import type { Doc, DocInput, ExtractedDoc, Found, Latest, ReadingIndex, Variant } from "./docs.ts";
 import { locate } from "./docs.ts";
 import type { PageExtract } from "./html.ts";
 import { extractPage, typesOf } from "./html.ts";
@@ -214,7 +214,8 @@ export class Extractors {
 
 export interface CrawlRuntime {
   readonly crawler: Crawler;
-  readonly index: DocIndex;
+  /** This index keeps the documents and the cache entries. `DocIndex` is the SQLite index. */
+  readonly index: ReadingIndex;
   readonly blobs: BlobStore;
   /** This reader is the read side of the capture log. The function `reindex` replays it. */
   readonly captures: CaptureReader;
@@ -872,8 +873,26 @@ const captureTarget = (
   return { url: payload.url, variant: payload.rendered === true ? "rendered" : "plain" };
 };
 
+/** A replay writes into a new generation of the index (a rebuild), or into the index itself (the tail of the log). */
+interface ReplayTarget {
+  upsert(input: DocInput, now: string): unknown;
+  setLatest(entry: Latest): void;
+  latest(url: string, variant?: Variant): Latest | undefined;
+}
+
+/** These are the counts of a replay. */
+interface ReplayTally {
+  captures: number;
+  failed: number;
+  missing: number;
+  readonly unknown: Set<string>;
+  readonly errors: Array<{ readonly capture: string; readonly error: string }>;
+}
+
+const newTally = (): ReplayTally => ({ captures: 0, failed: 0, missing: 0, unknown: new Set(), errors: [] });
+
 /** This function replays the cache entry of one capture, as the crawler made it at the time of the fetch. */
-const replayLatest = (build: IndexBuild, envelope: CaptureRecord, payload: CapturePayload): void => {
+const replayLatest = (build: ReplayTarget, envelope: CaptureRecord, payload: CapturePayload): void => {
   const { url, variant } = captureTarget(payload);
   const fetchedAt = payload.fetched_at ?? envelope.received_at;
   if (payload.outcome === "redirect") {
@@ -937,6 +956,70 @@ const replayLatest = (build: IndexBuild, envelope: CaptureRecord, payload: Captu
   });
 };
 
+/** This function replays one record of the log: its cache entry, and the documents that its extractor gives. */
+const replayRecord = async (
+  runtime: CrawlRuntime,
+  target: ReplayTarget,
+  envelope: CaptureRecord,
+  tally: ReplayTally,
+): Promise<void> => {
+  if (envelope.kind !== "capture" && envelope.kind !== "revisit") return;
+  const payload = envelope.payload as CapturePayload | null;
+  if (payload === null || typeof payload !== "object" || typeof payload.url !== "string") return;
+  if (payload.outcome === "redirect") {
+    replayLatest(target, envelope, payload);
+    return;
+  }
+  if (typeof payload.blob !== "string") return;
+  if (payload.outcome !== "ok" && payload.outcome !== "not-modified") return;
+  tally.captures += 1;
+  replayLatest(target, envelope, payload);
+  const extractor = runtime.extractors.get(payload.recipe);
+  if (extractor === undefined) {
+    // the crawler reads robots.txt for itself; it gives no document
+    if (payload.recipe !== "robots.txt") tally.unknown.add(payload.recipe);
+    return;
+  }
+  const body = await runtime.blobs.get(payload.blob);
+  if (body === undefined) {
+    tally.missing += 1;
+    return;
+  }
+  const { url, variant } = captureTarget(payload);
+  const latest = target.latest(url, variant);
+  let extracted: ReadonlyArray<ExtractedDoc>;
+  try {
+    extracted = await extractor(body, {
+      url,
+      contentType:
+        variant === "rendered" ? "text/html; charset=utf-8" : (payload.content_type ?? latest?.content_type ?? null),
+    });
+  } catch (error) {
+    tally.failed += 1;
+    if (tally.errors.length < MAX_ERRORS) tally.errors.push({ capture: envelope.id, error: messageOf(error) });
+    return;
+  }
+  // a bot check is not the content, so it is not a version of the document
+  if (extracted.some((doc) => blockedBy(doc) !== undefined)) return;
+  for (const doc of extracted) {
+    target.upsert(
+      {
+        ...doc,
+        captures: [envelope.id],
+        capture: envelope.id,
+        fetched_at: payload.fetched_at ?? envelope.received_at,
+        blob: payload.blob,
+        recipe: payload.recipe,
+        rendered: variant === "rendered",
+        ai_input: payload.signals?.ai_input ?? "unset",
+        ...(envelope.scope !== undefined ? { scope: envelope.scope } : {}),
+        ...(envelope.labels !== undefined ? { labels: envelope.labels } : {}),
+      },
+      envelope.received_at,
+    );
+  }
+};
+
 /**
  * This function builds the reading index again from the capture log and the blobs. The index is a
  * projection, and this function is the proof that its deletion loses nothing. These are its rules:
@@ -954,12 +1037,8 @@ export const reindex = async (
 ): Promise<ReindexResult> => {
   const since = runtime.now();
   const build = runtime.index.beginRebuild(options.batch === undefined ? {} : { batch: options.batch });
-  let captures = 0;
-  let failed = 0;
-  let missing = 0;
+  const tally = newTally();
   let damaged = 0;
-  const unknown = new Set<string>();
-  const errors: Array<{ readonly capture: string; readonly error: string }> = [];
   try {
     const scan = runtime.captures.scan(
       { source: "fetch" },
@@ -969,79 +1048,89 @@ export const reindex = async (
         },
       },
     );
-    for await (const envelope of scan) {
-      if (envelope.kind !== "capture" && envelope.kind !== "revisit") continue;
-      const payload = envelope.payload as CapturePayload | null;
-      if (payload === null || typeof payload !== "object" || typeof payload.url !== "string") continue;
-      if (payload.outcome === "redirect") {
-        replayLatest(build, envelope, payload);
-        continue;
-      }
-      if (typeof payload.blob !== "string") continue;
-      if (payload.outcome !== "ok" && payload.outcome !== "not-modified") continue;
-      captures += 1;
-      replayLatest(build, envelope, payload);
-      const extractor = runtime.extractors.get(payload.recipe);
-      if (extractor === undefined) {
-        // the crawler reads robots.txt for itself; it gives no document
-        if (payload.recipe !== "robots.txt") unknown.add(payload.recipe);
-        continue;
-      }
-      const body = await runtime.blobs.get(payload.blob);
-      if (body === undefined) {
-        missing += 1;
-        continue;
-      }
-      const { url, variant } = captureTarget(payload);
-      const latest = build.latest(url, variant);
-      let extracted: ReadonlyArray<ExtractedDoc>;
-      try {
-        extracted = await extractor(body, {
-          url,
-          contentType:
-            variant === "rendered"
-              ? "text/html; charset=utf-8"
-              : (payload.content_type ?? latest?.content_type ?? null),
-        });
-      } catch (error) {
-        failed += 1;
-        if (errors.length < MAX_ERRORS) errors.push({ capture: envelope.id, error: messageOf(error) });
-        continue;
-      }
-      // a bot check is not the content, so it is not a version of the document
-      if (extracted.some((doc) => blockedBy(doc) !== undefined)) continue;
-      for (const doc of extracted) {
-        build.upsert(
-          {
-            ...doc,
-            captures: [envelope.id],
-            capture: envelope.id,
-            fetched_at: payload.fetched_at ?? envelope.received_at,
-            blob: payload.blob,
-            recipe: payload.recipe,
-            rendered: variant === "rendered",
-            ai_input: payload.signals?.ai_input ?? "unset",
-            ...(envelope.scope !== undefined ? { scope: envelope.scope } : {}),
-            ...(envelope.labels !== undefined ? { labels: envelope.labels } : {}),
-          },
-          envelope.received_at,
-        );
-      }
-    }
+    for await (const envelope of scan) await replayRecord(runtime, build, envelope, tally);
     const carried = build.carry(new Set(runtime.extractors.recipes()));
     const counts = build.commit(since);
     return {
-      captures,
+      captures: tally.captures,
       ...counts,
-      failed,
-      missing,
+      failed: tally.failed,
+      missing: tally.missing,
       damaged,
       carried,
-      unknown_recipes: [...unknown].sort(),
-      errors,
+      unknown_recipes: [...tally.unknown].sort(),
+      errors: tally.errors,
     };
   } catch (error) {
     build.abort();
     throw error;
   }
+};
+
+/** The result of `catchUpIndex`. */
+export interface CatchUpResult extends ReindexResult {
+  /**
+   * The value `rebuild` tells that the index was stale, and the function built it again from the
+   * whole log. The value `tail` tells that it read only the captures that the index missed.
+   */
+  readonly mode: "rebuild" | "tail";
+}
+
+/** The tail starts this long before the newest cache entry. Two writers and their clocks can differ. */
+const TAIL_SLACK_MS = 10 * 60_000;
+
+/** This function tells if the index missed a record of the log: no cache entry as new as it, or no version of its documents. */
+const missed = (runtime: CrawlRuntime, envelope: CaptureRecord): boolean => {
+  if (envelope.kind !== "capture" && envelope.kind !== "revisit") return false;
+  const payload = envelope.payload as CapturePayload | null;
+  if (payload === null || typeof payload !== "object" || typeof payload.url !== "string") return false;
+  const fetchedAt = payload.fetched_at ?? envelope.received_at;
+  const { url, variant } = captureTarget(payload);
+  const entry = runtime.index.latest(url, variant);
+  if (payload.outcome === "redirect") return entry === undefined || entry.fetched_at < fetchedAt;
+  if (typeof payload.blob !== "string" || (payload.outcome !== "ok" && payload.outcome !== "not-modified")) return false;
+  if (entry === undefined || entry.fetched_at < fetchedAt) return true;
+  return runtime.extractors.get(payload.recipe) !== undefined && !runtime.index.hasVersion(envelope.id);
+};
+
+/**
+ * This function brings the reading index up to the capture log, with no request. `openCrawler`
+ * uses it at open. An application that uses `createRuntime` uses it the same way:
+ *
+ * - A stale index (a new schema, or a deleted file) is built again with `reindex`.
+ * - An index that is behind the log gets the captures that it missed. A process can stop between
+ *   the log and the index, and SQLite can lose its last transactions after a power cut. The
+ *   function reads the log from a short time before the newest cache entry.
+ *
+ * It gives the counts, or undefined when the index missed nothing.
+ */
+export const catchUpIndex = async (runtime: CrawlRuntime): Promise<CatchUpResult | undefined> => {
+  if (runtime.index.stale) return { mode: "rebuild", ...(await reindex(runtime)) };
+  const newest = runtime.index.newestFetch();
+  const since = newest === undefined ? undefined : new Date(Date.parse(newest) - TAIL_SLACK_MS).toISOString();
+  const tally = newTally();
+  let damaged = 0;
+  const scan = runtime.captures.scan(
+    { source: "fetch", ...(since === undefined ? {} : { since }) },
+    {
+      onDamaged: () => {
+        damaged += 1;
+      },
+    },
+  );
+  for await (const envelope of scan) {
+    if (missed(runtime, envelope)) await replayRecord(runtime, runtime.index, envelope, tally);
+  }
+  if (tally.captures === 0) return undefined;
+  return {
+    mode: "tail",
+    captures: tally.captures,
+    ...runtime.index.counts(),
+    failed: tally.failed,
+    missing: tally.missing,
+    damaged,
+    carried: 0,
+    unknown_recipes: [...tally.unknown].sort(),
+    errors: tally.errors,
+  };
 };

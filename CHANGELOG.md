@@ -49,6 +49,7 @@ The first version. It needs Node.js 22.19 or later, and it is ESM only.
   - The search folds case, accents and Unicode forms, reads phrases and prefixes, and finds Chinese, Japanese and Thai words.
   - The quote check ignores soft hyphens, zero-width characters and the differences of NFKC, NFC and NFD.
   - `reindex` builds a new index beside the old one, so a rebuild that fails keeps the old index. It counts damaged lines, missing bodies and readers that fail, and it does not stop at them.
+  - At open, the crawler rebuilds a stale index and gives an index that is behind the log the captures that it missed. `catchUpIndex` does the same after `createRuntime`. A runtime takes any `ReadingIndex`.
   - The log and the bodies go to the disk before a fetch finishes. Two processes can use one store: the index waits for a lock, and `hosts.sqlite` keeps one pace for each host.
   - A capture shows `REDACTED` in place of a user name, a password and the values of secret query parameters.
   - A body longer than the limit keeps its first part, and the capture says `truncated`. A body that does not download or decode gives the outcome `error`.

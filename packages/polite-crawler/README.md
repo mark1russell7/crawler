@@ -202,7 +202,8 @@ const server = createMcpServer(openCrawler({ dir: "./crawl" }), { onBehalfOf: ["
 
 The root entry point also exports the parts of the runtime, for an application that builds its own:
 
-- `createRuntime`: the parts of a store, made in one place. `openCrawler` uses it. Give `dir`, or your own `log`, `blobs` and `index`.
+- `createRuntime`: the parts of a store, made in one place. `openCrawler` uses it. Give `dir`, or your own `log`, `blobs` and `index` (any `ReadingIndex`).
+- `catchUpIndex(runtime)`: the step of `openCrawler` at open. It rebuilds a stale index, and gives an index that is behind the log the captures that it missed. Use it after `createRuntime`.
 - `Crawler`, `CaptureLog`, `DocIndex`, `FileBlobStore`, `SqliteHostStateStore`, `Extractors`, `fetchAndIndex`, `fetchPage` and `reindex`.
 - `readDocument`, `verifyQuote`, `findDocuments`, `isHeldBack`, `heldBackMeta` and `recordOverride`: the read, the verification and the rule for a held-back page, over a runtime.
 - `extractPage`, `typesOf`, `decodeBody` and `bodyEncoding`: the page reader and the decoder of a body in its declared encoding.
@@ -258,6 +259,7 @@ Disallow: /
 - The index keeps each capture of a document as a version. The current version is the latest capture by fetch time, or a render of the same page body. The earlier versions stay, so a citation that names a capture stays true after the page changes.
 - The capture log and the bodies go to the disk before a fetch finishes. `reindex` skips a damaged line of the log and a damaged body, and it counts them.
 - `reindex` builds a new index beside the old one and changes to it at the end. A rebuild that fails keeps the old index. The documents of a recipe that the runtime cannot read stay.
+- At open, the crawler rebuilds an index of an earlier version. An index that is behind the log (a process stopped between the log and the index) gets the captures that it missed.
 - An index of an earlier version of the package opens empty, and `openCrawler` builds it again from the log.
 - Two or more processes can use one store. The index waits for the lock of a different process.
 

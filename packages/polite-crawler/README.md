@@ -256,6 +256,8 @@ Disallow: /
 | `index.sqlite` | The search index. It is a projection: `polite-crawler reindex` builds it again from the other two. |
 | `hosts.sqlite` | The pace, the counts and the stops of each host. The processes on one store share it. |
 
+The package publishes the JSON Schema of a line of the log: `polite-crawler/record.schema.json`. A program that reads the log can check each record with it.
+
 - The index keeps each capture of a document as a version. The current version is the latest capture by fetch time, or a render of the same page body. The earlier versions stay, so a citation that names a capture stays true after the page changes.
 - The capture log and the bodies go to the disk before a fetch finishes. `reindex` skips a damaged line of the log and a damaged body, and it counts them.
 - `reindex` builds a new index beside the old one and changes to it at the end. A rebuild that fails keeps the old index. The documents of a recipe that the runtime cannot read stay.

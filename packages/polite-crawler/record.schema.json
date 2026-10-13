@@ -1,0 +1,138 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mark1russell7.github.io/crawler/record.schema.json",
+  "title": "polite-crawler capture record",
+  "description": "One line of the capture log of polite-crawler (captures/<source>/<year>/<month>.ndjson): a record of one fetch decision, the payload of schema 2. A reader ignores the fields that it does not know.",
+  "type": "object",
+  "required": ["id", "source", "kind", "received_at", "payload", "content_hash"],
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "description": "The source, a dot, and the first 12 hexadecimal digits of content_hash. A citation names this id.",
+      "type": "string",
+      "pattern": "^.+\\.[0-9a-f]{12}$"
+    },
+    "source": { "description": "The crawler writes fetch. An application can add its own sources.", "type": "string", "minLength": 1 },
+    "kind": { "description": "capture, revisit (a 304) or skipped for the source fetch; override for a held-back read that a person allowed.", "type": "string", "minLength": 1 },
+    "external_id": { "description": "The URL of the record, with its secrets as REDACTED.", "type": "string" },
+    "occurred_at": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}T" },
+    "received_at": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}T" },
+    "content_hash": {
+      "description": "The SHA-256 of the sorted JSON of source, kind, external_id and payload. Times, scope and labels are not part of it.",
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "scope": { "description": "A label of the application. The crawler does not read it.", "type": "string" },
+    "labels": {
+      "description": "Labels of the application, for example the lineage of a request. The crawler does not read them.",
+      "type": "object",
+      "additionalProperties": { "type": "string" }
+    },
+    "payload": { "description": "The fields of the record. Their shape depends on source and kind." }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "source": { "const": "fetch" }, "kind": { "enum": ["capture", "revisit", "skipped"] } } },
+      "then": { "properties": { "payload": { "$ref": "#/$defs/fetch" } } }
+    },
+    {
+      "if": { "properties": { "source": { "const": "fetch" }, "kind": { "const": "override" } } },
+      "then": { "properties": { "payload": { "$ref": "#/$defs/override" } } }
+    }
+  ],
+  "$defs": {
+    "nullableString": { "type": ["string", "null"] },
+    "fetch": {
+      "description": "A fetch decision: a response (capture, revisit) or a request that the crawler did not send (skipped).",
+      "type": "object",
+      "required": ["schema", "url", "recipe", "mode", "fetched_at"],
+      "properties": {
+        "schema": { "description": "The version of the payload.", "const": 2 },
+        "url": { "description": "The requested URL, with its secrets as REDACTED.", "type": "string" },
+        "recipe": { "description": "The recipe of the request: page, robots.txt, or a recipe of an application.", "type": "string" },
+        "mode": { "enum": ["api", "page"] },
+        "rendered": { "description": "True when the headless browser made the capture.", "type": "boolean" },
+        "job": { "type": "string" },
+        "fetched_at": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}T" },
+        "status": { "description": "The HTTP status, or 0 when no response came.", "type": "integer", "minimum": 0 },
+        "outcome": { "description": "ok, not-modified, redirect, error, not-html, blocked, challenge, rate-limited, unavailable, gone and others.", "type": "string" },
+        "note": { "type": "string" },
+        "elapsed_ms": { "type": "number", "minimum": 0 },
+        "ttfb_ms": { "type": ["number", "null"] },
+        "content_type": { "$ref": "#/$defs/nullableString" },
+        "bytes": { "type": "integer", "minimum": 0 },
+        "blob": { "description": "The SHA-256 of the stored body.", "type": ["string", "null"], "pattern": "^[0-9a-f]{64}$" },
+        "etag": { "$ref": "#/$defs/nullableString" },
+        "last_modified": { "$ref": "#/$defs/nullableString" },
+        "revisit_of": { "description": "The capture whose body a 304 confirmed.", "type": "string" },
+        "robots": { "description": "allowed for a page that robots.txt permits; not-checked for an api request.", "type": "string" },
+        "robots_check": { "$ref": "#/$defs/robotsCheck" },
+        "signals": { "$ref": "#/$defs/signals" },
+        "truncated": { "description": "True when the body is only the first part of the response.", "type": "boolean" },
+        "cut": { "description": "True when the server cut a compressed body. It is not a copy to keep.", "type": "boolean" },
+        "cache_control": { "type": "string" },
+        "expires": { "type": "string" },
+        "age": { "type": "string" },
+        "date": { "type": "string" },
+        "vary": { "type": "string" },
+        "fresh_until": { "$ref": "#/$defs/nullableString" },
+        "vary_key": { "$ref": "#/$defs/nullableString" },
+        "location": { "description": "The target of a redirect, with its secrets as REDACTED.", "type": "string" },
+        "final_url": { "description": "The URL that a render ended on.", "type": "string" },
+        "subrequests": {
+          "description": "The requests of a rendered page that the crawler allowed and refused.",
+          "type": "object",
+          "required": ["allowed", "refused", "hosts"],
+          "properties": {
+            "allowed": { "type": "integer", "minimum": 0 },
+            "refused": { "type": "integer", "minimum": 0 },
+            "hosts": { "type": "array", "items": { "type": "string" } }
+          }
+        }
+      }
+    },
+    "robotsCheck": {
+      "description": "Why robots.txt permitted or refused the request: the robots.txt capture, the product tokens and the rule.",
+      "type": "object",
+      "required": ["capture", "tokens", "rule", "group_line"],
+      "properties": {
+        "capture": { "$ref": "#/$defs/nullableString" },
+        "tokens": { "type": "array", "items": { "type": "string" } },
+        "rule": {
+          "type": ["object", "null"],
+          "properties": {
+            "line": { "type": ["integer", "null"] },
+            "pattern": { "type": "string" },
+            "allow": { "type": "boolean" }
+          }
+        },
+        "group_line": { "type": ["integer", "null"] },
+        "unreachable": { "type": "string" },
+        "stale": { "type": "string" }
+      }
+    },
+    "signals": {
+      "description": "The usage signals of the response: content signals, AIPREF, X-Robots-Tag, RSL and TDMRep.",
+      "type": "object",
+      "required": ["ai_input", "raw"],
+      "properties": {
+        "ai_input": { "enum": ["yes", "no", "unset"] },
+        "ai_train": { "enum": ["yes", "no", "unset"] },
+        "raw": { "type": "array", "items": { "type": "string" } },
+        "deciding": { "type": "string" }
+      }
+    },
+    "override": {
+      "description": "A person gave the URL of a held-back document, and the hold stopped for one read or verification.",
+      "type": "object",
+      "required": ["doc", "url", "action", "reason", "at"],
+      "properties": {
+        "doc": { "type": "string" },
+        "url": { "$ref": "#/$defs/nullableString" },
+        "action": { "enum": ["read", "verify"] },
+        "reason": { "type": "string" },
+        "at": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}T" }
+      }
+    }
+  }
+}

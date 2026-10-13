@@ -206,9 +206,12 @@ try {
     `const subpaths = ${JSON.stringify(subpaths)};
 for (const subpath of subpaths) {
   const specifier = subpath === "." ? ${JSON.stringify(manifest.name)} : ${JSON.stringify(manifest.name)} + subpath.slice(1);
-  if (subpath.endsWith(".json")) {
+  if (subpath === "./package.json") {
     const json = await import(specifier, { with: { type: "json" } });
     if (json.default.version !== ${JSON.stringify(manifest.version)}) throw new Error(specifier + " has the wrong version");
+  } else if (subpath.endsWith(".schema.json")) {
+    const json = await import(specifier, { with: { type: "json" } });
+    if (typeof json.default.$schema !== "string") throw new Error(specifier + " is not a JSON Schema");
   } else {
     const names = Object.keys(await import(specifier));
     if (names.length === 0) throw new Error(specifier + " exports nothing");

@@ -2,6 +2,7 @@ import { existsSync, lstatSync, mkdirSync, realpathSync, statSync } from "node:f
 import { join } from "node:path";
 import type { Dispatcher } from "undici";
 import type { BlobStore } from "./blobs.ts";
+import { checkedRenderer } from "./browser.ts";
 import { FileBlobStore } from "./blobs.ts";
 import type { CrawlEvent } from "./crawler.ts";
 import { Crawler } from "./crawler.ts";
@@ -120,7 +121,11 @@ export interface RuntimeOptions {
    * `From` header, and a URL does not. The crawler sends no contact without it.
    */
   readonly contact?: string | undefined;
-  /** This browser renders the pages that need JavaScript. The value `false` turns rendering off. */
+  /**
+   * This browser renders the pages that need JavaScript. The value `false` turns rendering off. The
+   * default checks one time that `playwright-core` and its browser are installed. With no browser,
+   * each page that needs JavaScript gets a note at once, with no wait.
+   */
   readonly renderer?: Renderer | false | undefined;
   /** This value is the number of sites that the crawler fetches from at one time. The default is 16. */
   readonly maxActive?: number | undefined;
@@ -210,7 +215,8 @@ export const createRuntime = (options: RuntimeOptions): StoreRuntime => {
     }
   }
   const clock = options.clock ?? realClock;
-  const renderer = options.renderer === false ? undefined : (options.renderer ?? playwrightRenderer());
+  // the default browser is checked one time: with none, each page gets its note at once
+  const renderer = options.renderer === false ? undefined : (options.renderer ?? checkedRenderer(playwrightRenderer()));
   const crawler = new Crawler({
     token: options.token ?? DEFAULT_TOKEN,
     userAgent: options.userAgent ?? defaultUserAgent(contact),

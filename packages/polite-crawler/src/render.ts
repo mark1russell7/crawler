@@ -55,6 +55,9 @@ export interface Renderer {
   close(): Promise<void>;
 }
 
+/** The reason of a `RenderRefused`. */
+export type RefusedReason = "refused" | "download" | "scheme" | "browser";
+
 /**
  * This error tells that the renderer did not render the page, and that the page or the site is
  * not at fault. The reason is one of these:
@@ -63,14 +66,16 @@ export interface Renderer {
  *   navigation of the page that left it on an error page. `url` names the refused URL.
  * - `download`: the URL gives a file, not a page.
  * - `scheme`: the URL is not an http or https URL.
+ * - `browser`: the renderer has no browser (`playwright-core` or its browser is not installed). The
+ *   crawler then renders no more pages, and gives each one the note at once.
  *
  * A crawler does not count this error as a failure of the host.
  */
 export class RenderRefused extends Error {
-  readonly reason: "refused" | "download" | "scheme";
+  readonly reason: RefusedReason;
   /** This URL is the request that `allowRequest` or the limit of redirects refused, when the reason is `refused`. */
   readonly url: string | undefined;
-  constructor(reason: "refused" | "download" | "scheme", message: string, url?: string) {
+  constructor(reason: RefusedReason, message: string, url?: string) {
     super(message);
     this.name = "RenderRefused";
     this.reason = reason;

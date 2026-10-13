@@ -27,7 +27,7 @@ npm install playwright-core
 npx playwright-core install chromium-headless-shell
 ```
 
-Without the browser, the crawler reads each page as plain HTML.
+Without the browser, the crawler reads each page as plain HTML. It checks for the browser one time, so a page that needs JavaScript gets a note at once, with no wait.
 
 The package is ESM only, and it includes its TypeScript declarations. It has these entry points:
 
@@ -210,7 +210,7 @@ The root entry point also exports the parts of the runtime, for an application t
 - `readPdf` and `isPdf`: the PDF reader. `PdfOptions` sets limits on the pages, the characters, the time and the inflated bytes.
 - `fromText`, `fromSchemaOrg`, `fromCompact` and `describeWeek`: the opening-hours reader.
 - `parseRobots` and `decide`: the robots.txt parser and matcher.
-- `RenderRefused`: the error of a renderer that did not render a page, with the reason `refused`, `download` or `scheme`. A crawler does not count it as a failure of the host.
+- `RenderRefused`: the error of a renderer that did not render a page, with the reason `refused`, `download`, `scheme` or `browser`. A crawler does not count it as a failure of the host. After the reason `browser`, the crawler renders no more pages.
 
 The readers give more facts than before:
 

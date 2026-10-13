@@ -31,7 +31,8 @@ import {
 import type { CaptureRecord } from "./record.ts";
 import { makeRecord } from "./record.ts";
 import type { Rendered, Renderer } from "./render.ts";
-import { RenderRefused } from "./render.ts";
+import type { RefusedReason } from "./render.ts";
+import { NO_PLAYWRIGHT, RenderRefused } from "./render.ts";
 import type { Robots, RobotsDecision } from "./robots.ts";
 import { decide, robotsFromResponse, robotsFromStatus, signalsFor, unreachableRobots } from "./robots.ts";
 import type { AiInput, Signals } from "./signals.ts";
@@ -328,6 +329,11 @@ const CONSTANT_HEADERS: ReadonlySet<string> = new Set(["accept-encoding", "user-
  * `aws-chunked` can send the name with the decoded body.
  */
 const IDENTITY_CODINGS: ReadonlySet<string> = new Set(["identity", "aws-chunked"]);
+
+/** This function tells if an error of a renderer says that it has no browser: no `playwright-core`, or no browser on the disk. */
+const missingBrowser = (message: string): boolean =>
+  message.startsWith(NO_PLAYWRIGHT) ||
+  /Executable doesn't exist|Cannot find (?:module|package) 'playwright-core'/.test(message);
 
 /** This text tells why the crawler did not fetch a page: a rule of the site, or no robots.txt to read. */
 const robotsRefusal = (robots: Robots, by: string): string =>
@@ -727,7 +733,7 @@ type RenderDone =
   | { readonly kind: "failed"; readonly note: string; readonly elapsedMs: number }
   | {
       readonly kind: "refused";
-      readonly reason: "refused" | "download" | "scheme";
+      readonly reason: RefusedReason;
       readonly note: string;
       /** This URL is the request that the renderer refused. */
       readonly url?: string | undefined;
@@ -826,6 +832,8 @@ export class Crawler {
   private readonly closing = new AbortController();
   private closed = false;
   private closingDone: Promise<void> | undefined;
+  /** This note tells why the renderer has no browser. After the first page that finds it, the crawler renders nothing. */
+  private renderOff: string | undefined;
 
   constructor(private readonly options: CrawlerOptions) {
     if (!PRODUCT_TOKEN.test(options.token)) {
@@ -1848,6 +1856,7 @@ export class Crawler {
       },
       async ({ target, skip }) => {
         if (renderer === undefined) return skip("no browser configured for rendering");
+        if (this.renderOff !== undefined) return skip(this.renderOff);
         // the browser does its own DNS, so the check here resolves the name too
         const resolved = await checkEgress(this.egress, target);
         return resolved === undefined ? undefined : skip(resolved);
@@ -1903,8 +1912,16 @@ export class Crawler {
             if (request_.signal?.aborted === true) {
               return { value: { kind: "cancelled", elapsedMs }, delayMs: restAfter(policy, rest(0)).ms };
             }
-            if (error instanceof RenderRefused) {
-              // a refused navigation, a file or a scheme is no fault of the host
+            // a renderer of an application that has no browser is no fault of the host either
+            const refused =
+              error instanceof RenderRefused
+                ? error
+                : missingBrowser(messageOf(error))
+                  ? new RenderRefused("browser", `rendering needs a browser: ${messageOf(error)}`)
+                  : undefined;
+            if (refused !== undefined) {
+              if (refused.reason === "browser") this.renderOff = refused.message;
+              // a refused navigation, a file, a scheme or no browser is no fault of the host
               const delayMs = this.settle(host, policy, {
                 outcome: "skipped",
                 status: 0,
@@ -1914,7 +1931,7 @@ export class Crawler {
                 result: "neutral",
               });
               return {
-                value: { kind: "refused", reason: error.reason, note: error.message, url: error.url, elapsedMs },
+                value: { kind: "refused", reason: refused.reason, note: refused.message, url: refused.url, elapsedMs },
                 delayMs,
               };
             }

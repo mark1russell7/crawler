@@ -9,7 +9,8 @@ import { CaptureLog } from "./log.ts";
 import type { Clock } from "./politeness.ts";
 import type { CaptureRecord } from "./record.ts";
 import type { RenderOptions, Rendered, Renderer } from "./render.ts";
-import { RenderRefused } from "./render.ts";
+import { NO_PLAYWRIGHT, RenderRefused } from "./render.ts";
+import { checkedRenderer } from "./browser.ts";
 import { removeDir, tempDir } from "./test-helpers.ts";
 
 const cleanups: Array<() => Promise<void>> = [];
@@ -231,5 +232,58 @@ describe("the rules of a fetch, applied to a render", () => {
       ["capture", ""],
       ["capture", "cancelled by the caller"],
     ]);
+  });
+});
+
+describe("a renderer with no browser", () => {
+  for (const [name, failure] of [
+    ["says so with RenderRefused", () => new RenderRefused("browser", "rendering needs a browser: npx playwright-core install chromium-headless-shell")],
+    ["throws the error of a missing playwright-core", () => new Error(NO_PLAYWRIGHT)],
+    ["throws the error of Playwright for a missing executable", () => new Error("browserType.launch: Executable doesn't exist at /x/chrome")],
+  ] as const) {
+    it(`renders no more pages, with no wait and no error capture, when it ${name}`, async () => {
+      let calls = 0;
+      const missing: Renderer = {
+        render: () => {
+          calls += 1;
+          return Promise.reject(failure());
+        },
+        close: () => Promise.resolve(),
+      };
+      const { crawler, robots, captures, clock } = await make(missing);
+      robots("https://shop.example", "User-agent: *\nAllow: /\n");
+      const pages = [];
+      for (const path of ["/a", "/b", "/c"]) pages.push(await crawler.render({ url: `https://shop.example${path}`, recipe: "page" }));
+      expect(calls).toBe(1);
+      expect(pages.map((page) => page.outcome)).toEqual(["skipped", "skipped", "skipped"]);
+      expect(pages.every((page) => /rendering needs/.test(page.note ?? ""))).toBe(true);
+      // no backoff: the host waits only its usual pace between two pages
+      expect(clock.slept.every((ms) => ms < 5000)).toBe(true);
+      const outcomes = (await captures()).map((row) => (row.payload as { outcome?: string }).outcome);
+      expect(outcomes).not.toContain("error");
+    });
+  }
+
+  it("checks for the browser one time, and opens no page with no browser", async () => {
+    let checks = 0;
+    let rendered = 0;
+    const inner: Renderer = {
+      render: (url) => {
+        rendered += 1;
+        return Promise.resolve({ html: "<p>shown</p>", finalUrl: url, status: 200, headers: {} });
+      },
+      close: () => Promise.resolve(),
+    };
+    const options = { userAgent: "PoliteCrawler/0.1 (test)", timeoutMs: 1000 };
+    const none = checkedRenderer(inner, () => {
+      checks += 1;
+      return Promise.resolve("rendering needs a browser");
+    });
+    await expect(none.render("https://shop.example/a", options)).rejects.toMatchObject({ reason: "browser" });
+    await expect(none.render("https://shop.example/b", options)).rejects.toMatchObject({ reason: "browser" });
+    expect([checks, rendered]).toEqual([1, 0]);
+    const present = checkedRenderer(inner, () => Promise.resolve(undefined));
+    expect((await present.render("https://shop.example/c", options)).finalUrl).toBe("https://shop.example/c");
+    expect(rendered).toBe(1);
   });
 });

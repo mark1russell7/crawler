@@ -17,6 +17,7 @@
  */
 export type { BlobStore } from "./blobs.ts";
 export { FileBlobStore } from "./blobs.ts";
+export { checkedRenderer } from "./browser.ts";
 export type {
   CacheEntry,
   CacheIndex,
@@ -95,7 +96,7 @@ export type {
 export { DEFAULT_POLICY, MemoryHostStateStore, realClock } from "./politeness.ts";
 export type { CaptureRecord, RecordInput } from "./record.ts";
 export { makeRecord } from "./record.ts";
-export type { PlaywrightRenderer, RenderOptions, Renderer, Rendered } from "./render.ts";
+export type { PlaywrightRenderer, RefusedReason, RenderOptions, Renderer, Rendered } from "./render.ts";
 export { NO_PLAYWRIGHT, RenderRefused, playwrightRenderer } from "./render.ts";
 export type { Robots, RobotsDecision, RobotsGroup, RobotsRule, RobotsSignal } from "./robots.ts";
 export { ALLOW_ALL, decide, parseRobots } from "./robots.ts";

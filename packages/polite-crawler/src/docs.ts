@@ -710,7 +710,8 @@ export class DocIndex {
       }
     }
     const row = winner.row;
-    const aiInput: AiInput = candidates.some((candidate) => candidate.ai === "no")
+    // a render can stay current after a newer plain capture: a no of its own capture still holds its text back
+    const aiInput: AiInput = row.ai_input === "no" || candidates.some((candidate) => candidate.ai === "no")
       ? "no"
       : winner.ai !== "unset"
         ? winner.ai
@@ -851,7 +852,11 @@ export class DocIndex {
     );
   }
 
-  /** This method gives the text of one version of a document. With no capture, it gives the current version. */
+  /**
+   * This method gives the text of one version of a document. With no capture, it gives the current
+   * version. It also gives the text of a held-back version: the caller applies `isHeldBack` to the
+   * `ai_input` of the version.
+   */
   versionText(doc: string, capture?: string): VersionText | undefined {
     return this.live((n) => {
       const id = capture ?? this.docOf(n, doc)?.capture;
@@ -865,7 +870,8 @@ export class DocIndex {
 
   /**
    * This method gives the texts of the earlier versions of a document, the newest first. Each
-   * text comes one time, with the newest version that has it. It skips the current text.
+   * text comes one time, with the newest version that has it. It skips the current text. It also
+   * gives held-back texts: the caller applies `isHeldBack` to the `ai_input` of each version.
    */
   earlierTexts(doc: string, options: { readonly limit?: number } = {}): VersionText[] {
     const limit = Math.max(1, Math.floor(options.limit ?? 50));

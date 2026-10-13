@@ -683,26 +683,26 @@ export const readDocument = async (
 };
 
 /**
- * This function finds a quote in a stored document, with `locate`, and writes nothing. It is the
- * synchronous part of `verifyQuote`. A held-back document gives `found: false` and no positions,
- * unless `userProvided`, and this function does not log the override.
+ * This function examines the versions of a document for a quote, and writes nothing. It also tells
+ * if `userProvided` opened a held-back version, so that `verifyQuote` logs the override.
  */
-export const checkQuote = (
+const examineQuote = (
   runtime: CrawlRuntime,
   id: string,
   quote: string,
-  options: VerifyOptions = {},
-): VerifyResult => {
+  options: VerifyOptions,
+): { readonly result: VerifyResult; readonly override: boolean } => {
   const doc = knownDoc(runtime, id);
   const pinned =
     options.capture === undefined ? undefined : runtime.index.versionText(id, options.capture);
   if (options.capture !== undefined && pinned === undefined) {
     throw new Error(`the document ${id} has no version from the capture ${options.capture}`);
   }
+  const userProvided = options.userProvided ?? false;
   const base = { doc: doc.doc, url: doc.url, captures: doc.captures };
   const aiInput: AiInput = doc.ai_input === "no" || pinned?.ai_input === "no" ? "no" : doc.ai_input;
-  if (isHeldBack({ ai_input: aiInput }, options.userProvided ?? false)) {
-    return {
+  if (isHeldBack({ ai_input: aiInput }, userProvided)) {
+    const result: VerifyResult = {
       ...base,
       found: false,
       start: null,
@@ -718,13 +718,18 @@ export const checkQuote = (
       held_back: true,
       note: HELD_BACK,
     };
+    return { result, override: false };
   }
   const current = pinned ?? runtime.index.versionText(id);
   const candidates =
     pinned !== undefined
       ? [pinned]
       : [...(current === undefined ? [] : [current]), ...runtime.index.earlierTexts(id)];
+  // a version that asked not to be AI input stays held back after the page drops the signal
+  const held = candidates.filter((version) => version.ai_input === "no").length;
+  const override = userProvided && (aiInput === "no" || held > 0);
   for (const [index, version] of candidates.entries()) {
+    if (isHeldBack(version, userProvided)) continue;
     let hit = locate(version.text, quote);
     let inFull = false;
     if (!hit.found && version.full_text !== undefined) {
@@ -733,7 +738,7 @@ export const checkQuote = (
     }
     if (!hit.found) continue;
     const stale = pinned === undefined && index > 0;
-    return {
+    const result: VerifyResult = {
       ...base,
       found: true,
       start: hit.start,
@@ -749,10 +754,20 @@ export const checkQuote = (
       held_back: false,
       note: stale ? "only an earlier capture of the document holds the quote" : null,
     };
+    return { result, override };
   }
   const incomplete =
     current !== undefined && current.meta["truncated"] === true && current.full_text === undefined;
-  return {
+  // the note does not depend on the quote, so it tells nothing about the held-back text
+  const notes = [
+    ...(incomplete
+      ? ["the reader stopped before the end of the file, so the quote can be in the part that it did not read"]
+      : []),
+    ...(held > 0 && !userProvided
+      ? [`the check did not examine the versions that asked not to be AI input (${String(held)})`]
+      : []),
+  ];
+  const result: VerifyResult = {
     ...base,
     found: false,
     start: null,
@@ -766,11 +781,23 @@ export const checkQuote = (
     complete: !incomplete,
     count: 0,
     held_back: false,
-    note: incomplete
-      ? "the reader stopped before the end of the file, so the quote can be in the part that it did not read"
-      : null,
+    note: notes.length > 0 ? notes.join("; ") : null,
   };
+  return { result, override };
 };
+
+/**
+ * This function finds a quote in a stored document, with `locate`, and writes nothing. It is the
+ * synchronous part of `verifyQuote`. A held-back document gives `found: false` and no positions,
+ * unless `userProvided`, and this function does not log the override. With no capture, it does not
+ * examine a version that asked not to be AI input, also when a later capture dropped the signal.
+ */
+export const checkQuote = (
+  runtime: CrawlRuntime,
+  id: string,
+  quote: string,
+  options: VerifyOptions = {},
+): VerifyResult => examineQuote(runtime, id, quote, options).result;
 
 /**
  * This function finds a quote in a stored document, with `locate`. It tells which capture holds the
@@ -782,7 +809,9 @@ export const checkQuote = (
  * - When the reader cut a text, it also examines the whole text.
  *
  * A held-back document gives `found: false` and no positions, so a quote cannot test its text,
- * unless `userProvided`. The crawler logs an override with `userProvided`.
+ * unless `userProvided`. The same rule applies to each version. A version that asked not to be AI
+ * input stays held back after a later capture drops the signal. The crawler logs an override when
+ * `userProvided` opens a held-back version.
  */
 export const verifyQuote = async (
   runtime: CrawlRuntime,
@@ -790,12 +819,8 @@ export const verifyQuote = async (
   quote: string,
   options: VerifyOptions = {},
 ): Promise<VerifyResult> => {
-  const result = checkQuote(runtime, id, quote, options);
-  const doc = knownDoc(runtime, id);
-  const pinned = options.capture === undefined ? undefined : runtime.index.versionText(id, options.capture);
-  if (options.userProvided === true && (doc.ai_input === "no" || pinned?.ai_input === "no")) {
-    await recordOverride(runtime, doc, "verify");
-  }
+  const { result, override } = examineQuote(runtime, id, quote, options);
+  if (override) await recordOverride(runtime, result, "verify");
   return result;
 };
 

@@ -289,7 +289,7 @@ export interface PoliteCrawler {
    * punctuation and Unicode forms. It tells which capture holds the quote.
    */
   verify(doc: string, quote: string, options?: VerifyOptions): Promise<VerifyResult>;
-  /** This method gives the versions of a stored document, the newest first. */
+  /** This method gives the versions of a stored document, the newest first. A held-back version shows no title. */
   versions(doc: string, options?: { readonly limit?: number }): Promise<DocVersion[]>;
   /** This method builds the index again from the capture log and the stored bodies, with no request. */
   reindex(): Promise<ReindexResult>;
@@ -347,7 +347,11 @@ export const openCrawler = (options: OpenOptions): PoliteCrawler => {
     },
     async versions(id, versionOptions = {}) {
       await live();
-      return runtime.index.versions(id, versionOptions);
+      // a held-back version shows no title, as a read of its capture does
+      const held = runtime.index.get(id)?.ai_input === "no";
+      return runtime.index
+        .versions(id, versionOptions)
+        .map((version) => (held || version.ai_input === "no" ? { ...version, title: "" } : version));
     },
     async reindex() {
       await live();

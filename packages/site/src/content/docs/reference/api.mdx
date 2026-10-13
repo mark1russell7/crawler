@@ -83,7 +83,7 @@ The method searches the stored documents with SQLite FTS5 and BM25, and gives a 
 
 The method gives a range of the text of a document. The options are `from` (default 0), `length` (default 4000), `capture` and `userProvided`. A `from` or a `length` less than 0 is an error. The result names the `capture` and the `fetched_at` of its text. With `capture`, the method reads the text of that capture, not the current text.
 
-When a page refuses AI input, the title and the text are empty, and `held_back` is true, unless `userProvided` is true. The crawler records each `userProvided` read. The MCP server sets it only with a signal from a person: [read the rule](../../guide/mcp/#pages-that-refuse-ai-input).
+When a page refuses AI input, the title and the text are empty, and `held_back` is true, unless `userProvided` is true. A `capture` of a version that refused AI input is held back too. The crawler records each `userProvided` read. The MCP server sets it only with a signal from a person: [read the rule](../../guide/mcp/#pages-that-refuse-ai-input).
 
 ### `verify(doc, quote, options?)`
 
@@ -92,10 +92,11 @@ The method finds a quote in a stored document, and gives a promise. It ignores c
 - With no option, it examines the current text first, then the earlier texts. `stale` is true when only an earlier capture holds the quote.
 - With `capture`, it examines the text of that capture only. A citation of that capture thus stays true after a new fetch.
 - A page that refuses AI input gives `found: false` and `held_back: true`, unless `userProvided` is true.
+- An earlier version that refused AI input stays held back after a later capture drops the signal. With no option, the method does not examine it, and the note says so.
 
 ### `versions(doc)`
 
-The method gives the versions of a document, the newest first: the capture, the blob, the fetch time and the length of each text.
+The method gives the versions of a document, the newest first: the capture, the blob, the fetch time and the length of each text. A version that refused AI input shows no title.
 
 ### `reindex()`
 

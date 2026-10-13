@@ -45,7 +45,7 @@ The first version. It needs Node.js 22.19 or later, and it is ESM only.
   - `CrawlerOptions.politeness` changes the limits for each host or for some hosts, and `hostState` keeps the state of each host. `crawler.resetHosts()` removes the stops.
 - **Egress.** By default, the crawler fetches only `http:` and `https:` URLs on public addresses, and it checks the address after DNS. `CrawlerOptions.egress` and the flag `--allow-private` permit private addresses.
 - **The store.** Each fetch decision goes into a capture log, and each body goes into a store by SHA-256 hash. A SQLite FTS5 index answers later questions with no request. A quote check finds the exact span of a quote, with the capture id to cite.
-  - The index keeps each capture of a document as a version: the latest capture is the current text. A page that asks not to be AI input stops being held back when a later capture does not ask it.
+  - The index keeps each capture of a document as a version: the latest capture is the current text. A page that asks not to be AI input stops being held back when a later capture does not ask it. The earlier versions that asked it stay held back, also from a quote check of the earlier texts.
   - The search folds case, accents and Unicode forms, reads phrases and prefixes, and finds Chinese, Japanese and Thai words.
   - The quote check ignores soft hyphens, zero-width characters and the differences of NFKC, NFC and NFD.
   - `reindex` builds a new index beside the old one, so a rebuild that fails keeps the old index. It counts damaged lines, missing bodies and readers that fail, and it does not stop at them.

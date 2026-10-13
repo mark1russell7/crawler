@@ -183,6 +183,7 @@ await crawler.close();
 - `versions(doc)` gives the versions of a document, the newest first.
 - `find` reads a query syntax. Text in double quotes is a phrase, and `bake*` is a prefix. The documents that hold each word come first. Case, accents and Unicode forms do not change a match, and Chinese, Japanese and Thai words match too.
 - A page that asks not to be AI input is held back in each result. `fetch` gives no title, and `read` gives no title, no text and only the structural metadata. `verify` gives `found: false`, and `find` leaves the page out. Only `userProvided` lifts the hold, and the crawler logs it.
+- The hold applies to each version too. When a later capture does not ask it, the current text is not held back, but the earlier versions that asked it stay held back. `verify` with no `capture` does not examine them, `read` and `verify` of their capture hold them back, and `versions` shows no title for them.
 
 The MCP server is in its own entry point:
 

@@ -316,6 +316,41 @@ describe("a page that asked not to be AI input", () => {
     const overrides = (await records()).filter((row) => row.kind === "override");
     expect(overrides.length).toBeGreaterThanOrEqual(1);
   });
+
+  it("stays held back in an earlier version after the page drops the signal", async () => {
+    const { agent, crawler, records } = await open();
+    let refuses = true;
+    site(agent, "https://news.example", (hit) => {
+      if (hit.path === "/robots.txt") return { status: 200, body: ROBOTS };
+      return refuses
+        ? { status: 200, body: PAGE, headers: { "content-type": "text/html", "content-signal": "ai-input=no" } }
+        : { status: 200, body: html(PARAGRAPH), headers: { "content-type": "text/html" } };
+    });
+    const first = await crawler.fetch("https://news.example/a");
+    refuses = false;
+    const second = await crawler.fetch("https://news.example/a", { maxAge: "0s" });
+    expect(second).toMatchObject({ held_back: false, capture_count: 2 });
+    const quote = "the access code is 7319";
+    // with no capture, the check examines only the versions that did not refuse
+    const unpinned = await crawler.verify(second.doc!, quote);
+    expect(unpinned).toMatchObject({ found: false, start: null, end: null, excerpt: null, stale: false });
+    expect(unpinned.note).toContain("did not examine the versions that asked not to be AI input (1)");
+    // the note does not depend on the quote
+    expect((await crawler.verify(second.doc!, "a quote that no version holds")).note).toBe(unpinned.note);
+    expect((await crawler.verify(second.doc!, "Wood-fired bread")).found).toBe(true);
+    expect(await crawler.verify(second.doc!, quote, { capture: first.capture! })).toMatchObject({ found: false, held_back: true });
+    const old = await crawler.read(second.doc!, { capture: first.capture! });
+    expect(old).toMatchObject({ held_back: true, text: "", title: "" });
+    expect(JSON.stringify(old.meta)).not.toMatch(/LEAK/);
+    expect(await crawler.find("vault")).toEqual([]);
+    expect((await crawler.versions(second.doc!)).map((row) => row.title)).toEqual(["Forno", ""]);
+    // a person who gave the URL opens the earlier version, and the crawler logs it
+    const opened = await crawler.verify(second.doc!, quote, { userProvided: true });
+    expect(opened).toMatchObject({ found: true, stale: true, capture: first.capture });
+    await crawler.runtime.log.flush();
+    const overrides = (await records()).filter((row) => row.kind === "override");
+    expect(overrides.map((row) => (row.payload as { action: string }).action)).toEqual(["verify"]);
+  });
 });
 
 describe("the freshness of a result", () => {

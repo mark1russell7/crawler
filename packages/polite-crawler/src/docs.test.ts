@@ -110,6 +110,23 @@ describe("the versions of a document", () => {
     expect(changed).toMatchObject({ capture: "fetch.p3", rendered: false });
   });
 
+  it("hold back a render that stays current, when its capture refused AI input and a newer plain capture does not", () => {
+    const index = memory();
+    index.upsert(version("fetch.p1", "2026-10-01T00:00:00.000Z", "Bistro", { blob: "aa", ai_input: "no" }), "x");
+    index.upsert(
+      version("fetch.r1", "2026-10-01T00:00:05.000Z", "Bistro. The vault opens at noon.", {
+        rendered: true,
+        blob: "rr",
+        ai_input: "no",
+      }),
+      "x",
+    );
+    const same = index.upsert(version("fetch.p2", "2026-10-02T00:00:00.000Z", "Bistro", { blob: "aa", ai_input: "yes" }), "x");
+    expect(same).toMatchObject({ capture: "fetch.r1", ai_input: "no" });
+    expect(index.find("vault", { limit: 10 })).toEqual([]);
+    expect(index.rankWithin("vault", [same.doc])).toEqual([]);
+  });
+
   it("choose the richer text of two recipes, or the newer text when both ask for it", () => {
     const index = memory();
     const paper = (capture: string, recipe: string, at: string, text: string, extra: Partial<DocInput> = {}): DocInput => ({

@@ -777,13 +777,14 @@ export const fromText = (text: string): Array<Hours & { readonly label: string |
   const original = text.split(/\n+/).map((line) => line.trim());
   const lines = original.map((line) => (line.length > MAX_LINE ? line : normalize(line)));
   const out: Array<Hours & { readonly label: string | null }> = [];
-  let block: { start: number; lines: number[]; season: string | undefined } | undefined;
+  /** A season or the size can cut a block from the block before it. Then the line above the block is not its label. */
+  let block: { start: number; lines: number[]; season: string | undefined; cut: boolean } | undefined;
   const flush = (): void => {
     if (block === undefined) return;
     const current = block;
     block = undefined;
-    const above = lines[current.start - 1] ?? "";
-    const label = original[current.start - 1];
+    const above = current.cut ? "" : (lines[current.start - 1] ?? "");
+    const label = current.cut ? undefined : original[current.start - 1];
     const week: Record<string, Interval[]> = {};
     let inferred = false;
     let partial = false;
@@ -1085,8 +1086,9 @@ export const fromText = (text: string): Array<Hours & { readonly label: string |
     if ((names || clock) && (line.length <= 160 || ranges >= 2)) {
       // a season starts a schedule of its own ("Summer: Mon-Sun 10am-8pm")
       const season = seasonOf(line);
-      if (season !== undefined || (block !== undefined && block.lines.length >= MAX_BLOCK_LINES)) flush();
-      block ??= { start: index, lines: [], season };
+      const cut = block !== undefined && (season !== undefined || block.lines.length >= MAX_BLOCK_LINES);
+      if (cut) flush();
+      block ??= { start: index, lines: [], season, cut };
       block.lines.push(index);
     } else {
       flush();

@@ -361,11 +361,13 @@ describe("hours that are not the week", () => {
   });
 
   it("gives each season a schedule of its own, and names it", () => {
-    const seasons = fromText("Summer: Mon-Sun 10am-8pm\nWinter: Sat-Sun 10am-4pm");
+    const seasons = fromText("Hours\nSummer: Mon-Sun 10am-8pm\nWinter: Sat-Sun 10am-4pm");
     expect(seasons.map((hours) => [hours.season, describeWeek(hours.week)])).toEqual([
       ["Summer", "Mon–Sun 10:00–20:00"],
       ["Winter", "Sat–Sun 10:00–16:00"],
     ]);
+    // the line above the winter schedule is the last line of the summer schedule, not a label
+    expect(seasons.map((hours) => hours.label)).toEqual(["Hours", null]);
     expect(fromText("Hours (June-August)\nMon-Sun 7am-10pm")[0]!.season).toBe("June-August");
   });
 });

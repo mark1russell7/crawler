@@ -37,6 +37,7 @@ import type { Robots, RobotsDecision } from "./robots.ts";
 import { decide, isProductToken, robotsFromResponse, robotsFromStatus, signalsFor, unreachableRobots } from "./robots.ts";
 import type { AiInput, Signals } from "./signals.ts";
 import { NO_SIGNALS, metaSignals, readSignals } from "./signals.ts";
+import { BOT_PAGE, DEFAULT_TOKEN } from "./version.ts";
 import { cacheKeyOf } from "./urls.ts";
 
 /**
@@ -212,6 +213,13 @@ export interface CrawlerOptions {
   readonly random?: (() => number) | undefined;
   /** This value is the number of hosts that get requests at one time. The default is 16. */
   readonly maxActive?: number | undefined;
+  /**
+   * This value tells if the crawler also obeys the robots.txt group of `PoliteCrawler`. That applies
+   * when the `User-Agent` links the bot page of polite-crawler (`BOT_PAGE`) and the token is different.
+   * Site owners read that page, and they write their rules for `PoliteCrawler`. The most restrictive
+   * of the groups applies, as for `onBehalfOf`. The default is true. Set false for a bot page of your own.
+   */
+  readonly obeyDefaultToken?: boolean | undefined;
   /**
    * This value is the number of pages that the browser renders at one time. The default is 2. Each
    * render is a browser context of its own, which holds much memory. A render waits for a slot before
@@ -922,6 +930,8 @@ export class Crawler {
   private renderOff: string | undefined;
   /** The renders that run at one time (`maxRenders`). */
   private readonly renders: Slots;
+  /** These tokens apply because the `User-Agent` links the bot page (`obeyDefaultToken`). */
+  private readonly pageTokens: readonly string[];
 
   constructor(private readonly options: CrawlerOptions) {
     if (!isProductToken(options.token)) {
@@ -944,6 +954,13 @@ export class Crawler {
     this.scheduler = new HostScheduler(this.clock, options.maxActive ?? 16, {
       store: options.hostState,
     });
+    // the bot page tells site owners to write rules for PoliteCrawler, so an application that links it obeys them
+    this.pageTokens =
+      options.obeyDefaultToken !== false &&
+      options.token.toLowerCase() !== DEFAULT_TOKEN.toLowerCase() &&
+      options.userAgent.includes(BOT_PAGE)
+        ? [DEFAULT_TOKEN]
+        : [];
     const maxRenders = options.maxRenders ?? 2;
     if (!Number.isInteger(maxRenders) || maxRenders < 1) {
       throw new RangeError(`maxRenders must be an integer of 1 or more, not ${String(maxRenders)}`);
@@ -1256,7 +1273,7 @@ export class Crawler {
     if (spec.invalid !== undefined) return answer(spec.invalid);
     const refused = egressRefusal(this.egress, target.hostname);
     if (refused !== undefined) return answer(refused);
-    const tokens = [this.options.token, ...(spec.onBehalfOf ?? [])];
+    const tokens = [this.options.token, ...(spec.onBehalfOf ?? []), ...this.pageTokens];
     const badToken = tokens.find((token) => !isProductToken(token));
     if (spec.mode === "page" && badToken !== undefined) return answer(`not a valid product token: "${badToken}"`);
     const host = hostKey(target);

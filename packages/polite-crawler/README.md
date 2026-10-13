@@ -225,6 +225,7 @@ The readers give more facts than before:
 - `politeness`: the limits of the policy, for each host or for some hosts (`hosts: { "*.example.org": { pageIntervalMs: 10_000 } }`). `DEFAULT_POLICY` has the defaults. A value that is not valid throws a `RangeError`.
 - `hostState`: the store of the pace, the counts and the stops of each host (`HostStateStore`). The default keeps them in memory (`MemoryHostStateStore`). `SqliteHostStateStore` keeps them in a file that processes share.
 - `onEvent`: a function that gets an event for each request, response, wait, stop and skip.
+- `obeyDefaultToken`: a crawler with a token of your own also obeys the group of `PoliteCrawler` when its `User-Agent` links the bot page of polite-crawler. Site owners read that page. The stricter rules apply. Set false when you host a bot page of your own.
 - `maxRenders`: the pages that the browser renders at one time. The default is 2, because each render holds a browser context. A render waits for a slot before the lease of its host, so the wait is not time of the host.
 - `scope`, `labels` and `scopeRank`: the labels of each record. One fetch of a robots.txt can serve requests of different scopes. Its record takes the labels of each request and the scope with the highest `scopeRank`, the most private one.
 

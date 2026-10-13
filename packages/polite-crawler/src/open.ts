@@ -34,15 +34,11 @@ import {
   reindex,
   verifyQuote,
 } from "./runtime.ts";
-import { VERSION } from "./version.ts";
+import { BOT_PAGE, DEFAULT_TOKEN, VERSION } from "./version.ts";
 
 export type { ReadOptions, ReadResult, VerifyOptions, VerifyResult } from "./runtime.ts";
 
-/** This is the product token that robots.txt rules match when an application gives no token. */
-export const DEFAULT_TOKEN = "PoliteCrawler";
-
-/** This page tells a site owner what the crawler is and how to control it. */
-export const BOT_PAGE = "https://mark1russell7.github.io/crawler/bot/";
+export { BOT_PAGE, DEFAULT_TOKEN } from "./version.ts";
 
 /**
  * This function gives the default `User-Agent` header. The header names the crawler, its version
@@ -143,6 +139,8 @@ export interface RuntimeOptions {
   readonly random?: (() => number) | undefined;
   /** This label goes into each capture record. */
   readonly scope?: string | undefined;
+  /** With the value false, the crawler does not also obey the group of `PoliteCrawler` when its `User-Agent` links the bot page (`CrawlerOptions.obeyDefaultToken`). */
+  readonly obeyDefaultToken?: boolean | undefined;
   /** This function ranks the scopes, the most private highest. A shared fetch of a robots.txt records the scope with the highest rank (`CrawlerOptions.scopeRank`). */
   readonly scopeRank?: ((scope: string) => number) | undefined;
   /** This function gets an event for each request, response, wait, stop and skip. */
@@ -239,6 +237,7 @@ export const createRuntime = (options: RuntimeOptions): StoreRuntime => {
     random: options.random,
     scope: options.scope,
     scopeRank: options.scopeRank,
+    obeyDefaultToken: options.obeyDefaultToken,
     onEvent: options.onEvent,
   });
   const extractors = new Extractors();

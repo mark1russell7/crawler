@@ -459,3 +459,24 @@ describe("the records of a robots.txt fetch", () => {
     ]);
   });
 });
+
+describe("an application that links the bot page of polite-crawler", () => {
+  const ask = async (options: Partial<CrawlerOptions>): Promise<Record<string, string>> => {
+    const { agent, crawler } = await setup(options);
+    const site = agent.get("https://shop.example");
+    site.intercept({ path: "/robots.txt", method: "GET" }).reply(200, "User-agent: PoliteCrawler\nDisallow: /private\n").persist();
+    site.intercept({ path: (path) => path !== "/robots.txt", method: "GET" }).reply(200, "page").persist();
+    const out: Record<string, string> = {};
+    for (const path of ["/private", "/open"]) {
+      out[path] = (await crawler.fetch({ url: `https://shop.example${path}`, mode: "page", recipe: "page" })).outcome;
+    }
+    return out;
+  };
+
+  it("obeys the rules for PoliteCrawler too, unless it turns that off or does not link the page", async () => {
+    const linked = { token: "MyApp", userAgent: "MyApp/1.0 (+https://mark1russell7.github.io/crawler/bot/)" };
+    expect(await ask(linked)).toEqual({ "/private": "skipped", "/open": "ok" });
+    expect(await ask({ ...linked, obeyDefaultToken: false })).toEqual({ "/private": "ok", "/open": "ok" });
+    expect(await ask({ token: "MyApp", userAgent: "MyApp/1.0 (+https://myapp.example/bot)" })).toEqual({ "/private": "ok", "/open": "ok" });
+  });
+});

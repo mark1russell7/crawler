@@ -56,6 +56,8 @@ Crawl-delay: 10
 
 When the crawler fetches a page for an AI assistant, it also obeys your rules for `Claude-User`.
 
+An application can use the software with a product token of its own. When its `User-Agent` links this page, it also obeys your rules for `PoliteCrawler`, and the stricter rules apply. An application with a bot page of its own can turn this off.
+
 To refuse the use of your text as AI input, add a content signal. The crawler keeps such a page but holds back its text from an AI reader:
 
 ```text

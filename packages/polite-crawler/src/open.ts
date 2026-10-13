@@ -129,6 +129,8 @@ export interface RuntimeOptions {
   readonly renderer?: Renderer | false | undefined;
   /** This value is the number of sites that the crawler fetches from at one time. The default is 16. */
   readonly maxActive?: number | undefined;
+  /** This value is the number of pages that the browser renders at one time. The default is 2: each render holds a browser context. */
+  readonly maxRenders?: number | undefined;
   /** This `undici` dispatcher sends the requests. Tests give a mock agent, and a proxy is possible. */
   readonly dispatcher?: Dispatcher | undefined;
   /** This policy controls the addresses that the crawler fetches. By default, it fetches only public addresses. */
@@ -228,6 +230,7 @@ export const createRuntime = (options: RuntimeOptions): StoreRuntime => {
     index,
     renderer,
     maxActive: options.maxActive,
+    maxRenders: options.maxRenders,
     dispatcher: options.dispatcher,
     egress: options.egress,
     politeness: options.politeness,

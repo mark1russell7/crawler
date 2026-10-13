@@ -235,6 +235,73 @@ describe("the rules of a fetch, applied to a render", () => {
   });
 });
 
+describe("the renders at one time", () => {
+  /** A browser that holds each page until the test lets it go, and counts the pages that it holds. */
+  const held = () => {
+    const waiting: Array<() => void> = [];
+    let running = 0;
+    let most = 0;
+    let clock: Clock | undefined;
+    const renderer: Renderer = {
+      render: async (url) => {
+        running += 1;
+        most = Math.max(most, running);
+        // the page takes one second of the clock of the test, and then waits for the test
+        await clock?.sleep(1000);
+        await new Promise<void>((resolve) => waiting.push(resolve));
+        running -= 1;
+        return { html: "<p>shown</p>", finalUrl: url, status: 200, headers: {} };
+      },
+      close: () => Promise.resolve(),
+    };
+    const settle = () => new Promise((resolve) => setTimeout(resolve, 50));
+    return {
+      renderer,
+      waiting,
+      most: () => most,
+      settle,
+      useClock: (value: Clock) => {
+        clock = value;
+      },
+    };
+  };
+  const HOSTS = ["shop.example", "cdn.example", "other.example", "unknown.example"];
+
+  it("are two by default, and more pages wait for a slot", async () => {
+    const browser = held();
+    const { crawler, robots } = await make(browser.renderer);
+    for (const host of HOSTS) robots(`https://${host}`, "User-agent: *\nAllow: /\n");
+    const pages = HOSTS.map((host) => crawler.render({ url: `https://${host}/`, recipe: "page" }));
+    for (let round = 0; round < 4; round += 1) {
+      await browser.settle();
+      browser.waiting.splice(0).forEach((go) => go());
+    }
+    expect((await Promise.all(pages)).map((page) => page.outcome)).toEqual(["ok", "ok", "ok", "ok"]);
+    expect(browser.most()).toBe(2);
+  });
+
+  it("wait for a slot outside the lease of the host, so the wait is not time of the host", async () => {
+    const browser = held();
+    const { crawler, robots, captures, clock } = await make(browser.renderer, { maxRenders: 1 });
+    browser.useClock(clock);
+    for (const host of HOSTS.slice(0, 2)) robots(`https://${host}`, "User-agent: *\nAllow: /\n");
+    const pages = HOSTS.slice(0, 2).map((host) => crawler.render({ url: `https://${host}/`, recipe: "page" }));
+    for (let round = 0; round < 3; round += 1) {
+      await browser.settle();
+      browser.waiting.splice(0).forEach((go) => go());
+    }
+    await Promise.all(pages);
+    expect(browser.most()).toBe(1);
+    // each render takes one second of the clock; the second page waited a second for the slot, not in its lease
+    const rendered = (await captures()).filter((row) => (row.payload as { rendered?: boolean }).rendered === true);
+    expect(rendered.map((row) => (row.payload as { elapsed_ms: number }).elapsed_ms)).toEqual([1000, 1000]);
+  });
+
+  it("refuses a count of renders that is not a whole number of 1 or more", async () => {
+    await expect(make(held().renderer, { maxRenders: 0 })).rejects.toThrow(/maxRenders must be an integer of 1 or more/);
+  });
+});
+
 describe("a renderer with no browser", () => {
   for (const [name, failure] of [
     ["says so with RenderRefused", () => new RenderRefused("browser", "rendering needs a browser: npx playwright-core install chromium-headless-shell")],

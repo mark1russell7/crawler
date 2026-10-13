@@ -213,6 +213,12 @@ export interface CrawlerOptions {
   /** This value is the number of hosts that get requests at one time. The default is 16. */
   readonly maxActive?: number | undefined;
   /**
+   * This value is the number of pages that the browser renders at one time. The default is 2. Each
+   * render is a browser context of its own, which holds much memory. A render waits for a slot before
+   * the lease of its host, so the wait does not count toward the time of the host.
+   */
+  readonly maxRenders?: number | undefined;
+  /**
    * This undici dispatcher sends the requests. With a dispatcher of your own, the crawler checks
    * only literal addresses. Put `egressLookup` in its connection options to check the address after DNS.
    */
@@ -356,6 +362,52 @@ const pageSignals = (body: Uint8Array | undefined, contentType: string | undefin
   body === undefined || !/html/i.test(contentType ?? "")
     ? []
     : metaSignals(new TextDecoder("latin1").decode(body.subarray(0, 65_536)));
+
+/** A count of slots: `max` holders at one time at most, and the others wait in sequence. */
+class Slots {
+  private used = 0;
+  private readonly waiting: Array<() => void> = [];
+
+  constructor(private readonly max: number) {}
+
+  /** This method gives a function that frees the slot. It rejects when the signal aborts before a slot is free. */
+  async acquire(signal: AbortSignal): Promise<() => void> {
+    if (this.used < this.max) {
+      this.used += 1;
+      return this.releaser();
+    }
+    await new Promise<void>((resolve, reject) => {
+      const stop = (): void => {
+        const at = this.waiting.indexOf(go);
+        if (at !== -1) this.waiting.splice(at, 1);
+        reject(signal.reason instanceof Error ? signal.reason : new Error("cancelled"));
+      };
+      const go = (): void => {
+        signal.removeEventListener("abort", stop);
+        resolve();
+      };
+      if (signal.aborted) {
+        stop();
+        return;
+      }
+      this.waiting.push(go);
+      signal.addEventListener("abort", stop, { once: true });
+    });
+    // the slot of the holder that freed it passes to this waiter, so the count stays
+    return this.releaser();
+  }
+
+  private releaser(): () => void {
+    let freed = false;
+    return () => {
+      if (freed) return;
+      freed = true;
+      const next = this.waiting.shift();
+      if (next !== undefined) next();
+      else this.used -= 1;
+    };
+  }
+}
 
 /** This function tells if an error of a renderer says that it has no browser: no `playwright-core`, or no browser on the disk. */
 const missingBrowser = (message: string): boolean =>
@@ -868,6 +920,8 @@ export class Crawler {
   private closingDone: Promise<void> | undefined;
   /** This note tells why the renderer has no browser. After the first page that finds it, the crawler renders nothing. */
   private renderOff: string | undefined;
+  /** The renders that run at one time (`maxRenders`). */
+  private readonly renders: Slots;
 
   constructor(private readonly options: CrawlerOptions) {
     if (!isProductToken(options.token)) {
@@ -890,6 +944,11 @@ export class Crawler {
     this.scheduler = new HostScheduler(this.clock, options.maxActive ?? 16, {
       store: options.hostState,
     });
+    const maxRenders = options.maxRenders ?? 2;
+    if (!Number.isInteger(maxRenders) || maxRenders < 1) {
+      throw new RangeError(`maxRenders must be an integer of 1 or more, not ${String(maxRenders)}`);
+    }
+    this.renders = new Slots(maxRenders);
     this.ownsDispatcher = options.dispatcher === undefined;
     this.dispatcher =
       options.dispatcher ??
@@ -1952,6 +2011,14 @@ export class Crawler {
     const allowRequest = this.allowRequestFor(target, verdict.robots, tokens, signal, tally);
     const rest = (elapsedMs: number): RestInput => ({ kind: "render", elapsedMs, crawlDelaySeconds });
 
+    // the wait for a slot of the browser comes before the lease of the host, so the host does not wait for it
+    let release: () => void;
+    try {
+      release = await this.renders.acquire(signal);
+    } catch {
+      if (this.closed) return closedResult(url);
+      return skip("cancelled by the caller");
+    }
     let done: RenderDone;
     try {
       done = await this.scheduler.run(
@@ -2031,6 +2098,8 @@ export class Crawler {
       if (this.closed) return closedResult(url);
       if (request_.signal?.aborted === true) return skip("cancelled by the caller");
       throw error;
+    } finally {
+      release();
     }
 
     if (done.kind === "closed" || this.closed) return closedResult(url);

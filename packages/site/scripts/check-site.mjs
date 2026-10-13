@@ -84,6 +84,14 @@ else {
   }
 }
 
+// the dataset of the study names its copy in the repository and the package that made it
+const study = readFileSync(join(dist, "notes", "robots-txt-ai-agents", "index.html"), "utf8");
+const graphs = [...study.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)].flatMap(([, json]) => JSON.parse(json)["@graph"] ?? []);
+const dataset = graphs.find((node) => node["@type"] === "Dataset");
+for (const same of ["https://github.com/mark1russell7/crawler/", "https://www.npmjs.com/package/polite-crawler"]) {
+  if (!(dataset?.sameAs ?? []).some((url) => url.startsWith(same))) problems.push(`the Dataset of the study has no sameAs ${same}`);
+}
+
 const browser = await chromium.launch();
 const context = await browser.newContext();
 for (const path of pages) {

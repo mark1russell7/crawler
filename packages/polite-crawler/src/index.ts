@@ -78,6 +78,7 @@ export {
   createRuntime,
   defaultUserAgent,
   durationMs,
+  isMailbox,
   openCrawler,
 } from "./open.ts";
 export type { PdfOptions, PdfText } from "./pdf.ts";

@@ -50,6 +50,16 @@ export const BOT_PAGE = "https://mark1russell7.github.io/crawler/bot/";
 export const defaultUserAgent = (contact?: string): string =>
   `${DEFAULT_TOKEN}/${VERSION} (+${BOT_PAGE}${contact === undefined ? "" : `; ${contact}`})`;
 
+/** A mailbox is `name@host`, or a name and `<name@host>`. A URL is not a mailbox, also when it holds an `@`. */
+const MAILBOX = /^(?:[^\s<>@:/]+@[^\s<>@/]+|[^<>]*<[^\s<>@:/]+@[^\s<>@/]+>)$/;
+
+/**
+ * This function tells if a contact is a mailbox. The `From` header holds only a mailbox (RFC 9110,
+ * section 10.1.2). Thus the crawler sends a mailbox in `From` and in the `User-Agent`, and a URL in
+ * the `User-Agent` only.
+ */
+export const isMailbox = (contact: string): boolean => MAILBOX.test(contact.trim());
+
 /** A duration is a count of milliseconds, or a text, for example `"30m"`, `"24h"` or `"7d"`. */
 export type Duration = number | string;
 
@@ -105,7 +115,10 @@ export interface RuntimeOptions {
   readonly token?: string | undefined;
   /** This text is the full `User-Agent` header. The default names the crawler and its page. */
   readonly userAgent?: string | undefined;
-  /** This address goes into the `From` header and the `User-Agent` header. The crawler sends no contact without it. */
+  /**
+   * This address goes into the `User-Agent` header. A mailbox (`ops@example.com`) also goes into the
+   * `From` header, and a URL does not. The crawler sends no contact without it.
+   */
   readonly contact?: string | undefined;
   /** This browser renders the pages that need JavaScript. The value `false` turns rendering off. */
   readonly renderer?: Renderer | false | undefined;
@@ -173,6 +186,10 @@ export const createRuntime = (options: RuntimeOptions): StoreRuntime => {
   if (dir === undefined && (options.log === undefined || options.blobs === undefined || options.index === undefined)) {
     throw new Error("a runtime needs dir, or a log, a blob store and an index");
   }
+  const contact = options.contact;
+  if (contact !== undefined && !/^[\t -~]*$/.test(contact)) {
+    throw new Error(`contact "${contact}" has a character that an HTTP header cannot hold: use printable ASCII`);
+  }
   if (dir !== undefined) guardStore(dir);
   const owned: Array<() => Promise<void> | void> = [];
   const log = options.log ?? new CaptureLog(join(dir!, "captures"));
@@ -196,8 +213,8 @@ export const createRuntime = (options: RuntimeOptions): StoreRuntime => {
   const renderer = options.renderer === false ? undefined : (options.renderer ?? playwrightRenderer());
   const crawler = new Crawler({
     token: options.token ?? DEFAULT_TOKEN,
-    userAgent: options.userAgent ?? defaultUserAgent(options.contact),
-    from: options.contact,
+    userAgent: options.userAgent ?? defaultUserAgent(contact),
+    from: contact !== undefined && isMailbox(contact) ? contact.trim() : undefined,
     log,
     blobs,
     index,

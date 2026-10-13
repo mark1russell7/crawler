@@ -76,6 +76,42 @@ describe("openCrawler", () => {
     expect(defaultUserAgent("ops@example.com")).toContain("; ops@example.com)");
   });
 
+  it("sends a mailbox in From and the User-Agent, and a URL in the User-Agent only", async () => {
+    dir = await tempDir("open");
+    const agent = new MockAgent();
+    agent.disableNetConnect();
+    const sent: Array<{ readonly from: string | undefined; readonly agent: string | undefined }> = [];
+    agent
+      .get("https://bakery.example")
+      .intercept({ path: () => true })
+      .reply((request) => {
+        const headers = request.headers as Record<string, string>;
+        sent.push({ from: headers["from"], agent: headers["user-agent"] });
+        return { statusCode: 200, data: "User-agent: *\nAllow: /\n" };
+      })
+      .persist();
+    const ask = async (contact: string): Promise<{ readonly from: string | undefined; readonly agent: string | undefined }> => {
+      sent.length = 0;
+      const runtime = createRuntime({ dir: dir!, contact, renderer: false, dispatcher: agent, clock: fakeClock() });
+      try {
+        await runtime.crawler.fetch({ url: `https://bakery.example/${String(Math.random()).slice(2)}`, mode: "api", recipe: "x", maxAgeMs: 0 });
+      } finally {
+        await runtime.close();
+      }
+      return sent.at(-1)!;
+    };
+    const url = await ask("https://ops.example/contact");
+    expect(url.from).toBeUndefined();
+    expect(url.agent).toContain("; https://ops.example/contact)");
+    expect(await ask("ops@example.com")).toMatchObject({ from: "ops@example.com" });
+    expect(await ask("Ops Team <ops@example.com>")).toMatchObject({ from: "Ops Team <ops@example.com>" });
+    // a URL with an @ is still a URL
+    expect(await ask("https://example.com/@ops")).toMatchObject({ from: undefined });
+    expect(() => createRuntime({ dir: dir!, contact: "ops@exämple.com", renderer: false })).toThrow(
+      /^contact "ops@exämple.com" has a character that an HTTP header cannot hold/,
+    );
+  });
+
   it("reads durations", () => {
     expect(durationMs("24h")).toBe(86_400_000);
     expect(durationMs("30m")).toBe(1_800_000);

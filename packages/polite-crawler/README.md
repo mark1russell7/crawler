@@ -150,7 +150,7 @@ The crawler records each release in the capture log.
 | Option | Variable | What it does |
 | --- | --- | --- |
 | `--dir <path>` | `POLITE_CRAWLER_DIR` | The folder of the store. The default is `~/.polite-crawler`. |
-| `--contact <text>` | `POLITE_CRAWLER_CONTACT` | An email address or a URL for the `From` header. |
+| `--contact <text>` | `POLITE_CRAWLER_CONTACT` | An email address (in `From` and the `User-Agent`) or a URL (in the `User-Agent` only). |
 | `--allow-private` | `POLITE_CRAWLER_ALLOW_PRIVATE=1` | Fetch loopback, private and link-local addresses too. |
 | `--allow-user-provided` | `POLITE_CRAWLER_ALLOW_USER_PROVIDED=1` | Let `user_provided` work when the client cannot ask the user. |
 | `--no-browser` | | Do not open a headless browser. |
@@ -236,7 +236,7 @@ The readers give more facts than before:
 2. **One request at a time for each host.** A host rests for 3 seconds or more between two requests, and longer after a slow response. Many hosts run in parallel, so a crawl is fast across sites and gentle on each one.
 3. **Stops.** A 401 or a 403 stops the host for 1 hour, and a challenge or a 402 for 24 hours. Five failures in sequence stop the host for 1 hour. A `Retry-After` longer than 1 hour stops the host for that time, up to 30 days. The note of a skipped fetch says `host stopped until <time>: <reason>`. The crawler does not try again with a different identity.
 4. **Failures and backoff.** A client error (a 404, for example), a 429 and a 503 do not count toward a stop. After an error or a request to wait, the crawler waits 5 seconds, then longer, up to 300 seconds, with random jitter.
-5. **An honest `User-Agent`.** The default is `PoliteCrawler/0.1.0 (+https://mark1russell7.github.io/crawler/bot/)`. The `contact` option adds an address. The constructor of `Crawler` throws an error for a bad option. Examples are a token that is not a product token, a `User-Agent` or a `From` that HTTP cannot send, and a `maxActive` less than 1.
+5. **An honest `User-Agent`.** The default is `PoliteCrawler/0.1.0 (+https://mark1russell7.github.io/crawler/bot/)`. The `contact` option adds an address. An email address also goes into the `From` header, and a URL does not, because `From` holds only a mailbox. The constructor of `Crawler` throws an error for a bad option. Examples are a token that is not a product token, a `User-Agent` or a `From` that HTTP cannot send, and a `maxActive` less than 1.
 6. **Public addresses only.** By default, the crawler fetches only `http:` and `https:` URLs on public addresses. It checks the address after DNS and at each redirect. In the headless browser, it checks each request of the page and each redirect of that request. A refusal is a skipped fetch with the note `egress policy: <address> is a loopback address; set allowPrivate to fetch it`.
 7. **Usage signals.** When a page asks not to be AI input (`ai-input=no` content signals), the crawler keeps it but holds back its text from the AI reader.
 

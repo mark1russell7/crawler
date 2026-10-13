@@ -147,7 +147,7 @@ Add an option after `mcp`, for example `npx -y polite-crawler mcp --dir ~/resear
 | Option | Variable | What it does |
 | --- | --- | --- |
 | `--dir <path>` | `POLITE_CRAWLER_DIR` | The folder of the store. The default is `~/.polite-crawler`. A path that starts with `~` is in your home folder. |
-| `--contact <text>` | `POLITE_CRAWLER_CONTACT` | An email address or a URL. The crawler sends it in the `From` header and in the `User-Agent`. |
+| `--contact <text>` | `POLITE_CRAWLER_CONTACT` | An email address or a URL. The crawler sends it in the `User-Agent`, and an email address in the `From` header too. |
 | `--allow-private` | `POLITE_CRAWLER_ALLOW_PRIVATE=1` | The crawler fetches loopback, private and link-local addresses too. By default, it refuses them. |
 | `--allow-user-provided` | `POLITE_CRAWLER_ALLOW_USER_PROVIDED=1` | `user_provided` works when the client cannot ask the user. [Read the rule](#pages-that-refuse-ai-input). |
 | `--no-browser` | | The crawler does not open a headless browser. |

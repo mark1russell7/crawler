@@ -39,7 +39,8 @@ Usage:
 
 Options:
   --dir <path>       the store (default $POLITE_CRAWLER_DIR, or ~/.polite-crawler)
-  --contact <text>   an email or URL for the From header ($POLITE_CRAWLER_CONTACT)
+  --contact <text>   an email (From and User-Agent) or a URL (User-Agent only)
+                     ($POLITE_CRAWLER_CONTACT)
   --allow-private    fetch loopback and private addresses too ($POLITE_CRAWLER_ALLOW_PRIVATE=1)
   --no-browser       never open the headless browser
   --json             print JSON

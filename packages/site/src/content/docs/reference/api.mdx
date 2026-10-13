@@ -18,7 +18,7 @@ The function opens a crawler on a folder and gives a `PoliteCrawler`.
 | `dir` | `string` | (necessary) | The folder of the capture log, the bodies and the index. |
 | `token` | `string` | `"PoliteCrawler"` | The product token that robots.txt rules match. |
 | `userAgent` | `string` | `PoliteCrawler/<version> (+<bot page>)` | The full `User-Agent` header. |
-| `contact` | `string` | none | An address for the `From` header and the `User-Agent`. |
+| `contact` | `string` | none | An address for the `User-Agent`. An email address goes into the `From` header too. |
 | `renderer` | `Renderer \| false` | a Playwright renderer | The browser for pages that need JavaScript. `false` turns rendering off. |
 | `maxActive` | `number` | `16` | The number of hosts that get requests at one time. |
 | `onBehalfOf` | `string[]` | `[]` | More product tokens whose robots.txt rules apply, for example `["Claude-User"]`. |

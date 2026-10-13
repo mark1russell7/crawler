@@ -39,6 +39,7 @@ The first version. It needs Node.js 22.19 or later, and it is ESM only.
   - A bad URL in `crawl_fetch` is an error of that URL only, and a URL given twice is fetched one time. The server sends progress for each URL.
   - With no browser installed, the server turns rendering off at start and writes one note.
 - **Politeness.** The crawler obeys robots.txt (RFC 9309), and the rules for `Claude-User` when an assistant asks. It sends one request at a time to each host and obeys `Retry-After`. The `User-Agent` names the crawler and links to a page for site owners.
+  - The `contact` option adds an address to the `User-Agent`. Only an email address goes into the `From` header (RFC 9110).
   - A 401 or a 403 stops the host for 1 hour, a challenge or a 402 for 24 hours, and five failures in sequence for 1 hour. A longer `Retry-After` stops the host for that time, up to 30 days.
   - A client error, a 429 and a 503 do not count toward a stop. The backoff starts at 5 seconds and stops at 300 seconds, with random jitter.
   - When robots.txt cannot be read, the crawler fetches nothing from the site and tries again after some minutes. A good copy from the last 30 days applies in that time. A 401 or a 403 for robots.txt means that the site has no file.

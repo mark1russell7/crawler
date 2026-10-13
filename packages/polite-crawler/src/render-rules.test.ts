@@ -254,12 +254,24 @@ describe("the renders at one time", () => {
       },
       close: () => Promise.resolve(),
     };
-    const settle = () => new Promise((resolve) => setTimeout(resolve, 50));
+    const settle = () => new Promise((resolve) => setTimeout(resolve, 20));
+    /** This function lets each page go until all pages are done, however slow the machine is. */
+    const drain = async <T>(pages: ReadonlyArray<Promise<T>>): Promise<T[]> => {
+      let done = false;
+      const all = Promise.all(pages).finally(() => {
+        done = true;
+      });
+      while (!done) {
+        await settle();
+        waiting.splice(0).forEach((go) => go());
+      }
+      return all;
+    };
     return {
       renderer,
       waiting,
       most: () => most,
-      settle,
+      drain,
       useClock: (value: Clock) => {
         clock = value;
       },
@@ -272,11 +284,7 @@ describe("the renders at one time", () => {
     const { crawler, robots } = await make(browser.renderer);
     for (const host of HOSTS) robots(`https://${host}`, "User-agent: *\nAllow: /\n");
     const pages = HOSTS.map((host) => crawler.render({ url: `https://${host}/`, recipe: "page" }));
-    for (let round = 0; round < 4; round += 1) {
-      await browser.settle();
-      browser.waiting.splice(0).forEach((go) => go());
-    }
-    expect((await Promise.all(pages)).map((page) => page.outcome)).toEqual(["ok", "ok", "ok", "ok"]);
+    expect((await browser.drain(pages)).map((page) => page.outcome)).toEqual(["ok", "ok", "ok", "ok"]);
     expect(browser.most()).toBe(2);
   });
 
@@ -286,11 +294,7 @@ describe("the renders at one time", () => {
     browser.useClock(clock);
     for (const host of HOSTS.slice(0, 2)) robots(`https://${host}`, "User-agent: *\nAllow: /\n");
     const pages = HOSTS.slice(0, 2).map((host) => crawler.render({ url: `https://${host}/`, recipe: "page" }));
-    for (let round = 0; round < 3; round += 1) {
-      await browser.settle();
-      browser.waiting.splice(0).forEach((go) => go());
-    }
-    await Promise.all(pages);
+    await browser.drain(pages);
     expect(browser.most()).toBe(1);
     // each render takes one second of the clock; the second page waited a second for the slot, not in its lease
     const rendered = (await captures()).filter((row) => (row.payload as { rendered?: boolean }).rendered === true);

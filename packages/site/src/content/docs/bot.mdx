@@ -30,6 +30,14 @@ Many people can use the software. When the operator gave a contact, the `User-Ag
 - **It stops at a refusal.** After a challenge, a 401, a 402 or a 403, it sends no more requests to your site in that run.
 - **It sends conditional requests.** With an `ETag` or a `Last-Modified` date, your server can answer `304 Not Modified` and send no body.
 
+## What it keeps
+
+PoliteCrawler keeps each response that it fetched in a private store on the computer of its operator: a log of each request, and the bodies. The store stays until the operator deletes it. A stored copy is the record of what a page said, so a citation can name it. The crawler does not publish the stored copies.
+
+- **By default, it uses a stored copy for 24 hours.** In that time, a question about the page sends no request to your site. The operator can set a shorter or a longer age.
+- **It reads `Cache-Control` and `Expires`.** With the age `auto`, it uses a stored copy only while your server says that the copy is fresh. `no-store` and `no-cache` make a copy stale at once.
+- **It keeps a response with `no-store` too.** `no-store` changes when the crawler asks again, not what it keeps.
+
 ## How to control it
 
 To block PoliteCrawler, add this group to your robots.txt:

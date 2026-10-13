@@ -1844,6 +1844,7 @@ export class Crawler {
                 timeoutMs: policy.renderTimeoutMs,
                 ...(this.options.from !== undefined ? { headers: { from: this.options.from } } : {}),
                 allowRequest,
+                maxRedirects: policy.maxRedirects,
                 signal,
               }),
               signal,

@@ -35,6 +35,22 @@ root.innerHTML = "<h2>Hours</h2><p>Tue-Sun 11am-9pm</p>";
   "/blank": '<html><body><div id="root"></div></body></html>',
   "/hang": `<html><body>${FILLER}<script>setTimeout(function () { for (;;) {} }, 50);</script></body></html>`,
   "/alert": `<html><body>${FILLER}<script>alert("hi"); confirm("sure?"); window.open("/inner");</script></body></html>`,
+  "/hops": `<html><body>${FILLER}<div id="out"></div><iframe src="/frame-out"></iframe><script>
+["/fetch-out", "/api-chain"].forEach(function (path) {
+  fetch(path).then(function (r) { return r.text(); }).then(function (t) { document.getElementById("out").textContent += " " + t; }, function () {});
+});
+</script></body></html>`,
+  "/end": `<html><body>${FILLER}<p>PUBLIC-END</p></body></html>`,
+};
+/** These paths redirect to the path that they give. The paths under /internal/ stand for a private address. */
+const HOPS: Record<string, string> = {
+  "/fetch-out": "/internal/fetch",
+  "/frame-out": "/internal/frame",
+  "/nav-out": "/internal/nav",
+  "/api-chain": "/api-chain2",
+  "/api-chain2": "/api-end",
+  "/chain": "/chain2",
+  "/chain2": "/end",
 };
 
 const asked: Array<{ readonly path: string; readonly from: string | undefined }> = [];
@@ -44,6 +60,19 @@ const server = createServer((request, response) => {
   asked.push({ path, from: typeof from === "string" ? from : undefined });
   if (/\.(png|PNG)$/.test(path) || path.startsWith("/cdn/")) {
     response.writeHead(200, { "content-type": "image/png" }).end(Buffer.alloc(16));
+    return;
+  }
+  if (path.startsWith("/internal/")) {
+    response.writeHead(200, { "content-type": "text/html", "access-control-allow-origin": "*" }).end(`INTERNAL ${path}`);
+    return;
+  }
+  const hop = HOPS[path] ?? (/^\/loop\/\d+$/.test(path) ? `/loop/${String(Number(path.slice(6)) + 1)}` : undefined);
+  if (hop !== undefined) {
+    response.writeHead(302, { location: hop }).end();
+    return;
+  }
+  if (path === "/api-end") {
+    response.writeHead(200, { "content-type": "text/plain" }).end("PUBLIC-FETCH-END");
     return;
   }
   if (path === "/api/hours") {
@@ -130,6 +159,50 @@ describe("the headless browser", () => {
     await expect(refused).rejects.toBeInstanceOf(RenderRefused);
     await expect(refused).rejects.toMatchObject({ reason: "refused" });
     expect(paths()).toEqual([]);
+  }, 60_000);
+
+  it("follows each redirect in the route, so a step that allowRequest refuses is never requested", async (context) => {
+    if (unavailable !== undefined)
+      context.skip(`Playwright's browser could not start: ${unavailable}`);
+    const decided: string[] = [];
+    const options = {
+      ...OPTIONS,
+      headers: { From: "bot-admin@example.org" },
+      allowRequest: (url: string) => {
+        decided.push(new URL(url).pathname);
+        return !new URL(url).pathname.startsWith("/internal/");
+      },
+    };
+    asked.length = 0;
+    const shown = await renderer!.render(`${base}/hops`, options);
+    const text = extractPage(shown.html, shown.finalUrl).text;
+    // a fetch and a frame that redirect to a refused address: allowRequest refuses the step, and the server never sees it
+    expect(decided).toEqual(expect.arrayContaining(["/hops", "/fetch-out", "/internal/fetch", "/frame-out", "/internal/frame"]));
+    expect(paths().filter((path) => path.startsWith("/internal/"))).toEqual([]);
+    expect(text).not.toContain("INTERNAL");
+    // an allowed chain still answers, and each step carries the headers
+    expect(text).toContain("PUBLIC-FETCH-END");
+    expect(asked.filter(({ path }) => path === "/api-chain2").map(({ from }) => from)).toEqual(["bot-admin@example.org"]);
+    // a navigation that redirects gives the URL of its last step
+    asked.length = 0;
+    const moved = await renderer!.render(`${base}/chain`, options);
+    expect(moved).toMatchObject({ finalUrl: `${base}/end`, status: 200 });
+    expect(extractPage(moved.html, moved.finalUrl).text).toContain("PUBLIC-END");
+    expect(paths()).toEqual(["/chain", "/chain2", "/end"]);
+    // a navigation that redirects to a refused address is no render
+    asked.length = 0;
+    await expect(renderer!.render(`${base}/nav-out`, options)).rejects.toMatchObject({
+      reason: "refused",
+      message: `the request for ${base}/internal/nav, a redirect of ${base}/nav-out, was refused`,
+    });
+    expect(paths()).toEqual(["/nav-out"]);
+    // the limit of a plain fetch: five redirects, and the sixth step is not requested
+    asked.length = 0;
+    await expect(renderer!.render(`${base}/loop/0`, options)).rejects.toMatchObject({ reason: "refused" });
+    expect(paths()).toEqual(["/loop/0", "/loop/1", "/loop/2", "/loop/3", "/loop/4", "/loop/5"]);
+    asked.length = 0;
+    await expect(renderer!.render(`${base}/loop/0`, { ...options, maxRedirects: 1 })).rejects.toThrow(/redirects more than 1 times/);
+    expect(paths()).toEqual(["/loop/0", "/loop/1"]);
   }, 60_000);
 
   it("reads open shadow roots and frames of the same origin, and stops waiting on an empty page", async (context) => {

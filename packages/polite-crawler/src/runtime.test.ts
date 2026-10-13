@@ -145,6 +145,16 @@ describe("the cache after a rebuild", () => {
     await crawler.reindex();
     expect(crawler.runtime.index.counts().docs).toBe(0);
   });
+
+  it("gives no stored copy to a web page that answered a JSON request, also after a rebuild", async () => {
+    const { agent, crawler } = await open();
+    site(agent, "https://api.example", () => ({ status: 200, body: "<html><body>Sign in</body></html>", headers: { "content-type": "text/html" } }));
+    const request = { url: "https://api.example/search?q=bread", mode: "api", recipe: "page", accept: "application/json" } as const;
+    await fetchAndIndex(crawler.runtime, request);
+    expect(crawler.runtime.index.latest(request.url)).toBeUndefined();
+    await crawler.reindex();
+    expect(crawler.runtime.index.latest(request.url)).toBeUndefined();
+  });
 });
 
 describe("an extractor that throws", () => {

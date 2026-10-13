@@ -380,6 +380,51 @@ describe("the polite fetcher", () => {
       raw: expect.arrayContaining(["tdm-policy: https://news.example/tdm.json", "meta tdm-reservation: 1"]) as unknown,
     });
   });
+
+  it("keeps no stored copy of a web page that answers a JSON request, and asks again the next time", async () => {
+    const { agent, crawler, index, captures } = await setup();
+    let calls = 0;
+    agent
+      .get("https://api.example")
+      .intercept({ path: "/data", method: "GET" })
+      .reply(() => {
+        calls += 1;
+        return calls === 1
+          ? { statusCode: 200, data: "<html><body>Please sign in</body></html>", responseOptions: { headers: { "content-type": "text/html; charset=utf-8" } } }
+          : { statusCode: 200, data: '{"ok":true}', responseOptions: { headers: { "content-type": "application/json" } } };
+      })
+      .persist();
+    const request = { url: "https://api.example/data", mode: "api", recipe: "t", accept: "application/json", maxAgeMs: 3_600_000 } as const;
+    const first = await crawler.fetch(request);
+    expect(first.outcome).toBe("ok");
+    expect(first.note).toContain("the server sent text/html; charset=utf-8, and the request accepts application/json");
+    expect(index.latest("https://api.example/data")).toBeUndefined();
+    const second = await crawler.fetch(request);
+    expect(second).toMatchObject({ outcome: "ok", fromCache: false });
+    expect(calls).toBe(2);
+    // the JSON answer is the stored copy, so a third request sends nothing
+    expect(await crawler.fetch(request)).toMatchObject({ fromCache: true });
+    expect(calls).toBe(2);
+    const records = await captures();
+    expect(records[0]!.payload).toMatchObject({ unasked: true });
+    expect(records[1]!.payload).not.toHaveProperty("unasked");
+  });
+
+  it("keeps an HTML answer that the request admits, and refuses one with q=0", async () => {
+    const { agent, crawler, index } = await setup();
+    agent
+      .get("https://api.example")
+      .intercept({ path: (path) => path.startsWith("/page"), method: "GET" })
+      .reply(200, "<html><body>page</body></html>", { headers: { "content-type": "text/html" } })
+      .persist();
+    const ask = async (path: string, accept: string): Promise<boolean> => {
+      await crawler.fetch({ url: `https://api.example${path}`, mode: "api", recipe: "t", accept });
+      return index.latest(`https://api.example${path}`) !== undefined;
+    };
+    expect(await ask("/page1", "text/html,*/*;q=0.5")).toBe(true);
+    expect(await ask("/page2", "application/json, text/*")).toBe(true);
+    expect(await ask("/page3", "application/json, text/html;q=0")).toBe(false);
+  });
 });
 
 describe("the records of a robots.txt fetch", () => {

@@ -335,6 +335,22 @@ const CONSTANT_HEADERS: ReadonlySet<string> = new Set(["accept-encoding", "user-
  */
 const IDENTITY_CODINGS: ReadonlySet<string> = new Set(["identity", "aws-chunked"]);
 
+/**
+ * This function tells if an answer is a web page that the request did not ask for. The answer is
+ * HTML, and the `Accept` of the request admits no HTML (`application/json`). A login or an error
+ * page in place of the data of an API is such an answer. A media range with `q=0` admits nothing.
+ */
+const unaskedPage = (accept: string | undefined, contentType: string | undefined): boolean => {
+  const type = (contentType ?? "").split(";")[0]!.trim().toLowerCase();
+  if (accept === undefined || accept.trim() === "" || (type !== "text/html" && type !== "application/xhtml+xml")) return false;
+  return !accept.split(",").some((range) => {
+    const [media = "", ...params] = range.split(";").map((part) => part.trim().toLowerCase());
+    const q = params.find((param) => param.startsWith("q="));
+    if (q !== undefined && Number(q.slice(2)) === 0) return false;
+    return media === "*/*" || media === type || (media.endsWith("/*") && type.startsWith(media.slice(0, -1)));
+  });
+};
+
 /** This function reads the TDMRep `<meta>` tags at the start of an HTML body. */
 const pageSignals = (body: Uint8Array | undefined, contentType: string | undefined): string[] =>
   body === undefined || !/html/i.test(contentType ?? "")
@@ -1656,6 +1672,12 @@ export class Crawler {
             signals = { ...signals, ai_input: merged };
           }
           const contentType = header("content-type") ?? (revisit ? (usable.content_type ?? undefined) : undefined);
+          // a web page in place of the data of an API (a login or an error page) is not the stored copy
+          const unasked = request_.mode === "api" && outcome === "ok" && unaskedPage(request_.accept, contentType);
+          if (unasked) {
+            const said = `the server sent ${contentType ?? ""}, and the request accepts ${request_.accept ?? ""}, so the crawler keeps no stored copy of it`;
+            note = note === undefined ? said : `${note}; ${said}`;
+          }
           const etag = header("etag") ?? (revisit ? usable.etag : null) ?? null;
           const lastModified = header("last-modified") ?? (revisit ? usable.last_modified : null) ?? null;
           const fetchedAt = this.clock.now();
@@ -1689,6 +1711,7 @@ export class Crawler {
               signals,
               ...(truncated ? { truncated: true } : {}),
               ...(cut ? { cut: true } : {}),
+              ...(unasked ? { unasked: true } : {}),
               ...cacheHeaders,
               ...(freshness !== null ? { fresh_until: freshness } : {}),
               ...(varyKey !== null ? { vary_key: varyKey } : {}),
@@ -1700,7 +1723,7 @@ export class Crawler {
           );
           const fetchedIso = new Date(fetchedAt).toISOString();
           // a body that the server cut is not a copy to keep: the next request asks for the whole body
-          if (capture !== undefined && (outcome === "ok" || outcome === "not-modified") && blob !== undefined && !cut) {
+          if (capture !== undefined && (outcome === "ok" || outcome === "not-modified") && blob !== undefined && !cut && !unasked) {
             this.store({
               url,
               capture,

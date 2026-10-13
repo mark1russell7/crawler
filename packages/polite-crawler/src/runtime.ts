@@ -244,6 +244,8 @@ export interface CapturePayload {
   readonly truncated?: boolean;
   /** This value is true when the server cut a compressed body. The capture is not a copy to keep. */
   readonly cut?: boolean;
+  /** This value is true when an API answered with a web page that the request did not accept. The capture is not a copy to keep. */
+  readonly unasked?: boolean;
   /** This time (ISO 8601) is the end of the freshness that the server gave. Captures before version 0.2 do not have it. */
   readonly fresh_until?: string | null;
   /** This text holds the request headers that the response varies on. Captures before version 0.2 do not have it. */
@@ -932,8 +934,8 @@ const replayLatest = (build: ReplayTarget, envelope: CaptureRecord, payload: Cap
     }
     return;
   }
-  // a body that the server cut was never the stored copy
-  if (payload.cut === true) return;
+  // a body that the server cut, or a web page in place of the data of an API, was never the stored copy
+  if (payload.cut === true || payload.unasked === true) return;
   const previous = build.latest(url, variant);
   const revisit = envelope.kind === "revisit" || payload.outcome === "not-modified";
   const truncated = payload.truncated === true;

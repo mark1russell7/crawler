@@ -70,6 +70,7 @@
         "signals": { "$ref": "#/$defs/signals" },
         "truncated": { "description": "True when the body is only the first part of the response.", "type": "boolean" },
         "cut": { "description": "True when the server cut a compressed body. It is not a copy to keep.", "type": "boolean" },
+        "unasked": { "description": "True when an API answered with a web page that the request did not accept. It is not a copy to keep.", "type": "boolean" },
         "cache_control": { "type": "string" },
         "expires": { "type": "string" },
         "age": { "type": "string" },

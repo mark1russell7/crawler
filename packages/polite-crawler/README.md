@@ -132,6 +132,8 @@ text (characters 0 to 4000 of 25000):
 
 - Each answer has a new random id. A page cannot close its envelope early, because the server changes the name of the tag in the page text to `untrusted_web_content`. The positions in the text stay the same.
 - The first block of each answer is JSON from the crawler. It has the outcomes, the document ids, the capture ids and the age of each copy. The same data is in the structured content of the result.
+- The reader leaves out the text that the page hides from a reader, and the links in it. These are the elements with `display: none` in their `style` attribute, the attribute `hidden` or `aria-hidden="true"`. Text with a font size of zero goes too.
+- The reader reads only the `style` attribute, not the style sheets. It does not read `visibility`, `opacity`, colors or positions, because many sites hide text with them until an animation shows it. Thus a page can still hide some text, and the envelope stays necessary.
 
 ### Pages that refuse AI input
 

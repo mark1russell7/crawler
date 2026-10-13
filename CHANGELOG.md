@@ -54,6 +54,7 @@ The first version. It needs Node.js 22.19 or later, and it is ESM only.
   - A body longer than the limit keeps its first part, and the capture says `truncated`. A body that does not download or decode gives the outcome `error`.
   - `FetchRequest.maxAgeMs` can be `"auto"`, the freshness that the server gave.
 - **Reading.** The crawler reads JSON-LD, the visible text, the links and PDF files with no browser. With the optional peer `playwright-core`, it opens a headless browser for a page that shows almost nothing without JavaScript.
+  - The text and the links leave out hidden text: `display: none` in a `style` attribute, `hidden`, `aria-hidden="true"` and a font size of zero.
   - `decodeBody` and `bodyEncoding` decode a body in the encoding that it declares.
   - `PageExtract` gives `canonical`, `redirect`, `blocked` and `notes`. `Hours` gives `partial` and `season`. `PdfOptions` sets the limits of the PDF reader.
   - A renderer throws `RenderRefused` for a page that it did not render, and the crawler does not count it as a failure of the host.

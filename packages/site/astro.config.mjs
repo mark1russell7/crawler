@@ -3,7 +3,7 @@ import { execFileSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import react from "@astrojs/react";
+import preact from "@astrojs/preact";
 import sitemap from "@astrojs/sitemap";
 import starlight from "@astrojs/starlight";
 import { defineConfig } from "astro/config";
@@ -103,6 +103,7 @@ export default defineConfig({
         { label: "For site owners", items: ["bot", "block-ai-training-crawlers"] },
       ],
     }),
-    react(),
+    // the islands are React code that runs on Preact (preact/compat): 9 KB of runtime in place of 69 KB (gzip)
+    preact({ compat: true }),
   ],
 });

@@ -82,11 +82,11 @@ export default function ResponseClassifier(): ReactElement {
         <div className="pc-tool-side">
           <label className="pc-field">
             <span>Status</span>
-            <input value={status} inputMode="numeric" onChange={(event) => setStatus(event.target.value)} />
+            <input value={status} inputMode="numeric" onChange={(event) => setStatus(event.currentTarget.value)} />
           </label>
           <label className="pc-field">
             <span>Headers, one on each line</span>
-            <textarea value={headers} rows={4} spellCheck={false} onChange={(event) => setHeaders(event.target.value)} />
+            <textarea value={headers} rows={4} spellcheck={false} onChange={(event) => setHeaders(event.currentTarget.value)} />
           </label>
         </div>
         <div className="pc-tool-side" aria-live="polite">

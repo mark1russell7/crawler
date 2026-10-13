@@ -3,6 +3,7 @@
 // - no page scrolls sideways at 320, 375, 768 and 1024 pixels;
 // - no page logs an error in the console;
 // - no page loads the search UI before a reader uses the search, and the search finds pages;
+// - with each island hydrated, no page loads more than JS_BUDGET bytes of JavaScript (gzip);
 // - one sitemap lists each page, with the date of its last change.
 // With --shots <dir>, it also saves a screenshot of each page: desktop and phone, light and dark.
 //   pnpm --filter @crawler/site check [--shots <dir>]
@@ -10,9 +11,12 @@ import { existsSync, mkdirSync, readFileSync, readdirSync, statSync } from "node
 import { createServer } from "node:http";
 import { extname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { gzipSync } from "node:zlib";
 import { chromium } from "playwright-core";
 
 const BASE = "/crawler";
+// The JavaScript of a page with each island hydrated, gzip. Preact gives 21 KB at most; React gave 82 KB.
+const JS_BUDGET = 40_000;
 const dist = fileURLToPath(new URL("../dist/", import.meta.url));
 const shotsAt = process.argv.indexOf("--shots");
 const shots = shotsAt === -1 ? undefined : process.argv[shotsAt + 1];
@@ -68,6 +72,7 @@ walk(dist, "");
 pages.sort((a, b) => a.localeCompare(b));
 
 const problems = [];
+let most = { path: "", bytes: 0 };
 
 // one sitemap, with each page and the date of its last change (a shallow clone has no dates, so it is not checked)
 const sitemaps = readdirSync(dist).filter((name) => /^sitemap.*\.xml$/.test(name)).sort();
@@ -98,6 +103,10 @@ const context = await browser.newContext();
 for (const path of pages) {
   const page = await context.newPage();
   const errors = [];
+  const scripts = new Set();
+  page.on("request", (request) => {
+    if (request.resourceType() === "script") scripts.add(new URL(request.url()).pathname);
+  });
   page.on("console", (message) => {
     if (message.type() === "error") errors.push(message.text());
   });
@@ -113,6 +122,21 @@ for (const path of pages) {
     if (url.origin !== origin || ref.startsWith("#")) continue;
     if (fileOf(url.pathname) === undefined) problems.push(`${path}: the link ${ref} goes to no file`);
   }
+  // the islands hydrate when they come into view: scroll through the page once, then count the JavaScript
+  await page.evaluate(async () => {
+    for (let y = 0; y < document.body.scrollHeight; y += 600) {
+      window.scrollTo(0, y);
+      await new Promise((resolve) => setTimeout(resolve, 60));
+    }
+    window.scrollTo(0, 0);
+  });
+  await page.waitForLoadState("networkidle");
+  const bytes = [...scripts].reduce((sum, script) => {
+    const file = fileOf(script);
+    return file === undefined ? sum : sum + gzipSync(readFileSync(file)).length;
+  }, 0);
+  if (bytes > JS_BUDGET) problems.push(`${path}: ${String(bytes)} bytes of JavaScript (gzip), more than ${String(JS_BUDGET)}`);
+  if (bytes > most.bytes) most = { path, bytes };
   for (const width of [320, 375, 768, 1024]) {
     await page.setViewportSize({ width, height: 900 });
     await page.waitForTimeout(150);
@@ -183,3 +207,4 @@ if (problems.length > 0) {
   process.exit(1);
 }
 console.info(`${String(pages.length)} pages: the links go to files, no page scrolls sideways, and no page logs an error`);
+console.info(`the most JavaScript: ${String(most.bytes)} bytes (gzip) on ${most.path}, of ${String(JS_BUDGET)}`);

@@ -650,7 +650,7 @@ export function StudyTable({
       <div className="pc-study-filters">
         <label className="pc-field">
           <span>Find a site</span>
-          <input type="search" value={query} placeholder="for example wikipedia" onChange={(event) => setQuery(event.target.value)} />
+          <input type="search" value={query} placeholder="for example wikipedia" onChange={(event) => setQuery(event.currentTarget.value)} />
         </label>
         <div className="pc-toggle" role="group" aria-label="Show">
           {filters.map(([key, text]) => (

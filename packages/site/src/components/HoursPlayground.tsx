@@ -165,7 +165,7 @@ export default function HoursPlayground(): ReactElement {
       </div>
       <label className="pc-field">
         <span>Text from a page, with one line for each line of the page. The reader reads English only.</span>
-        <textarea value={text} rows={5} spellCheck={false} onChange={(event) => setText(event.target.value)} />
+        <textarea value={text} rows={5} spellcheck={false} onChange={(event) => setText(event.currentTarget.value)} />
       </label>
       <div className="pc-readings" aria-live="polite">
         {failure !== undefined ? <p className="pc-empty">The reader stopped: {failure}</p> : null}

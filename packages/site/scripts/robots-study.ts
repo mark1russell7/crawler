@@ -27,8 +27,8 @@ import {
   FileBlobStore,
   decide,
   defaultUserAgent,
-  parseRobots,
 } from "polite-crawler";
+import { robotsFromResponse } from "polite-crawler/robots";
 import type { RawAnswer, Study, StudySite } from "../src/lib/study.ts";
 import { DATA_LICENSE, answerOf, toCsv } from "../src/lib/study.ts";
 
@@ -178,8 +178,8 @@ const derive = async (store: string): Promise<void> => {
     const { state, html, reason } = answerOf(raw);
     const host = new URL(answer.url).host;
     const counted = state === "file" || state === "none";
-    // the rules: a file is parsed, as RFC 9309 asks for a 2xx, and no file gives no rules
-    const robots: Robots = state === "file" || (state === "none" && html) ? parseRobots(text ?? "") : ALLOW_ALL;
+    // the rules: a file is read as the crawler reads it (robotsFromResponse), and no file gives no rules
+    const robots: Robots = state === "file" ? robotsFromResponse(200, answer.contentType, body ?? new Uint8Array()) : ALLOW_ALL;
     const out: {
       -readonly [key in keyof StudySite]: StudySite[key];
     } = { rank: answer.rank, domain: answer.domain, status: answer.status, state, p: "" };
@@ -189,8 +189,11 @@ const derive = async (store: string): Promise<void> => {
     if (state === "file") {
       out.bytes = answer.bytes ?? 0;
       out.groups = robots.groups.length;
-      // a file can repeat its signal in each group: keep each line one time
-      const signals = [...new Set(robots.signals.map((line) => line.trim().slice(0, 200)))];
+      // a file can repeat its signal in each group: keep each line one time. Only the content signals
+      // count here, not the RSL License lines that the parser also keeps
+      const signals = [
+        ...new Set(robots.signals.filter((line) => /^content-(?:signal|usage):/i.test(line)).map((line) => line.trim().slice(0, 200))),
+      ];
       if (signals.length > 0) out.signals = signals;
       if (robots.sitemaps.length > 0) out.sitemaps = robots.sitemaps.length;
     }

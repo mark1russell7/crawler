@@ -1,5 +1,5 @@
-import type { Clock } from "polite-crawler/politeness";
-import { HostScheduler, HostStopped } from "polite-crawler/politeness";
+import type { Clock, Rest } from "polite-crawler/politeness";
+import { DEFAULT_POLICY, HostScheduler, HostStopped, restAfter } from "polite-crawler/politeness";
 
 /** One page that the crawl asks for: the time the server takes, and its answer. */
 export interface PageScript {
@@ -140,26 +140,14 @@ export const macrotask = (): Promise<void> =>
     channel.port2.postMessage(null);
   });
 
-/** The pace of the fetcher: 3 seconds or more between two pages of a host, and longer after a slow page. */
-const restAfter = (
-  site: SiteScript,
-  page: PageScript,
-  elapsedMs: number,
-): { readonly ms: number; readonly reason: "pace" | "slow" | "retry-after" | "crawl-delay" } => {
-  const crawlDelay = (site.crawlDelaySeconds ?? 0) * 1000;
-  let ms = Math.max(3000, crawlDelay);
-  let reason: "pace" | "slow" | "retry-after" | "crawl-delay" = crawlDelay > 3000 ? "crawl-delay" : "pace";
-  const slow = Math.min(30_000, 5 * elapsedMs);
-  if (slow > ms) {
-    ms = slow;
-    reason = "slow";
-  }
-  if (page.status === 429 && (page.retryAfterMs ?? 0) > ms) {
-    ms = page.retryAfterMs ?? ms;
-    reason = "retry-after";
-  }
-  return { ms, reason };
-};
+/** The pace of the fetcher, from `restAfter` of polite-crawler. A host rests 3 seconds or more between two pages, and longer after a slow page. */
+const restOf = (site: SiteScript, page: PageScript, elapsedMs: number): Rest =>
+  restAfter(DEFAULT_POLICY, {
+    kind: "page",
+    elapsedMs,
+    crawlDelaySeconds: site.crawlDelaySeconds,
+    retryAfterMs: page.status === 429 ? page.retryAfterMs : undefined,
+  });
 
 /** The record of a crawl, which the page draws. */
 export class Timeline {
@@ -195,7 +183,7 @@ export const crawlPolitely = (sites: readonly SiteScript[], clock: VirtualClock,
           request.end = clock.now();
           request.status = page.status;
           if (page.status === 403) scheduler.stop(site.host, "403");
-          const rest = restAfter(site, page, request.end - start);
+          const rest = restOf(site, page, request.end - start);
           if (page.status !== 403 && index < site.pages.length - 1)
             timeline.segments.push({ kind: "rest", host: site.host, start: request.end, end: request.end + rest.ms, reason: rest.reason });
           return { value: undefined, delayMs: rest.ms };

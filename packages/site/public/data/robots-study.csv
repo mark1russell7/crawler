@@ -22,21 +22,21 @@ rank,domain,host,state,status,html,reason,bytes,groups,crawl_delay_s,content_sig
 21,hicloudcam.com,hicloudcam.com,unreachable,0,,no response: getaddrinfo ENOTFOUND hicloudcam.com,,,,,,,,,,,,,,,,,,,
 22,googletagmanager.com,googletagmanager.com,none,404,,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
 23,akadns.net,akadns.net,unreachable,0,,no response: getaddrinfo ENOTFOUND akadns.net,,,,,,,,,,,,,,,,,,,
-24,office.com,login.microsoftonline.com,none,200,yes,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
-25,live.com,outlook.live.com,none,200,yes,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
-26,azure.com,azure.microsoft.com,none,200,yes,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+24,office.com,login.microsoftonline.com,unreachable,200,yes,"robots.txt is a web page, not a robots.txt file (a login or challenge page)",,,,,,,,,,,,,,,,,,,
+25,live.com,outlook.live.com,unreachable,200,yes,"robots.txt is a web page, not a robots.txt file (a login or challenge page)",,,,,,,,,,,,,,,,,,,
+26,azure.com,azure.microsoft.com,unreachable,200,yes,"robots.txt is a web page, not a robots.txt file (a login or challenge page)",,,,,,,,,,,,,,,,,,,
 27,amazon.com,www.amazon.com,file,200,,,7947,101,,,refused-named,refused-named,refused-named,refused-named,permitted,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,permitted,permitted
 28,gtld-servers.net,gtld-servers.net,unreachable,0,,no response: getaddrinfo ENOTFOUND gtld-servers.net,,,,,,,,,,,,,,,,,,,
-29,github.com,github.com,file,200,,,16739,8,,,permitted-named,permitted-named,permitted,permitted,permitted,refused-named,permitted,permitted-named,permitted,permitted-named,permitted,permitted,permitted,permitted,permitted
+29,github.com,github.com,file,200,,,16739,7,1,,permitted-named,permitted-named,permitted,permitted,permitted,refused-named,permitted,permitted-named,permitted,permitted-named,permitted,permitted,permitted,permitted,permitted
 30,appsflyersdk.com,appsflyersdk.com,blocked,403,,status 403,,,,,,,,,,,,,,,,,,,
-31,wikipedia.org,en.wikipedia.org,file,200,,,28275,34,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+31,wikipedia.org,en.wikipedia.org,file,200,,,28275,33,5,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
 32,aaplimg.com,aaplimg.com,unreachable,0,,no response: getaddrinfo ENOTFOUND aaplimg.com,,,,,,,,,,,,,,,,,,,
 33,whatsapp.net,www.whatsapp.com,file,200,,,1180,17,,,refused-named,refused-named,refused-named,permitted,refused-named,permitted,permitted,permitted,permitted,refused-named,permitted,permitted,permitted,permitted,permitted
 34,cloudfront.net,cloudfront.net,unreachable,0,,no response: getaddrinfo ENOTFOUND cloudfront.net,,,,,,,,,,,,,,,,,,,
 35,bing.com,www.bing.com,file,200,,,2676,3,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
 36,fastly.net,www.fastly.com,file,200,,,398,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
 37,apple-dns.net,apple-dns.net,unreachable,0,,no response: getaddrinfo ENOTFOUND apple-dns.net,,,,,,,,,,,,,,,,,,,
-38,cloud.microsoft,m365.cloud.microsoft,none,200,yes,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+38,cloud.microsoft,m365.cloud.microsoft,unreachable,200,yes,"robots.txt is a web page, not a robots.txt file (a login or challenge page)",,,,,,,,,,,,,,,,,,,
 39,trafficmanager.net,trafficmanager.net,unreachable,0,,no response: getaddrinfo ENOTFOUND trafficmanager.net,,,,,,,,,,,,,,,,,,,
 40,office.net,office.net,unreachable,0,,no response: getaddrinfo ENOTFOUND office.net,,,,,,,,,,,,,,,,,,,
 41,googleusercontent.com,googleusercontent.com,none,404,,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
@@ -48,11 +48,11 @@ rank,domain,host,state,status,html,reason,bytes,groups,crawl_delay_s,content_sig
 47,youtu.be,youtu.be,file,200,,,511,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
 48,x.com,x.com,file,200,,,2678,10,1,,refused-star,refused-star,refused-named,refused-star,refused-star,refused-star,refused-named,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,permitted-named,refused-star
 49,wordpress.org,wordpress.org,file,200,,,976,12,,,permitted-named,permitted-named,permitted-named,permitted-named,permitted-named,permitted-named,permitted,permitted,permitted,permitted-named,permitted,permitted,permitted,permitted,permitted
-50,skype.com,teams.live.com,none,200,yes,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+50,skype.com,teams.live.com,unreachable,200,yes,"robots.txt is a web page, not a robots.txt file (a login or challenge page)",,,,,,,,,,,,,,,,,,,
 51,icloud.com,www.icloud.com,file,200,,,1289,3,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted-named,permitted
 52,digicert.com,www.digicert.com,file,200,,,2657,23,,,permitted-named,permitted-named,permitted-named,permitted,permitted,permitted,permitted,permitted-named,permitted-named,permitted-named,permitted-named,permitted-named,permitted-named,permitted,permitted
 53,pinterest.com,www.pinterest.com,file,200,,,40982,8,,,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,permitted-named,refused-star
-54,googledomains.com,domains.google,none,200,yes,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+54,googledomains.com,domains.google,unreachable,200,yes,"robots.txt is a web page, not a robots.txt file (a login or challenge page)",,,,,,,,,,,,,,,,,,,
 55,googlesyndication.com,googlesyndication.com,none,404,,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
 56,cloudflare.net,cloudflare.net,file,200,,,207,4,10,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
 57,whatsapp.com,www.whatsapp.com,file,200,,,1180,17,,,refused-named,refused-named,refused-named,permitted,refused-named,permitted,permitted,permitted,permitted,refused-named,permitted,permitted,permitted,permitted,permitted
@@ -80,21 +80,21 @@ rank,domain,host,state,status,html,reason,bytes,groups,crawl_delay_s,content_sig
 79,root-servers.net,root-servers.net,unreachable,0,,no response: getaddrinfo ENOTFOUND root-servers.net,,,,,,,,,,,,,,,,,,,
 80,baidu.com,www.baidu.com,file,200,,,2814,16,,,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,permitted-named,refused-star
 81,qq.com,www.qq.com,file,200,,,71,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
-82,workers.dev,www.cloudflare.com,none,200,yes,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+82,workers.dev,www.cloudflare.com,unreachable,200,yes,"robots.txt is a web page, not a robots.txt file (a login or challenge page)",,,,,,,,,,,,,,,,,,,
 83,tiktokv.com,tiktokv.com,none,404,,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
 84,yandex.net,yandex.net,none,404,,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
-85,vimeo.com,vimeo.com,file,200,,,22615,20,2,,refused-named,refused-named,refused-named,refused-named,permitted,refused-named,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+85,vimeo.com,vimeo.com,file,200,,,22615,15,2,,refused-named,refused-named,refused-named,refused-named,permitted,refused-named,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
 86,f5.com,www.f5.com,file,200,,,156,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
 87,gwfb.net,gwfb.net,unreachable,0,,no response: getaddrinfo ENOTFOUND gwfb.net,,,,,,,,,,,,,,,,,,,
 88,a2z.com,a2z.com,unreachable,0,,no response: getaddrinfo ENOTFOUND a2z.com,,,,,,,,,,,,,,,,,,,
 89,mozilla.org,www.mozilla.org,file,200,,,66,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
 90,chatgpt.com,chatgpt.com,file,200,,,4390,14,,,refused-star,refused-star,refused-named,refused-named,refused-star,refused-named,refused-star,refused-star,refused-star,refused-named,refused-star,refused-star,refused-star,refused-star,refused-star
-91,nginx.com,www.f5.com,none,200,yes,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+91,nginx.com,www.f5.com,unreachable,200,yes,"robots.txt is a web page, not a robots.txt file (a login or challenge page)",,,,,,,,,,,,,,,,,,,
 92,gvt2.com,gvt2.com,unreachable,0,,no response: getaddrinfo ENOTFOUND gvt2.com,,,,,,,,,,,,,,,,,,,
 93,blogspot.com,www.blogger.com,file,200,,,572,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
 94,highwebmedia.com,highwebmedia.com,unreachable,0,,no response: getaddrinfo ENOTFOUND highwebmedia.com,,,,,,,,,,,,,,,,,,,
 95,yandex.ru,yandex.ru,file,200,,,40638,5,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted-named,permitted,permitted,permitted,permitted,permitted,permitted-named,permitted
-96,b-cdn.net,bunny.net,none,200,yes,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+96,b-cdn.net,bunny.net,unreachable,200,yes,"robots.txt is a web page, not a robots.txt file (a login or challenge page)",,,,,,,,,,,,,,,,,,,
 97,yccdn.ru,yccdn.ru,unreachable,0,,no response: getaddrinfo ENOTFOUND yccdn.ru,,,,,,,,,,,,,,,,,,,
 98,yuga.com,yuga.com,file,200,,,40,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
 99,sentry.io,sentry.io,file,200,,,140,1,,"content-signal: search=yes, ai-input=yes, ai-train=yes",permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
@@ -107,26 +107,26 @@ rank,domain,host,state,status,html,reason,bytes,groups,crawl_delay_s,content_sig
 106,edgesuite.net,edgesuite.net,unreachable,0,,no response: getaddrinfo ENOTFOUND edgesuite.net,,,,,,,,,,,,,,,,,,,
 107,openai.com,openai.com,file,200,,,98,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
 108,nic.ru,nic.ru,blocked,200,yes,"a JavaScript challenge in place of the file, status 200",,,,,,,,,,,,,,,,,,,
-109,triplinkintl.com,www.triplinkintl.com,none,200,yes,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+109,triplinkintl.com,www.triplinkintl.com,unreachable,200,yes,"robots.txt is a web page, not a robots.txt file (a login or challenge page)",,,,,,,,,,,,,,,,,,,
 110,ui.com,ui.com,file,200,,,367,10,,,permitted-named,permitted-named,permitted-named,permitted-named,permitted-named,permitted,permitted,permitted-named,permitted,permitted-named,permitted-named,permitted,permitted,permitted,permitted
 111,samsung.com,www.samsung.com,file,200,,,10085,4,,,permitted-named,permitted,permitted-named,permitted,permitted,permitted,permitted,permitted-named,permitted,permitted-named,permitted-named,permitted,permitted,permitted-named,permitted
 112,office365.com,office365.com,blocked,403,,status 403,,,,,,,,,,,,,,,,,,,
 113,epicgames.com,www.epicgames.com,blocked,403,,"Cloudflare challenge, status 403",,,,,,,,,,,,,,,,,,,
 114,ytimg.com,ytimg.com,unreachable,0,,no response: getaddrinfo ENOTFOUND ytimg.com,,,,,,,,,,,,,,,,,,,
-115,windows.com,www.microsoft.com,none,200,yes,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+115,windows.com,www.microsoft.com,unreachable,200,yes,"robots.txt is a web page, not a robots.txt file (a login or challenge page)",,,,,,,,,,,,,,,,,,,
 116,europa.eu,europa.eu,file,200,,,4930,2,10,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
 117,aws.dev,aws.dev,unreachable,0,,no response: getaddrinfo ENOTFOUND aws.dev,,,,,,,,,,,,,,,,,,,
 118,3gppnetwork.org,3gppnetwork.org,unreachable,0,,no response: getaddrinfo ENOTFOUND 3gppnetwork.org,,,,,,,,,,,,,,,,,,,
 119,bit.ly,bit.ly,file,200,,,123,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
 120,registrar-servers.com,registrar-servers.com,file,200,,,26,1,,,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star
 121,okcdn.ru,st.okcdn.ru,none,404,,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
-122,outlook.com,outlook.live.com,none,200,yes,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+122,outlook.com,outlook.live.com,unreachable,200,yes,"robots.txt is a web page, not a robots.txt file (a login or challenge page)",,,,,,,,,,,,,,,,,,,
 123,trbcdn.net,trbcdn.net,unreachable,0,,no response: Hostname/IP does not match certificate's altnames: Host: trbcdn.net. is not in the cert's altnames: DNS:cdnvideo.ru,,,,,,,,,,,,,,,,,,,
 124,reg.ru,reg.ru,blocked,200,yes,"a JavaScript challenge in place of the file, status 200",,,,,,,,,,,,,,,,,,,
 125,cdn77.org,cdn77.org,unreachable,0,,no response: getaddrinfo ENOTFOUND cdn77.org,,,,,,,,,,,,,,,,,,,
 126,dnsowl.com,dnsowl.com,unreachable,0,,no response: getaddrinfo ENOTFOUND dnsowl.com,,,,,,,,,,,,,,,,,,,
-127,lencr.org,letsencrypt.org,none,200,yes,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
-128,github.io,pages.github.com,none,200,yes,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+127,lencr.org,letsencrypt.org,unreachable,200,yes,"robots.txt is a web page, not a robots.txt file (a login or challenge page)",,,,,,,,,,,,,,,,,,,
+128,github.io,pages.github.com,unreachable,200,yes,"robots.txt is a web page, not a robots.txt file (a login or challenge page)",,,,,,,,,,,,,,,,,,,
 129,dropbox.com,www.dropbox.com,file,200,,,801,3,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
 130,shiabank.com,shiabank.com,unreachable,0,,no response: Client network socket disconnected before secure TLS connection was established,,,,,,,,,,,,,,,,,,,
 131,intuit.com,www.intuit.com,file,200,,,3086,16,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
@@ -176,7 +176,7 @@ rank,domain,host,state,status,html,reason,bytes,groups,crawl_delay_s,content_sig
 175,vk.ru,vk.ru,file,200,,,6175,3,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted-named,permitted
 176,discord.com,discord.com,file,200,,,1774,3,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
 177,xiaomi.com,www.mi.com,file,200,,,145,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
-178,hosting24.com,www.hostinger.com,none,200,yes,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+178,hosting24.com,www.hostinger.com,unreachable,200,yes,"robots.txt is a web page, not a robots.txt file (a login or challenge page)",,,,,,,,,,,,,,,,,,,
 179,macromedia.com,macromedia.com,unreachable,0,,"no response: Connect Timeout Error (attempted address: macromedia.com:443, timeout: 10000ms)",,,,,,,,,,,,,,,,,,,
 180,doctolib.net,doctolib.net,unreachable,0,,no response: getaddrinfo ENOTFOUND doctolib.net,,,,,,,,,,,,,,,,,,,
 181,w3.org,www.w3.org,file,200,,,3844,2,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
@@ -193,7 +193,7 @@ rank,domain,host,state,status,html,reason,bytes,groups,crawl_delay_s,content_sig
 192,creativecommons.org,creativecommons.org,file,200,,,177,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
 193,vedcdnlb.com,vedcdnlb.com,unreachable,0,,no response: getaddrinfo ENOTFOUND vedcdnlb.com,,,,,,,,,,,,,,,,,,,
 194,ubuntu.com,ubuntu.com,file,200,,,5511,2,1,,permitted-named,permitted-named,permitted-named,permitted,permitted-named,permitted-named,permitted-named,permitted-named,permitted-named,permitted-named,permitted-named,permitted,permitted-named,permitted,permitted
-195,crashlytics.com,firebase.google.com,none,200,yes,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+195,crashlytics.com,firebase.google.com,unreachable,200,yes,"robots.txt is a web page, not a robots.txt file (a login or challenge page)",,,,,,,,,,,,,,,,,,,
 196,applovin.com,applovin.com,file,200,,,218,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
 197,adtrafficquality.google,adtrafficquality.google,none,404,,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
 198,theguardian.com,www.theguardian.com,file,200,,,2873,3,,,permitted,refused-named,permitted,refused-named,refused-named,refused-named,refused-named,permitted,refused-named,refused-named,permitted,refused-named,permitted,permitted,permitted
@@ -209,12 +209,12 @@ rank,domain,host,state,status,html,reason,bytes,groups,crawl_delay_s,content_sig
 208,oracle.com,www.oracle.com,file,200,,,2649,2,,,permitted-named,permitted-named,permitted-named,permitted,permitted-named,permitted,permitted,permitted-named,permitted,permitted-named,permitted-named,permitted,permitted-named,permitted,permitted
 209,ksyuncdn.com,ksyuncdn.com,unreachable,0,,no response: getaddrinfo ENOTFOUND ksyuncdn.com,,,,,,,,,,,,,,,,,,,
 210,bytefcdn-oversea.com,bytefcdn-oversea.com,unreachable,0,,no response: getaddrinfo ENOTFOUND bytefcdn-oversea.com,,,,,,,,,,,,,,,,,,,
-211,pages.dev,www.cloudflare.com,none,200,yes,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+211,pages.dev,www.cloudflare.com,unreachable,200,yes,"robots.txt is a web page, not a robots.txt file (a login or challenge page)",,,,,,,,,,,,,,,,,,,
 212,doi.org,www.doi.org,none,404,,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
 213,steamserver.net,steamserver.net,unreachable,0,,no response: getaddrinfo ENOTFOUND steamserver.net,,,,,,,,,,,,,,,,,,,
 214,ttdns2.com,ttdns2.com,unreachable,0,,no response: getaddrinfo ENOTFOUND ttdns2.com,,,,,,,,,,,,,,,,,,,
 215,shifen.com,shifen.com,unreachable,0,,"no response: Connect Timeout Error (attempted address: shifen.com:443, timeout: 10000ms)",,,,,,,,,,,,,,,,,,,
-216,forbes.com,www.forbes.com,file,200,,,33649,23,,,refused-named,refused-named,permitted,refused-named,refused-named,refused-named,refused-named,permitted-named,permitted-named,refused-named,permitted,permitted-named,permitted,permitted,permitted
+216,forbes.com,www.forbes.com,file,200,,,33649,22,,,refused-named,refused-named,permitted,refused-named,refused-named,refused-named,refused-named,permitted-named,permitted-named,refused-named,permitted,permitted-named,permitted,permitted,permitted
 217,bbc.com,www.bbc.com,file,200,,,6169,40,,,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,permitted,refused-named,refused-named,permitted,refused-named,permitted,permitted
 218,samsungcloud.com,www.samsungcloud.com,file,200,,,125,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
 219,cdn-apple.com,cdn-apple.com,unreachable,0,,no response: getaddrinfo ENOTFOUND cdn-apple.com,,,,,,,,,,,,,,,,,,,
@@ -244,7 +244,7 @@ rank,domain,host,state,status,html,reason,bytes,groups,crawl_delay_s,content_sig
 243,meraki.com,meraki.cisco.com,file,200,,,2213,2,,,refused-star,refused-star,refused-star,permitted-named,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,permitted-named,refused-star
 244,canva.com,www.canva.com,file,200,,,6527,5,,,refused-named,refused-named,permitted,refused-named,refused-named,refused-named,refused-named,permitted,permitted,permitted-named,permitted,permitted,permitted-named,permitted,permitted
 245,arubanetworks.com,arubanetworks.com,unreachable,0,,no response: Hostname/IP does not match certificate's altnames: Host: arubanetworks.com. is not in the cert's altnames: DNS:www.arubanetworks.com,,,,,,,,,,,,,,,,,,,
-246,telekom.net,www.telekom.com,none,200,yes,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+246,telekom.net,www.telekom.com,unreachable,200,yes,"robots.txt is a web page, not a robots.txt file (a login or challenge page)",,,,,,,,,,,,,,,,,,,
 247,wsdvs.com,wsdvs.com,unreachable,0,,no response: getaddrinfo ENOTFOUND wsdvs.com,,,,,,,,,,,,,,,,,,,
 248,userapi.com,vk.com,file,304,,,6175,3,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted-named,permitted
 249,msedge.net,msedge.net,unreachable,0,,"no response: Connect Timeout Error (attempted address: msedge.net:443, timeout: 10000ms)",,,,,,,,,,,,,,,,,,,
@@ -280,7 +280,7 @@ rank,domain,host,state,status,html,reason,bytes,groups,crawl_delay_s,content_sig
 279,adsafeprotected.com,adsafeprotected.com,file,200,,,43,0,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
 280,launchpad.net,launchpad.net,file,200,,,1881,2,,"content-usage: ai=n | content-signal: ai-train=no, search=yes, ai-input=no",refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,permitted,refused-named,permitted,permitted,permitted
 281,miui.com,miui.com,none,404,,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
-282,googleblog.com,blog.google,none,200,yes,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+282,googleblog.com,blog.google,unreachable,200,yes,"robots.txt is a web page, not a robots.txt file (a login or challenge page)",,,,,,,,,,,,,,,,,,,
 283,gmail.com,gmail.com,file,200,,,129,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
 284,adnxs.com,adnxs.com,none,404,,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
 285,reuters.com,www.reuters.com,file,200,,,4627,3,,,refused-star,refused-star,refused-star,refused-star,refused-named,refused-star,refused-star,permitted-named,refused-star,refused-star,permitted-named,refused-star,refused-star,permitted-named,refused-star
@@ -292,15 +292,15 @@ rank,domain,host,state,status,html,reason,bytes,groups,crawl_delay_s,content_sig
 291,skybridge.click,skybridge.click,file,200,,,26,1,,,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star
 292,capcutapi.com,capcutapi.com,unreachable,0,,no response: getaddrinfo ENOTFOUND capcutapi.com,,,,,,,,,,,,,,,,,,,
 293,tinyurl.com,tinyurl.com,file,200,,,154,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
-294,telegram.me,telegram.org,none,200,yes,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+294,telegram.me,telegram.org,unreachable,200,yes,"robots.txt is a web page, not a robots.txt file (a login or challenge page)",,,,,,,,,,,,,,,,,,,
 295,ip-api.com,ip-api.com,file,200,,,213,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
 296,nr-data.net,nr-data.net,unreachable,0,,no response: getaddrinfo ENOTFOUND nr-data.net,,,,,,,,,,,,,,,,,,,
 297,ripn.net,ripn.net,unreachable,0,,no response: getaddrinfo ENOTFOUND ripn.net,,,,,,,,,,,,,,,,,,,
 298,springer.com,www.springer.com,file,200,,,286,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
 299,w2rt6byl5nf1opmc-a.com,w2rt6byl5nf1opmc-a.com,unreachable,0,,no response: getaddrinfo ENOTFOUND w2rt6byl5nf1opmc-a.com,,,,,,,,,,,,,,,,,,,
 300,mangosip.ru,mangosip.ru,unreachable,0,,"no response: Connect Timeout Error (attempted address: mangosip.ru:443, timeout: 10000ms)",,,,,,,,,,,,,,,,,,,
-301,hp.com,www.hp.com,file,200,,,17151,15,,,permitted-named,permitted-named,permitted-named,permitted,permitted,permitted,permitted,permitted-named,permitted-named,permitted-named,permitted-named,permitted-named,permitted-named,permitted,permitted
-302,www.gov.uk,www.gov.uk,file,200,,,1097,5,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted-named,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+301,hp.com,www.hp.com,file,200,,,17151,14,,,permitted-named,permitted-named,permitted-named,permitted,permitted,permitted,permitted,permitted-named,permitted-named,permitted-named,permitted-named,permitted-named,permitted-named,permitted,permitted
+302,www.gov.uk,www.gov.uk,file,200,,,1097,4,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted-named,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
 303,salesforce.com,www.salesforce.com,file,200,,,14256,9,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
 304,autodesk.com,www.autodesk.com,blocked,403,,status 403,,,,,,,,,,,,,,,,,,,
 305,tiktokcdn-us.com,tiktokcdn-us.com,unreachable,0,,no response: getaddrinfo ENOTFOUND tiktokcdn-us.com,,,,,,,,,,,,,,,,,,,
@@ -314,7 +314,7 @@ rank,domain,host,state,status,html,reason,bytes,groups,crawl_delay_s,content_sig
 313,byteoversea.net,byteoversea.net,unreachable,0,,no response: getaddrinfo ENOTFOUND byteoversea.net,,,,,,,,,,,,,,,,,,,
 314,ok.ru,ok.ru,file,200,,,6051,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
 315,harvard.edu,www.harvard.edu,file,200,,,748,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
-316,casalemedia.com,www.indexexchange.com,none,200,yes,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+316,casalemedia.com,www.indexexchange.com,unreachable,200,yes,"robots.txt is a web page, not a robots.txt file (a login or challenge page)",,,,,,,,,,,,,,,,,,,
 317,alibaba.com,www.alibaba.com,file,200,,,5406,6,,,refused-named,permitted,refused-named,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted-named,permitted
 318,debian.org,www.debian.org,none,404,,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
 319,douyincdn.com,douyincdn.com,unreachable,0,,no response: getaddrinfo ENOTFOUND douyincdn.com,,,,,,,,,,,,,,,,,,,
@@ -325,7 +325,7 @@ rank,domain,host,state,status,html,reason,bytes,groups,crawl_delay_s,content_sig
 324,appsflyer.com,www.appsflyer.com,file,200,,,3116,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
 325,wiley.com,www.wiley.com,file,200,,,1014,9,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
 326,clarity.ms,clarity.ms,unreachable,0,,"no response: Hostname/IP does not match certificate's altnames: Host: clarity.ms. is not in the cert's altnames: DNS:*.azurewebsites.net, DNS:*.scm.azurewebsite",,,,,,,,,,,,,,,,,,,
-327,mzstatic.com,www.apple.com,none,200,yes,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+327,mzstatic.com,www.apple.com,unreachable,200,yes,"robots.txt is a web page, not a robots.txt file (a login or challenge page)",,,,,,,,,,,,,,,,,,,
 328,etsy.com,www.etsy.com,file,200,,,52819,3,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
 329,php.net,www.php.net,file,200,,,292,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
 330,statsigapi.net,statsigapi.net,blocked,403,,status 403,,,,,,,,,,,,,,,,,,,
@@ -334,14 +334,14 @@ rank,domain,host,state,status,html,reason,bytes,groups,crawl_delay_s,content_sig
 333,amazon.co.uk,www.amazon.co.uk,file,200,,,7258,101,,,refused-named,refused-named,refused-named,refused-named,permitted,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,permitted,permitted
 334,browser-intake-datadoghq.com,browser-intake-datadoghq.com,blocked,403,,status 403,,,,,,,,,,,,,,,,,,,
 335,aliyun.com,www.aliyun.com,file,200,,,316,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
-336,crpt.ru,crpt.ru,none,200,yes,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
-337,drom.ru,www.drom.ru,file,200,,,10797,6,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted-named,permitted
+336,crpt.ru,crpt.ru,file,200,,,0,0,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+337,drom.ru,www.drom.ru,file,200,,,10797,5,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted-named,permitted
 338,name.com,www.name.com,file,200,,,1986,3,,,permitted,permitted,permitted,permitted,permitted,permitted,refused-named,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
 339,weebly.com,www.weebly.com,file,200,,,777,2,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
 340,facebook.net,facebook.net,unreachable,0,,no response: getaddrinfo ENOTFOUND facebook.net,,,,,,,,,,,,,,,,,,,
 341,hostgator.com,www.hostgator.com,blocked,403,,"Cloudflare challenge, status 403",,,,,,,,,,,,,,,,,,,
 342,dell.com,www.dell.com,file,200,,,28897,9,,,permitted,permitted,permitted,permitted,permitted,permitted-named,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
-343,smartadserver.com,www.equativ.com,none,200,yes,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+343,smartadserver.com,www.equativ.com,unreachable,200,yes,"robots.txt is a web page, not a robots.txt file (a login or challenge page)",,,,,,,,,,,,,,,,,,,
 344,netflix.net,www.netflix.com,file,200,,,3790,4,,,permitted-named,permitted-named,permitted-named,refused-star,refused-star,refused-star,refused-star,permitted-named,permitted-named,permitted-named,permitted-named,permitted-named,refused-star,permitted-named,refused-star
 345,gnu.org,www.gnu.org,file,200,,,2862,27,4,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
 346,akamaihd.net,akamaihd.net,unreachable,0,,no response: getaddrinfo ENOTFOUND akamaihd.net,,,,,,,,,,,,,,,,,,,
@@ -353,7 +353,7 @@ rank,domain,host,state,status,html,reason,bytes,groups,crawl_delay_s,content_sig
 352,tbcache.com,tbcache.com,unreachable,0,,"no response: Connect Timeout Error (attempted addresses: 140.205.77.240:443, 140.205.132.250:443, timeout: 10000ms)",,,,,,,,,,,,,,,,,,,
 353,ea.com,www.ea.com,file,200,,,1904,8,,,permitted,permitted,permitted,permitted,permitted,refused-named,refused-named,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
 354,trustpilot.com,www.trustpilot.com,file,200,,,25101,46,,,permitted-named,permitted-named,permitted-named,permitted-named,refused-named,refused-named,permitted-named,permitted-named,permitted-named,permitted-named,permitted-named,permitted-named,refused-star,permitted-named,refused-star
-355,onelink.me,www.appsflyer.com,none,200,yes,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+355,onelink.me,www.appsflyer.com,unreachable,200,yes,"robots.txt is a web page, not a robots.txt file (a login or challenge page)",,,,,,,,,,,,,,,,,,,
 356,nasa.gov,www.nasa.gov,file,200,,,69,2,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
 357,mobile.de,www.mobile.de,file,200,,,1142,4,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
 358,trueconf.net,trueconf.net,unreachable,0,,"no response: Hostname/IP does not match certificate's altnames: Host: trueconf.net. is not in the cert's altnames: DNS:*.trueconf.com, DNS:trueconf.com",,,,,,,,,,,,,,,,,,,
@@ -369,7 +369,7 @@ rank,domain,host,state,status,html,reason,bytes,groups,crawl_delay_s,content_sig
 368,gitlab.com,gitlab.com,file,200,,,3230,4,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
 369,googletagservices.com,googletagservices.com,unreachable,0,,no response: getaddrinfo ENOTFOUND googletagservices.com,,,,,,,,,,,,,,,,,,,
 370,brave.com,brave.com,file,200,,,53,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
-371,tradingview.com,www.tradingview.com,file,200,,,1153,4,,,permitted,permitted-named,permitted-named,permitted,permitted-named,permitted-named,permitted-named,permitted-named,permitted,permitted-named,permitted-named,permitted,permitted,permitted,permitted
+371,tradingview.com,www.tradingview.com,file,200,,,1153,2,,,permitted,permitted-named,permitted-named,permitted,permitted-named,permitted-named,permitted-named,permitted-named,permitted,permitted-named,permitted-named,permitted,permitted,permitted,permitted
 372,shalltry.com,shalltry.com,blocked,403,,status 403,,,,,,,,,,,,,,,,,,,
 373,allawnos.com,allawnos.com,unreachable,0,,no response: getaddrinfo ENOTFOUND allawnos.com,,,,,,,,,,,,,,,,,,,
 374,cookiedatabase.org,cookiedatabase.org,blocked,403,,"Cloudflare challenge, status 403",,,,,,,,,,,,,,,,,,,
@@ -409,7 +409,7 @@ rank,domain,host,state,status,html,reason,bytes,groups,crawl_delay_s,content_sig
 408,nflxvideo.net,nflxvideo.net,unreachable,0,,no response: B4650000:error:0A000438:SSL routines:ssl3_read_bytes:tlsv1 alert internal error:openssl\ssl\record\rec_layer_s3.c:918:SSL alert number 80,,,,,,,,,,,,,,,,,,,
 409,expireddomains.com,expireddomains.com,none,404,,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
 410,ibyteimg.com,ibyteimg.com,unreachable,0,,no response: getaddrinfo ENOTFOUND ibyteimg.com,,,,,,,,,,,,,,,,,,,
-411,timeweb.ru,timeweb.com,none,200,yes,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+411,timeweb.ru,timeweb.com,unreachable,200,yes,"robots.txt is a web page, not a robots.txt file (a login or challenge page)",,,,,,,,,,,,,,,,,,,
 412,shopifysvc.com,shopifysvc.com,unreachable,0,,no response: getaddrinfo ENOTFOUND shopifysvc.com,,,,,,,,,,,,,,,,,,,
 413,virginm.net,virginm.net,unreachable,0,,no response: getaddrinfo ENOTFOUND virginm.net,,,,,,,,,,,,,,,,,,,
 414,skyhigh.cloud,www.skyhighsecurity.com,blocked,403,,status 403,,,,,,,,,,,,,,,,,,,
@@ -420,7 +420,7 @@ rank,domain,host,state,status,html,reason,bytes,groups,crawl_delay_s,content_sig
 419,scdn.co,scdn.co,unreachable,0,,no response: getaddrinfo ENOTFOUND scdn.co,,,,,,,,,,,,,,,,,,,
 420,bluehost.com,www.bluehost.com,blocked,403,,"Cloudflare challenge, status 403",,,,,,,,,,,,,,,,,,,
 421,kwai-pro.com,kwai-pro.com,unreachable,0,,no response: getaddrinfo ENOTFOUND kwai-pro.com,,,,,,,,,,,,,,,,,,,
-422,dropcatch.com,www.dropcatch.com,none,200,yes,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+422,dropcatch.com,www.dropcatch.com,unreachable,200,yes,"robots.txt is a web page, not a robots.txt file (a login or challenge page)",,,,,,,,,,,,,,,,,,,
 423,163.com,www.163.com,file,200,,,225,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
 424,go.com,www.go.com,file,200,,,212,3,,,refused-named,permitted,refused-named,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
 425,netease.com,netease.com,unreachable,0,,"no response: Connect Timeout Error (attempted address: netease.com:443, timeout: 10000ms)",,,,,,,,,,,,,,,,,,,
@@ -440,7 +440,7 @@ rank,domain,host,state,status,html,reason,bytes,groups,crawl_delay_s,content_sig
 439,vecdnlb.com,vecdnlb.com,unreachable,0,,no response: getaddrinfo ENOTFOUND vecdnlb.com,,,,,,,,,,,,,,,,,,,
 440,supercell.com,supercell.com,file,200,,,66,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
 441,tencent-cloud.net,tencent-cloud.net,unreachable,0,,no response: getaddrinfo ENOTFOUND tencent-cloud.net,,,,,,,,,,,,,,,,,,,
-442,intel.com,www.intel.com,file,200,,,4211,31,,,permitted-named,permitted-named,permitted-named,permitted,permitted,permitted,permitted,permitted,permitted,permitted-named,permitted-named,permitted,permitted,permitted,permitted
+442,intel.com,www.intel.com,file,200,,,4211,9,,,permitted-named,permitted-named,permitted-named,permitted,permitted,permitted,permitted,permitted,permitted,permitted-named,permitted-named,permitted,permitted,permitted,permitted
 443,pangle.io,pangle.io,unreachable,0,,no response: getaddrinfo ENOTFOUND pangle.io,,,,,,,,,,,,,,,,,,,
 444,rocket-cdn.com,rocket-cdn.com,unreachable,0,,no response: getaddrinfo ENOTFOUND rocket-cdn.com,,,,,,,,,,,,,,,,,,,
 445,huawei.com,huawei.com,unreachable,0,,"no response: Connect Timeout Error (attempted addresses: 2407:c080:17ef:ffff::7274:d206:443, 121.37.49.12:443, timeout: 10000ms)",,,,,,,,,,,,,,,,,,,
@@ -454,7 +454,7 @@ rank,domain,host,state,status,html,reason,bytes,groups,crawl_delay_s,content_sig
 453,duolingo.com,www.duolingo.com,file,200,,,826,3,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
 454,vercel-dns-016.com,vercel-dns-016.com,unreachable,0,,no response: getaddrinfo ENOTFOUND vercel-dns-016.com,,,,,,,,,,,,,,,,,,,
 455,adobe.net,adobe.net,unreachable,0,,"no response: Hostname/IP does not match certificate's altnames: Host: adobe.net. is not in the cert's altnames: DNS:redirect.adobe.com, DNS:www.cmo.com, DNS:gen",,,,,,,,,,,,,,,,,,,
-456,g.page,www.google.com,none,200,yes,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+456,g.page,www.google.com,unreachable,200,yes,"robots.txt is a web page, not a robots.txt file (a login or challenge page)",,,,,,,,,,,,,,,,,,,
 457,businessinsider.com,www.businessinsider.com,file,200,,,2231,13,,,permitted,refused-named,permitted,refused-named,permitted,refused-named,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
 458,fandom.com,www.fandom.com,blocked,403,,"Cloudflare challenge, status 403",,,,,,,,,,,,,,,,,,,
 459,aol.com,www.aol.com,file,200,,,2909,44,,,refused-named,refused-named,refused-named,refused-named,permitted,refused-named,permitted,permitted,permitted,permitted-named,permitted-named,permitted,permitted,permitted,permitted
@@ -462,7 +462,7 @@ rank,domain,host,state,status,html,reason,bytes,groups,crawl_delay_s,content_sig
 461,pixabay.com,pixabay.com,file,200,,,3248,2,,,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
 462,yahoo.co.jp,www.yahoo.co.jp,file,200,,,87,3,,,refused-named,permitted,refused-named,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
 463,arxiv.org,arxiv.org,file,200,,,5854,10,15,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted-named,permitted
-464,cloudflareinsights.com,cloudflareinsights.com,none,200,yes,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+464,cloudflareinsights.com,cloudflareinsights.com,unreachable,200,yes,"robots.txt is a web page, not a robots.txt file (a login or challenge page)",,,,,,,,,,,,,,,,,,,
 465,myqcloud.com,myqcloud.com,unreachable,0,,no response: getaddrinfo ENOTFOUND myqcloud.com,,,,,,,,,,,,,,,,,,,
 466,speedtest.net,www.speedtest.net,file,200,,,247,2,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
 467,inner-active.mobi,inner-active.mobi,unreachable,0,,"no response: Connect Timeout Error (attempted addresses: 54.225.119.21:443, 62.219.50.32:443, timeout: 10000ms)",,,,,,,,,,,,,,,,,,,
@@ -479,7 +479,7 @@ rank,domain,host,state,status,html,reason,bytes,groups,crawl_delay_s,content_sig
 478,branch.io,www.branch.io,file,200,,,1783,8,,,permitted-named,permitted-named,permitted-named,permitted-named,permitted-named,permitted,permitted,permitted,permitted,permitted-named,permitted,permitted,permitted,permitted,permitted
 479,cnbc.com,www.cnbc.com,file,200,,,2477,3,,,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,permitted,refused-named,refused-named,refused-named,permitted,permitted-named,permitted
 480,walmart.com,www.walmart.com,file,200,,,3479,2,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
-481,goodreads.com,www.goodreads.com,file,200,,,2647,8,,,refused-named,permitted,permitted,refused-named,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+481,goodreads.com,www.goodreads.com,file,200,,,2647,7,,,refused-named,permitted,permitted,refused-named,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
 482,ampproject.org,amp.dev,none,404,,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
 483,kwai.net,kwai.net,unreachable,0,,"no response: Connect Timeout Error (attempted address: kwai.net:443, timeout: 10000ms)",,,,,,,,,,,,,,,,,,,
 484,ietf.org,www.ietf.org,file,200,,,51,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
@@ -501,7 +501,7 @@ rank,domain,host,state,status,html,reason,bytes,groups,crawl_delay_s,content_sig
 500,npr.org,www.npr.org,file,200,,,4736,47,,,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,permitted,refused-named,refused-named,refused-named,refused-named,refused-named,permitted,permitted-named,permitted
 501,nease.net,nease.net,unreachable,0,,"no response: Connect Timeout Error (attempted address: nease.net:443, timeout: 10000ms)",,,,,,,,,,,,,,,,,,,
 502,run.app,run.app,none,404,,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
-503,ezvizlife.com,www.ezviz.com,none,200,yes,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+503,ezvizlife.com,www.ezviz.com,unreachable,200,yes,"robots.txt is a web page, not a robots.txt file (a login or challenge page)",,,,,,,,,,,,,,,,,,,
 504,sohu.com,www.sohu.com,file,200,,,3097,4,,,refused-named,refused-named,refused-named,refused-named,refused-named,permitted-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,permitted-named,refused-star
 505,sc-gw.com,sc-gw.com,unreachable,0,,no response: getaddrinfo ENOTFOUND sc-gw.com,,,,,,,,,,,,,,,,,,,
 506,bdydns.com,bdydns.com,unreachable,0,,no response: getaddrinfo ENOTFOUND bdydns.com,,,,,,,,,,,,,,,,,,,
@@ -523,12 +523,12 @@ rank,domain,host,state,status,html,reason,bytes,groups,crawl_delay_s,content_sig
 522,foxnews.com,www.foxnews.com,file,200,,,301,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
 523,anthropic.com,www.anthropic.com,file,200,,,71,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
 524,stackoverflow.com,stackoverflow.com,blocked,418,,status 418,,,,,,,,,,,,,,,,,,,
-525,mediatek.com,www.mediatek.com,none,200,yes,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+525,mediatek.com,www.mediatek.com,unreachable,200,yes,"robots.txt is a web page, not a robots.txt file (a login or challenge page)",,,,,,,,,,,,,,,,,,,
 526,twc.com,twc.com,unreachable,0,,"no response: Hostname/IP does not match certificate's altnames: Host: twc.com. is not in the cert's altnames: DNS:spectrum.com, DNS:baedirectsales.spectrum.com,",,,,,,,,,,,,,,,,,,,
 527,squarespacedns.com,squarespacedns.com,unreachable,0,,no response: getaddrinfo ENOTFOUND squarespacedns.com,,,,,,,,,,,,,,,,,,,
 528,ipv4only.arpa,ipv4only.arpa,unreachable,0,,"no response: Connect Timeout Error (attempted addresses: 192.0.0.171:443, 192.0.0.170:443, timeout: 10000ms)",,,,,,,,,,,,,,,,,,,
-529,share.google,share.google,none,200,yes,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
-530,eventbrite.com,eventbrite.com,file,200,,,7559,139,,,permitted,permitted,permitted,permitted-named,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+529,share.google,share.google,unreachable,200,yes,"robots.txt is a web page, not a robots.txt file (a login or challenge page)",,,,,,,,,,,,,,,,,,,
+530,eventbrite.com,eventbrite.com,file,200,,,7559,135,,,permitted,permitted,permitted,refused-named,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
 531,mysql.com,www.mysql.com,blocked,403,,status 403,,,,,,,,,,,,,,,,,,,
 532,google.com.hk,www.google.com.hk,file,200,,,6624,4,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
 533,tplinkcloud.com,www.tplinkcloud.com,file,200,,,70,1,,,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star
@@ -559,7 +559,7 @@ rank,domain,host,state,status,html,reason,bytes,groups,crawl_delay_s,content_sig
 558,amazon.co.za,www.amazon.co.za,file,200,,,7257,101,,,refused-named,refused-named,refused-named,refused-named,permitted,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,permitted,permitted
 559,ft.com,www.ft.com,file,200,,,1556,20,1,,permitted,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,permitted,permitted,refused-named,permitted,permitted,refused-named,permitted,permitted
 560,wired.com,www.wired.com,file,200,,,2245,3,,,permitted,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,permitted,refused-named,refused-named,permitted,refused-named,refused-named,permitted,permitted
-561,icloud-content.com,developer.apple.com,none,200,yes,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+561,icloud-content.com,developer.apple.com,unreachable,200,yes,"robots.txt is a web page, not a robots.txt file (a login or challenge page)",,,,,,,,,,,,,,,,,,,
 562,fast.com,fast.com,file,200,,,41,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
 563,share-dns.com,share-dns.com,unreachable,0,,no response: getaddrinfo ENOTFOUND share-dns.com,,,,,,,,,,,,,,,,,,,
 564,openx.net,openx.net,none,404,,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
@@ -585,11 +585,11 @@ rank,domain,host,state,status,html,reason,bytes,groups,crawl_delay_s,content_sig
 584,eset.com,www.eset.com,file,200,,,6699,2,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
 585,qlivecdn.com,qlivecdn.com,unreachable,0,,no response: getaddrinfo ENOTFOUND qlivecdn.com,,,,,,,,,,,,,,,,,,,
 586,vercel-dns-017.com,vercel-dns-017.com,unreachable,0,,no response: getaddrinfo ENOTFOUND vercel-dns-017.com,,,,,,,,,,,,,,,,,,,
-587,aboutads.info,youradchoices.com,none,200,yes,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+587,aboutads.info,youradchoices.com,unreachable,200,yes,"robots.txt is a web page, not a robots.txt file (a login or challenge page)",,,,,,,,,,,,,,,,,,,
 588,360yield.com,ssp.improvedigital.com,file,200,,,106,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
 589,comcast.com,comcast.com,unreachable,0,,no response: connect ECONNREFUSED 96.99.227.0:443,,,,,,,,,,,,,,,,,,,
 590,teamviewer.com,www.teamviewer.com,file,200,,,581,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
-591,dotomi.com,www.epsilon.com,none,200,yes,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+591,dotomi.com,www.epsilon.com,unreachable,200,yes,"robots.txt is a web page, not a robots.txt file (a login or challenge page)",,,,,,,,,,,,,,,,,,,
 592,svc.ms,svc.ms,unreachable,0,,no response: getaddrinfo ENOTFOUND svc.ms,,,,,,,,,,,,,,,,,,,
 593,braze.com,braze.com,file,200,,,129,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
 594,threads.com,www.threads.com,file,200,,,8228,36,,,refused-named,refused-named,refused-named,refused-star,refused-named,refused-star,refused-star,refused-star,refused-star,refused-named,refused-star,refused-star,refused-star,permitted-named,refused-star
@@ -601,7 +601,7 @@ rank,domain,host,state,status,html,reason,bytes,groups,crawl_delay_s,content_sig
 600,herokuapp.com,herokuapp.com,unreachable,0,,no response: B4650000:error:0A000458:SSL routines:ssl3_read_bytes:tlsv1 unrecognized name:openssl\ssl\record\rec_layer_s3.c:918:SSL alert number 112,,,,,,,,,,,,,,,,,,,
 601,ovh.net,proof.ovh.net,blocked,429,,status 429,,,,,,,,,,,,,,,,,,,
 602,akamaitech.net,akamaitech.net,unreachable,0,,no response: getaddrinfo ENOTFOUND akamaitech.net,,,,,,,,,,,,,,,,,,,
-603,playstation.com,www.playstation.com,file,200,,,655,8,5,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+603,playstation.com,www.playstation.com,file,200,,,655,4,10,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
 604,usatoday.com,www.usatoday.com,file,200,,,16350,288,,,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,permitted,permitted
 605,wps.com,www.wps.com,file,200,,,666,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
 606,wildberries.ru,www.wildberries.ru,blocked,498,,status 498,,,,,,,,,,,,,,,,,,,
@@ -626,7 +626,7 @@ rank,domain,host,state,status,html,reason,bytes,groups,crawl_delay_s,content_sig
 625,berkeley.edu,www.berkeley.edu,file,200,,,190,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
 626,unesco.org,www.unesco.org,file,200,,,67187,2,,"content-signal: search=yes,ai-input=yes,ai-train=no,use=reference",refused-named,refused-named,permitted,refused-named,refused-named,refused-named,refused-named,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
 627,my.com,my.com,unreachable,0,,no response: getaddrinfo ENOTFOUND my.com,,,,,,,,,,,,,,,,,,,
-628,bitdefender.net,www.bitdefender.com,none,200,yes,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+628,bitdefender.net,www.bitdefender.com,unreachable,200,yes,"robots.txt is a web page, not a robots.txt file (a login or challenge page)",,,,,,,,,,,,,,,,,,,
 629,wix.com,www.wix.com,file,200,,,2797,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
 630,force.com,www.force.com,blocked,403,,status 403,,,,,,,,,,,,,,,,,,,
 631,telegraph.co.uk,www.telegraph.co.uk,file,200,,,3228,3,,,refused-named,refused-named,permitted-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,permitted,permitted
@@ -646,7 +646,7 @@ rank,domain,host,state,status,html,reason,bytes,groups,crawl_delay_s,content_sig
 645,t-msedge.net,t-msedge.net,unreachable,0,,no response: getaddrinfo ENOTFOUND t-msedge.net,,,,,,,,,,,,,,,,,,,
 646,verisign.com,www.verisign.com,file,200,,,62,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
 647,amazon.ca,www.amazon.ca,file,200,,,6179,101,,,refused-named,refused-named,refused-named,refused-named,permitted,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,permitted,permitted
-648,dyndns.org,account.dyn.com,none,200,yes,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+648,dyndns.org,account.dyn.com,unreachable,200,yes,"robots.txt is a web page, not a robots.txt file (a login or challenge page)",,,,,,,,,,,,,,,,,,,
 649,sagepub.com,www.sagepub.com,file,200,,,5472,43,,,permitted-named,permitted-named,permitted-named,refused-named,permitted-named,refused-named,refused-named,permitted,permitted,permitted,permitted-named,permitted,permitted,permitted-named,permitted
 650,resolver.arpa,resolver.arpa,unreachable,0,,no response: getaddrinfo ENOTFOUND resolver.arpa,,,,,,,,,,,,,,,,,,,
 651,techcrunch.com,techcrunch.com,file,200,,,710,13,,,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,permitted,permitted,permitted,permitted,refused-named,permitted,permitted,permitted,permitted
@@ -664,8 +664,8 @@ rank,domain,host,state,status,html,reason,bytes,groups,crawl_delay_s,content_sig
 663,nike.com,www.nike.com,file,200,,,3503,6,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
 664,footprintdns.com,footprintdns.com,unreachable,0,,no response: getaddrinfo ENOTFOUND footprintdns.com,,,,,,,,,,,,,,,,,,,
 665,chatgpt.site,chatgpt.com,blocked,403,,"Cloudflare challenge, status 403",,,,,,,,,,,,,,,,,,,
-666,2gis.com,2gis.ae,file,200,,,1193,4,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
-667,service.gov.uk,www.gov.uk,none,200,yes,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+666,2gis.com,2gis.ae,file,200,,,1193,3,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+667,service.gov.uk,www.gov.uk,unreachable,200,yes,"robots.txt is a web page, not a robots.txt file (a login or challenge page)",,,,,,,,,,,,,,,,,,,
 668,intercom.io,www.intercom.com,file,200,,,261,1,,"content-signal: ai-train=yes, ai-input=yes, search=yes",permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
 669,samsungapps.com,samsungapps.com,unreachable,0,,"no response: Connect Timeout Error (attempted address: samsungapps.com:443, timeout: 10000ms)",,,,,,,,,,,,,,,,,,,
 670,ks-cdn.com,ks-cdn.com,unreachable,0,,no response: getaddrinfo ENOTFOUND ks-cdn.com,,,,,,,,,,,,,,,,,,,
@@ -673,7 +673,7 @@ rank,domain,host,state,status,html,reason,bytes,groups,crawl_delay_s,content_sig
 672,stackadapt.com,www.stackadapt.com,file,200,,,623,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
 673,bidswitch.net,bidswitch.net,unreachable,0,,no response: getaddrinfo ENOTFOUND bidswitch.net,,,,,,,,,,,,,,,,,,,
 674,dailymail.com,www.dailymail.com,file,200,,,5435,7,,,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,permitted,permitted
-675,withgoogle.com,www.google.com,none,200,yes,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+675,withgoogle.com,www.google.com,unreachable,200,yes,"robots.txt is a web page, not a robots.txt file (a login or challenge page)",,,,,,,,,,,,,,,,,,,
 676,primevideo.com,www.primevideo.com,file,200,,,4348,94,,,permitted,permitted,permitted,refused-named,permitted,refused-named,refused-named,permitted,permitted,refused-named,refused-named,refused-named,refused-named,permitted,permitted
 677,redhat.com,www.redhat.com,file,200,,,3368,1,10,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
 678,hstgr.net,hstgr.net,unreachable,0,,no response: B4650000:error:0A000438:SSL routines:ssl3_read_bytes:tlsv1 alert internal error:openssl\ssl\record\rec_layer_s3.c:918:SSL alert number 80,,,,,,,,,,,,,,,,,,,
@@ -693,7 +693,7 @@ rank,domain,host,state,status,html,reason,bytes,groups,crawl_delay_s,content_sig
 692,bunnyinfra.net,bunnyinfra.net,unreachable,0,,no response: getaddrinfo ENOTFOUND bunnyinfra.net,,,,,,,,,,,,,,,,,,,
 693,cambridge.org,www.cambridge.org,file,200,,,2785,5,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,refused-named,permitted,permitted,permitted,permitted
 694,amazon.in,www.amazon.in,file,200,,,9320,103,,,refused-named,refused-named,refused-named,refused-named,permitted,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,permitted,permitted
-695,warnerbros.com,www.warnerbros.com,none,200,yes,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+695,warnerbros.com,www.warnerbros.com,unreachable,200,yes,"robots.txt is a web page, not a robots.txt file (a login or challenge page)",,,,,,,,,,,,,,,,,,,
 696,vkontakte.ru,vkontakte.ru,file,200,,,55,1,,,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star
 697,optimizely.com,www.optimizely.com,file,200,,,207,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
 698,spotifycdn.com,spotifycdn.com,unreachable,0,,no response: getaddrinfo ENOTFOUND spotifycdn.com,,,,,,,,,,,,,,,,,,,
@@ -726,7 +726,7 @@ rank,domain,host,state,status,html,reason,bytes,groups,crawl_delay_s,content_sig
 725,amazon.es,www.amazon.es,file,200,,,7063,101,,,refused-named,refused-named,refused-named,refused-named,permitted,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,permitted,permitted
 726,pinimg.com,www.pinterest.com,file,200,,,40982,8,,,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,permitted-named,refused-star
 727,consultant.ru,www.consultant.ru,file,200,,,1176,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
-728,bandcamp.com,bandcamp.com,file,200,,,1053,20,,,refused-named,refused-named,refused-named,refused-named,permitted,refused-named,refused-named,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+728,bandcamp.com,bandcamp.com,file,200,,,1053,19,,,refused-named,refused-named,refused-named,refused-named,permitted,refused-named,refused-named,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
 729,ya.ru,ya.ru,file,200,,,29928,5,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted-named,permitted
 730,itch.io,itch.io,file,200,,,249,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
 731,airbnb.com,www.airbnb.com,file,200,,,20930,18,,,refused-named,refused-named,permitted,permitted,refused-named,permitted,permitted-named,permitted-named,permitted,permitted-named,permitted-named,permitted,permitted,permitted-named,permitted
@@ -782,13 +782,13 @@ rank,domain,host,state,status,html,reason,bytes,groups,crawl_delay_s,content_sig
 781,crwdcntrl.net,crwdcntrl.net,unreachable,0,,"no response: Connect Timeout Error (attempted addresses: 199.233.57.17:443, 199.233.57.18:443, 199.233.57.16:443, 199.233.57.19:443, 199.233.57.21:443, 199.233.",,,,,,,,,,,,,,,,,,,
 782,yieldmo.com,yieldmo.com,file,200,,,169,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
 783,steamstatic.com,steamstatic.com,unreachable,0,,no response: getaddrinfo ENOTFOUND steamstatic.com,,,,,,,,,,,,,,,,,,,
-784,nikkei.com,www.nikkei.com,none,200,yes,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+784,nikkei.com,www.nikkei.com,unreachable,200,yes,"robots.txt is a web page, not a robots.txt file (a login or challenge page)",,,,,,,,,,,,,,,,,,,
 785,keenetic.io,keenetic.io,unreachable,0,,no response: getaddrinfo ENOTFOUND keenetic.io,,,,,,,,,,,,,,,,,,,
 786,sedo.com,sedo.com,file,200,,,270,2,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
 787,mhverifier.ru,mhverifier.ru,unreachable,0,,"no response: Hostname/IP does not match certificate's altnames: Host: mhverifier.ru. is not in the cert's altnames: DNS:*.telecomid.ru, DNS:telecomid.ru",,,,,,,,,,,,,,,,,,,
 788,mckinsey.com,mckinsey.com,unreachable,0,,"no response: unable to verify the first certificate; if the root CA is installed locally, try running Node.js with --use-system-ca",,,,,,,,,,,,,,,,,,,
 789,shopeemobile.com,shopeemobile.com,unreachable,0,,"no response: Connect Timeout Error (attempted address: shopeemobile.com:443, timeout: 10000ms)",,,,,,,,,,,,,,,,,,,
-790,id5-sync.com,console.id5.io,none,200,yes,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+790,id5-sync.com,console.id5.io,unreachable,200,yes,"robots.txt is a web page, not a robots.txt file (a login or challenge page)",,,,,,,,,,,,,,,,,,,
 791,ddnss.de,ddnss.de,file,200,,,286,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
 792,zillow.com,www.zillow.com,file,200,,,10524,4,,,permitted,permitted,permitted,permitted,refused-named,permitted,refused-named,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
 793,samsungosp.com,samsungosp.com,unreachable,0,,no response: getaddrinfo ENOTFOUND samsungosp.com,,,,,,,,,,,,,,,,,,,
@@ -817,7 +817,7 @@ rank,domain,host,state,status,html,reason,bytes,groups,crawl_delay_s,content_sig
 816,mixpanel.com,mixpanel.com,file,200,,,314,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
 817,prnewswire.com,www.prnewswire.com,file,200,,,3353,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
 818,hugedomains.com,www.hugedomains.com,file,200,,,606,3,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
-819,moloco.com,www.moloco.com,file,200,,,3335,69,,,permitted,permitted,permitted,permitted-named,permitted,refused-named,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+819,moloco.com,www.moloco.com,file,200,,,3335,54,,,permitted,permitted,permitted,permitted-named,permitted,refused-named,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
 820,disneyplus.com,www.disneyplus.com,file,200,,,2794,2,,,permitted-named,permitted-named,permitted-named,permitted-named,permitted-named,permitted-named,permitted-named,permitted-named,permitted-named,permitted-named,permitted-named,permitted-named,refused-star,permitted-named,refused-star
 821,xvideos.com,xvideos.com,file,200,,,61,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
 822,rakuten.com,www.rakuten.com,file,200,,,2621,4,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
@@ -829,7 +829,7 @@ rank,domain,host,state,status,html,reason,bytes,groups,crawl_delay_s,content_sig
 828,allaboutcookies.org,allaboutcookies.org,blocked,403,,status 403,,,,,,,,,,,,,,,,,,,
 829,adform.net,adform.net,file,200,,,139,3,,,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star
 830,33across.com,www.33across.com,blocked,403,,"Cloudflare challenge, status 403",,,,,,,,,,,,,,,,,,,
-831,teads.tv,cdn.teads.tv,none,200,yes,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+831,teads.tv,cdn.teads.tv,unreachable,200,yes,"robots.txt is a web page, not a robots.txt file (a login or challenge page)",,,,,,,,,,,,,,,,,,,
 832,liftoff.io,liftoff.ai,file,200,,,92,1,30,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
 833,lefigaro.fr,www.lefigaro.fr,file,200,,,12666,246,,,refused-named,refused-named,refused-named,refused-named,permitted,permitted,permitted,refused-named,refused-named,permitted,refused-named,refused-named,permitted,permitted,permitted
 834,adjust.com,www.adjust.com,blocked,429,,status 429,,,,,,,,,,,,,,,,,,,
@@ -839,13 +839,13 @@ rank,domain,host,state,status,html,reason,bytes,groups,crawl_delay_s,content_sig
 838,discordapp.com,discord.com,file,200,,,1774,3,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
 839,amagi.tv,amagi.tv,unreachable,0,,no response: read ECONNRESET,,,,,,,,,,,,,,,,,,,
 840,vivo.com.cn,vivo.com.cn,unreachable,0,,"no response: Connect Timeout Error (attempted address: vivo.com.cn:443, timeout: 10000ms)",,,,,,,,,,,,,,,,,,,
-841,ryanair.com,www.ryanair.com,none,200,yes,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+841,ryanair.com,www.ryanair.com,unreachable,200,yes,"robots.txt is a web page, not a robots.txt file (a login or challenge page)",,,,,,,,,,,,,,,,,,,
 842,grab.co,grab.co,unreachable,0,,no response: getaddrinfo ENOTFOUND grab.co,,,,,,,,,,,,,,,,,,,
 843,goskope.com,goskope.com,unreachable,0,,no response: getaddrinfo ENOTFOUND goskope.com,,,,,,,,,,,,,,,,,,,
 844,a-mo.net,a-mo.net,blocked,403,,status 403,,,,,,,,,,,,,,,,,,,
 845,usps.com,www.usps.com,file,200,,,435,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
 846,turn.com,turn.com,unreachable,0,,no response: getaddrinfo ENOTFOUND turn.com,,,,,,,,,,,,,,,,,,,
-847,me.com,www.icloud.com,none,200,yes,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+847,me.com,www.icloud.com,unreachable,200,yes,"robots.txt is a web page, not a robots.txt file (a login or challenge page)",,,,,,,,,,,,,,,,,,,
 848,usda.gov,www.usda.gov,blocked,403,,status 403,,,,,,,,,,,,,,,,,,,
 849,unpkg.com,unpkg.com,file,200,,,733,0,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
 850,academia.edu,www.academia.edu,file,200,,,57366,63,,,refused-named,refused-star,refused-named,refused-star,refused-named,refused-star,refused-star,permitted-named,permitted-named,permitted-named,permitted-named,permitted-named,refused-star,permitted-named,refused-star
@@ -867,7 +867,7 @@ rank,domain,host,state,status,html,reason,bytes,groups,crawl_delay_s,content_sig
 866,pendo.io,www.pendo.io,file,200,,,646,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
 867,cloudsink.net,cloudsink.net,unreachable,0,,no response: getaddrinfo ENOTFOUND cloudsink.net,,,,,,,,,,,,,,,,,,,
 868,wcdnga.com,wcdnga.com,unreachable,0,,no response: getaddrinfo ENOTFOUND wcdnga.com,,,,,,,,,,,,,,,,,,,
-869,onetag-sys.com,onetag-sys.com,none,200,yes,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+869,onetag-sys.com,onetag-sys.com,unreachable,200,yes,"robots.txt is a web page, not a robots.txt file (a login or challenge page)",,,,,,,,,,,,,,,,,,,
 870,fbsbx.com,fbsbx.com,none,404,,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
 871,appcenter.ms,appcenter.ms,none,404,,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
 872,dnse0.com,dnse0.com,unreachable,0,,no response: getaddrinfo ENOTFOUND dnse0.com,,,,,,,,,,,,,,,,,,,
@@ -884,7 +884,7 @@ rank,domain,host,state,status,html,reason,bytes,groups,crawl_delay_s,content_sig
 883,synology.com,www.synology.com,file,200,,,127,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
 884,biblegateway.com,www.biblegateway.com,file,200,,,743,1,15,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
 885,adgrx.com,adgrx.com,unreachable,0,,no response: getaddrinfo ENOTFOUND adgrx.com,,,,,,,,,,,,,,,,,,,
-886,jetbrains.com,www.jetbrains.com,file,200,,,1760,3,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+886,jetbrains.com,www.jetbrains.com,file,200,,,1760,2,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
 887,ebay.de,www.ebay.de,file,200,,,15980,7,,,refused-named,refused-named,permitted,refused-named,refused-named,refused-named,refused-named,permitted,permitted,refused-named,permitted,permitted,permitted,permitted-named,permitted
 888,msftauth.net,msftauth.net,unreachable,0,,no response: getaddrinfo ENOTFOUND msftauth.net,,,,,,,,,,,,,,,,,,,
 889,yellowblue.io,yellowblue.io,unreachable,0,,no response: getaddrinfo ENOTFOUND yellowblue.io,,,,,,,,,,,,,,,,,,,
@@ -894,7 +894,7 @@ rank,domain,host,state,status,html,reason,bytes,groups,crawl_delay_s,content_sig
 893,azure-devices.net,azure-devices.net,unreachable,0,,no response: getaddrinfo ENOTFOUND azure-devices.net,,,,,,,,,,,,,,,,,,,
 894,nbcnews.com,www.nbcnews.com,file,200,,,13381,39,,,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,permitted,permitted
 895,amazon.com.au,www.amazon.com.au,file,200,,,6904,101,,,refused-named,refused-named,refused-named,refused-named,permitted,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,refused-named,permitted,permitted
-896,appspot.com,accounts.google.com,none,200,yes,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+896,appspot.com,accounts.google.com,unreachable,200,yes,"robots.txt is a web page, not a robots.txt file (a login or challenge page)",,,,,,,,,,,,,,,,,,,
 897,disqus.com,disqus.com,file,200,,,49,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
 898,dv.tech,dv.tech,unreachable,0,,no response: Client network socket disconnected before secure TLS connection was established,,,,,,,,,,,,,,,,,,,
 899,pornhub.com,www.pornhub.com,file,200,,,5295,3,,,permitted,permitted,permitted,refused-named,permitted,refused-named,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
@@ -913,12 +913,12 @@ rank,domain,host,state,status,html,reason,bytes,groups,crawl_delay_s,content_sig
 912,dnse2.com,dnse2.com,unreachable,0,,no response: getaddrinfo ENOTFOUND dnse2.com,,,,,,,,,,,,,,,,,,,
 913,fwmrm.net,www.freewheel.com,file,200,,,191,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
 914,it.com,it.com,none,404,,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
-915,readthedocs.io,about.readthedocs.com,none,200,yes,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+915,readthedocs.io,about.readthedocs.com,unreachable,200,yes,"robots.txt is a web page, not a robots.txt file (a login or challenge page)",,,,,,,,,,,,,,,,,,,
 916,mayoclinic.org,www.mayoclinic.org,blocked,403,,status 403,,,,,,,,,,,,,,,,,,,
 917,coupang.com,www.coupang.com,blocked,403,,status 403,,,,,,,,,,,,,,,,,,,
 918,ys7.com,www.ys7.com,unreachable,0,,"no response: Connect Timeout Error (attempted address: www.ys7.com:443, timeout: 10000ms)",,,,,,,,,,,,,,,,,,,
 919,kleinanzeigen.de,www.kleinanzeigen.de,file,200,,,11141,10,,,permitted-named,permitted,permitted,permitted,permitted,permitted,permitted,permitted-named,permitted,permitted-named,permitted-named,permitted,permitted,permitted,permitted
-920,wyzecam.com,www.wyze.com,file,200,,,6418,16,,,permitted-named,permitted-named,permitted-named,permitted-named,permitted,permitted,permitted-named,permitted-named,permitted,permitted-named,permitted,permitted,permitted,permitted,permitted
+920,wyzecam.com,www.wyze.com,file,200,,,6418,14,,,permitted-named,permitted-named,permitted-named,permitted-named,permitted,permitted,permitted-named,permitted-named,permitted,permitted-named,permitted,permitted,permitted,permitted,permitted
 921,lg.com,www.lg.com,file,200,,,8054,4,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
 922,thenai.org,thenai.org,file,200,,,184,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
 923,latimes.com,www.latimes.com,file,200,,,1768,13,,,refused-named,refused-named,permitted,permitted,permitted,refused-named,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
@@ -927,7 +927,7 @@ rank,domain,host,state,status,html,reason,bytes,groups,crawl_delay_s,content_sig
 926,epa.gov,www.epa.gov,file,200,,,2035,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
 927,stbid.ru,stbid.ru,unreachable,0,,"no response: Hostname/IP does not match certificate's altnames: Host: stbid.ru. is not in the cert's altnames: DNS:*.n0.sync.bumlam.com, DNS:*.n1.sync.bumlam.co",,,,,,,,,,,,,,,,,,,
 928,volcgslb.com,volcgslb.com,unreachable,0,,no response: getaddrinfo ENOTFOUND volcgslb.com,,,,,,,,,,,,,,,,,,,
-929,classlink.com,www.classlink.com,file,200,,,126,2,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+929,classlink.com,www.classlink.com,file,200,,,126,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
 930,eu-1-id5-sync.com,eu-1-id5-sync.com,blocked,522,,status 522,,,,,,,,,,,,,,,,,,,
 931,px-cloud.net,px-cloud.net,none,404,,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
 932,qualtrics.com,www.qualtrics.com,file,200,,,30643,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
@@ -953,7 +953,7 @@ rank,domain,host,state,status,html,reason,bytes,groups,crawl_delay_s,content_sig
 952,note.com,note.com,file,200,,,1197,6,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted-named,permitted
 953,go-mpulse.net,go-mpulse.net,unreachable,0,,no response: getaddrinfo ENOTFOUND go-mpulse.net,,,,,,,,,,,,,,,,,,,
 954,chaturbate.com,chaturbate.com,file,200,,,274,2,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
-955,youku.com,www.youku.com,none,200,yes,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+955,youku.com,www.youku.com,unreachable,200,yes,"robots.txt is a web page, not a robots.txt file (a login or challenge page)",,,,,,,,,,,,,,,,,,,
 956,tbank.ru,tbank.ru,unreachable,0,,no response: self-signed certificate in certificate chain,,,,,,,,,,,,,,,,,,,
 957,leiniao.com,leiniao.com,unreachable,0,,"no response: Connect Timeout Error (attempted address: leiniao.com:443, timeout: 10000ms)",,,,,,,,,,,,,,,,,,,
 958,character.ai,character.ai,file,200,,,159,1,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
@@ -989,9 +989,9 @@ rank,domain,host,state,status,html,reason,bytes,groups,crawl_delay_s,content_sig
 988,xhamster46.desi,xhamster46.desi,file,200,,,13012,2,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
 989,ancestry.com,ancestry.com,blocked,403,,"Cloudflare challenge, status 403",,,,,,,,,,,,,,,,,,,
 990,nexusmods.com,www.nexusmods.com,blocked,403,,"Cloudflare challenge, status 403",,,,,,,,,,,,,,,,,,,
-991,smilewanted.com,www.smilewanted.com,none,200,yes,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+991,smilewanted.com,www.smilewanted.com,unreachable,200,yes,"robots.txt is a web page, not a robots.txt file (a login or challenge page)",,,,,,,,,,,,,,,,,,,
 992,shopee.ph,shopee.ph,file,200,,,1834,2,1,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted-named,permitted
-993,ubi.com,www.ubisoft.com,none,200,yes,,,,,,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted,permitted
+993,ubi.com,www.ubisoft.com,unreachable,200,yes,"robots.txt is a web page, not a robots.txt file (a login or challenge page)",,,,,,,,,,,,,,,,,,,
 994,presage.io,presage.io,unreachable,0,,no response: certificate has expired,,,,,,,,,,,,,,,,,,,
 995,btloader.com,btloader.com,file,200,,,26,1,,,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star,refused-star
 996,sofascore.com,sofascore.com,blocked,403,,status 403,,,,,,,,,,,,,,,,,,,

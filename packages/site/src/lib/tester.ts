@@ -2,36 +2,17 @@
  * The input of the robots.txt tester, made ready for `decide`. A reader can paste a full URL in place
  * of a path, and a full User-Agent header in place of a product token.
  */
-
-/** The parts of a browser User-Agent that are not the name of a bot. */
-const BROWSER_PARTS = new Set([
-  "mozilla",
-  "applewebkit",
-  "khtml",
-  "gecko",
-  "chrome",
-  "chromium",
-  "safari",
-  "version",
-  "mobile",
-  "firefox",
-  "edg",
-  "opr",
-  "like",
-]);
+import { productToken as tokenOf } from "polite-crawler/robots";
 
 /**
- * This function gives the product token that robots.txt matches. `MyBot/1.0` gives `MyBot`. The header
- * `Mozilla/5.0 (compatible; MyBot/1.0; +https://example.com/bot)` also gives `MyBot`.
+ * This function gives the product token that robots.txt matches, as the crawler finds it
+ * (`productToken` of polite-crawler), in the case that the reader wrote. `MyBot/1.0` gives `MyBot`.
+ * The header `Mozilla/5.0 (compatible; MyBot/1.0; +https://example.com/bot)` also gives `MyBot`.
  */
 export const productToken = (input: string): string => {
-  const text = input.trim();
-  const first = /^[A-Za-z_-]+/.exec(text)?.[0] ?? "";
-  if (first.toLowerCase() !== "mozilla") return first;
-  const compatible = /compatible;\s*([A-Za-z_-]+)/i.exec(text)?.[1];
-  if (compatible !== undefined) return compatible;
-  const products = [...text.matchAll(/([A-Za-z][A-Za-z_-]*)\/[\w.]+/g)].map((match) => match[1] ?? "");
-  return products.find((product) => !BROWSER_PARTS.has(product.toLowerCase())) ?? first;
+  const token = tokenOf(input);
+  const at = input.toLowerCase().indexOf(token);
+  return token.length > 0 && at !== -1 ? input.slice(at, at + token.length) : token;
 };
 
 /** A path to test, and the text that the reader wrote when it was not a path. */

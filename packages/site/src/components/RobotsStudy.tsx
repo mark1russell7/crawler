@@ -758,8 +758,6 @@ const answerText = (site: PackedSite, detail: StudySite): string => {
       return `Blocked at the edge: ${detail.reason ?? status}. The study cannot tell the rules of the site.`;
     case "m":
       return `${status}: no file. The site states no rules, so each agent is permitted.`;
-    case "h":
-      return `${status}, but an HTML page and not a robots.txt file. The page states no rules, so each agent is permitted.`;
     case "f":
       return detail.status === 304
         ? `Status 304: the file is the copy that the same run fetched before, through a different domain. ${String(detail.bytes ?? 0)} bytes, ${String(detail.groups ?? 0)} groups.`

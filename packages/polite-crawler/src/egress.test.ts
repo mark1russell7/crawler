@@ -11,7 +11,14 @@ import type { CrawlerOptions } from "./crawler.ts";
 import { Crawler } from "./crawler.ts";
 import { DocIndex } from "./docs.ts";
 import type { Resolve } from "./egress.ts";
-import { addressKind, checkEgress, egressLookup, egressRefusal, parseIPv4, parseIPv6 } from "./egress.ts";
+import {
+  addressKind,
+  checkEgress,
+  egressLookup,
+  egressRefusal,
+  parseIPv4,
+  parseIPv6,
+} from "./egress.ts";
 import { CaptureLog } from "./log.ts";
 
 const cleanups: Array<() => Promise<void>> = [];
@@ -75,7 +82,9 @@ describe("the kinds of address", () => {
     expect(parseIPv4("127.1")).toEqual([127, 0, 0, 1]);
     expect(parseIPv4("example.com")).toBeUndefined();
     expect(parseIPv4("256.0.0.1")).toBeUndefined();
-    expect(parseIPv6("[::ffff:127.0.0.1]")).toEqual([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 255, 255, 127, 0, 0, 1]);
+    expect(parseIPv6("[::ffff:127.0.0.1]")).toEqual([
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 255, 255, 127, 0, 0, 1,
+    ]);
   });
 
   it("names each range that is not public, and nothing for a public address", () => {
@@ -108,11 +117,21 @@ describe("the kinds of address", () => {
       "2606:4700::1111": undefined,
       "2001:db8::1": "documentation",
     };
-    for (const [address, kind] of Object.entries(kinds)) expect(addressKind(address), address).toBe(kind);
+    for (const [address, kind] of Object.entries(kinds))
+      expect(addressKind(address), address).toBe(kind);
   });
 
   it("refuses a literal host before DNS, and permits the hosts of allowHosts", () => {
-    for (const host of ["127.0.0.1", "2130706433", "0x7f.1", "[::1]", "[::ffff:127.0.0.1]", "localhost", "a.localhost", "metadata.google.internal"]) {
+    for (const host of [
+      "127.0.0.1",
+      "2130706433",
+      "0x7f.1",
+      "[::1]",
+      "[::ffff:127.0.0.1]",
+      "localhost",
+      "a.localhost",
+      "metadata.google.internal",
+    ]) {
       expect(egressRefusal({}, host), host).toMatch(/^egress policy: /);
     }
     expect(egressRefusal({}, "2130706433")).toBe(LOOPBACK);
@@ -133,8 +152,11 @@ describe("the kinds of address", () => {
       "egress policy: 10.0.0.5 is a private address; set allowPrivate to fetch it",
     );
     expect(await checkEgress({}, url, resolve("93.184.215.14"))).toBeUndefined();
-    expect(await checkEgress({ allowHosts: ["rebind.example"] }, url, resolve("10.0.0.5"))).toBeUndefined();
-    const fails: Resolve = (_host, _options, callback) => callback(Object.assign(new Error("ENOTFOUND"), { code: "ENOTFOUND" }), []);
+    expect(
+      await checkEgress({ allowHosts: ["rebind.example"] }, url, resolve("10.0.0.5")),
+    ).toBeUndefined();
+    const fails: Resolve = (_host, _options, callback) =>
+      callback(Object.assign(new Error("ENOTFOUND"), { code: "ENOTFOUND" }), []);
     expect(await checkEgress({}, url, fails)).toBeUndefined();
   });
 });
@@ -144,11 +166,23 @@ describe("the egress policy of the crawler", () => {
     const site = await serve();
     const crawler = await make();
     for (const host of ["127.0.0.1", "localhost", "0.0.0.0", "[::1]", "2130706433", "0x7f.1"]) {
-      const fetched = await crawler.fetch({ url: `http://${host}:${String(site.port)}/admin`, mode: "page", recipe: "page" });
+      const fetched = await crawler.fetch({
+        url: `http://${host}:${String(site.port)}/admin`,
+        mode: "page",
+        recipe: "page",
+      });
       expect(fetched.outcome, host).toBe("skipped");
-      expect(fetched.note, host).toMatch(/^egress policy: .* address; set allowPrivate to fetch it$/);
+      expect(fetched.note, host).toMatch(
+        /^egress policy: .* address; set allowPrivate to fetch it$/,
+      );
     }
-    expect(await crawler.fetch({ url: "http://169.254.169.254/latest/meta-data/", mode: "api", recipe: "t" })).toMatchObject({
+    expect(
+      await crawler.fetch({
+        url: "http://169.254.169.254/latest/meta-data/",
+        mode: "api",
+        recipe: "t",
+      }),
+    ).toMatchObject({
       outcome: "skipped",
       note: "egress policy: 169.254.169.254 is a metadata address; set allowPrivate to fetch it",
     });
@@ -158,12 +192,20 @@ describe("the egress policy of the crawler", () => {
   it("checks each redirect hop again", async () => {
     const site = await serve();
     const crawler = await make({ egress: { allowHosts: ["127.0.0.1"] } });
-    const loopback = await crawler.fetch({ url: `http://127.0.0.1:${String(site.port)}/to-loopback`, mode: "api", recipe: "t" });
+    const loopback = await crawler.fetch({
+      url: `http://127.0.0.1:${String(site.port)}/to-loopback`,
+      mode: "api",
+      recipe: "t",
+    });
     expect(loopback).toMatchObject({
       outcome: "skipped",
       note: "egress policy: 127.0.0.2 is a loopback address; set allowPrivate to fetch it",
     });
-    const named = await crawler.fetch({ url: `http://127.0.0.1:${String(site.port)}/to-localhost`, mode: "api", recipe: "t" });
+    const named = await crawler.fetch({
+      url: `http://127.0.0.1:${String(site.port)}/to-localhost`,
+      mode: "api",
+      recipe: "t",
+    });
     expect(named).toMatchObject({
       outcome: "skipped",
       note: "egress policy: localhost is a loopback address; set allowPrivate to fetch it",
@@ -173,20 +215,27 @@ describe("the egress policy of the crawler", () => {
 
   it("checks the address after DNS in the connection, so the address that it checks is the address that it uses", async () => {
     const site = await serve();
-    const toLoopback: Resolve = (_host, _options, callback) => callback(null, [{ address: "127.0.0.1", family: 4 }]);
+    const toLoopback: Resolve = (_host, _options, callback) =>
+      callback(null, [{ address: "127.0.0.1", family: 4 }]);
     const guarded = new Agent({ connect: { lookup: egressLookup({}, toLoopback) } });
-    const permitted = new Agent({ connect: { lookup: egressLookup({ allowHosts: ["127.0.0.0/8"] }, toLoopback) } });
+    const permitted = new Agent({
+      connect: { lookup: egressLookup({ allowHosts: ["127.0.0.0/8"] }, toLoopback) },
+    });
     cleanups.push(async () => {
       await guarded.close();
       await permitted.close();
     });
-    const refused = await (await make({ dispatcher: guarded })).fetch({
+    const refused = await (
+      await make({ dispatcher: guarded })
+    ).fetch({
       url: `http://rebind.example:${String(site.port)}/admin`,
       mode: "api",
       recipe: "t",
     });
     expect(refused).toMatchObject({ outcome: "skipped", note: LOOPBACK });
-    const fetched = await (await make({ dispatcher: permitted })).fetch({
+    const fetched = await (
+      await make({ dispatcher: permitted })
+    ).fetch({
       url: `http://rebind.example:${String(site.port)}/admin`,
       mode: "api",
       recipe: "t",

@@ -416,7 +416,8 @@ const toVersion = (row: VersionRow): DocVersion => ({
   cut: row.full_sha !== null,
 });
 
-const messageOf = (error: unknown): string => (error instanceof Error ? error.message : String(error));
+const messageOf = (error: unknown): string =>
+  error instanceof Error ? error.message : String(error);
 
 /**
  * A reading index keeps the documents, their versions, the search and the cache entries. `DocIndex`
@@ -435,7 +436,10 @@ export interface ReadingIndex {
   /** This method tells if a capture gave a version of a document. */
   hasVersion(capture: string): boolean;
   find(q: string, options: { readonly limit: number; readonly kind?: string | null }): Found[];
-  rankWithin(q: string, docs: readonly string[]): Array<{ readonly doc: string; readonly score: number }>;
+  rankWithin(
+    q: string,
+    docs: readonly string[],
+  ): Array<{ readonly doc: string; readonly score: number }>;
   latest(url: string, variant?: Variant): Latest | undefined;
   setLatest(entry: Latest): void;
   /** This method gives the newest fetch time of the cache entries, or undefined for an empty index. */
@@ -529,8 +533,10 @@ export class DocIndex implements ReadingIndex {
   }
 
   private getMeta(key: string): string | undefined {
-    return (this.stmt("SELECT value FROM index_meta WHERE key = ?").get(key) as { value: string } | undefined)
-      ?.value;
+    return (
+      this.stmt("SELECT value FROM index_meta WHERE key = ?").get(key) as
+        { value: string } | undefined
+    )?.value;
   }
 
   private stmt(sql: string): StatementSync {
@@ -613,7 +619,8 @@ export class DocIndex implements ReadingIndex {
     for (const generation of generations) {
       if (generation === current) continue;
       const started = this.getMeta(`building:${String(generation)}`);
-      const age = started === undefined ? Number.POSITIVE_INFINITY : Date.now() - Date.parse(started);
+      const age =
+        started === undefined ? Number.POSITIVE_INFINITY : Date.now() - Date.parse(started);
       if (!(age < ABANDONED_MS)) this.dropGeneration(generation);
     }
   }
@@ -628,8 +635,10 @@ export class DocIndex implements ReadingIndex {
 
   private textOf(n: Names, key: string | null): string | undefined {
     if (key === null) return undefined;
-    return (this.stmt(`SELECT body FROM ${n.texts} WHERE sha = ?`).get(key) as { body: string } | undefined)
-      ?.body;
+    return (
+      this.stmt(`SELECT body FROM ${n.texts} WHERE sha = ?`).get(key) as
+        { body: string } | undefined
+    )?.body;
   }
 
   private putVersion(n: Names, input: DocInput, now: string): void {
@@ -676,12 +685,12 @@ export class DocIndex implements ReadingIndex {
 
   /** This method chooses the current version of a document from its versions, and writes it with its search entry. */
   private recompute(n: Names, doc: string, now: string): Doc | undefined {
-    const groups = this.stmt(`SELECT DISTINCT recipe, rendered FROM ${n.versions} WHERE doc = ?`).all(
+    const groups = this.stmt(
+      `SELECT DISTINCT recipe, rendered FROM ${n.versions} WHERE doc = ?`,
+    ).all(doc) as Array<{ recipe: string; rendered: number }>;
+    const before = this.stmt(`SELECT rowid, text_sha, title FROM ${n.docs} WHERE doc = ?`).get(
       doc,
-    ) as Array<{ recipe: string; rendered: number }>;
-    const before = this.stmt(`SELECT rowid, text_sha, title FROM ${n.docs} WHERE doc = ?`).get(doc) as
-      | { rowid: number; text_sha: string; title: string }
-      | undefined;
+    ) as { rowid: number; text_sha: string; title: string } | undefined;
     if (groups.length === 0) {
       if (before !== undefined) {
         this.stmt(`DELETE FROM ${n.fts} WHERE rowid = ?`).run(before.rowid);
@@ -714,7 +723,8 @@ export class DocIndex implements ReadingIndex {
           `SELECT blob FROM ${n.versions} WHERE doc = ? AND recipe = ? AND rendered = 0 AND fetched_at <= ?
             ORDER BY fetched_at DESC, capture DESC LIMIT 1`,
         ).get(doc, recipe, rendered.fetched_at) as { blob: string | null } | undefined;
-        pick = base !== undefined && base.blob !== null && base.blob === plain.blob ? rendered : plain;
+        pick =
+          base !== undefined && base.blob !== null && base.blob === plain.blob ? rendered : plain;
       }
       const newest =
         plain === undefined
@@ -735,24 +745,29 @@ export class DocIndex implements ReadingIndex {
         const b = winner.row;
         const better = latest
           ? a.fetched_at > b.fetched_at
-          : a.text_chars > b.text_chars || (a.text_chars === b.text_chars && a.fetched_at > b.fetched_at);
+          : a.text_chars > b.text_chars ||
+            (a.text_chars === b.text_chars && a.fetched_at > b.fetched_at);
         if (better) winner = candidate;
       }
     }
     const row = winner.row;
     // a render can stay current after a newer plain capture: a no of its own capture still holds its text back
-    const aiInput: AiInput = row.ai_input === "no" || candidates.some((candidate) => candidate.ai === "no")
-      ? "no"
-      : winner.ai !== "unset"
-        ? winner.ai
-        : candidates.some((candidate) => candidate.ai === "yes")
-          ? "yes"
-          : "unset";
+    const aiInput: AiInput =
+      row.ai_input === "no" || candidates.some((candidate) => candidate.ai === "no")
+        ? "no"
+        : winner.ai !== "unset"
+          ? winner.ai
+          : candidates.some((candidate) => candidate.ai === "yes")
+            ? "yes"
+            : "unset";
     let meta = parseJson<Record<string, unknown>>(this.textOf(n, row.meta_sha), {});
     for (const candidate of candidates) {
       // a different source of the same document fills the keys that the current version lacks
       if (candidate !== winner) {
-        meta = { ...parseJson<Record<string, unknown>>(this.textOf(n, candidate.row.meta_sha), {}), ...meta };
+        meta = {
+          ...parseJson<Record<string, unknown>>(this.textOf(n, candidate.row.meta_sha), {}),
+          ...meta,
+        };
       }
     }
     const same = this.stmt(
@@ -764,11 +779,18 @@ export class DocIndex implements ReadingIndex {
         row.capture,
         ...same.map((entry) => entry.capture),
         ...winner.others.map((other) => other.capture),
-        ...candidates.filter((candidate) => candidate !== winner).map((candidate) => candidate.row.capture),
+        ...candidates
+          .filter((candidate) => candidate !== winner)
+          .map((candidate) => candidate.row.capture),
       ]),
     ].slice(0, MAX_CAPTURES);
-    const count = (this.stmt(`SELECT count(*) AS n FROM ${n.versions} WHERE doc = ?`).get(doc) as { n: number }).n;
-    const url = row.url ?? candidates.map((candidate) => candidate.row.url).find((value) => value !== null) ?? null;
+    const count = (
+      this.stmt(`SELECT count(*) AS n FROM ${n.versions} WHERE doc = ?`).get(doc) as { n: number }
+    ).n;
+    const url =
+      row.url ??
+      candidates.map((candidate) => candidate.row.url).find((value) => value !== null) ??
+      null;
     const saved = this.stmt(
       `INSERT INTO ${n.docs} (doc, kind, title, url, meta, text_sha, full_sha, captures, capture_count, capture,
          blob, fetched_at, recipe, rendered, ai_input, scope, labels, updated_at)
@@ -813,7 +835,8 @@ export class DocIndex implements ReadingIndex {
   }
 
   private docOf(n: Names, doc: string, knownText?: string): Doc | undefined {
-    const row = this.stmt(`SELECT rowid, * FROM ${n.docs} WHERE doc = ?`).get(doc) as DocRow | undefined;
+    const row = this.stmt(`SELECT rowid, * FROM ${n.docs} WHERE doc = ?`).get(doc) as
+      DocRow | undefined;
     if (row === undefined) return undefined;
     return this.toDoc(n, row, knownText);
   }
@@ -891,9 +914,10 @@ export class DocIndex implements ReadingIndex {
     return this.live((n) => {
       const id = capture ?? this.docOf(n, doc)?.capture;
       if (id === undefined) return undefined;
-      const row = this.stmt(`SELECT * FROM ${n.versions} WHERE doc = ? AND capture = ?`).get(doc, id) as
-        | VersionRow
-        | undefined;
+      const row = this.stmt(`SELECT * FROM ${n.versions} WHERE doc = ? AND capture = ?`).get(
+        doc,
+        id,
+      ) as VersionRow | undefined;
       return row === undefined ? undefined : this.versionTextOf(n, row);
     });
   }
@@ -907,8 +931,7 @@ export class DocIndex implements ReadingIndex {
     const limit = Math.max(1, Math.floor(options.limit ?? 50));
     return this.live((n) => {
       const head = this.stmt(`SELECT text_sha FROM ${n.docs} WHERE doc = ?`).get(doc) as
-        | { text_sha: string }
-        | undefined;
+        { text_sha: string } | undefined;
       if (head === undefined) return [];
       const rows = this.stmt(
         `SELECT * FROM ${n.versions} WHERE doc = ? AND text_sha != ? ORDER BY fetched_at DESC, capture DESC`,
@@ -928,7 +951,9 @@ export class DocIndex implements ReadingIndex {
   /** This method tells if a capture gave a version of a document. */
   hasVersion(capture: string): boolean {
     return this.live(
-      (n) => this.stmt(`SELECT 1 AS found FROM ${n.versions} WHERE capture = ? LIMIT 1`).get(capture) !== undefined,
+      (n) =>
+        this.stmt(`SELECT 1 AS found FROM ${n.versions} WHERE capture = ? LIMIT 1`).get(capture) !==
+        undefined,
     );
   }
 
@@ -936,15 +961,21 @@ export class DocIndex implements ReadingIndex {
   newestFetch(): string | undefined {
     return this.live(
       (n) =>
-        (this.stmt(`SELECT max(fetched_at) AS newest FROM ${n.latest}`).get() as { newest: string | null } | undefined)
-          ?.newest ?? undefined,
+        (
+          this.stmt(`SELECT max(fetched_at) AS newest FROM ${n.latest}`).get() as
+            { newest: string | null } | undefined
+        )?.newest ?? undefined,
     );
   }
 
   /** This method gives the current documents that a capture gave. */
   docsOfCapture(capture: string): Doc[] {
     return this.live((n) =>
-      (this.stmt(`SELECT DISTINCT doc FROM ${n.versions} WHERE capture = ?`).all(capture) as Array<{ doc: string }>)
+      (
+        this.stmt(`SELECT DISTINCT doc FROM ${n.versions} WHERE capture = ?`).all(
+          capture,
+        ) as Array<{ doc: string }>
+      )
         .map((row) => this.docOf(n, row.doc))
         .filter((doc): doc is Doc => doc !== undefined),
     );
@@ -961,7 +992,8 @@ export class DocIndex implements ReadingIndex {
     if (query === undefined) return [];
     const limit = Math.max(1, Math.min(1000, Math.floor(options.limit) || 10));
     return this.live((n) => {
-      const kindClause = options.kind === undefined || options.kind === null ? "" : "AND d.kind = ?";
+      const kindClause =
+        options.kind === undefined || options.kind === null ? "" : "AND d.kind = ?";
       const sql = `SELECT d.rowid AS rowid, d.*, bm25(${n.fts}, 3.0, 1.0) AS rank
           FROM ${n.fts} JOIN ${n.docs} d ON d.rowid = ${n.fts}.rowid
          WHERE ${n.fts} MATCH ? AND d.ai_input != 'no' ${kindClause}
@@ -1173,7 +1205,9 @@ export class DocIndex implements ReadingIndex {
           this.write(() => {
             copyTexts(current, where, [known, part]);
             this.db
-              .prepare(`INSERT OR IGNORE INTO ${n.versions} SELECT * FROM ${current.versions} WHERE ${where}`)
+              .prepare(
+                `INSERT OR IGNORE INTO ${n.versions} SELECT * FROM ${current.versions} WHERE ${where}`,
+              )
               .run(known, part);
             const now = new Date().toISOString();
             for (const doc of JSON.parse(part) as string[]) this.recompute(n, doc, now);
@@ -1193,7 +1227,9 @@ export class DocIndex implements ReadingIndex {
             .prepare(`SELECT DISTINCT doc FROM ${old.versions} WHERE fetched_at >= ?`)
             .all(since) as Array<{ doc: string }>;
           this.db
-            .prepare(`INSERT OR IGNORE INTO ${n.versions} SELECT * FROM ${old.versions} WHERE fetched_at >= ?`)
+            .prepare(
+              `INSERT OR IGNORE INTO ${n.versions} SELECT * FROM ${old.versions} WHERE fetched_at >= ?`,
+            )
             .run(since);
           const now = new Date().toISOString();
           for (const { doc } of added) this.recompute(n, doc, now);
@@ -1203,12 +1239,15 @@ export class DocIndex implements ReadingIndex {
             this.putLatest(n, toLatest(row));
           }
           this.setMeta("generation", String(generation));
-          this.db.prepare("DELETE FROM index_meta WHERE key = ?").run(`building:${String(generation)}`);
+          this.db
+            .prepare("DELETE FROM index_meta WHERE key = ?")
+            .run(`building:${String(generation)}`);
           this.dropGeneration(current);
           this.empty = false;
           return {
             docs: (this.db.prepare(`SELECT count(*) AS n FROM ${n.docs}`).get() as { n: number }).n,
-            urls: (this.db.prepare(`SELECT count(*) AS n FROM ${n.latest}`).get() as { n: number }).n,
+            urls: (this.db.prepare(`SELECT count(*) AS n FROM ${n.latest}`).get() as { n: number })
+              .n,
           };
         });
       },

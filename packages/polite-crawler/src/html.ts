@@ -301,9 +301,15 @@ const IMPLIED_END = new Set([
   "tr",
 ]);
 
-const isLetter = (code: number): boolean => (code >= 0x61 && code <= 0x7a) || (code >= 0x41 && code <= 0x5a);
+const isLetter = (code: number): boolean =>
+  (code >= 0x61 && code <= 0x7a) || (code >= 0x41 && code <= 0x5a);
 const isNameChar = (code: number): boolean =>
-  isLetter(code) || (code >= 0x30 && code <= 0x39) || code === 0x2d || code === 0x3a || code === 0x5f || code === 0x2e;
+  isLetter(code) ||
+  (code >= 0x30 && code <= 0x39) ||
+  code === 0x2d ||
+  code === 0x3a ||
+  code === 0x5f ||
+  code === 0x2e;
 
 /** This function gives the index after the `>` of a tag. A `>` inside a quoted attribute value does not end it. */
 const endOfTag = (html: string, from: number): number => {
@@ -434,7 +440,10 @@ const inlineStyle = (node: DomNode): ReadonlyMap<string, string> => {
     if (colon === -1) continue;
     const property = declaration.slice(0, colon).trim().toLowerCase();
     if (!STYLE_PROPERTIES.has(property)) continue;
-    let value = declaration.slice(colon + 1).trim().toLowerCase();
+    let value = declaration
+      .slice(colon + 1)
+      .trim()
+      .toLowerCase();
     const bang = value.lastIndexOf("!");
     const strong = bang !== -1 && value.slice(bang + 1).trim() === "important";
     if (strong) value = value.slice(0, bang).trim();
@@ -461,7 +470,8 @@ const notRendered = (node: DomNode, style: ReadonlyMap<string, string>): boolean
 /** A font size of zero: `0`, `0px`, `0em` or `0%`. */
 const ZERO_SIZE = /^\+?(?:0+(?:\.0*)?|\.0+)(?:[a-z]{1,4}|%)?$/;
 /** These sizes are a part of the size of the parent, so a part of zero stays zero. */
-const RELATIVE_SIZE = /^(?:\+?[\d.]+(?:em|ex|ch|cap|ic|lh|%)|larger|smaller|inherit|unset|revert|revert-layer)$/;
+const RELATIVE_SIZE =
+  /^(?:\+?[\d.]+(?:em|ex|ch|cap|ic|lh|%)|larger|smaller|inherit|unset|revert|revert-layer)$/;
 
 /** This function tells if the text of an element has a zero size. A child that sets a size of its own shows its text again. */
 const zeroSize = (fontSize: string | undefined, parentZero: boolean): boolean => {
@@ -788,7 +798,9 @@ const EMBEDDED: ReadonlyArray<readonly [string, (html: string, doc: DomDocument)
 ];
 
 /** This function reads `content="0; url=/home"`. A refresh with no URL reloads the page, and is no redirect. */
-const refreshTarget = (content: string): { readonly delay: number; readonly url: string } | undefined => {
+const refreshTarget = (
+  content: string,
+): { readonly delay: number; readonly url: string } | undefined => {
   const text = content.slice(0, 2000).trim();
   const delay = /^\d+(?:\.\d*)?/.exec(text)?.[0] ?? "";
   const url = text
@@ -874,7 +886,8 @@ const restOf = (all: readonly string[], taken: Uint8Array): string[] => {
   for (let index = 0; index < all.length; index += 1) {
     if (taken[index] === 1) continue;
     const above = all[index - 1];
-    if (index > 0 && taken[index - 1] === 1 && above !== undefined && isHeading(above)) rest.push(above);
+    if (index > 0 && taken[index - 1] === 1 && above !== undefined && isHeading(above))
+      rest.push(above);
     rest.push(all[index]!);
   }
   return rest;
@@ -895,7 +908,9 @@ export const extractPage = (html: string, pageUrl: string): PageExtract => {
   const scripts = [...doc.querySelectorAll("script")];
   const parsed = parseJsonLd(
     scripts
-      .filter((node) => /^\s*application\/ld\+json\s*(?:;|$)/i.test(node.getAttribute("type") ?? ""))
+      .filter((node) =>
+        /^\s*application\/ld\+json\s*(?:;|$)/i.test(node.getAttribute("type") ?? ""),
+      )
       .map((node) => node.textContent ?? ""),
   );
   const jsonld = parsed.records;
@@ -960,7 +975,8 @@ export const extractPage = (html: string, pageUrl: string): PageExtract => {
     return canonicalUrl(url.href);
   })();
 
-  const clean = (value: string | null | undefined): string => (value ?? "").replace(/\s+/g, " ").trim();
+  const clean = (value: string | null | undefined): string =>
+    (value ?? "").replace(/\s+/g, " ").trim();
   const titles = [...doc.querySelectorAll("title")];
   // an <svg> keeps a <title> of its own ("Icon"), which names no page
   const inSvg = (node: DomNode): boolean => {
@@ -1038,7 +1054,11 @@ export const extractPage = (html: string, pageUrl: string): PageExtract => {
         // article as an element, read here so that blocks stay lines
         const article = new Readability<DomNode>(
           doc as unknown as ConstructorParameters<typeof Readability>[0],
-          { charThreshold: 500, disableJSONLD: true, serializer: (node) => node as unknown as DomNode },
+          {
+            charThreshold: 500,
+            disableJSONLD: true,
+            serializer: (node) => node as unknown as DomNode,
+          },
         ).parse();
         return article?.content === null || article?.content === undefined
           ? ""

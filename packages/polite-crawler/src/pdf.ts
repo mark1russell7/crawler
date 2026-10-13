@@ -86,7 +86,11 @@ const latin1 = (bytes: Uint8Array, start: number, end: number): string => {
 
 const indexOf = (bytes: Uint8Array, needle: string, from: number): number => {
   const first = needle.charCodeAt(0);
-  for (let index = bytes.indexOf(first, from); index !== -1; index = bytes.indexOf(first, index + 1)) {
+  for (
+    let index = bytes.indexOf(first, from);
+    index !== -1;
+    index = bytes.indexOf(first, index + 1)
+  ) {
     let match = true;
     for (let at = 1; at < needle.length; at += 1) {
       if (bytes[index + at] !== needle.charCodeAt(at)) {

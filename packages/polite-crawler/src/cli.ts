@@ -11,7 +11,10 @@ import { VERSION } from "./version.ts";
 
 // node:sqlite of Node.js 22 writes "SQLite is an experimental feature" to the standard error at
 // each start. The command removes only that warning, before the store loads node:sqlite.
-const emitWarning = process.emitWarning.bind(process) as (warning: string | Error, ...rest: unknown[]) => void;
+const emitWarning = process.emitWarning.bind(process) as (
+  warning: string | Error,
+  ...rest: unknown[]
+) => void;
 process.emitWarning = ((warning: string | Error, ...rest: unknown[]): void => {
   const first: unknown = rest[0];
   const kind =
@@ -23,7 +26,8 @@ process.emitWarning = ((warning: string | Error, ...rest: unknown[]): void => {
           ? warning.name
           : undefined;
   const text = typeof warning === "string" ? warning : warning.message;
-  if (kind === "ExperimentalWarning" && text.startsWith("SQLite is an experimental feature")) return;
+  if (kind === "ExperimentalWarning" && text.startsWith("SQLite is an experimental feature"))
+    return;
   emitWarning(warning, ...rest);
 }) as typeof process.emitWarning;
 
@@ -99,7 +103,9 @@ const OWNER: Readonly<Record<string, string>> = {
 };
 
 /** These are the commands, with the smallest and the largest count of arguments. */
-const COMMANDS: Readonly<Record<string, { readonly min: number; readonly max: number; readonly wants: string }>> = {
+const COMMANDS: Readonly<
+  Record<string, { readonly min: number; readonly max: number; readonly wants: string }>
+> = {
   fetch: { min: 1, max: Infinity, wants: "fetch wants at least one URL" },
   find: { min: 1, max: Infinity, wants: "find wants a query" },
   read: { min: 1, max: 1, wants: "read wants one document id" },
@@ -123,7 +129,8 @@ const parse = (args: readonly string[]) => {
 
 const whole = (name: string, text: string | undefined, fallback: number, min: number): number => {
   if (text === undefined) return fallback;
-  if (!/^\s*\d+\s*$/.test(text)) throw new UsageError(`--${name} wants a whole number, not "${text}"`);
+  if (!/^\s*\d+\s*$/.test(text))
+    throw new UsageError(`--${name} wants a whole number, not "${text}"`);
   const value = Number(text);
   if (value < min) throw new UsageError(`--${name} wants ${String(min)} or more`);
   return value;
@@ -160,7 +167,9 @@ const describePage = (page: PageResult): string => {
     page.rendered ? "rendered" : null,
     page.structured.length > 0 ? `JSON-LD: ${page.structured.join(", ")}` : null,
   ].filter((fact) => fact !== null);
-  return [head, `  ${facts.join(" · ")}`, ...(page.note === null ? [] : [`  ${page.note}`])].join("\n");
+  return [head, `  ${facts.join(" · ")}`, ...(page.note === null ? [] : [`  ${page.note}`])].join(
+    "\n",
+  );
 };
 
 /** This is the result of a URL that the crawler did not fetch. */
@@ -252,9 +261,12 @@ const main = async (args: readonly string[]): Promise<number> => {
   } catch (error) {
     const code = (error as { code?: unknown }).code;
     if (typeof code === "string" && FS_CODES.has(code)) {
-      throw new Error(`the store ${dir} does not open: it is not a folder that polite-crawler can write (${code})`, {
-        cause: error,
-      });
+      throw new Error(
+        `the store ${dir} does not open: it is not a folder that polite-crawler can write (${code})`,
+        {
+          cause: error,
+        },
+      );
     }
     throw error;
   }
@@ -265,12 +277,17 @@ const main = async (args: readonly string[]): Promise<number> => {
       case "fetch": {
         // the same URL twice is one fetch; one bad URL is an error of that URL only
         const urls = [...new Set(rest)];
-        const settled = await Promise.allSettled(urls.map((url) => crawler.fetch(url, { render, maxAge })));
+        const settled = await Promise.allSettled(
+          urls.map((url) => crawler.fetch(url, { render, maxAge })),
+        );
         const pages = settled.map((result, at) => {
           const url = urls[at]!;
           if (result.status === "rejected") {
             const reason: unknown = result.reason;
-            return failedPage(url, `${url}: ${reason instanceof Error ? reason.message : String(reason)}`);
+            return failedPage(
+              url,
+              `${url}: ${reason instanceof Error ? reason.message : String(reason)}`,
+            );
           }
           const page = result.value;
           return renderOff !== undefined && page.note !== null && /no browser/i.test(page.note)
@@ -285,7 +302,9 @@ const main = async (args: readonly string[]): Promise<number> => {
         print(found, () =>
           found.length === 0
             ? "nothing stored matches"
-            : found.map((hit) => `${hit.doc}  ${hit.title}\n  ${hit.snippet.replace(/\s+/g, " ")}`).join("\n"),
+            : found
+                .map((hit) => `${hit.doc}  ${hit.title}\n  ${hit.snippet.replace(/\s+/g, " ")}`)
+                .join("\n"),
         );
         return found.length === 0 ? 1 : 0;
       }
@@ -318,7 +337,9 @@ const main = async (args: readonly string[]): Promise<number> => {
           [
             `${String(counts.captures)} captures replayed, ${String(counts.docs)} documents, ${String(counts.urls)} URLs`,
             ...(counts.carried > 0
-              ? [`${String(counts.carried)} documents of other recipes kept: ${counts.unknown_recipes.join(", ")}`]
+              ? [
+                  `${String(counts.carried)} documents of other recipes kept: ${counts.unknown_recipes.join(", ")}`,
+                ]
               : []),
             ...(counts.failed + counts.missing + counts.damaged > 0
               ? [
@@ -342,7 +363,9 @@ main(process.argv.slice(2)).then(
   (error: unknown) => {
     const message = error instanceof Error ? error.message : String(error);
     const usage = error instanceof UsageError;
-    process.stderr.write(`polite-crawler: ${message}${usage ? " (polite-crawler --help lists the commands)" : ""}\n`);
+    process.stderr.write(
+      `polite-crawler: ${message}${usage ? " (polite-crawler --help lists the commands)" : ""}\n`,
+    );
     process.exitCode = usage ? 2 : 1;
   },
 );

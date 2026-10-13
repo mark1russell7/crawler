@@ -5,7 +5,16 @@
  */
 import { useCallback, useEffect, useRef, useState, type ReactElement } from "react";
 import type { Segment, SiteScript } from "../lib/sim.ts";
-import { SITES, Timeline, VirtualClock, askAgain, crawlImpolitely, crawlPolitely, endOf, peakOf } from "../lib/sim.ts";
+import {
+  SITES,
+  Timeline,
+  VirtualClock,
+  askAgain,
+  crawlImpolitely,
+  crawlPolitely,
+  endOf,
+  peakOf,
+} from "../lib/sim.ts";
 
 type Mode = "polite" | "impolite";
 
@@ -18,13 +27,22 @@ const pct = (ms: number): string => `${((Math.min(ms, DOMAIN) / DOMAIN) * 100).t
 const seconds = (ms: number): string => `${(ms / 1000).toFixed(ms < 10_000 ? 1 : 0)} s`;
 
 /** This function gives the short note under the name of a host. */
-const laneNote = (site: SiteScript, lane: readonly Segment[], mode: Mode, done: boolean): string => {
+const laneNote = (
+  site: SiteScript,
+  lane: readonly Segment[],
+  mode: Mode,
+  done: boolean,
+): string => {
   const sent = lane.filter((segment) => segment.kind === "request").length;
   const refused = lane.find((segment) => segment.kind === "refused");
   if (mode === "impolite") {
-    const failed = lane.filter((segment) => segment.kind === "request" && (segment.status ?? 200) >= 400).length;
+    const failed = lane.filter(
+      (segment) => segment.kind === "request" && (segment.status ?? 200) >= 400,
+    ).length;
     if (site.robots === "disallow") return `robots.txt ignored, ${String(sent)} at once`;
-    return failed > 0 ? `${String(sent)} at once, ${String(failed)} refused` : `${String(sent)} at once`;
+    return failed > 0
+      ? `${String(sent)} at once, ${String(failed)} refused`
+      : `${String(sent)} at once`;
   }
   if (site.robots === "disallow") return "robots.txt refuses: no request";
   if (refused !== undefined) return "a 403: stopped for 1 hour";
@@ -35,20 +53,33 @@ const laneNote = (site: SiteScript, lane: readonly Segment[], mode: Mode, done: 
     if (rest.reason === "retry-after") return `a 429: waits ${wait}`;
     return `crawl-delay: ${wait}`;
   }
-  return done ? `${String(sent)} pages, one at a time` : `${String(sent)} of ${String(site.pages.length)} pages`;
+  return done
+    ? `${String(sent)} pages, one at a time`
+    : `${String(sent)} of ${String(site.pages.length)} pages`;
 };
 
 /** This component draws one mark of a lane. */
-const Mark = ({ segment, now }: { readonly segment: Segment; readonly now: number }): ReactElement | null => {
+const Mark = ({
+  segment,
+  now,
+}: {
+  readonly segment: Segment;
+  readonly now: number;
+}): ReactElement | null => {
   switch (segment.kind) {
     case "request": {
       const end = segment.end ?? now;
       const status = segment.status;
-      const tone = status === undefined || status === 200 ? "ok" : status === 429 ? "wait" : "refused";
+      const tone =
+        status === undefined || status === 200 ? "ok" : status === 429 ? "wait" : "refused";
       return (
         <span
           className={`pc-req pc-req-${tone}${segment.end === undefined ? " pc-req-live" : ""}`}
-          style={{ left: pct(segment.start), width: pct(Math.max(end - segment.start, 120)), top: `${String(4 + segment.row * 9)}px` }}
+          style={{
+            left: pct(segment.start),
+            width: pct(Math.max(end - segment.start, 120)),
+            top: `${String(4 + segment.row * 9)}px`,
+          }}
           title={`${segment.host}: ${status === undefined ? "in progress" : `status ${String(status)}`}, ${seconds(end - segment.start)}`}
         />
       );
@@ -87,7 +118,9 @@ export default function LiveCrawl(): ReactElement {
   const [now, setNow] = useState(0);
   const [done, setDone] = useState(false);
   const [asked, setAsked] = useState(false);
-  const run = useRef<{ clock: VirtualClock; timeline: Timeline; id: number } | undefined>(undefined);
+  const run = useRef<{ clock: VirtualClock; timeline: Timeline; id: number } | undefined>(
+    undefined,
+  );
   const root = useRef<HTMLElement | null>(null);
 
   const start = useCallback((next: Mode) => {
@@ -141,7 +174,8 @@ export default function LiveCrawl(): ReactElement {
     const element = root.current;
     if (element === null) return;
     const observer = new IntersectionObserver((entries) => {
-      if (entries.some((entry) => entry.isIntersecting) && run.current === undefined) start("polite");
+      if (entries.some((entry) => entry.isIntersecting) && run.current === undefined)
+        start("polite");
     });
     observer.observe(element);
     return () => observer.disconnect();
@@ -155,7 +189,9 @@ export default function LiveCrawl(): ReactElement {
   const rows = mode === "impolite" ? Math.max(...SITES.map((site) => site.pages.length)) : 1;
   const peak = peakOf(segments, now);
 
-  const refusals = segments.filter((segment) => segment.kind === "request" && (segment.status ?? 200) >= 400).length;
+  const refusals = segments.filter(
+    (segment) => segment.kind === "request" && (segment.status ?? 200) >= 400,
+  ).length;
   const verdict =
     mode === "impolite"
       ? done
@@ -177,7 +213,11 @@ export default function LiveCrawl(): ReactElement {
   };
 
   return (
-    <figure className="pc-crawl" ref={root} aria-label="A live crawl of eight sites, one lane for each site">
+    <figure
+      className="pc-crawl"
+      ref={root}
+      aria-label="A live crawl of eight sites, one lane for each site"
+    >
       <header className="pc-crawl-head">
         <div className="pc-crawl-title">
           <strong>A crawl of eight sites</strong>
@@ -188,11 +228,20 @@ export default function LiveCrawl(): ReactElement {
             <button type="button" aria-pressed={mode === "polite"} onClick={() => start("polite")}>
               Polite
             </button>
-            <button type="button" aria-pressed={mode === "impolite"} onClick={() => start("impolite")}>
+            <button
+              type="button"
+              aria-pressed={mode === "impolite"}
+              onClick={() => start("impolite")}
+            >
               Impolite
             </button>
           </div>
-          <button type="button" className="pc-button" disabled={!done || asked || mode !== "polite"} onClick={again}>
+          <button
+            type="button"
+            className="pc-button"
+            disabled={!done || asked || mode !== "polite"}
+            onClick={again}
+          >
             Ask again
           </button>
           <button type="button" className="pc-button" onClick={() => start(mode)}>
@@ -235,7 +284,9 @@ export default function LiveCrawl(): ReactElement {
         })}
       </div>
 
-      <p className="pc-crawl-verdict" aria-live="polite">{verdict}</p>
+      <p className="pc-crawl-verdict" aria-live="polite">
+        {verdict}
+      </p>
       <footer className="pc-crawl-foot">
         <dl className="pc-stats">
           <div>
@@ -256,11 +307,22 @@ export default function LiveCrawl(): ReactElement {
           </div>
         </dl>
         <ul className="pc-legend" aria-label="Legend">
-          <li><span className="pc-key pc-key-ok" />A request</li>
-          <li><span className="pc-key pc-key-rest" />A rest</li>
-          <li><span className="pc-key pc-key-wait" />A 429</li>
-          <li><span className="pc-key pc-key-refused" />A refusal</li>
-          <li><span className="pc-key pc-key-stored" />From the store</li>
+          <li>
+            <span className="pc-key pc-key-ok" />A request
+          </li>
+          <li>
+            <span className="pc-key pc-key-rest" />A rest
+          </li>
+          <li>
+            <span className="pc-key pc-key-wait" />A 429
+          </li>
+          <li>
+            <span className="pc-key pc-key-refused" />A refusal
+          </li>
+          <li>
+            <span className="pc-key pc-key-stored" />
+            From the store
+          </li>
         </ul>
       </footer>
     </figure>

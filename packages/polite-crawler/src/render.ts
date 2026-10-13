@@ -177,13 +177,17 @@ interface Serialized {
 const withFrames = ({ html, frames }: Serialized): string => {
   if (frames.length === 0) return html;
   const sections = frames
-    .map(({ src, html: body }) => `<section data-polite-frame="${src.replace(/&/g, "&amp;").replace(/"/g, "&quot;")}">${body}</section>`)
+    .map(
+      ({ src, html: body }) =>
+        `<section data-polite-frame="${src.replace(/&/g, "&amp;").replace(/"/g, "&quot;")}">${body}</section>`,
+    )
     .join("");
   const end = html.toLowerCase().lastIndexOf("</body>");
   return end === -1 ? `${html}${sections}` : `${html.slice(0, end)}${sections}${html.slice(end)}`;
 };
 
-const messageOf = (error: unknown): string => (error instanceof Error ? error.message : String(error));
+const messageOf = (error: unknown): string =>
+  error instanceof Error ? error.message : String(error);
 
 const sleep = (ms: number): Promise<void> =>
   new Promise((resolve) => {
@@ -275,9 +279,17 @@ export const playwrightRenderer = (
 
   const renderPage = async (
     url: string,
-    { userAgent, timeoutMs, headers, allowRequest, maxRedirects = MAX_REDIRECTS, signal }: RenderOptions,
+    {
+      userAgent,
+      timeoutMs,
+      headers,
+      allowRequest,
+      maxRedirects = MAX_REDIRECTS,
+      signal,
+    }: RenderOptions,
   ): Promise<Rendered> => {
-    if (signal?.aborted === true) throw signal.reason instanceof Error ? signal.reason : new Error("the render was cancelled");
+    if (signal?.aborted === true)
+      throw signal.reason instanceof Error ? signal.reason : new Error("the render was cancelled");
     const deadline = Date.now() + timeoutMs;
     const left = (): number => Math.max(1, deadline - Date.now());
     let running: Browser | undefined;
@@ -314,14 +326,23 @@ export const playwrightRenderer = (
     const follow = async (
       route: Route,
       sent: Record<string, string> | undefined,
-    ): Promise<{ readonly response: APIResponse; readonly url: string } | { readonly refusal: string; readonly url: string }> => {
+    ): Promise<
+      | { readonly response: APIResponse; readonly url: string }
+      | { readonly refusal: string; readonly url: string }
+    > => {
       const request = route.request();
       let url = request.url();
       let method = request.method();
       let headers: Record<string, string> = { ...request.headers(), ...extra };
-      let response = await route.fetch({ maxRedirects: 0, timeout: left(), ...(sent === undefined ? {} : { headers: sent }) });
+      let response = await route.fetch({
+        maxRedirects: 0,
+        timeout: left(),
+        ...(sent === undefined ? {} : { headers: sent }),
+      });
       for (let hop = 0; ; hop += 1) {
-        const location = REDIRECTS.has(response.status()) ? response.headers()["location"] : undefined;
+        const location = REDIRECTS.has(response.status())
+          ? response.headers()["location"]
+          : undefined;
         if (location === undefined) return { response, url };
         let next: URL;
         try {
@@ -330,10 +351,16 @@ export const playwrightRenderer = (
           return { refusal: `${url} redirects to a URL that does not parse`, url };
         }
         if (hop >= maxRedirects) {
-          return { refusal: `${request.url()} redirects more than ${String(maxRedirects)} times`, url: next.href };
+          return {
+            refusal: `${request.url()} redirects more than ${String(maxRedirects)} times`,
+            url: next.href,
+          };
         }
         if (!(await ask(next.href))) {
-          return { refusal: `the request for ${next.href}, a redirect of ${url}, was refused`, url: next.href };
+          return {
+            refusal: `the request for ${next.href}, a redirect of ${url}, was refused`,
+            url: next.href,
+          };
         }
         const status = response.status();
         const get = status === 303 || ((status === 301 || status === 302) && method === "POST");
@@ -377,7 +404,11 @@ export const playwrightRenderer = (
           return;
         }
         if (!(await ask(request.url()))) {
-          if (main) refused = { message: `the request for ${request.url()} was refused`, url: request.url() };
+          if (main)
+            refused = {
+              message: `the request for ${request.url()} was refused`,
+              url: request.url(),
+            };
           await route.abort("blockedbyclient");
           return;
         }
@@ -386,7 +417,9 @@ export const playwrightRenderer = (
             ? undefined
             : {
                 ...Object.fromEntries(
-                  Object.entries(await request.allHeaders()).filter(([name]) => !name.startsWith(":") && name !== "host"),
+                  Object.entries(await request.allHeaders()).filter(
+                    ([name]) => !name.startsWith(":") && name !== "host",
+                  ),
                 ),
                 ...extra,
               };
@@ -461,13 +494,17 @@ export const playwrightRenderer = (
       let last = -1;
       let since = Date.now();
       while (Date.now() < settleEnd) {
-        const measured = (page.evaluate(MEASURE) as Promise<number>).catch(async (error: unknown) => {
-          // a script of the page can start a navigation while the text is measured: the next poll measures the new document
-          if (!/destroyed|navigat/i.test(messageOf(error))) throw error;
-          await page.waitForLoadState("domcontentloaded", { timeout: left() }).catch(() => undefined);
-          // no length equals NaN, so the wait goes on
-          return Number.NaN;
-        });
+        const measured = (page.evaluate(MEASURE) as Promise<number>).catch(
+          async (error: unknown) => {
+            // a script of the page can start a navigation while the text is measured: the next poll measures the new document
+            if (!/destroyed|navigat/i.test(messageOf(error))) throw error;
+            await page
+              .waitForLoadState("domcontentloaded", { timeout: left() })
+              .catch(() => undefined);
+            // no length equals NaN, so the wait goes on
+            return Number.NaN;
+          },
+        );
         const length = await within(measured, settleEnd - Date.now());
         // a page that keeps its thread busy does not answer: the reading below decides
         if (length === undefined) break;
@@ -490,7 +527,9 @@ export const playwrightRenderer = (
           serialized = (await page.evaluate(SERIALIZE)) as Serialized;
         } catch (error) {
           if (!/destroyed|navigat/i.test(messageOf(error)) || Date.now() >= deadline) throw error;
-          await page.waitForLoadState("domcontentloaded", { timeout: left() }).catch(() => undefined);
+          await page
+            .waitForLoadState("domcontentloaded", { timeout: left() })
+            .catch(() => undefined);
         }
       }
       // a later navigation that the route refused leaves the browser on its error page, which is not the page
@@ -501,7 +540,8 @@ export const playwrightRenderer = (
       const shown = page.url().replace(/#.*$/s, "");
       return {
         html: withFrames(serialized),
-        finalUrl: navigated !== undefined && shown === navigated.asked ? navigated.final : page.url(),
+        finalUrl:
+          navigated !== undefined && shown === navigated.asked ? navigated.final : page.url(),
         status: response?.status() ?? null,
         headers: response?.headers() ?? {},
       };
@@ -517,7 +557,10 @@ export const playwrightRenderer = (
       );
       // a cancelled render ends now; the context closes below, and that stops the page
       if (signal !== undefined) {
-        cancel = () => reject(signal.reason instanceof Error ? signal.reason : new Error("the render was cancelled"));
+        cancel = () =>
+          reject(
+            signal.reason instanceof Error ? signal.reason : new Error("the render was cancelled"),
+          );
         signal.addEventListener("abort", cancel, { once: true });
       }
     });
@@ -554,7 +597,10 @@ export const playwrightRenderer = (
         throw new RenderRefused("scheme", `${url} is not a URL`);
       }
       if (target.protocol !== "http:" && target.protocol !== "https:") {
-        throw new RenderRefused("scheme", `the renderer reads http and https pages, not ${target.protocol}`);
+        throw new RenderRefused(
+          "scheme",
+          `the renderer reads http and https pages, not ${target.protocol}`,
+        );
       }
       if (idle !== undefined) {
         clearTimeout(idle);

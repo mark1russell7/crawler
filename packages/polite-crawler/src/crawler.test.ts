@@ -371,13 +371,24 @@ describe("the polite fetcher", () => {
     agent
       .get("https://news.example")
       .intercept({ path: "/tdm", method: "GET" })
-      .reply(200, '<html><head><meta name="tdm-reservation" content="1"></head><body><p>text</p></body></html>', {
-        headers: { "content-type": "text/html", "tdm-policy": "https://news.example/tdm.json" },
-      });
-    const fetched = await crawler.fetch({ url: "https://news.example/tdm", mode: "api", recipe: "t" });
+      .reply(
+        200,
+        '<html><head><meta name="tdm-reservation" content="1"></head><body><p>text</p></body></html>',
+        {
+          headers: { "content-type": "text/html", "tdm-policy": "https://news.example/tdm.json" },
+        },
+      );
+    const fetched = await crawler.fetch({
+      url: "https://news.example/tdm",
+      mode: "api",
+      recipe: "t",
+    });
     expect(fetched.signals).toMatchObject({
       ai_input: "unset",
-      raw: expect.arrayContaining(["tdm-policy: https://news.example/tdm.json", "meta tdm-reservation: 1"]) as unknown,
+      raw: expect.arrayContaining([
+        "tdm-policy: https://news.example/tdm.json",
+        "meta tdm-reservation: 1",
+      ]) as unknown,
     });
   });
 
@@ -390,14 +401,30 @@ describe("the polite fetcher", () => {
       .reply(() => {
         calls += 1;
         return calls === 1
-          ? { statusCode: 200, data: "<html><body>Please sign in</body></html>", responseOptions: { headers: { "content-type": "text/html; charset=utf-8" } } }
-          : { statusCode: 200, data: '{"ok":true}', responseOptions: { headers: { "content-type": "application/json" } } };
+          ? {
+              statusCode: 200,
+              data: "<html><body>Please sign in</body></html>",
+              responseOptions: { headers: { "content-type": "text/html; charset=utf-8" } },
+            }
+          : {
+              statusCode: 200,
+              data: '{"ok":true}',
+              responseOptions: { headers: { "content-type": "application/json" } },
+            };
       })
       .persist();
-    const request = { url: "https://api.example/data", mode: "api", recipe: "t", accept: "application/json", maxAgeMs: 3_600_000 } as const;
+    const request = {
+      url: "https://api.example/data",
+      mode: "api",
+      recipe: "t",
+      accept: "application/json",
+      maxAgeMs: 3_600_000,
+    } as const;
     const first = await crawler.fetch(request);
     expect(first.outcome).toBe("ok");
-    expect(first.note).toContain("the server sent text/html; charset=utf-8, and the request accepts application/json");
+    expect(first.note).toContain(
+      "the server sent text/html; charset=utf-8, and the request accepts application/json",
+    );
     expect(index.latest("https://api.example/data")).toBeUndefined();
     const second = await crawler.fetch(request);
     expect(second).toMatchObject({ outcome: "ok", fromCache: false });
@@ -431,17 +458,37 @@ describe("the records of a robots.txt fetch", () => {
   const RANK = ["public", "private", "intimate"];
 
   it("take the most private scope of the requests that wait for the fetch, and their labels", async () => {
-    const { agent, crawler, captures } = await setup({ scope: "public", scopeRank: (scope) => RANK.indexOf(scope) });
+    const { agent, crawler, captures } = await setup({
+      scope: "public",
+      scopeRank: (scope) => RANK.indexOf(scope),
+    });
     const site = agent.get("https://shop.example");
     // the robots.txt answers late, so both pages wait for the one fetch
-    site.intercept({ path: "/robots.txt", method: "GET" }).reply(200, "User-agent: *\nAllow: /\n").delay(100);
+    site
+      .intercept({ path: "/robots.txt", method: "GET" })
+      .reply(200, "User-agent: *\nAllow: /\n")
+      .delay(100);
     site.intercept({ path: "/a", method: "GET" }).reply(200, "a").persist();
     site.intercept({ path: "/b", method: "GET" }).reply(200, "b").persist();
     await Promise.all([
-      crawler.fetch({ url: "https://shop.example/a", mode: "page", recipe: "page", scope: "private", labels: { from: "a" } }),
-      crawler.fetch({ url: "https://shop.example/b", mode: "page", recipe: "page", scope: "intimate", labels: { gift: "b" } }),
+      crawler.fetch({
+        url: "https://shop.example/a",
+        mode: "page",
+        recipe: "page",
+        scope: "private",
+        labels: { from: "a" },
+      }),
+      crawler.fetch({
+        url: "https://shop.example/b",
+        mode: "page",
+        recipe: "page",
+        scope: "intimate",
+        labels: { gift: "b" },
+      }),
     ]);
-    const robots = (await captures()).filter((row) => (row.payload as { recipe?: string }).recipe === "robots.txt");
+    const robots = (await captures()).filter(
+      (row) => (row.payload as { recipe?: string }).recipe === "robots.txt",
+    );
     expect(robots).toHaveLength(1);
     expect(robots[0]).toMatchObject({ scope: "intimate", labels: { from: "a", gift: "b" } });
   });
@@ -451,9 +498,17 @@ describe("the records of a robots.txt fetch", () => {
     const site = agent.get("https://quiet.example");
     site.intercept({ path: "/robots.txt", method: "GET" }).reply(200, "User-agent: *\nAllow: /\n");
     site.intercept({ path: "/a", method: "GET" }).reply(200, "a");
-    await crawler.fetch({ url: "https://quiet.example/a", mode: "page", recipe: "page", scope: "intimate", labels: { gift: "17" } });
+    await crawler.fetch({
+      url: "https://quiet.example/a",
+      mode: "page",
+      recipe: "page",
+      scope: "intimate",
+      labels: { gift: "17" },
+    });
     const rows = await captures();
-    expect(rows.map((row) => [(row.payload as { recipe?: string }).recipe, row.scope, row.labels])).toEqual([
+    expect(
+      rows.map((row) => [(row.payload as { recipe?: string }).recipe, row.scope, row.labels]),
+    ).toEqual([
       ["robots.txt", "intimate", { gift: "17" }],
       ["page", "intimate", { gift: "17" }],
     ]);
@@ -464,19 +519,35 @@ describe("an application that links the bot page of polite-crawler", () => {
   const ask = async (options: Partial<CrawlerOptions>): Promise<Record<string, string>> => {
     const { agent, crawler } = await setup(options);
     const site = agent.get("https://shop.example");
-    site.intercept({ path: "/robots.txt", method: "GET" }).reply(200, "User-agent: PoliteCrawler\nDisallow: /private\n").persist();
-    site.intercept({ path: (path) => path !== "/robots.txt", method: "GET" }).reply(200, "page").persist();
+    site
+      .intercept({ path: "/robots.txt", method: "GET" })
+      .reply(200, "User-agent: PoliteCrawler\nDisallow: /private\n")
+      .persist();
+    site
+      .intercept({ path: (path) => path !== "/robots.txt", method: "GET" })
+      .reply(200, "page")
+      .persist();
     const out: Record<string, string> = {};
     for (const path of ["/private", "/open"]) {
-      out[path] = (await crawler.fetch({ url: `https://shop.example${path}`, mode: "page", recipe: "page" })).outcome;
+      out[path] = (
+        await crawler.fetch({ url: `https://shop.example${path}`, mode: "page", recipe: "page" })
+      ).outcome;
     }
     return out;
   };
 
   it("obeys the rules for PoliteCrawler too, unless it turns that off or does not link the page", async () => {
-    const linked = { token: "MyApp", userAgent: "MyApp/1.0 (+https://mark1russell7.github.io/crawler/bot/)" };
+    const linked = {
+      token: "MyApp",
+      userAgent: "MyApp/1.0 (+https://mark1russell7.github.io/crawler/bot/)",
+    };
     expect(await ask(linked)).toEqual({ "/private": "skipped", "/open": "ok" });
-    expect(await ask({ ...linked, obeyDefaultToken: false })).toEqual({ "/private": "ok", "/open": "ok" });
-    expect(await ask({ token: "MyApp", userAgent: "MyApp/1.0 (+https://myapp.example/bot)" })).toEqual({ "/private": "ok", "/open": "ok" });
+    expect(await ask({ ...linked, obeyDefaultToken: false })).toEqual({
+      "/private": "ok",
+      "/open": "ok",
+    });
+    expect(
+      await ask({ token: "MyApp", userAgent: "MyApp/1.0 (+https://myapp.example/bot)" }),
+    ).toEqual({ "/private": "ok", "/open": "ok" });
   });
 });

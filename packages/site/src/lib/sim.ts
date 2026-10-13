@@ -36,7 +36,12 @@ export type Segment =
       readonly end: number;
       readonly reason: "pace" | "slow" | "retry-after" | "crawl-delay";
     }
-  | { readonly kind: "refused"; readonly host: string; readonly at: number; readonly reason: string }
+  | {
+      readonly kind: "refused";
+      readonly host: string;
+      readonly at: number;
+      readonly reason: string;
+    }
   | { readonly kind: "stored"; readonly host: string; readonly at: number; readonly index: number };
 
 /** The sites of the demonstration. The names are examples, and the timing comes from real sites. */
@@ -164,19 +169,35 @@ export class Timeline {
  * This function starts the polite crawl on the real `HostScheduler`. The scheduler keeps one request
  * in progress for each host. Each task tells the scheduler how long the host rests after it.
  */
-export const crawlPolitely = (sites: readonly SiteScript[], clock: VirtualClock, timeline: Timeline): Promise<void> => {
+export const crawlPolitely = (
+  sites: readonly SiteScript[],
+  clock: VirtualClock,
+  timeline: Timeline,
+): Promise<void> => {
   const scheduler = new HostScheduler(clock, 16);
   const work: Array<Promise<void>> = [];
   for (const site of sites) {
     if (site.robots === "disallow") {
-      timeline.segments.push({ kind: "refused", host: site.host, at: 0, reason: "robots.txt: Disallow: /" });
+      timeline.segments.push({
+        kind: "refused",
+        host: site.host,
+        at: 0,
+        reason: "robots.txt: Disallow: /",
+      });
       continue;
     }
     site.pages.forEach((page, index) => {
       const job = scheduler
         .run(site.host, async () => {
           const start = clock.now();
-          const request: Segment = { kind: "request", host: site.host, start, end: undefined, status: undefined, row: 0 };
+          const request: Segment = {
+            kind: "request",
+            host: site.host,
+            start,
+            end: undefined,
+            status: undefined,
+            row: 0,
+          };
           timeline.segments.push(request);
           timeline.requests += 1;
           await clock.sleep(page.latencyMs);
@@ -185,12 +206,23 @@ export const crawlPolitely = (sites: readonly SiteScript[], clock: VirtualClock,
           if (page.status === 403) scheduler.stop(site.host, "403");
           const rest = restOf(site, page, request.end - start);
           if (page.status !== 403 && index < site.pages.length - 1)
-            timeline.segments.push({ kind: "rest", host: site.host, start: request.end, end: request.end + rest.ms, reason: rest.reason });
+            timeline.segments.push({
+              kind: "rest",
+              host: site.host,
+              start: request.end,
+              end: request.end + rest.ms,
+              reason: rest.reason,
+            });
           return { value: undefined, delayMs: rest.ms };
         })
         .catch((error: unknown) => {
           if (!(error instanceof HostStopped)) throw error;
-          timeline.segments.push({ kind: "refused", host: site.host, at: clock.now(), reason: "stopped for 1 hour after a 403" });
+          timeline.segments.push({
+            kind: "refused",
+            host: site.host,
+            at: clock.now(),
+            reason: "stopped for 1 hour after a 403",
+          });
         });
       work.push(job);
     });
@@ -202,12 +234,23 @@ export const crawlPolitely = (sites: readonly SiteScript[], clock: VirtualClock,
  * This function starts the same crawl with no politeness. It sends all pages of a site at the same
  * time, and it ignores robots.txt and refusals. A server under the burst answers more slowly.
  */
-export const crawlImpolitely = (sites: readonly SiteScript[], clock: VirtualClock, timeline: Timeline): Promise<void> => {
+export const crawlImpolitely = (
+  sites: readonly SiteScript[],
+  clock: VirtualClock,
+  timeline: Timeline,
+): Promise<void> => {
   const work: Array<Promise<void>> = [];
   for (const site of sites) {
     const load = site.pages.length;
     site.pages.forEach((page, index) => {
-      const request: Segment = { kind: "request", host: site.host, start: 0, end: undefined, status: undefined, row: index };
+      const request: Segment = {
+        kind: "request",
+        host: site.host,
+        start: 0,
+        end: undefined,
+        status: undefined,
+        row: index,
+      };
       timeline.segments.push(request);
       timeline.requests += 1;
       const busy = site.host === "api.busy.example" && index > 0;

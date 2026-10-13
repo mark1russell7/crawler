@@ -40,21 +40,27 @@ interface FileChange {
 
 function rewritePackageJson(raw: string, fromScope: string, toScope: string): string {
   return raw
-    .split(`"${fromScope}-monorepo"`).join(`"${toScope}-monorepo"`)
-    .split(`@${fromScope}/`).join(`@${toScope}/`);
+    .split(`"${fromScope}-monorepo"`)
+    .join(`"${toScope}-monorepo"`)
+    .split(`@${fromScope}/`)
+    .join(`@${toScope}/`);
 }
 
 function rewriteSourceFile(raw: string, fromScope: string, toScope: string): string {
   return raw.split(`@${fromScope}/`).join(`@${toScope}/`);
 }
 
-async function collectPackageJsonChanges(fromScope: string, toScope: string): Promise<FileChange[]> {
+async function collectPackageJsonChanges(
+  fromScope: string,
+  toScope: string,
+): Promise<FileChange[]> {
   const changes: FileChange[] = [];
 
   const rootPath = resolve(repoRoot, "package.json");
   const rootRaw = await readFile(rootPath, "utf8");
   const rootUpdated = rewritePackageJson(rootRaw, fromScope, toScope);
-  if (rootUpdated !== rootRaw) changes.push({ path: rootPath, before: rootRaw, after: rootUpdated });
+  if (rootUpdated !== rootRaw)
+    changes.push({ path: rootPath, before: rootRaw, after: rootUpdated });
 
   if (!existsSync(packagesDir)) return changes;
   const entries = await readdir(packagesDir, { withFileTypes: true });
@@ -82,7 +88,12 @@ async function collectSourceFileChanges(fromScope: string, toScope: string): Pro
   return changes;
 }
 
-async function walkSourceDir(dir: string, fromScope: string, toScope: string, out: FileChange[]): Promise<void> {
+async function walkSourceDir(
+  dir: string,
+  fromScope: string,
+  toScope: string,
+  out: FileChange[],
+): Promise<void> {
   const entries = await readdir(dir, { withFileTypes: true });
   for (const entry of entries) {
     const path = resolve(dir, entry.name);
@@ -164,7 +175,9 @@ export async function renameRepo(args: string[]): Promise<void> {
   if (allChanges.length === 0) {
     p.log.warn(`No files reference "@${currentScope}/" or "${currentScope}-monorepo".`);
   } else if (dryRun) {
-    p.log.info(`(dry-run) Would rewrite "@${currentScope}/" → "@${scope}/" in ${allChanges.length} file(s):`);
+    p.log.info(
+      `(dry-run) Would rewrite "@${currentScope}/" → "@${scope}/" in ${allChanges.length} file(s):`,
+    );
     for (const c of allChanges) p.log.info(`  ${relative(repoRoot, c.path)}`);
   } else {
     await Promise.all(allChanges.map((c) => writeFile(c.path, c.after)));

@@ -44,10 +44,16 @@ describe("decoding a body in the encoding the page declares", () => {
   });
 
   it("lets a byte order mark win, as a browser does", () => {
-    const utf16 = new Uint8Array([0xff, 0xfe, ...Array.from("<p>Hi</p>").flatMap((c) => [c.charCodeAt(0), 0])]);
+    const utf16 = new Uint8Array([
+      0xff,
+      0xfe,
+      ...Array.from("<p>Hi</p>").flatMap((c) => [c.charCodeAt(0), 0]),
+    ]);
     expect(decodeBody(utf16, "text/html; charset=iso-8859-1")).toBe("<p>Hi</p>");
     expect(bodyEncoding(utf16, null)).toBe("utf-16le");
-    expect(decodeBody(bytes([0xef, 0xbb, 0xbf], "<p>caf", [0xc3, 0xa9]), "text/html")).toBe("<p>café");
+    expect(decodeBody(bytes([0xef, 0xbb, 0xbf], "<p>caf", [0xc3, 0xa9]), "text/html")).toBe(
+      "<p>café",
+    );
   });
 
   it("reads a page that a browser rendered as UTF-8, though the page still declares its old encoding", () => {
@@ -56,7 +62,9 @@ describe("decoding a body in the encoding the page declares", () => {
   });
 
   it("falls back to UTF-8, and to windows-1252 for bytes that are not UTF-8", () => {
-    expect(decodeBody(new TextEncoder().encode("<p>Mon–Fri</p>"), "text/html")).toBe("<p>Mon–Fri</p>");
+    expect(decodeBody(new TextEncoder().encode("<p>Mon–Fri</p>"), "text/html")).toBe(
+      "<p>Mon–Fri</p>",
+    );
     expect(decodeBody(LEGACY, "text/html")).toContain("Mon–Fri 11am–9pm");
     expect(decodeBody(LEGACY, null)).toContain("Café");
     // a body cut at its size limit inside a character is still UTF-8

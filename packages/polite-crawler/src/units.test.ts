@@ -28,7 +28,15 @@ describe("classifying responses", () => {
     expect(parseRetryAfter("soon", now)).toBeUndefined();
   });
   it("reads only the two forms of Retry-After, so garbage gets the backoff and not a zero", () => {
-    for (const value of ["1.5", "-5", "120, 120", "0x10", "", "Wed, 07 Oct 2026", "2026-10-07T12:02:00Z"]) {
+    for (const value of [
+      "1.5",
+      "-5",
+      "120, 120",
+      "0x10",
+      "",
+      "Wed, 07 Oct 2026",
+      "2026-10-07T12:02:00Z",
+    ]) {
       expect(parseRetryAfter(value, now), value).toBeUndefined();
     }
     expect(parseRetryAfter("0", now)).toBe(0);
@@ -43,8 +51,10 @@ describe("classifying responses", () => {
     expect(parseHttpDate("1.5")).toBeUndefined();
   });
   it("keeps a client error apart from a failure of the host", () => {
-    for (const status of [400, 405, 406, 409, 413, 414, 422, 451]) expect(isClientError(status), String(status)).toBe(true);
-    for (const status of [401, 402, 403, 404, 408, 410, 429, 500, 503, 200]) expect(isClientError(status), String(status)).toBe(false);
+    for (const status of [400, 405, 406, 409, 413, 414, 422, 451])
+      expect(isClientError(status), String(status)).toBe(true);
+    for (const status of [401, 402, 403, 404, 408, 410, 429, 500, 503, 200])
+      expect(isClientError(status), String(status)).toBe(false);
   });
   it("recognizes challenges, licence demands and refusals", () => {
     expect(classify(202, headers({ "x-amzn-waf-action": "challenge" }), now).outcome).toBe(
@@ -87,17 +97,30 @@ describe("usage signals", () => {
       ["content-signal: search=yes, ai-train=no"],
       headers({ "content-signal": "ai-input=no" }),
     );
-    expect(decided).toMatchObject({ ai_input: "no", ai_train: "no", deciding: "content-signal: ai-input=no" });
+    expect(decided).toMatchObject({
+      ai_input: "no",
+      ai_train: "no",
+      deciding: "content-signal: ai-input=no",
+    });
   });
   it("records the RSL license and the TDMRep reservation, and changes no verdict with them", () => {
-    const robots = parseRobots("User-agent: *\nAllow: /\nLicense: https://example.com/license.xml\n");
+    const robots = parseRobots(
+      "User-agent: *\nAllow: /\nLicense: https://example.com/license.xml\n",
+    );
     const lines = signalsFor(robots, ["PoliteCrawler"], "/menu");
     expect(lines).toEqual(["license: https://example.com/license.xml"]);
     const page = metaSignals(
       `<head><meta name="tdm-reservation" content="1"><meta content='https://example.com/tdm.json' name=TDM-Policy><meta name="description" content="x"></head>`,
     );
-    expect(page).toEqual(["meta tdm-reservation: 1", "meta tdm-policy: https://example.com/tdm.json"]);
-    const read = readSignals(lines, headers({ "tdm-reservation": "1", "tdm-policy": "https://example.com/p.json" }), page);
+    expect(page).toEqual([
+      "meta tdm-reservation: 1",
+      "meta tdm-policy: https://example.com/tdm.json",
+    ]);
+    const read = readSignals(
+      lines,
+      headers({ "tdm-reservation": "1", "tdm-policy": "https://example.com/p.json" }),
+      page,
+    );
     expect(read.raw).toEqual([
       "license: https://example.com/license.xml",
       "tdm-reservation: 1",
@@ -116,8 +139,12 @@ describe("usage signals", () => {
 
 describe("redaction", () => {
   it("removes userinfo and default secrets, and keeps the rest of the query as written", () => {
-    const url = new URL("http://alice:hunter2@h.example/x?q=a%20b/c,d~e*f&api_key=X&Token=Y&page=2#top");
-    expect(redact(url)).toBe("http://h.example/x?q=a%20b/c,d~e*f&api_key=REDACTED&Token=REDACTED&page=2#top");
+    const url = new URL(
+      "http://alice:hunter2@h.example/x?q=a%20b/c,d~e*f&api_key=X&Token=Y&page=2#top",
+    );
+    expect(redact(url)).toBe(
+      "http://h.example/x?q=a%20b/c,d~e*f&api_key=REDACTED&Token=REDACTED&page=2#top",
+    );
     expect(redact(new URL("http://h.example/?mailto=me%40x.example"), ["mailto"])).toBe(
       "http://h.example/?mailto=REDACTED",
     );
@@ -158,7 +185,10 @@ describe("pacing across hosts", () => {
   });
   it("never has more requests in progress than maxActive, under load", async () => {
     for (const maxActive of [1, 4]) {
-      const scheduler = new HostScheduler({ now: () => 0, sleep: () => Promise.resolve() }, maxActive);
+      const scheduler = new HostScheduler(
+        { now: () => 0, sleep: () => Promise.resolve() },
+        maxActive,
+      );
       let inFlight = 0;
       let peak = 0;
       const tasks = Array.from({ length: 60 }, (_, index) =>
@@ -193,7 +223,9 @@ describe("pacing across hosts", () => {
       },
       2,
     );
-    await expect(scheduler.run("a", () => Promise.reject(new Error("boom")))).rejects.toThrow("boom");
+    await expect(scheduler.run("a", () => Promise.reject(new Error("boom")))).rejects.toThrow(
+      "boom",
+    );
     await scheduler.run("a", () => Promise.resolve({ value: 1, delayMs: Number.NaN }));
     await scheduler.run("a", () => Promise.resolve({ value: 2, delayMs: 0 }));
     expect(slept).toEqual([1000, 1000]);
@@ -202,7 +234,11 @@ describe("pacing across hosts", () => {
     const scheduler = new HostScheduler(realClock, 2);
     await scheduler.run("a", () => Promise.resolve({ value: 1, delayMs: 60_000 }));
     const controller = new AbortController();
-    const waiting = scheduler.run("a", () => Promise.resolve({ value: 2, delayMs: 0 }), controller.signal);
+    const waiting = scheduler.run(
+      "a",
+      () => Promise.resolve({ value: 2, delayMs: 0 }),
+      controller.signal,
+    );
     setTimeout(() => controller.abort(new Error("stop")), 20);
     const started = Date.now();
     await expect(waiting).rejects.toThrow("stop");
@@ -212,13 +248,17 @@ describe("pacing across hosts", () => {
     let now = 1000;
     const scheduler = new HostScheduler({ now: () => now, sleep: () => Promise.resolve() }, 1);
     scheduler.stop("a", "blocked", 5000);
-    await expect(scheduler.run("a", () => Promise.resolve({ value: 1, delayMs: 0 }))).rejects.toMatchObject({
+    await expect(
+      scheduler.run("a", () => Promise.resolve({ value: 1, delayMs: 0 })),
+    ).rejects.toMatchObject({
       reason: "blocked",
       until: 5000,
     });
     now = 5000;
     expect(scheduler.stoppedReason("a")).toBeUndefined();
-    await expect(scheduler.run("a", () => Promise.resolve({ value: 1, delayMs: 0 }))).resolves.toBe(1);
+    await expect(scheduler.run("a", () => Promise.resolve({ value: 1, delayMs: 0 }))).resolves.toBe(
+      1,
+    );
     scheduler.stop("b", "challenge");
     expect(scheduler.stopOf("b")).toEqual({ until: Number.POSITIVE_INFINITY, reason: "challenge" });
     scheduler.reset("b");
@@ -288,11 +328,17 @@ describe("the politeness policy", () => {
     expect(policyFor(undefined, "a.example")).toBe(DEFAULT_POLICY);
     const options = {
       pageIntervalMs: 4000,
-      hosts: { "*.example.org": { pageIntervalMs: 6000 }, "api.example.org": { apiIntervalMs: 250 } },
+      hosts: {
+        "*.example.org": { pageIntervalMs: 6000 },
+        "api.example.org": { apiIntervalMs: 250 },
+      },
     };
     expect(policyFor(options, "news.example.com").pageIntervalMs).toBe(4000);
     expect(policyFor(options, "news.example.org").pageIntervalMs).toBe(6000);
-    expect(policyFor(options, "API.example.org.")).toMatchObject({ pageIntervalMs: 6000, apiIntervalMs: 250 });
+    expect(policyFor(options, "API.example.org.")).toMatchObject({
+      pageIntervalMs: 6000,
+      apiIntervalMs: 250,
+    });
   });
   it("refuses a value that is not a number of 0 or more", () => {
     expect(() => checkPolicy({ maxFailures: 2.5 })).toThrow(RangeError);

@@ -49,7 +49,11 @@
   color: #fff;
 }
 .pc-v-S {
-  background: repeating-linear-gradient(135deg, var(--verdict-name) 0 1.5px, var(--verdict-star-bg) 1.5px 3.5px);
+  background: repeating-linear-gradient(
+    135deg,
+    var(--verdict-name) 0 1.5px,
+    var(--verdict-star-bg) 1.5px 3.5px
+  );
   color: var(--color-ink);
 }
 .pc-v-B {

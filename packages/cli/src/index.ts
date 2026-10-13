@@ -18,13 +18,17 @@ async function main(): Promise<void> {
   }
 
   if (!subName) {
-    p.log.error(`Missing subcommand for "${groupName}". Available: ${Object.keys(group).join(", ")}`);
+    p.log.error(
+      `Missing subcommand for "${groupName}". Available: ${Object.keys(group).join(", ")}`,
+    );
     process.exit(1);
   }
 
   const sub = group[subName];
   if (!sub) {
-    p.log.error(`Unknown "${groupName}" subcommand: ${subName}. Available: ${Object.keys(group).join(", ")}`);
+    p.log.error(
+      `Unknown "${groupName}" subcommand: ${subName}. Available: ${Object.keys(group).join(", ")}`,
+    );
     process.exit(1);
   }
 

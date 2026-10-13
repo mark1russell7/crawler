@@ -35,7 +35,14 @@ import type { Rendered, Renderer } from "./render.ts";
 import type { RefusedReason } from "./render.ts";
 import { NO_PLAYWRIGHT, RenderRefused } from "./render.ts";
 import type { Robots, RobotsDecision } from "./robots.ts";
-import { decide, isProductToken, robotsFromResponse, robotsFromStatus, signalsFor, unreachableRobots } from "./robots.ts";
+import {
+  decide,
+  isProductToken,
+  robotsFromResponse,
+  robotsFromStatus,
+  signalsFor,
+  unreachableRobots,
+} from "./robots.ts";
 import type { AiInput, Signals } from "./signals.ts";
 import { NO_SIGNALS, metaSignals, readSignals } from "./signals.ts";
 import { BOT_PAGE, DEFAULT_TOKEN } from "./version.ts";
@@ -197,7 +204,12 @@ export type CrawlEvent =
       readonly elapsedMs: number;
     }
   | { readonly type: "wait"; readonly host: string; readonly ms: number; readonly reason: string }
-  | { readonly type: "stop"; readonly host: string; readonly until: number; readonly reason: string }
+  | {
+      readonly type: "stop";
+      readonly host: string;
+      readonly until: number;
+      readonly reason: string;
+    }
   | { readonly type: "skip"; readonly url: string; readonly note: string };
 
 export interface CrawlerOptions {
@@ -339,7 +351,11 @@ const RESERVED_HEADERS: ReadonlySet<string> = new Set([
   "keep-alive",
 ]);
 /** A redirect to a different origin removes these headers, as the Fetch standard does. */
-const CREDENTIAL_HEADERS: ReadonlySet<string> = new Set(["authorization", "cookie", "proxy-authorization"]);
+const CREDENTIAL_HEADERS: ReadonlySet<string> = new Set([
+  "authorization",
+  "cookie",
+  "proxy-authorization",
+]);
 /** The crawler sends the same value of these headers in each request, so a `Vary` on them changes nothing. */
 const CONSTANT_HEADERS: ReadonlySet<string> = new Set(["accept-encoding", "user-agent", "from"]);
 /**
@@ -355,12 +371,21 @@ const IDENTITY_CODINGS: ReadonlySet<string> = new Set(["identity", "aws-chunked"
  */
 const unaskedPage = (accept: string | undefined, contentType: string | undefined): boolean => {
   const type = (contentType ?? "").split(";")[0]!.trim().toLowerCase();
-  if (accept === undefined || accept.trim() === "" || (type !== "text/html" && type !== "application/xhtml+xml")) return false;
+  if (
+    accept === undefined ||
+    accept.trim() === "" ||
+    (type !== "text/html" && type !== "application/xhtml+xml")
+  )
+    return false;
   return !accept.split(",").some((range) => {
     const [media = "", ...params] = range.split(";").map((part) => part.trim().toLowerCase());
     const q = params.find((param) => param.startsWith("q="));
     if (q !== undefined && Number(q.slice(2)) === 0) return false;
-    return media === "*/*" || media === type || (media.endsWith("/*") && type.startsWith(media.slice(0, -1)));
+    return (
+      media === "*/*" ||
+      media === type ||
+      (media.endsWith("/*") && type.startsWith(media.slice(0, -1)))
+    );
   });
 };
 
@@ -481,7 +506,9 @@ const holdsSecrets = (url: URL, secretParams: readonly string[]): boolean => {
   return url.search
     .slice(1)
     .split("&")
-    .some((part) => part.includes("=") && secrets.has(nameOfParam(part.slice(0, part.indexOf("=")))));
+    .some(
+      (part) => part.includes("=") && secrets.has(nameOfParam(part.slice(0, part.indexOf("=")))),
+    );
 };
 
 /** The pace, the stops and the robots.txt of a host do not change with a trailing dot or the case of the name. */
@@ -550,7 +577,9 @@ const inflateAny = (): Transform => {
     transform(chunk: Buffer, _encoding, done) {
       if (inner === undefined) {
         const zlib =
-          chunk.length >= 2 && (chunk[0]! & 0x0f) === 8 && ((chunk[0]! << 8) | chunk[1]!) % 31 === 0;
+          chunk.length >= 2 &&
+          (chunk[0]! & 0x0f) === 8 &&
+          ((chunk[0]! << 8) | chunk[1]!) % 31 === 0;
         inner = zlib ? createInflate() : createInflateRaw();
         inner.on("data", (data: Buffer) => outer.push(data));
         inner.on("error", (error) => outer.destroy(error));
@@ -677,7 +706,10 @@ const directives = (value: string | undefined): Map<string, string> => {
     const name = (equals === -1 ? part : part.slice(0, equals)).trim().toLowerCase();
     if (name.length === 0) continue;
     const raw = equals === -1 ? "" : part.slice(equals + 1).trim();
-    out.set(name, raw.length >= 2 && raw.startsWith('"') && raw.endsWith('"') ? raw.slice(1, -1) : raw);
+    out.set(
+      name,
+      raw.length >= 2 && raw.startsWith('"') && raw.endsWith('"') ? raw.slice(1, -1) : raw,
+    );
   }
   return out;
 };
@@ -712,7 +744,8 @@ const freshUntil = (
     lifetime = at === undefined ? 0 : at - date;
   } else if (HEURISTIC_STATUSES.has(status)) {
     const modified = parseHttpDate(lastModified ?? undefined);
-    if (modified !== undefined && modified < date) lifetime = Math.min(capMs, (date - modified) / 10);
+    if (modified !== undefined && modified < date)
+      lifetime = Math.min(capMs, (date - modified) / 10);
     else if (PERMANENT_REDIRECTS.has(status)) lifetime = capMs;
   }
   if (lifetime === undefined) return null;
@@ -720,7 +753,10 @@ const freshUntil = (
 };
 
 /** This function gives the request headers that a response varies on, with their values. A `Vary: *` gives `*`. */
-const varyKeyOf = (vary: string | undefined, sent: Readonly<Record<string, string>>): string | null => {
+const varyKeyOf = (
+  vary: string | undefined,
+  sent: Readonly<Record<string, string>>,
+): string | null => {
   if (vary === undefined) return null;
   const names = vary
     .split(",")
@@ -734,7 +770,10 @@ const varyKeyOf = (vary: string | undefined, sent: Readonly<Record<string, strin
     .join("\n");
 };
 
-const varyMatches = (stored: string | null | undefined, sent: Readonly<Record<string, string>>): boolean => {
+const varyMatches = (
+  stored: string | null | undefined,
+  sent: Readonly<Record<string, string>>,
+): boolean => {
   if (stored === undefined || stored === null) return true;
   if (stored === "*") return false;
   return stored.split("\n").every((line) => {
@@ -752,9 +791,15 @@ const withoutCredentials = (
         Object.entries(headers).filter(([name]) => !CREDENTIAL_HEADERS.has(name.toLowerCase())),
       );
 
-const invalidNumber = (name: string, value: number | "auto" | undefined, auto: boolean): string | undefined => {
+const invalidNumber = (
+  name: string,
+  value: number | "auto" | undefined,
+  auto: boolean,
+): string | undefined => {
   if (value === undefined || (auto && value === "auto")) return undefined;
-  return typeof value === "number" && value >= 0 ? undefined : `invalid option: ${name} is ${String(value)}`;
+  return typeof value === "number" && value >= 0
+    ? undefined
+    : `invalid option: ${name} is ${String(value)}`;
 };
 
 const closedResult = (url: string): Fetched => ({
@@ -874,7 +919,11 @@ const robotsCheck = (
   rule:
     decision.rule === undefined
       ? null
-      : { line: decision.rule.line ?? null, pattern: decision.rule.pattern, allow: decision.rule.allow },
+      : {
+          line: decision.rule.line ?? null,
+          pattern: decision.rule.pattern,
+          allow: decision.rule.allow,
+        },
   group_line: decision.groups?.[0]?.line ?? null,
   ...(verdict.robots.unreachable !== undefined ? { unreachable: verdict.robots.unreachable } : {}),
   ...(verdict.stale !== undefined ? { stale: verdict.stale } : {}),
@@ -917,9 +966,10 @@ export class Crawler {
   private readonly egress: EgressOptions;
   private readonly robots = new Lru<string, RobotsEntry>(4096);
   /** The fields of a cache entry that the index does not keep, and the raw target of a redirect. */
-  private readonly meta = new Lru<string, { readonly entry: CacheEntry; readonly location?: string | undefined }>(
-    10_000,
-  );
+  private readonly meta = new Lru<
+    string,
+    { readonly entry: CacheEntry; readonly location?: string | undefined }
+  >(10_000);
   private readonly inFlight = new Map<string, Promise<Step>>();
   private readonly running = new Set<Promise<unknown>>();
   private readonly closing = new AbortController();
@@ -943,7 +993,9 @@ export class Crawler {
       ["from", options.from],
     ] as const) {
       if (value !== undefined && !HEADER_TEXT.test(value)) {
-        throw new Error(`${name} "${value}" has a character that an HTTP header cannot hold: use printable ASCII`);
+        throw new Error(
+          `${name} "${value}" has a character that an HTTP header cannot hold: use printable ASCII`,
+        );
       }
     }
     checkPolicy(options.politeness);
@@ -1014,7 +1066,10 @@ export class Crawler {
     kind: "capture" | "revisit" | "skipped",
     payload: Record<string, unknown>,
     url: string,
-    labels: { readonly scope?: string | undefined; readonly labels?: Readonly<Record<string, string>> | undefined } = {},
+    labels: {
+      readonly scope?: string | undefined;
+      readonly labels?: Readonly<Record<string, string>> | undefined;
+    } = {},
   ): Promise<string | undefined> {
     // a closed crawler writes nothing, so its log stays closed
     if (this.closed) return undefined;
@@ -1039,7 +1094,10 @@ export class Crawler {
     url: string,
     note: string,
     extra: Record<string, unknown> = {},
-    labels: { readonly scope?: string | undefined; readonly labels?: Readonly<Record<string, string>> | undefined } = {},
+    labels: {
+      readonly scope?: string | undefined;
+      readonly labels?: Readonly<Record<string, string>> | undefined;
+    } = {},
   ): Promise<Fetched> {
     this.emit({ type: "skip", url, note });
     return {
@@ -1071,7 +1129,10 @@ export class Crawler {
     const variant = entry.variant ?? "plain";
     const keyed = { ...entry, url: cacheKeyOf(entry.url), variant };
     this.options.index.setLatest(keyed);
-    this.meta.set(`${variant} ${keyed.url}`, { entry: keyed, ...(location !== undefined ? { location } : {}) });
+    this.meta.set(`${variant} ${keyed.url}`, {
+      entry: keyed,
+      ...(location !== undefined ? { location } : {}),
+    });
   }
 
   /** This method gives the target of a stored redirect, when the crawler can follow it. */
@@ -1104,7 +1165,9 @@ export class Crawler {
     if (!Number.isFinite(fetchedAt)) return undefined;
     const age = now - fetchedAt;
     const until =
-      entry.fresh_until === undefined || entry.fresh_until === null ? Number.NaN : Date.parse(entry.fresh_until);
+      entry.fresh_until === undefined || entry.fresh_until === null
+        ? Number.NaN
+        : Date.parse(entry.fresh_until);
     const fresh = Number.isFinite(until) && until > now;
     const redirect = entry.status >= 300 && entry.status < 400;
     // an explicit age wins; `auto` uses the freshness of the server; a temporary redirect needs both
@@ -1194,11 +1257,18 @@ export class Crawler {
       const asked = step.retryAfterMs;
       if (asked !== undefined && asked > policy.maxRetryAfterMs) {
         // a wait longer than the budget stops the host, so no request sleeps for days
-        this.stopHost(host, now + Math.min(asked, MAX_STOP_MS), `asked to wait ${String(Math.round(asked / 1000))} s`);
+        this.stopHost(
+          host,
+          now + Math.min(asked, MAX_STOP_MS),
+          `asked to wait ${String(Math.round(asked / 1000))} s`,
+        );
         return delayMs;
       }
       return waited(
-        Math.max(delayMs, asked ?? equalJitterMs(waits, policy.backoffBaseMs, policy.backoffCapMs, this.random)),
+        Math.max(
+          delayMs,
+          asked ?? equalJitterMs(waits, policy.backoffBaseMs, policy.backoffCapMs, this.random),
+        ),
         asked === undefined ? "backoff" : "retry-after",
       );
     }
@@ -1211,13 +1281,18 @@ export class Crawler {
       if (failures >= policy.maxFailures)
         this.stopHost(host, now + policy.failureStopMs, `${String(failures)} failures in a row`);
       return waited(
-        Math.max(delayMs, equalJitterMs(failures, policy.backoffBaseMs, policy.backoffCapMs, this.random)),
+        Math.max(
+          delayMs,
+          equalJitterMs(failures, policy.backoffBaseMs, policy.backoffCapMs, this.random),
+        ),
         "backoff",
       );
     }
     if (outcome === "challenge") this.stopHost(host, now + policy.challengeStopMs, outcome);
-    else if (outcome === "payment-required") this.stopHost(host, now + policy.paymentStopMs, outcome);
-    else if (outcome === "blocked" && !step.robotsFile) this.stopHost(host, now + policy.blockedStopMs, outcome);
+    else if (outcome === "payment-required")
+      this.stopHost(host, now + policy.paymentStopMs, outcome);
+    else if (outcome === "blocked" && !step.robotsFile)
+      this.stopHost(host, now + policy.blockedStopMs, outcome);
     store.record(host, "success");
     return delayMs;
   }
@@ -1234,7 +1309,11 @@ export class Crawler {
       return;
     }
     const policy = this.policyOf(target);
-    this.stopHost(hostKey(target), this.clock.now() + policy.challengeStopMs, `challenge (${what})`);
+    this.stopHost(
+      hostKey(target),
+      this.clock.now() + policy.challengeStopMs,
+      `challenge (${what})`,
+    );
   }
 
   /**
@@ -1245,19 +1324,29 @@ export class Crawler {
    */
   private async admit(
     spec: AdmitSpec,
-    extra?: (admitted: Omit<Admitted, "verdict" | "check" | "robotsLines" | "crawlDelaySeconds">) => Promise<Fetched | undefined>,
+    extra?: (
+      admitted: Omit<Admitted, "verdict" | "check" | "robotsLines" | "crawlDelaySeconds">,
+    ) => Promise<Fetched | undefined>,
   ): Promise<{ readonly answer: Step } | { readonly admitted: Admitted }> {
     const marks = { scope: spec.scope, labels: spec.labels };
     let target: URL;
     try {
       target = new URL(spec.url);
     } catch {
-      return { answer: { fetched: await this.skip(spec.base, spec.url, "not a valid URL", {}, marks) } };
+      return {
+        answer: { fetched: await this.skip(spec.base, spec.url, "not a valid URL", {}, marks) },
+      };
     }
     if (!WEB_PROTOCOLS.has(target.protocol)) {
       return {
         answer: {
-          fetched: await this.skip(spec.base, redact(target, spec.secretParams), "not an http(s) URL", {}, marks),
+          fetched: await this.skip(
+            spec.base,
+            redact(target, spec.secretParams),
+            "not an http(s) URL",
+            {},
+            marks,
+          ),
         },
       };
     }
@@ -1274,7 +1363,8 @@ export class Crawler {
     if (refused !== undefined) return answer(refused);
     const tokens = [this.options.token, ...(spec.onBehalfOf ?? []), ...this.pageTokens];
     const badToken = tokens.find((token) => !isProductToken(token));
-    if (spec.mode === "page" && badToken !== undefined) return answer(`not a valid product token: "${badToken}"`);
+    if (spec.mode === "page" && badToken !== undefined)
+      return answer(`not a valid product token: "${badToken}"`);
     const host = hostKey(target);
     const policy = this.policyOf(target);
     const path = `${target.pathname}${target.search}`;
@@ -1282,7 +1372,8 @@ export class Crawler {
     // the rules for an agent apply before a stored copy answers it
     let verdict: RobotsVerdict | undefined;
     if (spec.mode === "page") {
-      verdict = tokens.length > 1 ? await this.robotsFor(target, policy, spec) : this.knownRobots(target);
+      verdict =
+        tokens.length > 1 ? await this.robotsFor(target, policy, spec) : this.knownRobots(target);
       if (verdict !== undefined) {
         const decision = decide(verdict.robots, tokens, path);
         if (!decision.allowed) {
@@ -1308,14 +1399,27 @@ export class Crawler {
       const decision = decide(verdict.robots, tokens, path);
       check = robotsCheck(verdict, tokens, decision);
       if (!decision.allowed) {
-        return answer(robotsRefusal(verdict.robots, decision.by ?? this.options.token), { robots_check: check });
+        return answer(robotsRefusal(verdict.robots, decision.by ?? this.options.token), {
+          robots_check: check,
+        });
       }
       robotsLines = signalsFor(verdict.robots, tokens, path);
       crawlDelaySeconds = decision.crawlDelaySeconds ?? 0;
     }
     if (this.closed) return { answer: { fetched: closedResult(url) } };
     return {
-      admitted: { target, url, host, policy, tokens, verdict, check, robotsLines, crawlDelaySeconds, skip },
+      admitted: {
+        target,
+        url,
+        host,
+        policy,
+        tokens,
+        verdict,
+        check,
+        robotsLines,
+        crawlDelaySeconds,
+        skip,
+      },
     };
   }
 
@@ -1346,7 +1450,11 @@ export class Crawler {
         const step = await this.hop({ ...request_, url, headers }, signal);
         if (step.next === undefined) return step.fetched;
         if (hop >= maxRedirects) {
-          return { ...step.fetched, outcome: "error", note: `more than ${String(maxRedirects)} redirects` };
+          return {
+            ...step.fetched,
+            outcome: "error",
+            note: `more than ${String(maxRedirects)} redirects`,
+          };
         }
         const next = new URL(step.next);
         // a credential for one origin does not go to a different origin
@@ -1392,7 +1500,9 @@ export class Crawler {
 
   private knownRobots(target: URL): RobotsVerdict | undefined {
     const entry = this.robots.peek(originKey(target));
-    return entry !== undefined && this.clock.now() - entry.at < entry.ttlMs ? entry.value : undefined;
+    return entry !== undefined && this.clock.now() - entry.at < entry.ttlMs
+      ? entry.value
+      : undefined;
   }
 
   /**
@@ -1403,7 +1513,10 @@ export class Crawler {
   private robotsFor(
     target: URL,
     policy: PolitenessPolicy,
-    marks: { readonly scope?: string | undefined; readonly labels?: Readonly<Record<string, string>> | undefined } = {},
+    marks: {
+      readonly scope?: string | undefined;
+      readonly labels?: Readonly<Record<string, string>> | undefined;
+    } = {},
   ): Promise<RobotsVerdict> {
     const key = originKey(target);
     const now = this.clock.now();
@@ -1437,8 +1550,16 @@ export class Crawler {
           entry.good = { verdict, at: this.clock.now() };
         } else {
           entry.misses += 1;
-          const backoff = equalJitterMs(entry.misses, policy.robotsRetryMs, policy.robotsRetryCapMs, this.random);
-          entry.ttlMs = Math.min(policy.robotsRetryCapMs, Math.max(read.retryAfterMs ?? 0, backoff));
+          const backoff = equalJitterMs(
+            entry.misses,
+            policy.robotsRetryMs,
+            policy.robotsRetryCapMs,
+            this.random,
+          );
+          entry.ttlMs = Math.min(
+            policy.robotsRetryCapMs,
+            Math.max(read.retryAfterMs ?? 0, backoff),
+          );
           const good =
             entry.good !== undefined && this.clock.now() - entry.good.at <= policy.robotsStaleMs
               ? entry.good.verdict
@@ -1457,17 +1578,26 @@ export class Crawler {
    * come from its memory, or from a fetch of `/robots.txt` with its redirects. A robots.txt that
    * the crawler cannot read gives rules that permit nothing, and `unreachable` gives the reason.
    */
-  async readRobots(url: string): Promise<{ readonly robots: Robots; readonly capture: string | undefined; readonly stale?: string | undefined }> {
+  async readRobots(url: string): Promise<{
+    readonly robots: Robots;
+    readonly capture: string | undefined;
+    readonly stale?: string | undefined;
+  }> {
     const target = new URL(url);
-    if (!WEB_PROTOCOLS.has(target.protocol)) return { robots: unreachableRobots("not an http(s) URL"), capture: undefined };
+    if (!WEB_PROTOCOLS.has(target.protocol))
+      return { robots: unreachableRobots("not an http(s) URL"), capture: undefined };
     return this.robotsFor(target, this.policyOf(target));
   }
 
   /** This method reads the stored copy of a robots.txt, when it is younger than the limit of the policy. */
-  private async storedRobots(target: URL, policy: PolitenessPolicy): Promise<RobotsVerdict | undefined> {
+  private async storedRobots(
+    target: URL,
+    policy: PolitenessPolicy,
+  ): Promise<RobotsVerdict | undefined> {
     try {
       const row = this.lookup(redact(new URL("/robots.txt", target.origin)));
-      if (row === undefined || row.blob === null || row.status < 200 || row.status >= 300) return undefined;
+      if (row === undefined || row.blob === null || row.status < 200 || row.status >= 300)
+        return undefined;
       if (this.clock.now() - Date.parse(row.fetched_at) > policy.robotsStaleMs) return undefined;
       const body = await this.options.blobs.get(row.blob);
       if (body === undefined) return undefined;
@@ -1481,18 +1611,30 @@ export class Crawler {
   /** This method adds the scope and the labels of one request to the requests that wait for a robots.txt. The most private scope wins. */
   private join(
     waiting: Waiting,
-    marks: { readonly scope?: string | undefined; readonly labels?: Readonly<Record<string, string>> | undefined },
+    marks: {
+      readonly scope?: string | undefined;
+      readonly labels?: Readonly<Record<string, string>> | undefined;
+    },
   ): void {
     const scope = marks.scope ?? this.options.scope;
     const rank = this.options.scopeRank;
     if (waiting.scope === undefined) waiting.scope = scope;
-    else if (scope !== undefined && rank !== undefined && rank(scope) > rank(waiting.scope)) waiting.scope = scope;
+    else if (scope !== undefined && rank !== undefined && rank(scope) > rank(waiting.scope))
+      waiting.scope = scope;
     if (marks.labels !== undefined) waiting.labels = { ...marks.labels, ...waiting.labels };
   }
 
-  private async fetchRobots(target: URL, policy: PolitenessPolicy, waiting: Waiting): Promise<RobotsRead> {
+  private async fetchRobots(
+    target: URL,
+    policy: PolitenessPolicy,
+    waiting: Waiting,
+  ): Promise<RobotsRead> {
     let url = new URL("/robots.txt", target.origin);
-    const unreachable = (reason: string, capture: string | undefined, retryAfterMs?: number): RobotsRead => ({
+    const unreachable = (
+      reason: string,
+      capture: string | undefined,
+      retryAfterMs?: number,
+    ): RobotsRead => ({
       robots: unreachableRobots(reason),
       capture,
       retryAfterMs,
@@ -1534,11 +1676,19 @@ export class Crawler {
       if (result.outcome === "not-modified") {
         return result.body === undefined
           ? unreachable("status 304, and no stored copy", result.capture)
-          : { robots: robotsFromResponse(200, result.contentType ?? null, result.body), capture: result.capture, retryAfterMs: undefined };
+          : {
+              robots: robotsFromResponse(200, result.contentType ?? null, result.body),
+              capture: result.capture,
+              retryAfterMs: undefined,
+            };
       }
       const robots =
         result.status >= 200 && result.status < 300
-          ? robotsFromResponse(result.status, result.contentType ?? null, result.body ?? new Uint8Array())
+          ? robotsFromResponse(
+              result.status,
+              result.contentType ?? null,
+              result.body ?? new Uint8Array(),
+            )
           : robotsFromStatus(result.status, undefined);
       return { robots, capture: result.capture, retryAfterMs: step.retryAfterMs };
     }
@@ -1578,7 +1728,8 @@ export class Crawler {
       cached: (url) => this.fromCache(url, "plain", request_.maxAgeMs, sent, secretParams),
     });
     if ("answer" in admission) return admission.answer;
-    const { target, url, host, policy, check, robotsLines, crawlDelaySeconds, skip } = admission.admitted;
+    const { target, url, host, policy, check, robotsLines, crawlDelaySeconds, skip } =
+      admission.admitted;
     const maxBytes = request_.maxBytes ?? policy.maxBytes;
     const rest = (elapsedMs: number): RestInput => ({
       kind: request_.mode,
@@ -1606,7 +1757,8 @@ export class Crawler {
             stored = await this.options.blobs.get(usable.blob);
           const headers: Record<string, string> = { ...sent };
           if (stored !== undefined && usable?.etag) headers["if-none-match"] = usable.etag;
-          if (stored !== undefined && usable?.last_modified) headers["if-modified-since"] = usable.last_modified;
+          if (stored !== undefined && usable?.last_modified)
+            headers["if-modified-since"] = usable.last_modified;
           const started = this.clock.now();
           const timeout = AbortSignal.timeout(policy.requestTimeoutMs);
           const abort = AbortSignal.any([timeout, signal]);
@@ -1619,10 +1771,16 @@ export class Crawler {
           this.emit({ type: "request", url, host, transport: "http" });
           let response: Dispatcher.ResponseData;
           try {
-            response = await request(target, { method: "GET", headers, dispatcher: this.dispatcher, signal: abort });
+            response = await request(target, {
+              method: "GET",
+              headers,
+              dispatcher: this.dispatcher,
+              signal: abort,
+            });
           } catch (error) {
             const egress = egressError(error);
-            if (egress !== undefined) return { value: { fetched: await skip(egress.message) }, delayMs: 0 };
+            if (egress !== undefined)
+              return { value: { fetched: await skip(egress.message) }, delayMs: 0 };
             if (this.closed) return { value: { fetched: closedResult(url) }, delayMs: 0 };
             const elapsedMs = this.clock.now() - started;
             const note = cancelled() ? "cancelled by the caller" : failedNote("no response", error);
@@ -1637,7 +1795,15 @@ export class Crawler {
             this.emit({ type: "response", url, host, status: 0, outcome: "error", elapsedMs });
             const capture = await this.record(
               "capture",
-              { ...base, url, status: 0, outcome: "error", note, elapsed_ms: elapsedMs, ...(check ? { robots_check: check } : {}) },
+              {
+                ...base,
+                url,
+                status: 0,
+                outcome: "error",
+                note,
+                elapsed_ms: elapsedMs,
+                ...(check ? { robots_check: check } : {}),
+              },
               url,
               marks,
             );
@@ -1662,7 +1828,9 @@ export class Crawler {
             };
           }
 
-          const header = headerOf(response.headers as Record<string, string | string[] | undefined>);
+          const header = headerOf(
+            response.headers as Record<string, string | string[] | undefined>,
+          );
           const ttfbMs = this.clock.now() - started;
           const classified = classify(response.statusCode, header, this.clock.now());
           let outcome: Outcome = classified.outcome;
@@ -1679,7 +1847,8 @@ export class Crawler {
               body = read.bytes;
               truncated = read.truncated;
               cut = read.cut;
-              if (read.cut) note = `the compressed body ended early, so the crawler keeps the ${String(read.bytes.length)} bytes before the end`;
+              if (read.cut)
+                note = `the compressed body ended early, so the crawler keeps the ${String(read.bytes.length)} bytes before the end`;
               else if (truncated) note = `truncated at ${String(maxBytes)} bytes`;
             } catch (error) {
               if (this.closed) return { value: { fetched: closedResult(url) }, delayMs: 0 };
@@ -1746,26 +1915,48 @@ export class Crawler {
                   : usable.ai_input;
             signals = { ...signals, ai_input: merged };
           }
-          const contentType = header("content-type") ?? (revisit ? (usable.content_type ?? undefined) : undefined);
+          const contentType =
+            header("content-type") ?? (revisit ? (usable.content_type ?? undefined) : undefined);
           // a web page in place of the data of an API (a login or an error page) is not the stored copy
-          const unasked = request_.mode === "api" && outcome === "ok" && unaskedPage(request_.accept, contentType);
+          const unasked =
+            request_.mode === "api" &&
+            outcome === "ok" &&
+            unaskedPage(request_.accept, contentType);
           if (unasked) {
             const said = `the server sent ${contentType ?? ""}, and the request accepts ${request_.accept ?? ""}, so the crawler keeps no stored copy of it`;
             note = note === undefined ? said : `${note}; ${said}`;
           }
           const etag = header("etag") ?? (revisit ? usable.etag : null) ?? null;
-          const lastModified = header("last-modified") ?? (revisit ? usable.last_modified : null) ?? null;
+          const lastModified =
+            header("last-modified") ?? (revisit ? usable.last_modified : null) ?? null;
           const fetchedAt = this.clock.now();
-          const freshness = freshUntil(header, response.statusCode, fetchedAt, lastModified, policy.heuristicFreshnessCapMs);
+          const freshness = freshUntil(
+            header,
+            response.statusCode,
+            fetchedAt,
+            lastModified,
+            policy.heuristicFreshnessCapMs,
+          );
           const varyKey =
-            header("vary") !== undefined ? varyKeyOf(header("vary"), sent) : revisit ? (usable.vary_key ?? null) : null;
+            header("vary") !== undefined
+              ? varyKeyOf(header("vary"), sent)
+              : revisit
+                ? (usable.vary_key ?? null)
+                : null;
           const cacheHeaders = Object.fromEntries(
             ["cache-control", "expires", "age", "date", "vary"].flatMap((name) => {
               const value = header(name);
               return value === undefined ? [] : [[name.replace("-", "_"), value]];
             }),
           );
-          this.emit({ type: "response", url, host, status: response.statusCode, outcome, elapsedMs });
+          this.emit({
+            type: "response",
+            url,
+            host,
+            status: response.statusCode,
+            outcome,
+            elapsedMs,
+          });
           const capture = await this.record(
             revisit ? "revisit" : "capture",
             {
@@ -1798,7 +1989,13 @@ export class Crawler {
           );
           const fetchedIso = new Date(fetchedAt).toISOString();
           // a body that the server cut is not a copy to keep: the next request asks for the whole body
-          if (capture !== undefined && (outcome === "ok" || outcome === "not-modified") && blob !== undefined && !cut && !unasked) {
+          if (
+            capture !== undefined &&
+            (outcome === "ok" || outcome === "not-modified") &&
+            blob !== undefined &&
+            !cut &&
+            !unasked
+          ) {
             this.store({
               url,
               capture,
@@ -1874,9 +2071,11 @@ export class Crawler {
         signal,
       );
     } catch (error) {
-      if (error instanceof HostStopped) return { fetched: await skip(stopNote(error.reason, error.until)) };
+      if (error instanceof HostStopped)
+        return { fetched: await skip(stopNote(error.reason, error.until)) };
       if (this.closed) return { fetched: closedResult(url) };
-      if (request_.signal?.aborted === true) return { fetched: await skip("cancelled by the caller") };
+      if (request_.signal?.aborted === true)
+        return { fetched: await skip("cancelled by the caller") };
       throw error;
     }
   }
@@ -1907,7 +2106,12 @@ export class Crawler {
       } catch {
         return refuse();
       }
-      if (target.protocol === "data:" || target.protocol === "blob:" || target.protocol === "about:") return true;
+      if (
+        target.protocol === "data:" ||
+        target.protocol === "blob:" ||
+        target.protocol === "about:"
+      )
+        return true;
       const web = WEB_PROTOCOLS.has(target.protocol);
       if (!web && target.protocol !== "ws:" && target.protocol !== "wss:") return refuse();
       let check = checked.get(target.hostname);
@@ -1918,7 +2122,10 @@ export class Crawler {
       if ((await check) !== undefined) return refuse();
       if (web) {
         const rules = originKey(target) === pageOrigin ? robots : this.knownRobots(target)?.robots;
-        if (rules !== undefined && !decide(rules, tokens, `${target.pathname}${target.search}`).allowed)
+        if (
+          rules !== undefined &&
+          !decide(rules, tokens, `${target.pathname}${target.search}`).allowed
+        )
           return refuse();
       }
       tally.allowed += 1;
@@ -1948,13 +2155,18 @@ export class Crawler {
     if (target.href === page.href) return undefined;
     const url = redact(target);
     const moved = `the page moved to ${url}`;
-    if (!WEB_PROTOCOLS.has(target.protocol)) return { note: `${moved}, which is not an http(s) URL`, url };
+    if (!WEB_PROTOCOLS.has(target.protocol))
+      return { note: `${moved}, which is not an http(s) URL`, url };
     const egress = await checkEgress(this.egress, target);
     if (egress !== undefined) return { note: `${moved}: ${egress}`, url };
     const rules = originKey(target) === originKey(page) ? robots : this.knownRobots(target)?.robots;
     if (rules !== undefined) {
       const decision = decide(rules, tokens, `${target.pathname}${target.search}`);
-      if (!decision.allowed) return { note: `${moved}: ${robotsRefusal(rules, decision.by ?? this.options.token)}`, url };
+      if (!decision.allowed)
+        return {
+          note: `${moved}: ${robotsRefusal(rules, decision.by ?? this.options.token)}`,
+          url,
+        };
     }
     return undefined;
   }
@@ -1977,7 +2189,11 @@ export class Crawler {
       this.renderOnce(request_).catch((error: unknown) =>
         this.closed
           ? closedResult(request_.url)
-          : { ...closedResult(request_.url), outcome: "error" as const, note: `crawler error: ${messageOf(error)}` },
+          : {
+              ...closedResult(request_.url),
+              outcome: "error" as const,
+              note: `crawler error: ${messageOf(error)}`,
+            },
       ),
     );
   }
@@ -2017,7 +2233,8 @@ export class Crawler {
       },
     );
     if ("answer" in admission) return admission.answer.fetched;
-    const { target, url, host, policy, tokens, check, crawlDelaySeconds, skip } = admission.admitted;
+    const { target, url, host, policy, tokens, check, crawlDelaySeconds, skip } =
+      admission.admitted;
     const verdict = admission.admitted.verdict!;
     const signal =
       request_.signal === undefined
@@ -2025,7 +2242,11 @@ export class Crawler {
         : AbortSignal.any([request_.signal, this.closing.signal]);
     const tally = { allowed: 0, refused: 0, hosts: new Set<string>() };
     const allowRequest = this.allowRequestFor(target, verdict.robots, tokens, signal, tally);
-    const rest = (elapsedMs: number): RestInput => ({ kind: "render", elapsedMs, crawlDelaySeconds });
+    const rest = (elapsedMs: number): RestInput => ({
+      kind: "render",
+      elapsedMs,
+      crawlDelaySeconds,
+    });
 
     // the wait for a slot of the browser comes before the lease of the host, so the host does not wait for it
     let release: () => void;
@@ -2047,14 +2268,17 @@ export class Crawler {
               renderer!.render(target.href, {
                 userAgent: this.options.userAgent,
                 timeoutMs: policy.renderTimeoutMs,
-                ...(this.options.from !== undefined ? { headers: { from: this.options.from } } : {}),
+                ...(this.options.from !== undefined
+                  ? { headers: { from: this.options.from } }
+                  : {}),
                 allowRequest,
                 maxRedirects: policy.maxRedirects,
                 signal,
               }),
               signal,
             );
-            const header = (name: string): string | undefined => rendered.headers[name.toLowerCase()];
+            const header = (name: string): string | undefined =>
+              rendered.headers[name.toLowerCase()];
             const classified: Classified =
               rendered.status === null
                 ? { outcome: "ok", retryAfterMs: undefined, note: undefined }
@@ -2072,7 +2296,10 @@ export class Crawler {
             const elapsedMs = this.clock.now() - started;
             if (this.closed) return { value: { kind: "closed" }, delayMs: 0 };
             if (request_.signal?.aborted === true) {
-              return { value: { kind: "cancelled", elapsedMs }, delayMs: restAfter(policy, rest(0)).ms };
+              return {
+                value: { kind: "cancelled", elapsedMs },
+                delayMs: restAfter(policy, rest(0)).ms,
+              };
             }
             // a renderer of an application that has no browser is no fault of the host either
             const refused =
@@ -2093,7 +2320,13 @@ export class Crawler {
                 result: "neutral",
               });
               return {
-                value: { kind: "refused", reason: refused.reason, note: refused.message, url: refused.url, elapsedMs },
+                value: {
+                  kind: "refused",
+                  reason: refused.reason,
+                  note: refused.message,
+                  url: refused.url,
+                  elapsedMs,
+                },
                 delayMs,
               };
             }
@@ -2104,7 +2337,10 @@ export class Crawler {
               rest: rest(elapsedMs),
               robotsFile: false,
             });
-            return { value: { kind: "failed", note: `render failed: ${messageOf(error)}`, elapsedMs }, delayMs };
+            return {
+              value: { kind: "failed", note: `render failed: ${messageOf(error)}`, elapsedMs },
+              delayMs,
+            };
           }
         },
         signal,
@@ -2121,14 +2357,37 @@ export class Crawler {
     if (done.kind === "closed" || this.closed) return closedResult(url);
     const subrequests = { allowed: tally.allowed, refused: tally.refused, hosts: [...tally.hosts] };
     if (done.kind === "refused") {
-      this.emit({ type: "response", url, host, status: 0, outcome: done.reason === "download" ? "not-html" : "skipped", elapsedMs: done.elapsedMs });
+      this.emit({
+        type: "response",
+        url,
+        host,
+        status: 0,
+        outcome: done.reason === "download" ? "not-html" : "skipped",
+        elapsedMs: done.elapsedMs,
+      });
       if (done.reason !== "download") {
-        const moved = done.url === undefined ? undefined : await this.movedRefusal(done.url, target, verdict.robots, tokens);
-        return skip(moved?.note ?? done.note, { robots_check: check, subrequests, ...(moved === undefined ? {} : { final_url: moved.url }) });
+        const moved =
+          done.url === undefined
+            ? undefined
+            : await this.movedRefusal(done.url, target, verdict.robots, tokens);
+        return skip(moved?.note ?? done.note, {
+          robots_check: check,
+          subrequests,
+          ...(moved === undefined ? {} : { final_url: moved.url }),
+        });
       }
       const capture = await this.record(
         "capture",
-        { ...base, url, status: 0, outcome: "not-html", note: done.note, elapsed_ms: done.elapsedMs, robots_check: check, subrequests },
+        {
+          ...base,
+          url,
+          status: 0,
+          outcome: "not-html",
+          note: done.note,
+          elapsed_ms: done.elapsedMs,
+          robots_check: check,
+          subrequests,
+        },
         url,
         marks,
       );
@@ -2136,10 +2395,26 @@ export class Crawler {
     }
     if (done.kind === "failed" || done.kind === "cancelled") {
       const note = done.kind === "failed" ? done.note : "cancelled by the caller";
-      this.emit({ type: "response", url, host, status: 0, outcome: "error", elapsedMs: done.elapsedMs });
+      this.emit({
+        type: "response",
+        url,
+        host,
+        status: 0,
+        outcome: "error",
+        elapsedMs: done.elapsedMs,
+      });
       const capture = await this.record(
         "capture",
-        { ...base, url, status: 0, outcome: "error", note, elapsed_ms: done.elapsedMs, robots_check: check, subrequests },
+        {
+          ...base,
+          url,
+          status: 0,
+          outcome: "error",
+          note,
+          elapsed_ms: done.elapsedMs,
+          robots_check: check,
+          subrequests,
+        },
         url,
         marks,
       );
@@ -2173,7 +2448,8 @@ export class Crawler {
     const finalPath = `${finalTarget.pathname}${finalTarget.search}`;
     if (finalTarget.href !== target.href) {
       const moved = `the page moved to ${finalUrl}`;
-      if (!WEB_PROTOCOLS.has(finalTarget.protocol)) return skip(`${moved}, which is not an http(s) URL`, { final_url: finalUrl });
+      if (!WEB_PROTOCOLS.has(finalTarget.protocol))
+        return skip(`${moved}, which is not an http(s) URL`, { final_url: finalUrl });
       const refusal = await checkEgress(this.egress, finalTarget);
       if (refusal !== undefined) return skip(`${moved}: ${refusal}`, { final_url: finalUrl });
       if (originKey(finalTarget) !== originKey(target)) {
@@ -2181,10 +2457,13 @@ export class Crawler {
       }
       const finalDecision = decide(finalVerdict.robots, tokens, finalPath);
       if (!finalDecision.allowed) {
-        return skip(`${moved}: ${robotsRefusal(finalVerdict.robots, finalDecision.by ?? this.options.token)}`, {
-          final_url: finalUrl,
-          robots_check: robotsCheck(finalVerdict, tokens, finalDecision),
-        });
+        return skip(
+          `${moved}: ${robotsRefusal(finalVerdict.robots, finalDecision.by ?? this.options.token)}`,
+          {
+            final_url: finalUrl,
+            robots_check: robotsCheck(finalVerdict, tokens, finalDecision),
+          },
+        );
       }
     }
     let outcome: Outcome = classified.outcome;
@@ -2201,10 +2480,20 @@ export class Crawler {
         body = undefined;
       }
     }
-    const signals = readSignals(signalsFor(finalVerdict.robots, tokens, finalPath), header, metaSignals(rendered.html));
+    const signals = readSignals(
+      signalsFor(finalVerdict.robots, tokens, finalPath),
+      header,
+      metaSignals(rendered.html),
+    );
     const status = rendered.status ?? 200;
     const fetchedAt = this.clock.now();
-    const freshness = freshUntil(header, status, fetchedAt, header("last-modified"), policy.heuristicFreshnessCapMs);
+    const freshness = freshUntil(
+      header,
+      status,
+      fetchedAt,
+      header("last-modified"),
+      policy.heuristicFreshnessCapMs,
+    );
     this.emit({ type: "response", url, host, status, outcome, elapsedMs });
     const capture = await this.record(
       "capture",
@@ -2270,7 +2559,8 @@ export class Crawler {
     this.scheduler.reset(name);
     for (const key of this.robots.keys()) {
       const entry = this.robots.peek(key);
-      const unreachable = entry?.value?.robots.unreachable !== undefined || entry?.value?.stale !== undefined;
+      const unreachable =
+        entry?.value?.robots.unreachable !== undefined || entry?.value?.stale !== undefined;
       if (unreachable && (name === undefined || key.endsWith(`//${name}`))) this.robots.delete(key);
     }
   }

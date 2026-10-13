@@ -248,7 +248,9 @@ export interface SchedulerOptions {
 }
 
 const aborted = (signal: AbortSignal): Error =>
-  signal.reason instanceof Error ? signal.reason : new DOMException("The wait was aborted", "AbortError");
+  signal.reason instanceof Error
+    ? signal.reason
+    : new DOMException("The wait was aborted", "AbortError");
 
 export class HostScheduler {
   /** This store keeps the state of each host. */
@@ -477,7 +479,10 @@ export const restAfter = (policy: PolitenessPolicy, input: RestInput): Rest => {
       : input.kind === "api"
         ? policy.apiIntervalMs
         : policy.renderIntervalMs);
-  const crawlDelay = Math.min(policy.crawlDelayCapMs, Math.max(0, (input.crawlDelaySeconds ?? 0) * 1000));
+  const crawlDelay = Math.min(
+    policy.crawlDelayCapMs,
+    Math.max(0, (input.crawlDelaySeconds ?? 0) * 1000),
+  );
   let ms = Math.max(interval, crawlDelay);
   let reason: Rest["reason"] = crawlDelay > interval ? "crawl-delay" : "pace";
   if (input.kind !== "api") {
@@ -592,13 +597,15 @@ const INTEGER_KEYS: ReadonlySet<string> = new Set(["maxRedirects", "maxFailures"
 
 const checked = (values: Partial<PolitenessPolicy>, where: string): Partial<PolitenessPolicy> => {
   for (const [key, value] of Object.entries(values)) {
-    if (!(key in DEFAULT_POLICY)) throw new RangeError(`${where}: ${key} is not a politeness setting`);
+    if (!(key in DEFAULT_POLICY))
+      throw new RangeError(`${where}: ${key} is not a politeness setting`);
     const good =
       typeof value === "number" &&
       value >= 0 &&
       (Number.isFinite(value) || key.endsWith("StopMs")) &&
       (!INTEGER_KEYS.has(key) || Number.isInteger(value));
-    if (!good) throw new RangeError(`${where}: ${key} must be a number of 0 or more, not ${String(value)}`);
+    if (!good)
+      throw new RangeError(`${where}: ${key} must be a number of 0 or more, not ${String(value)}`);
   }
   return values;
 };
@@ -608,7 +615,8 @@ export const checkPolicy = (options: PolicyOptions | undefined): void => {
   if (options === undefined) return;
   const { hosts, ...base } = options;
   checked(base, "politeness");
-  for (const [host, values] of Object.entries(hosts ?? {})) checked(values, `politeness.hosts["${host}"]`);
+  for (const [host, values] of Object.entries(hosts ?? {}))
+    checked(values, `politeness.hosts["${host}"]`);
 };
 
 /** This function gives the policy of one host: the defaults, then the general options, then the entries for the host. */
@@ -620,6 +628,13 @@ export const policyFor = (options: PolicyOptions | undefined, host: string): Pol
     .map(([key, values]) => ({ key: key.toLowerCase(), values }))
     .filter(({ key }) => key === name || (key.startsWith("*.") && name.endsWith(key.slice(1))))
     // an exact name wins, and a longer pattern wins over a shorter one
-    .sort((a, b) => (a.key === name ? 1 : 0) - (b.key === name ? 1 : 0) || a.key.length - b.key.length);
-  return Object.assign({}, DEFAULT_POLICY, base, ...matching.map(({ values }) => values)) as PolitenessPolicy;
+    .sort(
+      (a, b) => (a.key === name ? 1 : 0) - (b.key === name ? 1 : 0) || a.key.length - b.key.length,
+    );
+  return Object.assign(
+    {},
+    DEFAULT_POLICY,
+    base,
+    ...matching.map(({ values }) => values),
+  ) as PolitenessPolicy;
 };

@@ -129,7 +129,12 @@ export const foldText = (text: string, mode: FoldMode): Folded => {
     let folded =
       mode === "quote"
         ? cluster.normalize("NFKC").toLowerCase()
-        : cluster.normalize("NFKD").replace(NONSPACING, "").normalize("NFC").toUpperCase().toLowerCase();
+        : cluster
+            .normalize("NFKD")
+            .replace(NONSPACING, "")
+            .normalize("NFC")
+            .toUpperCase()
+            .toLowerCase();
     if (mode === "search" && SEGMENTED.test(first)) folded = ` ${folded} `;
     for (let at = 0; at < folded.length; at += 1) {
       let unit = folded.charCodeAt(at);

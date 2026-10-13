@@ -108,7 +108,10 @@ const pagesPdf = (
     object(number, [
       `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R >> >> /Contents ${String(number + 1)} 0 R >>`,
     ]);
-    const data = options.flate === true ? deflateSync(Buffer.from(content, "latin1")) : Buffer.from(content, "latin1");
+    const data =
+      options.flate === true
+        ? deflateSync(Buffer.from(content, "latin1"))
+        : Buffer.from(content, "latin1");
     object(number + 1, [
       `<< /Length ${String(data.length)}${options.flate === true ? " /Filter /FlateDecode" : ""} >>\nstream\n`,
       data,
@@ -121,7 +124,9 @@ const pagesPdf = (
   for (let number = 1; number <= total; number += 1) {
     push(`${String(offsets[number]).padStart(10, "0")} 00000 n \n`);
   }
-  push(`trailer\n<< /Size ${String(total + 1)} /Root 1 0 R /Info 4 0 R >>\nstartxref\n${String(xref)}\n%%EOF\n`);
+  push(
+    `trailer\n<< /Size ${String(total + 1)} /Root 1 0 R /Info 4 0 R >>\nstartxref\n${String(xref)}\n%%EOF\n`,
+  );
   return new Uint8Array(Buffer.concat(parts));
 };
 
@@ -129,39 +134,61 @@ const textPage = (line: string): string => `BT /F1 12 Tf 72 720 Td (${line}) Tj 
 
 describe("PDFs that cost more than their size", () => {
   it("stops at its page and character limits, and says so", async () => {
-    const pdf = pagesPdf(["One", "Two", "Three"].map((word) => textPage(`Page ${word}`)), { flate: true });
+    const pdf = pagesPdf(
+      ["One", "Two", "Three"].map((word) => textPage(`Page ${word}`)),
+      { flate: true },
+    );
     const pages = await readPdf(pdf, { maxPages: 2 });
     expect(pages).toMatchObject({ text: "Page One\n\nPage Two", pages: 3, truncated: true });
     expect(pages.note).toBe("the reader stops after 2 pages");
     // the limit cuts the text of a page, and counts the blank line between two pages
     const chars = await readPdf(pdf, { maxChars: 5 });
-    expect(chars).toMatchObject({ text: "Page", truncated: true, note: "the reader stops at 5 characters, at page 1" });
+    expect(chars).toMatchObject({
+      text: "Page",
+      truncated: true,
+      note: "the reader stops at 5 characters, at page 1",
+    });
     const two = await readPdf(pdf, { maxChars: 12 });
-    expect(two).toMatchObject({ text: "Page One\n\nPa", note: "the reader stops at 12 characters, at page 2" });
+    expect(two).toMatchObject({
+      text: "Page One\n\nPa",
+      note: "the reader stops at 12 characters, at page 2",
+    });
   });
 
   /** One page of text operators that inflate to about this many megabytes, in a file of less than 100 KB. */
   const heavyPage = (megabytes: number): Uint8Array => {
     const operator = "ET BT /F1 12 Tf 1 0 0 1 72 720 Tm (A) Tj ";
-    const bomb = pagesPdf([`BT ${operator.repeat(Math.floor((megabytes * 1024 * 1024) / operator.length))} ET`], { flate: true });
+    const bomb = pagesPdf(
+      [`BT ${operator.repeat(Math.floor((megabytes * 1024 * 1024) / operator.length))} ET`],
+      { flate: true },
+    );
     expect(bomb.length).toBeLessThan(100_000);
     return bomb;
   };
 
   it("refuses by default a small file that inflates past 8 MB", async () => {
     const read = await readPdf(heavyPage(9));
-    expect(read).toMatchObject({ text: "", pages: 0, note: "the streams of the file inflate past 8 MB" });
+    expect(read).toMatchObject({
+      text: "",
+      pages: 0,
+      note: "the streams of the file inflate past 8 MB",
+    });
   });
 
   it("cuts the text of one heavy page to the character limit", async () => {
     // a page of 31 MB gave 756,000 characters past a limit of 200,000
     const read = await readPdf(heavyPage(2), { maxChars: 1000 });
     expect(read.text.length).toBeLessThanOrEqual(1000);
-    expect(read).toMatchObject({ truncated: true, note: "the reader stops at 1000 characters, at page 1" });
+    expect(read).toMatchObject({
+      truncated: true,
+      note: "the reader stops at 1000 characters, at page 1",
+    });
   }, 30_000);
 
   it("refuses a file whose streams inflate past the limit, and reads no page of it", async () => {
-    const bomb = pagesPdf([`BT /F1 12 Tf 72 720 Td ${"(A) Tj ".repeat(300_000)} ET`], { flate: true });
+    const bomb = pagesPdf([`BT /F1 12 Tf 72 720 Td ${"(A) Tj ".repeat(300_000)} ET`], {
+      flate: true,
+    });
     expect(bomb.length).toBeLessThan(50_000);
     const read = await readPdf(bomb, { maxInflatedBytes: 1_000_000 });
     expect(read).toMatchObject({ text: "", pages: 0, truncated: true });
@@ -185,7 +212,10 @@ describe("a PDF with little to read", () => {
   });
 
   it("names a file by its file name when its title is the word processor's", async () => {
-    const pdf = pagesPdf([textPage("Dinner")], { title: "Microsoft Word - menu-final-v3.docx", prefix: "\r\n\r\n" });
+    const pdf = pagesPdf([textPage("Dinner")], {
+      title: "Microsoft Word - menu-final-v3.docx",
+      prefix: "\r\n\r\n",
+    });
     expect(isPdf(pdf, "application/octet-stream")).toBe(true);
     const [doc] = await pageExtractor(pdf, {
       url: "https://venue.example/files/Dinner%20Menu.pdf",

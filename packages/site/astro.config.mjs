@@ -25,7 +25,11 @@ const lastmodOf = (url) => {
     const full = join(docs, file);
     if (!existsSync(full)) continue;
     try {
-      return execFileSync("git", ["log", "-1", "--format=%cI", "--", full], { encoding: "utf8" }).trim() || undefined;
+      return (
+        execFileSync("git", ["log", "-1", "--format=%cI", "--", full], {
+          encoding: "utf8",
+        }).trim() || undefined
+      );
     } catch {
       return undefined;
     }
@@ -57,7 +61,8 @@ export default defineConfig({
           tag: "meta",
           attrs: {
             property: "og:image:alt",
-            content: "polite-crawler: fetch once, read many times. Request bars on graph paper, one lane for each site.",
+            content:
+              "polite-crawler: fetch once, read many times. Request bars on graph paper, one lane for each site.",
           },
         },
         { tag: "meta", attrs: { name: "twitter:card", content: "summary_large_image" } },
@@ -96,9 +101,24 @@ export default defineConfig({
       // the date of the last commit of each page (the Pages workflow needs the full history for it)
       lastUpdated: true,
       sidebar: [
-        { label: "Start", items: ["guide/quick-start", "guide/mcp", "guide/how-it-works", "guide/politeness", "guide/compare"] },
-        { label: "Tools", items: ["tools/robots-txt-tester", "tools/page-reader", "tools/opening-hours"] },
-        { label: "Field notes", items: ["notes/robots-txt-ai-agents", "notes/restaurant-websites"] },
+        {
+          label: "Start",
+          items: [
+            "guide/quick-start",
+            "guide/mcp",
+            "guide/how-it-works",
+            "guide/politeness",
+            "guide/compare",
+          ],
+        },
+        {
+          label: "Tools",
+          items: ["tools/robots-txt-tester", "tools/page-reader", "tools/opening-hours"],
+        },
+        {
+          label: "Field notes",
+          items: ["notes/robots-txt-ai-agents", "notes/restaurant-websites"],
+        },
         { label: "Reference", items: ["reference/api", "reference/cli"] },
         { label: "For site owners", items: ["bot", "block-ai-training-crawlers"] },
       ],

@@ -13,7 +13,15 @@
 //
 // `derive` reads answers.ndjson and the bodies again and writes the dataset. It sends no request,
 // so a change to the classification in src/lib/study.ts needs no new run.
-import { appendFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
+import {
+  appendFileSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -93,10 +101,17 @@ const code = (decision: RobotsDecision, token: string): string => {
   return named ? "n" : ".";
 };
 
-const fetchAll = async (csv: string, listId: string, listDate: string, given: string | undefined): Promise<string> => {
+const fetchAll = async (
+  csv: string,
+  listId: string,
+  listDate: string,
+  given: string | undefined,
+): Promise<string> => {
   const store = given ?? mkdtempSync(join(tmpdir(), "robots-study-"));
   if (existsSync(store) && readdirSync(store).length > 0) {
-    console.error(`${store} is not empty. A study needs a fresh store, so that no request is conditional.`);
+    console.error(
+      `${store} is not empty. A study needs a fresh store, so that no request is conditional.`,
+    );
     process.exit(2);
   }
   mkdirSync(store, { recursive: true });
@@ -174,12 +189,21 @@ const derive = async (store: string): Promise<void> => {
   for (const answer of stored) {
     const body = answer.blob === undefined ? undefined : await blobs.get(answer.blob);
     const text = body === undefined ? undefined : new TextDecoder("utf-8").decode(body);
-    const raw: RawAnswer = { status: answer.status, outcome: answer.outcome, contentType: answer.contentType, text, note: answer.note };
+    const raw: RawAnswer = {
+      status: answer.status,
+      outcome: answer.outcome,
+      contentType: answer.contentType,
+      text,
+      note: answer.note,
+    };
     const { state, html, reason } = answerOf(raw);
     const host = new URL(answer.url).host;
     const counted = state === "file" || state === "none";
     // the rules: a file is read as the crawler reads it (robotsFromResponse), and no file gives no rules
-    const robots: Robots = state === "file" ? robotsFromResponse(200, answer.contentType, body ?? new Uint8Array()) : ALLOW_ALL;
+    const robots: Robots =
+      state === "file"
+        ? robotsFromResponse(200, answer.contentType, body ?? new Uint8Array())
+        : ALLOW_ALL;
     const out: {
       -readonly [key in keyof StudySite]: StudySite[key];
     } = { rank: answer.rank, domain: answer.domain, status: answer.status, state, p: "" };
@@ -192,7 +216,11 @@ const derive = async (store: string): Promise<void> => {
       // a file can repeat its signal in each group: keep each line one time. Only the content signals
       // count here, not the RSL License lines that the parser also keeps
       const signals = [
-        ...new Set(robots.signals.filter((line) => /^content-(?:signal|usage):/i.test(line)).map((line) => line.trim().slice(0, 200))),
+        ...new Set(
+          robots.signals
+            .filter((line) => /^content-(?:signal|usage):/i.test(line))
+            .map((line) => line.trim().slice(0, 200)),
+        ),
       ];
       if (signals.length > 0) out.signals = signals;
       if (robots.sitemaps.length > 0) out.sitemaps = robots.sitemaps.length;
@@ -213,7 +241,9 @@ const derive = async (store: string): Promise<void> => {
       const onHome = decide(robots, [agent.token], "/");
       page += code(onPage, agent.token);
       home += code(onHome, agent.token);
-      const group = onPage.groups?.find((candidate) => onPage.rule !== undefined && candidate.rules.includes(onPage.rule));
+      const group = onPage.groups?.find(
+        (candidate) => onPage.rule !== undefined && candidate.rules.includes(onPage.rule),
+      );
       const ruleLine = onPage.rule?.line ?? 0;
       const groupLine = group?.line ?? 0;
       if (ruleLine > 0 && state === "file") {
@@ -222,7 +252,11 @@ const derive = async (store: string): Promise<void> => {
           if (line > 0) lines[String(line)] = (source[line - 1] ?? "").trim().slice(0, 160);
         }
       } else refs.push(0);
-      if (agent.token === DEFAULT_TOKEN && onPage.crawlDelaySeconds !== undefined && state === "file")
+      if (
+        agent.token === DEFAULT_TOKEN &&
+        onPage.crawlDelaySeconds !== undefined &&
+        state === "file"
+      )
         out.delay = onPage.crawlDelaySeconds;
     }
     out.p = page;
@@ -246,14 +280,22 @@ const derive = async (store: string): Promise<void> => {
   mkdirSync(dirname(jsonOut), { recursive: true });
   writeFileSync(
     jsonOut,
-    [`${head.slice(0, -1)},"sites":[`, sites.map((entry) => JSON.stringify(entry)).join(",\n"), "]}", ""].join("\n"),
+    [
+      `${head.slice(0, -1)},"sites":[`,
+      sites.map((entry) => JSON.stringify(entry)).join(",\n"),
+      "]}",
+      "",
+    ].join("\n"),
   );
   const study = JSON.parse(readFileSync(jsonOut, "utf8")) as Study;
   mkdirSync(dirname(csvOut), { recursive: true });
   writeFileSync(csvOut, toCsv(study));
   const states = new Map<string, number>();
   for (const entry of sites) states.set(entry.state, (states.get(entry.state) ?? 0) + 1);
-  console.info(`wrote ${jsonOut} and ${csvOut}: ${String(sites.length)} sites`, Object.fromEntries(states));
+  console.info(
+    `wrote ${jsonOut} and ${csvOut}: ${String(sites.length)} sites`,
+    Object.fromEntries(states),
+  );
 };
 
 const [command, ...args] = process.argv.slice(2);

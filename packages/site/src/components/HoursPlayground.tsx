@@ -97,7 +97,8 @@ const WeekChart = ({ week }: { readonly week: Week }): ReactElement => {
               key={tick}
               style={{
                 left: `${String(share * 100)}%`,
-                transform: share < 0.06 ? "none" : share > 0.94 ? "translateX(-100%)" : "translateX(-50%)",
+                transform:
+                  share < 0.06 ? "none" : share > 0.94 ? "translateX(-100%)" : "translateX(-50%)",
               }}
             >
               {clock12(tick)}
@@ -110,7 +111,13 @@ const WeekChart = ({ week }: { readonly week: Week }): ReactElement => {
 };
 
 /** This component shows one reading of the hours. */
-const Reading = ({ title, reading }: { readonly title: string; readonly reading: Hours & { readonly label?: string | null } }): ReactElement => {
+const Reading = ({
+  title,
+  reading,
+}: {
+  readonly title: string;
+  readonly reading: Hours & { readonly label?: string | null };
+}): ReactElement => {
   const said = describeWeek(reading.week);
   return (
     <section className="pc-reading">
@@ -118,9 +125,14 @@ const Reading = ({ title, reading }: { readonly title: string; readonly reading:
         <strong>{title}</strong>
         {reading.label ? <span className="pc-tag">below “{reading.label}”</span> : null}
         {reading.inferred ? <span className="pc-tag pc-tag-guess">am or pm guessed</span> : null}
-        {reading.season !== undefined ? <span className="pc-tag">season: {reading.season}</span> : null}
+        {reading.season !== undefined ? (
+          <span className="pc-tag">season: {reading.season}</span>
+        ) : null}
         {reading.partial === true ? (
-          <span className="pc-tag pc-tag-guess" title="The reader left out a rule or a line, for example a holiday or a date.">
+          <span
+            className="pc-tag pc-tag-guess"
+            title="The reader left out a rule or a line, for example a holiday or a date."
+          >
             a rule left out
           </span>
         ) : null}
@@ -164,18 +176,32 @@ export default function HoursPlayground(): ReactElement {
         ))}
       </div>
       <label className="pc-field">
-        <span>Text from a page, with one line for each line of the page. The reader reads English only.</span>
-        <textarea value={text} rows={5} spellcheck={false} onChange={(event) => setText(event.currentTarget.value)} />
+        <span>
+          Text from a page, with one line for each line of the page. The reader reads English only.
+        </span>
+        <textarea
+          value={text}
+          rows={5}
+          spellcheck={false}
+          onChange={(event) => setText(event.currentTarget.value)}
+        />
       </label>
       <div className="pc-readings" aria-live="polite">
         {failure !== undefined ? <p className="pc-empty">The reader stopped: {failure}</p> : null}
         {readings.map((reading, index) => (
-          <Reading key={index} title={readings.length > 1 ? `Page text, reading ${String(index + 1)}` : "Page text"} reading={reading} />
+          <Reading
+            key={index}
+            title={readings.length > 1 ? `Page text, reading ${String(index + 1)}` : "Page text"}
+            reading={reading}
+          />
         ))}
-        {compact !== undefined ? <Reading title="OpenStreetMap notation" reading={compact} /> : null}
+        {compact !== undefined ? (
+          <Reading title="OpenStreetMap notation" reading={compact} />
+        ) : null}
         {readings.length === 0 && compact === undefined && failure === undefined ? (
           <p className="pc-empty">
-            The reader found no hours. It needs a day and a time near each other, or one range below an hours heading. It reads English only.
+            The reader found no hours. It needs a day and a time near each other, or one range below
+            an hours heading. It reads English only.
           </p>
         ) : null}
       </div>

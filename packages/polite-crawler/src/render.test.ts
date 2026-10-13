@@ -65,10 +65,14 @@ const server = createServer((request, response) => {
     return;
   }
   if (path.startsWith("/internal/")) {
-    response.writeHead(200, { "content-type": "text/html", "access-control-allow-origin": "*" }).end(`INTERNAL ${path}`);
+    response
+      .writeHead(200, { "content-type": "text/html", "access-control-allow-origin": "*" })
+      .end(`INTERNAL ${path}`);
     return;
   }
-  const hop = HOPS[path] ?? (/^\/loop\/\d+$/.test(path) ? `/loop/${String(Number(path.slice(6)) + 1)}` : undefined);
+  const hop =
+    HOPS[path] ??
+    (/^\/loop\/\d+$/.test(path) ? `/loop/${String(Number(path.slice(6)) + 1)}` : undefined);
   if (hop !== undefined) {
     response.writeHead(302, { location: hop }).end();
     return;
@@ -157,7 +161,10 @@ describe("the headless browser", () => {
     expect(extractPage(shown.html, shown.finalUrl).text).not.toContain("Secret hours");
     // a refused first navigation is no render, and no failure of the site
     asked.length = 0;
-    const refused = renderer!.render(`${base}/api/hours`, { ...OPTIONS, allowRequest: () => false });
+    const refused = renderer!.render(`${base}/api/hours`, {
+      ...OPTIONS,
+      allowRequest: () => false,
+    });
     await expect(refused).rejects.toBeInstanceOf(RenderRefused);
     await expect(refused).rejects.toMatchObject({ reason: "refused" });
     expect(paths()).toEqual([]);
@@ -179,12 +186,22 @@ describe("the headless browser", () => {
     const shown = await renderer!.render(`${base}/hops`, options);
     const text = extractPage(shown.html, shown.finalUrl).text;
     // a fetch and a frame that redirect to a refused address: allowRequest refuses the step, and the server never sees it
-    expect(decided).toEqual(expect.arrayContaining(["/hops", "/fetch-out", "/internal/fetch", "/frame-out", "/internal/frame"]));
+    expect(decided).toEqual(
+      expect.arrayContaining([
+        "/hops",
+        "/fetch-out",
+        "/internal/fetch",
+        "/frame-out",
+        "/internal/frame",
+      ]),
+    );
     expect(paths().filter((path) => path.startsWith("/internal/"))).toEqual([]);
     expect(text).not.toContain("INTERNAL");
     // an allowed chain still answers, and each step carries the headers
     expect(text).toContain("PUBLIC-FETCH-END");
-    expect(asked.filter(({ path }) => path === "/api-chain2").map(({ from }) => from)).toEqual(["bot-admin@example.org"]);
+    expect(asked.filter(({ path }) => path === "/api-chain2").map(({ from }) => from)).toEqual([
+      "bot-admin@example.org",
+    ]);
     // a navigation that redirects gives the URL of its last step
     asked.length = 0;
     const moved = await renderer!.render(`${base}/chain`, options);
@@ -200,10 +217,14 @@ describe("the headless browser", () => {
     expect(paths()).toEqual(["/nav-out"]);
     // the limit of a plain fetch: five redirects, and the sixth step is not requested
     asked.length = 0;
-    await expect(renderer!.render(`${base}/loop/0`, options)).rejects.toMatchObject({ reason: "refused" });
+    await expect(renderer!.render(`${base}/loop/0`, options)).rejects.toMatchObject({
+      reason: "refused",
+    });
     expect(paths()).toEqual(["/loop/0", "/loop/1", "/loop/2", "/loop/3", "/loop/4", "/loop/5"]);
     asked.length = 0;
-    await expect(renderer!.render(`${base}/loop/0`, { ...options, maxRedirects: 1 })).rejects.toThrow(/redirects more than 1 times/);
+    await expect(
+      renderer!.render(`${base}/loop/0`, { ...options, maxRedirects: 1 }),
+    ).rejects.toThrow(/redirects more than 1 times/);
     expect(paths()).toEqual(["/loop/0", "/loop/1"]);
     // a script that goes on to a refused URL leaves the browser on its error page: no render, and the error names the URL
     asked.length = 0;
@@ -248,9 +269,9 @@ describe("the headless browser", () => {
     if (unavailable !== undefined)
       context.skip(`Playwright's browser could not start: ${unavailable}`);
     const started = Date.now();
-    await expect(
-      renderer!.render(`${base}/hang`, { ...OPTIONS, timeoutMs: 4000 }),
-    ).rejects.toThrow(/timed out after 4000 ms/);
+    await expect(renderer!.render(`${base}/hang`, { ...OPTIONS, timeoutMs: 4000 })).rejects.toThrow(
+      /timed out after 4000 ms/,
+    );
     expect(Date.now() - started).toBeLessThan(12_000);
     const next = await renderer!.render(`${base}/late`, OPTIONS);
     expect(extractPage(next.html, next.finalUrl).text).toContain("Wed-Sun 17:00-23:00");
@@ -263,9 +284,9 @@ describe("the headless browser", () => {
       name: "RenderRefused",
       reason: "download",
     });
-    await expect(
-      renderer!.render("data:text/html,<p>hello</p>", OPTIONS),
-    ).rejects.toMatchObject({ reason: "scheme" });
+    await expect(renderer!.render("data:text/html,<p>hello</p>", OPTIONS)).rejects.toMatchObject({
+      reason: "scheme",
+    });
   }, 60_000);
 
   it("launches a new browser when the old one disconnects", async (context) => {

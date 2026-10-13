@@ -88,12 +88,17 @@ export const ROLES: ReadonlyArray<{ readonly role: Role; readonly label: string 
 ];
 
 /** The four answers, in the sequence of the charts, with the text that each chart and table shows. */
-export const STATES: ReadonlyArray<{ readonly state: State; readonly label: string; readonly meaning: string }> = [
+export const STATES: ReadonlyArray<{
+  readonly state: State;
+  readonly label: string;
+  readonly meaning: string;
+}> = [
   { state: "file", label: "A robots.txt file", meaning: "The verdicts come from its rules." },
   {
     state: "none",
     label: "No file",
-    meaning: "A 404 or a 410, or an HTML page in place of the file. The site states no rules, so each agent is permitted.",
+    meaning:
+      "A 404 or a 410, or an HTML page in place of the file. The site states no rules, so each agent is permitted.",
   },
   {
     state: "blocked",
@@ -116,7 +121,10 @@ export const DATA_LICENSE = {
   url: "https://creativecommons.org/licenses/by/4.0/",
 } as const;
 
-export const STUDY_AUTHOR = { name: "Mark Russell", url: "https://github.com/mark1russell7" } as const;
+export const STUDY_AUTHOR = {
+  name: "Mark Russell",
+  url: "https://github.com/mark1russell7",
+} as const;
 
 /* ---------------------------------------------------------------------------------------------- */
 /* The classification of one answer                                                               */
@@ -143,7 +151,10 @@ export interface Answer {
  * challenge or a block, so a normal page that loads a script of the same company does not match.
  */
 const WALLS: ReadonlyArray<readonly [RegExp, string]> = [
-  [/\/cdn-cgi\/challenge-platform\/|cf-chl-|cf_chl_|<title>\s*just a moment\.\.\.|attention required! \| cloudflare/i, "a Cloudflare challenge"],
+  [
+    /\/cdn-cgi\/challenge-platform\/|cf-chl-|cf_chl_|<title>\s*just a moment\.\.\.|attention required! \| cloudflare/i,
+    "a Cloudflare challenge",
+  ],
   [/_incapsula_resource|incapsula incident id/i, "an Imperva challenge"],
   [/captcha-delivery\.com/i, "a DataDome challenge"],
   [/px-captcha|_pxcaptcha|access to this page has been denied/i, "a HUMAN challenge"],
@@ -155,8 +166,10 @@ const WALLS: ReadonlyArray<readonly [RegExp, string]> = [
 ];
 
 /** A page that asks for a CAPTCHA and is not a full web page. */
-const CAPTCHA = /g-recaptcha|google\.com\/recaptcha\/|hcaptcha\.com|challenges\.cloudflare\.com\/turnstile/i;
-const CAPTCHA_TITLE = /<title>[^<]*(captcha|security|verif|robot|unusual|challenge|blocked|denied)[^<]*<\/title>/i;
+const CAPTCHA =
+  /g-recaptcha|google\.com\/recaptcha\/|hcaptcha\.com|challenges\.cloudflare\.com\/turnstile/i;
+const CAPTCHA_TITLE =
+  /<title>[^<]*(captcha|security|verif|robot|unusual|challenge|blocked|denied)[^<]*<\/title>/i;
 
 /** This function gives the name of the bot wall that a page shows, or undefined for a normal page. */
 export const wallOf = (text: string): string | undefined => {
@@ -182,23 +195,41 @@ export const answerOf = (raw: RawAnswer): Answer => {
     return {
       state: "unreachable",
       html: false,
-      reason: note?.startsWith("location ") === true ? "more than 5 redirects" : `status ${String(status)} with no Location header`,
+      reason:
+        note?.startsWith("location ") === true
+          ? "more than 5 redirects"
+          : `status ${String(status)} with no Location header`,
     };
   if (outcome === "challenge")
-    return { state: "blocked", html: false, reason: `${note ?? "a challenge"}, status ${String(status)}` };
+    return {
+      state: "blocked",
+      html: false,
+      reason: `${note ?? "a challenge"}, status ${String(status)}`,
+    };
   if (status === 404 || status === 410) return { state: "none", html: false };
   // a 304 confirms the copy that the crawler fetched before in the same run, for example through a
   // redirect from a different domain: the stored body is the file
   const kept = outcome === "not-modified" && raw.text !== undefined;
-  if (!kept && (status < 200 || status >= 300)) return { state: "blocked", html: false, reason: `status ${String(status)}` };
+  if (!kept && (status < 200 || status >= 300))
+    return { state: "blocked", html: false, reason: `status ${String(status)}` };
   if (raw.text === undefined) {
     // a page too large to decode is still a page, and a bot wall is small
-    if (/html/i.test(raw.contentType ?? "")) return { state: "unreachable", html: true, reason: HTML_ROBOTS };
-    return { state: "unreachable", html: false, reason: note ?? `status ${String(status)} with no body` };
+    if (/html/i.test(raw.contentType ?? ""))
+      return { state: "unreachable", html: true, reason: HTML_ROBOTS };
+    return {
+      state: "unreachable",
+      html: false,
+      reason: note ?? `status ${String(status)} with no body`,
+    };
   }
   if (!isHtmlRobots(raw.contentType, raw.text)) return { state: "file", html: false };
   const wall = wallOf(raw.text);
-  if (wall !== undefined) return { state: "blocked", html: true, reason: `${wall} in place of the file, status ${String(status)}` };
+  if (wall !== undefined)
+    return {
+      state: "blocked",
+      html: true,
+      reason: `${wall} in place of the file, status ${String(status)}`,
+    };
   return { state: "unreachable", html: true, reason: HTML_ROBOTS };
 };
 
@@ -227,7 +258,19 @@ export const ticks = (max: number): readonly number[] => {
   return Array.from({ length: max / step + 1 }, (_, index) => index * step);
 };
 
-const SMALL = ["zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten"];
+const SMALL = [
+  "zero",
+  "one",
+  "two",
+  "three",
+  "four",
+  "five",
+  "six",
+  "seven",
+  "eight",
+  "nine",
+  "ten",
+];
 
 /** A share as words: 19.0 gives "one site in five". */
 export const oneIn = (share: number): string => {
@@ -237,7 +280,12 @@ export const oneIn = (share: number): string => {
 
 /** A date of the study, as the pages show it: 12 October 2026. */
 export const formatDay = (iso: string): string =>
-  new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" });
+  new Date(iso).toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+    timeZone: "UTC",
+  });
 
 export interface AgentRow {
   readonly token: string;
@@ -331,7 +379,8 @@ const signalOf = (lines: readonly string[], key: string): "yes" | "no" | "mixed"
 
 export const summarize = (study: Study): Summary => {
   const sites = answered(study);
-  const of = (state: State): readonly StudySite[] => study.sites.filter((site) => site.state === state);
+  const of = (state: State): readonly StudySite[] =>
+    study.sites.filter((site) => site.state === state);
   const ai = study.agents
     .map((agent, index) => ({ agent, index }))
     .filter(({ agent }) => agent.role !== "control")
@@ -366,7 +415,9 @@ export const summarize = (study: Study): Summary => {
     noFile: of("none").length,
     html: unreachable.filter((site) => site.html === true).length,
     blocked: blocked.length,
-    challenges: blocked.filter((site) => /challenge|CAPTCHA|block in place/i.test(site.reason ?? "")).length,
+    challenges: blocked.filter((site) =>
+      /challenge|CAPTCHA|block in place/i.test(site.reason ?? ""),
+    ).length,
     blockedStatuses: [...statuses]
       .map(([status, count]) => ({ status, sites: count }))
       .sort((a, b) => b.sites - a.sites || a.status - b.status),
@@ -374,9 +425,12 @@ export const summarize = (study: Study): Summary => {
     dns: unreachable.filter((site) => /ENOTFOUND|EAI_AGAIN|ENODATA/.test(site.reason ?? "")).length,
     redirects: unreachable.filter((site) => /redirect/i.test(site.reason ?? "")).length,
     undecodable: unreachable.filter((site) => /undecodable/i.test(site.reason ?? "")).length,
-    namesAnAgent: sites.filter((site) => ai.some((index) => site.p[index] === "N" || site.p[index] === "n")).length,
+    namesAnAgent: sites.filter((site) =>
+      ai.some((index) => site.p[index] === "N" || site.p[index] === "n"),
+    ).length,
     refusesAnAgentByName: sites.filter((site) => ai.some((index) => site.p[index] === "N")).length,
-    refusesAllTraining: sites.filter((site) => training.every((index) => refused(site.p[index]))).length,
+    refusesAllTraining: sites.filter((site) => training.every((index) => refused(site.p[index])))
+      .length,
     blocksEveryBot: sites.filter((site) => site.p[polite] === "S").length,
     signals: withSignals.length,
     crawlDelay: sites.filter((site) => site.delay !== undefined).length,
@@ -395,7 +449,11 @@ export const companies = (
   study: Study,
 ): ReadonlyArray<{
   readonly owner: string;
-  readonly agents: ReadonlyArray<{ readonly token: string; readonly role: Role; readonly share: number }>;
+  readonly agents: ReadonlyArray<{
+    readonly token: string;
+    readonly role: Role;
+    readonly share: number;
+  }>;
 }> => {
   const rows = agentRows(study);
   return ["OpenAI", "Anthropic", "Perplexity"].map((owner) => ({
@@ -407,14 +465,26 @@ export const companies = (
 };
 
 /** The sentence of the headline, for the share card, llms.txt and the descriptions of the pages. */
-export const headline = (study: Study): { readonly gpt: AgentRow; readonly claudeUser: AgentRow; readonly googlebot: AgentRow; readonly summary: Summary } => {
+export const headline = (
+  study: Study,
+): {
+  readonly gpt: AgentRow;
+  readonly claudeUser: AgentRow;
+  readonly googlebot: AgentRow;
+  readonly summary: Summary;
+} => {
   const rows = agentRows(study);
   const find = (token: string): AgentRow => {
     const row = rows.find((entry) => entry.token === token);
     if (row === undefined) throw new Error(`the study has no agent ${token}`);
     return row;
   };
-  return { gpt: find("GPTBot"), claudeUser: find("Claude-User"), googlebot: find("Googlebot"), summary: summarize(study) };
+  return {
+    gpt: find("GPTBot"),
+    claudeUser: find("Claude-User"),
+    googlebot: find("Googlebot"),
+    summary: summarize(study),
+  };
 };
 
 /* ---------------------------------------------------------------------------------------------- */
@@ -506,7 +576,9 @@ export const toCsv = (study: Study): string => {
     site.delay,
     (site.signals ?? []).join(" | "),
     ...study.agents.map((_, index) =>
-      site.state === "file" || site.state === "none" ? (CSV_VERDICT[site.p[index] ?? "."] ?? "") : "",
+      site.state === "file" || site.state === "none"
+        ? (CSV_VERDICT[site.p[index] ?? "."] ?? "")
+        : "",
     ),
   ]);
   return `${[head, ...rows].map((row) => row.map(csvCell).join(",")).join("\n")}\n`;

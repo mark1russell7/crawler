@@ -8,7 +8,11 @@ import { STOPS_HOST, classify } from "polite-crawler/classify";
 import { DEFAULT_POLICY } from "polite-crawler/politeness";
 import { afterRetry } from "../lib/response.ts";
 
-const EXAMPLES: ReadonlyArray<{ readonly name: string; readonly status: string; readonly headers: string }> = [
+const EXAMPLES: ReadonlyArray<{
+  readonly name: string;
+  readonly status: string;
+  readonly headers: string;
+}> = [
   { name: "200", status: "200", headers: "content-type: text/html" },
   { name: "304 Not Modified", status: "304", headers: 'etag: "a1b2"' },
   { name: "429 with Retry-After", status: "429", headers: "retry-after: 120" },
@@ -34,14 +38,18 @@ const STOP_FOR: Readonly<Partial<Record<Outcome, string>>> = {
 
 const NEXT: Readonly<Record<Outcome, string>> = {
   ok: "It keeps the body, reads it and rests before the next request to the host.",
-  "not-modified": "The stored copy is still correct. It reads the stored body again and downloads nothing.",
-  redirect: "It follows the redirect, for a maximum of five steps. Each step is a separate decision.",
+  "not-modified":
+    "The stored copy is still correct. It reads the stored body again and downloads nothing.",
+  redirect:
+    "It follows the redirect, for a maximum of five steps. Each step is a separate decision.",
   challenge: `A bot challenge. It stops the host for ${STOP_FOR.challenge!} and does not try a different identity.`,
   "payment-required": `The site wants payment or a license. It records the price, pays nothing and stops the host for ${STOP_FOR["payment-required"]!}.`,
   blocked: `A refusal. RFC 9110 tells a client not to send the request again, so it stops the host for ${STOP_FOR.blocked!}.`,
   "not-found": "The page is not there. It records the result and continues with the next page.",
-  "rate-limited": "The site limits the rate. The host waits until Retry-After, or for a backoff with jitter.",
-  unavailable: "The server is busy or down. The host waits until Retry-After, or for a backoff with jitter.",
+  "rate-limited":
+    "The site limits the rate. The host waits until Retry-After, or for a backoff with jitter.",
+  unavailable:
+    "The server is busy or down. The host waits until Retry-After, or for a backoff with jitter.",
   error: `An unknown failure. The host waits for a backoff, and ${String(DEFAULT_POLICY.maxFailures)} failures in sequence stop it for ${hours(DEFAULT_POLICY.failureStopMs)}.`,
 };
 
@@ -56,7 +64,9 @@ export default function ResponseClassifier(): ReactElement {
   }
   const code = Number(status);
   const now = Date.parse("2026-10-21T07:00:00Z");
-  const result = Number.isInteger(code) ? classify(code, (name) => map.get(name.toLowerCase()), now) : undefined;
+  const result = Number.isInteger(code)
+    ? classify(code, (name) => map.get(name.toLowerCase()), now)
+    : undefined;
   // a Retry-After of more than 1 hour stops the host, as a refusal does
   const retry = afterRetry(result?.retryAfterMs);
   const stops = result !== undefined && (STOPS_HOST.has(result.outcome) || retry.kind === "stop");
@@ -82,11 +92,20 @@ export default function ResponseClassifier(): ReactElement {
         <div className="pc-tool-side">
           <label className="pc-field">
             <span>Status</span>
-            <input value={status} inputMode="numeric" onChange={(event) => setStatus(event.currentTarget.value)} />
+            <input
+              value={status}
+              inputMode="numeric"
+              onChange={(event) => setStatus(event.currentTarget.value)}
+            />
           </label>
           <label className="pc-field">
             <span>Headers, one on each line</span>
-            <textarea value={headers} rows={4} spellcheck={false} onChange={(event) => setHeaders(event.currentTarget.value)} />
+            <textarea
+              value={headers}
+              rows={4}
+              spellcheck={false}
+              onChange={(event) => setHeaders(event.currentTarget.value)}
+            />
           </label>
         </div>
         <div className="pc-tool-side" aria-live="polite">
@@ -94,10 +113,16 @@ export default function ResponseClassifier(): ReactElement {
             <p className="pc-empty">Write a status code, for example 429.</p>
           ) : (
             <>
-              <div className={`pc-callout ${stops ? "pc-callout-stop" : result.outcome === "ok" || result.outcome === "not-modified" ? "pc-callout-ok" : "pc-callout-warn"}`}>
+              <div
+                className={`pc-callout ${stops ? "pc-callout-stop" : result.outcome === "ok" || result.outcome === "not-modified" ? "pc-callout-ok" : "pc-callout-warn"}`}
+              >
                 <strong>
                   <code>{result.outcome}</code>
-                  {STOPS_HOST.has(result.outcome) ? `: the host stops for ${STOP_FOR[result.outcome] ?? "a time"}` : retry.kind === "stop" ? ": the host stops" : ""}
+                  {STOPS_HOST.has(result.outcome)
+                    ? `: the host stops for ${STOP_FOR[result.outcome] ?? "a time"}`
+                    : retry.kind === "stop"
+                      ? ": the host stops"
+                      : ""}
                 </strong>
                 <span>{NEXT[result.outcome]}</span>
               </div>

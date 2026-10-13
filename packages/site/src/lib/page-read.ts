@@ -32,7 +32,8 @@ export interface PageRead {
   readonly notes: readonly string[];
 }
 
-const BLOCKS = /<script\b[^>]*type\s*=\s*["']?application\/ld\+json["']?[^>]*>([\s\S]*?)<\/script>/gi;
+const BLOCKS =
+  /<script\b[^>]*type\s*=\s*["']?application\/ld\+json["']?[^>]*>([\s\S]*?)<\/script>/gi;
 
 /** This function counts the JSON-LD blocks with text that does not give a JSON-LD object. */
 export const brokenJsonLd = (html: string): number =>

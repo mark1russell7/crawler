@@ -214,7 +214,9 @@ export class CaptureLog implements CaptureReader {
     const files: string[] = [];
     for (const year of years) {
       if (from !== undefined && year < from.slice(0, 4)) continue;
-      const months = (await readdir(join(sourceDir, year))).filter((name) => MONTH_FILE.test(name)).sort();
+      const months = (await readdir(join(sourceDir, year)))
+        .filter((name) => MONTH_FILE.test(name))
+        .sort();
       for (const month of months) {
         if (from !== undefined && monthKey(year, month) < from) continue;
         files.push(join(sourceDir, year, month));
@@ -280,7 +282,8 @@ export class CaptureLog implements CaptureReader {
       this.readSource(source, filter, options)[Symbol.asyncIterator](),
     );
     const heads: Array<CaptureRecord | undefined> = [];
-    for (const stream of streams) heads.push((await stream.next()).value as CaptureRecord | undefined);
+    for (const stream of streams)
+      heads.push((await stream.next()).value as CaptureRecord | undefined);
     for (;;) {
       let pick = -1;
       for (const [index, head] of heads.entries()) {

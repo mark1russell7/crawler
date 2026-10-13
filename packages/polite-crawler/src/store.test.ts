@@ -18,11 +18,18 @@ afterEach(async () => {
 });
 
 const record = (at: string, source = "fetch", extra: Record<string, unknown> = {}): CaptureRecord =>
-  makeRecord({ source, kind: "capture", payload: { url: "https://x.example/", ...extra }, received_at: at });
+  makeRecord({
+    source,
+    kind: "capture",
+    payload: { url: "https://x.example/", ...extra },
+    received_at: at,
+  });
 
 const scanAll = async (log: CaptureLog, damaged: DamagedLine[] = [], since?: string) => {
   const rows: CaptureRecord[] = [];
-  for await (const row of log.scan(since === undefined ? undefined : { since }, { onDamaged: (line) => damaged.push(line) })) {
+  for await (const row of log.scan(since === undefined ? undefined : { since }, {
+    onDamaged: (line) => damaged.push(line),
+  })) {
     rows.push(row);
   }
   return rows;
@@ -45,7 +52,11 @@ describe("the capture log", () => {
     expect(lines[1]).toBe('{"torn":');
     const damaged: DamagedLine[] = [];
     const rows = await scanAll(log, damaged);
-    expect(rows.map((row) => row.id)).toEqual([first.id, record("2026-10-07T12:00:00.000Z").id, "fetch.second"]);
+    expect(rows.map((row) => row.id)).toEqual([
+      first.id,
+      record("2026-10-07T12:00:00.000Z").id,
+      "fetch.second",
+    ]);
     expect(damaged).toEqual([{ path: join(shard, "10.ndjson"), line: 2 }]);
   });
 
@@ -113,7 +124,9 @@ describe("the capture log", () => {
     logs.push(one, two);
     await Promise.all(
       Array.from({ length: 100 }, (_, index) =>
-        (index % 2 === 0 ? one : two).append(record("2026-10-07T12:00:00.000Z", "fetch", { index })),
+        (index % 2 === 0 ? one : two).append(
+          record("2026-10-07T12:00:00.000Z", "fetch", { index }),
+        ),
       ),
     );
     await one.close();

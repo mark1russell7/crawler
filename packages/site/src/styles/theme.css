@@ -34,7 +34,6 @@ header.header {
   backdrop-filter: blur(6px);
 }
 
-
 /* ---------------------------------------------------------------- the hero */
 
 .pc-hero {
@@ -272,8 +271,14 @@ header.header {
 .pc-track {
   background-image:
     linear-gradient(90deg, var(--color-grid) 1px, transparent 1px),
-    linear-gradient(90deg, color-mix(in srgb, var(--color-grid) 50%, transparent) 1px, transparent 1px);
-  background-size: calc(100% / 13) 100%, calc(100% / 26) 100%;
+    linear-gradient(
+      90deg,
+      color-mix(in srgb, var(--color-grid) 50%, transparent) 1px,
+      transparent 1px
+    );
+  background-size:
+    calc(100% / 13) 100%,
+    calc(100% / 26) 100%;
 }
 .pc-req {
   position: absolute;
@@ -282,7 +287,11 @@ header.header {
   background: var(--color-accent);
 }
 .pc-req-live {
-  background: repeating-linear-gradient(90deg, var(--color-accent) 0 4px, var(--color-accent-wash) 4px 6px);
+  background: repeating-linear-gradient(
+    90deg,
+    var(--color-accent) 0 4px,
+    var(--color-accent-wash) 4px 6px
+  );
 }
 .pc-req-wait {
   background: var(--status-warning);

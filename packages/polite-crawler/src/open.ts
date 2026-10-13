@@ -76,7 +76,8 @@ const UNITS: Readonly<Record<string, number>> = {
  */
 export const durationMs = (duration: Duration): number => {
   if (typeof duration === "number") {
-    if (!Number.isFinite(duration) || duration < 0) throw new Error(`not a duration: ${String(duration)}`);
+    if (!Number.isFinite(duration) || duration < 0)
+      throw new Error(`not a duration: ${String(duration)}`);
     return duration;
   }
   if (/^\s*0+(\.0+)?\s*$/.test(duration)) return 0;
@@ -84,7 +85,9 @@ export const durationMs = (duration: Duration): number => {
   const unit = match?.[2];
   const factor = unit === undefined || unit === "M" ? undefined : UNITS[unit.toLowerCase()];
   if (match === null || factor === undefined) {
-    throw new Error(`not a duration: "${duration}" (write a number and ms, s, m, h, d or w; m is minutes)`);
+    throw new Error(
+      `not a duration: "${duration}" (write a number and ms, s, m, h, d or w; m is minutes)`,
+    );
   }
   return Number(match[1]) * factor;
 };
@@ -169,7 +172,11 @@ const guardStore = (dir: string): void => {
   const real = lstatSync(dir).isSymbolicLink() ? realpathSync(dir) : dir;
   const info = statSync(real);
   if (!info.isDirectory()) throw new Error(`the store ${dir} is not a folder`);
-  if (process.platform !== "win32" && typeof process.getuid === "function" && info.uid !== process.getuid()) {
+  if (
+    process.platform !== "win32" &&
+    typeof process.getuid === "function" &&
+    info.uid !== process.getuid()
+  ) {
     throw new Error(`the store ${dir} belongs to a different user: use a folder of your own`);
   }
   for (const part of STORE_PARTS) {
@@ -179,7 +186,10 @@ const guardStore = (dir: string): void => {
     } catch {
       // a part that is not there yet
     }
-    if (link) throw new Error(`${part} in the store ${dir} is a symbolic link: the crawler does not follow it`);
+    if (link)
+      throw new Error(
+        `${part} in the store ${dir} is a symbolic link: the crawler does not follow it`,
+      );
   }
 };
 
@@ -190,12 +200,17 @@ const guardStore = (dir: string): void => {
  */
 export const createRuntime = (options: RuntimeOptions): StoreRuntime => {
   const dir = options.dir;
-  if (dir === undefined && (options.log === undefined || options.blobs === undefined || options.index === undefined)) {
+  if (
+    dir === undefined &&
+    (options.log === undefined || options.blobs === undefined || options.index === undefined)
+  ) {
     throw new Error("a runtime needs dir, or a log, a blob store and an index");
   }
   const contact = options.contact;
   if (contact !== undefined && !/^[\t -~]*$/.test(contact)) {
-    throw new Error(`contact "${contact}" has a character that an HTTP header cannot hold: use printable ASCII`);
+    throw new Error(
+      `contact "${contact}" has a character that an HTTP header cannot hold: use printable ASCII`,
+    );
   }
   if (dir !== undefined) guardStore(dir);
   const owned: Array<() => Promise<void> | void> = [];
@@ -218,7 +233,10 @@ export const createRuntime = (options: RuntimeOptions): StoreRuntime => {
   }
   const clock = options.clock ?? realClock;
   // the default browser is checked one time: with none, each page gets its note at once
-  const renderer = options.renderer === false ? undefined : (options.renderer ?? checkedRenderer(playwrightRenderer()));
+  const renderer =
+    options.renderer === false
+      ? undefined
+      : (options.renderer ?? checkedRenderer(playwrightRenderer()));
   const crawler = new Crawler({
     token: options.token ?? DEFAULT_TOKEN,
     userAgent: options.userAgent ?? defaultUserAgent(contact),
@@ -394,7 +412,9 @@ export const openCrawler = (options: OpenOptions): PoliteCrawler => {
       const held = runtime.index.get(id)?.ai_input === "no";
       return runtime.index
         .versions(id, versionOptions)
-        .map((version) => (held || version.ai_input === "no" ? { ...version, title: "" } : version));
+        .map((version) =>
+          held || version.ai_input === "no" ? { ...version, title: "" } : version,
+        );
     },
     async reindex() {
       await live();

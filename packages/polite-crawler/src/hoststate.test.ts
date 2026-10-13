@@ -45,7 +45,10 @@ describe("the SQLite host state store", () => {
     expect(store.stopped("a", 4000)).toEqual({ until: 9000, reason: "challenge" });
     expect(store.stopped("a", 9000)).toBeUndefined();
     store.stop("b", Number.POSITIVE_INFINITY, "blocked");
-    expect(store.stopped("b", 9000)).toEqual({ until: Number.POSITIVE_INFINITY, reason: "blocked" });
+    expect(store.stopped("b", 9000)).toEqual({
+      until: Number.POSITIVE_INFINITY,
+      reason: "blocked",
+    });
     store.defer("a", 4000);
     store.reset();
     expect(store.stopped("a", 4000)).toBeUndefined();
@@ -132,8 +135,12 @@ describe("two crawlers on one store", () => {
     const a = crawlerOn("a");
     const b = crawlerOn("b");
     await Promise.all([
-      ...[1, 2, 3].map((n) => a.fetch({ url: `${origin}/a${String(n)}`, mode: "api", recipe: "t" })),
-      ...[1, 2, 3].map((n) => b.fetch({ url: `${origin}/b${String(n)}`, mode: "api", recipe: "t" })),
+      ...[1, 2, 3].map((n) =>
+        a.fetch({ url: `${origin}/a${String(n)}`, mode: "api", recipe: "t" }),
+      ),
+      ...[1, 2, 3].map((n) =>
+        b.fetch({ url: `${origin}/b${String(n)}`, mode: "api", recipe: "t" }),
+      ),
     ]);
     const times = seen.map((hit) => hit.at).sort((x, y) => x - y);
     expect(times).toHaveLength(6);
@@ -142,7 +149,9 @@ describe("two crawlers on one store", () => {
       expect(times[index]! - times[index - 1]!).toBeGreaterThanOrEqual(145);
     }
     // a stop that one crawler learns holds for the other
-    expect((await a.fetch({ url: `${origin}/refuse`, mode: "api", recipe: "t" })).outcome).toBe("blocked");
+    expect((await a.fetch({ url: `${origin}/refuse`, mode: "api", recipe: "t" })).outcome).toBe(
+      "blocked",
+    );
     const after = await b.fetch({ url: `${origin}/b4`, mode: "api", recipe: "t" });
     expect(after).toMatchObject({ outcome: "skipped" });
     expect(after.note).toMatch(/^host stopped until .*: blocked$/);
@@ -151,17 +160,38 @@ describe("two crawlers on one store", () => {
 
 describe("the rest of a host", () => {
   it("is the interval, the crawl delay, the slow answer or the Retry-After, the longest", () => {
-    expect(restAfter(DEFAULT_POLICY, { kind: "page", elapsedMs: 100 })).toEqual({ ms: 3000, reason: "pace" });
-    expect(restAfter(DEFAULT_POLICY, { kind: "api", elapsedMs: 10_000 })).toEqual({ ms: 1000, reason: "pace" });
-    expect(restAfter(DEFAULT_POLICY, { kind: "page", elapsedMs: 2000 })).toEqual({ ms: 10_000, reason: "slow" });
-    expect(restAfter(DEFAULT_POLICY, { kind: "render", elapsedMs: 60_000 })).toEqual({ ms: 30_000, reason: "slow" });
-    expect(restAfter(DEFAULT_POLICY, { kind: "page", elapsedMs: 0, crawlDelaySeconds: 10 })).toEqual({
+    expect(restAfter(DEFAULT_POLICY, { kind: "page", elapsedMs: 100 })).toEqual({
+      ms: 3000,
+      reason: "pace",
+    });
+    expect(restAfter(DEFAULT_POLICY, { kind: "api", elapsedMs: 10_000 })).toEqual({
+      ms: 1000,
+      reason: "pace",
+    });
+    expect(restAfter(DEFAULT_POLICY, { kind: "page", elapsedMs: 2000 })).toEqual({
+      ms: 10_000,
+      reason: "slow",
+    });
+    expect(restAfter(DEFAULT_POLICY, { kind: "render", elapsedMs: 60_000 })).toEqual({
+      ms: 30_000,
+      reason: "slow",
+    });
+    expect(
+      restAfter(DEFAULT_POLICY, { kind: "page", elapsedMs: 0, crawlDelaySeconds: 10 }),
+    ).toEqual({
       ms: 10_000,
       reason: "crawl-delay",
     });
-    expect(restAfter(DEFAULT_POLICY, { kind: "page", elapsedMs: 0, crawlDelaySeconds: 3600 }).ms).toBe(60_000);
-    expect(restAfter(DEFAULT_POLICY, { kind: "api", elapsedMs: 0, minIntervalMs: 200 })).toEqual({ ms: 200, reason: "pace" });
-    expect(restAfter(DEFAULT_POLICY, { kind: "page", elapsedMs: 0, retryAfterMs: 120_000 })).toEqual({
+    expect(
+      restAfter(DEFAULT_POLICY, { kind: "page", elapsedMs: 0, crawlDelaySeconds: 3600 }).ms,
+    ).toBe(60_000);
+    expect(restAfter(DEFAULT_POLICY, { kind: "api", elapsedMs: 0, minIntervalMs: 200 })).toEqual({
+      ms: 200,
+      reason: "pace",
+    });
+    expect(
+      restAfter(DEFAULT_POLICY, { kind: "page", elapsedMs: 0, retryAfterMs: 120_000 }),
+    ).toEqual({
       ms: 120_000,
       reason: "retry-after",
     });

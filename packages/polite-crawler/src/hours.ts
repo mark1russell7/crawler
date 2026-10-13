@@ -173,7 +173,9 @@ const MAX_COMPACT_CHARS = 2000;
 const osmInterval = (span: string): Interval | undefined => {
   const time = OSM_TIME.exec(span);
   if (time === null) return undefined;
-  const [openHour, openMinute, closeHour, closeMinute] = [time[1], time[2], time[3], time[4]].map(Number);
+  const [openHour, openMinute, closeHour, closeMinute] = [time[1], time[2], time[3], time[4]].map(
+    Number,
+  );
   if (openMinute! > 59 || closeMinute! > 59 || openHour! > 24 || closeHour! > 48) return undefined;
   return [hhmm(openHour!, openMinute!), hhmm(closeHour!, closeMinute!)];
 };
@@ -219,9 +221,10 @@ export const fromCompact = (value: string, from: "osm" | "jsonld" = "osm"): Hour
       continue;
     }
     // the days ("Mo-Fr", "Tu,Th", "Monday-Friday", ", Tu"), then the times
-    const parts = /^[\s,]*([A-Za-z]{1,9}(?:-[A-Za-z]{1,9})?(?: ?, ?[A-Za-z]{1,9}(?:-[A-Za-z]{1,9})?)*)? ?:? ?(.*)$/s.exec(
-      rule,
-    );
+    const parts =
+      /^[\s,]*([A-Za-z]{1,9}(?:-[A-Za-z]{1,9})?(?: ?, ?[A-Za-z]{1,9}(?:-[A-Za-z]{1,9})?)*)? ?:? ?(.*)$/s.exec(
+        rule,
+      );
     let dayPart = (parts?.[1] ?? "").replace(/\s/g, "");
     let timePart = (parts?.[2] ?? "").trim();
     if (timePart.length === 0 && /^(off|closed|open)$/i.test(dayPart)) {
@@ -307,16 +310,25 @@ export const fromCompact = (value: string, from: "osm" | "jsonld" = "osm"): Hour
 const SCHEMA_DAY = /(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)$/i;
 
 /** This function reads a schema.org time: "17:00", "17:00:00", "17:00:00-05:00" or "5:00 PM". */
-const clockOf = (value: unknown): { readonly minutes: number; readonly raw: string } | undefined => {
+const clockOf = (
+  value: unknown,
+): { readonly minutes: number; readonly raw: string } | undefined => {
   if (typeof value !== "string") return undefined;
   const raw = value.trim().slice(0, 40);
   const match =
-    /^(\d{1,2})(?::(\d{2}))?(?::\d{2}(?:\.\d+)?)?\s*(a\.?m\.?|p\.?m\.?)?\s*(?:z|[+-]\d{2}:?\d{2})?$/i.exec(raw);
+    /^(\d{1,2})(?::(\d{2}))?(?::\d{2}(?:\.\d+)?)?\s*(a\.?m\.?|p\.?m\.?)?\s*(?:z|[+-]\d{2}:?\d{2})?$/i.exec(
+      raw,
+    );
   if (match === null) return undefined;
   let hour = Number(match[1]);
   const minute = Number(match[2] ?? 0);
   if (minute > 59 || hour > 24 || (hour === 24 && minute > 0)) return undefined;
-  const meridiem = match[3]?.toLowerCase().startsWith("p") === true ? "pm" : match[3] === undefined ? undefined : "am";
+  const meridiem =
+    match[3]?.toLowerCase().startsWith("p") === true
+      ? "pm"
+      : match[3] === undefined
+        ? undefined
+        : "am";
   if (meridiem !== undefined) {
     if (hour === 0 || hour > 12) return undefined;
     hour = meridiem === "am" ? hour % 12 : (hour % 12) + 12;
@@ -387,7 +399,9 @@ export const fromSchemaOrg = (
           ? undefined
           : `${dateText(entry["validFrom"])}/${dateText(entry["validThrough"])}`;
       const short =
-        fromDate !== undefined && throughDate !== undefined && throughDate - fromDate < 7 * 86_400_000;
+        fromDate !== undefined &&
+        throughDate !== undefined &&
+        throughDate - fromDate < 7 * 86_400_000;
       return { entry, key, fromDate, throughDate, short };
     });
     if (windowed.some(({ short }) => short)) partial = true;
@@ -397,7 +411,9 @@ export const fromSchemaOrg = (
     if (at !== undefined && !Number.isNaN(at)) {
       const now = seasonal.filter(
         ({ key, fromDate, throughDate }) =>
-          key !== undefined && (fromDate ?? -Infinity) <= at && at <= (throughDate ?? Infinity) + 86_399_999,
+          key !== undefined &&
+          (fromDate ?? -Infinity) <= at &&
+          at <= (throughDate ?? Infinity) + 86_399_999,
       );
       if (now.length > 0) {
         season = now[0]!.key;
@@ -477,7 +493,8 @@ const RANGE_SEP = `\\s?(?:${DASH}|to|thru|through|until|till|['’]til|til)\\s?`
 const TIME =
   "(?:12\\s?(?:midnight|noon|mn|nn)\\b|\\d{1,2}(?:[:.]\\d{2}|h(?:\\d{2})?(?![a-z]))?(?:\\s?(?:a\\.?m\\.?|p\\.?m\\.?))?|noon|midnight)";
 /** This pattern is one time with am or pm: "7:00 am". */
-const CLOCK = "(?:12\\s?(?:midnight|noon)\\b|\\d{1,2}(?:[:.]\\d{2})?\\s?(?:a\\.?m\\.?|p\\.?m\\.?)|noon|midnight)";
+const CLOCK =
+  "(?:12\\s?(?:midnight|noon)\\b|\\d{1,2}(?:[:.]\\d{2})?\\s?(?:a\\.?m\\.?|p\\.?m\\.?)|noon|midnight)";
 /** "Open 24 hours", "24/7": open all day. "Within 24 hours" and "24 hours notice" are not. */
 const ALL_DAY_WORDS =
   "(?:open\\s)?(?<!(?:within|in|for|last|past|next|every|after|than)\\s)(?:24\\s?(?:hours|hrs?|h)\\b(?!\\s?(?:notice|in advance|advance|prior|before|ahead|later|turnaround|delivery|of|to|from))|24\\s?\\/\\s?7\\b|around the clock)";
@@ -511,7 +528,8 @@ interface Clock {
 
 const readClock = (value: string): Clock | undefined => {
   const text = value.trim().toLowerCase();
-  if (/^(?:12\s?)?(?:noon|nn)$/.test(text)) return { hour: 12, minute: 0, meridiem: "pm", h24: false };
+  if (/^(?:12\s?)?(?:noon|nn)$/.test(text))
+    return { hour: 12, minute: 0, meridiem: "pm", h24: false };
   if (/^(?:12\s?)?(?:midnight|mn)$/.test(text)) {
     return { hour: 12, minute: 0, meridiem: "am", h24: false };
   }
@@ -564,7 +582,12 @@ const read24 = (
     for (const [bIndex, closeHour] of options(b).entries()) {
       const open = openHour * 60 + a.minute;
       const close = closeHour * 60 + b.minute;
-      candidates.push({ open, close, length: lengthOf(open, close), written: aIndex === 0 && bIndex === 0 });
+      candidates.push({
+        open,
+        close,
+        length: lengthOf(open, close),
+        written: aIndex === 0 && bIndex === 0,
+      });
     }
   }
   const stated = a.h24 && b.h24;
@@ -650,7 +673,11 @@ export const readRange = (
     // morning one ("10-11"), is pm; a close of 12 after a morning opening is noon
     inferred = true;
     open =
-      a.hour === 12 ? 12 : a.hour >= 7 || (a.hour >= 5 && b.hour >= 1 && b.hour <= 3) ? a.hour : a.hour + 12;
+      a.hour === 12
+        ? 12
+        : a.hour >= 7 || (a.hour >= 5 && b.hour >= 1 && b.hour <= 3)
+          ? a.hour
+          : a.hour + 12;
     if (b.hour === 12) close = open < 12 ? 12 : 0;
     else if (open < 12) close = b.hour <= a.hour || b.hour - open < 3 ? b.hour + 12 : b.hour;
     else close = b.hour + 12 > open ? b.hour + 12 : b.hour;
@@ -673,13 +700,16 @@ const daysOfToken = (
   groups: Record<string, string | undefined>,
 ): { readonly days: Day[]; readonly spec: number } | undefined => {
   if (groups["every"] !== undefined) return { days: [...DAYS], spec: 0 };
-  if (groups["weekdays"] !== undefined) return { days: ["mon", "tue", "wed", "thu", "fri"], spec: 0 };
+  if (groups["weekdays"] !== undefined)
+    return { days: ["mon", "tue", "wed", "thu", "fri"], spec: 0 };
   if (groups["weekends"] !== undefined) return { days: ["sat", "sun"], spec: 0 };
   if (groups["span"] !== undefined) {
     const [from, to] = groups["span"].split(new RegExp(RANGE_SEP, "i"));
     const first = from === undefined ? undefined : dayOf(from.trim());
     const last = to === undefined ? undefined : dayOf(to.trim());
-    return first === undefined || last === undefined ? undefined : { days: dayRange(first, last), spec: 1 };
+    return first === undefined || last === undefined
+      ? undefined
+      : { days: dayRange(first, last), spec: 1 };
   }
   if (groups["day"] !== undefined) {
     const day = dayOf(groups["day"]);
@@ -778,7 +808,8 @@ export const fromText = (text: string): Array<Hours & { readonly label: string |
   const lines = original.map((line) => (line.length > MAX_LINE ? line : normalize(line)));
   const out: Array<Hours & { readonly label: string | null }> = [];
   /** A season or the size can cut a block from the block before it. Then the line above the block is not its label. */
-  let block: { start: number; lines: number[]; season: string | undefined; cut: boolean } | undefined;
+  let block:
+    { start: number; lines: number[]; season: string | undefined; cut: boolean } | undefined;
   const flush = (): void => {
     if (block === undefined) return;
     const current = block;
@@ -813,7 +844,9 @@ export const fromText = (text: string): Array<Hours & { readonly label: string |
         value !== undefined &&
         SERVICE.test(line.slice(0, value.start)) &&
         above.some((token) => token.days !== undefined) &&
-        above.some((token) => token.groups["times"] !== undefined || token.groups["closed"] !== undefined);
+        above.some(
+          (token) => token.groups["times"] !== undefined || token.groups["closed"] !== undefined,
+        );
       return (
         (date !== null && (value === undefined || date.index < value.start)) ||
         (!weekly && OCCASION.test(line)) ||
@@ -832,7 +865,10 @@ export const fromText = (text: string): Array<Hours & { readonly label: string |
       const line = lines[current.lines[at]!]!;
       const dayTokens = onLine.filter((token) => token.days !== undefined);
       const broad =
-        dayTokens.length >= 2 || dayTokens.some((token) => token.spec < 2) || heading || /^(?:hours|open)\b/i.test(line);
+        dayTokens.length >= 2 ||
+        dayTokens.some((token) => token.spec < 2) ||
+        heading ||
+        /^(?:hours|open)\b/i.test(line);
       const daysOnlyAbove =
         at > 0 &&
         !breaks.has(at - 1) &&
@@ -876,11 +912,18 @@ export const fromText = (text: string): Array<Hours & { readonly label: string |
     const lineHasDays = new Set<number>();
     for (const token of tokens) {
       if (isDays(token)) lineHasDays.add(token.line);
-      if (!firstOnLine.has(token.line) && (isDays(token) || isValue(token))) firstOnLine.set(token.line, token);
+      if (!firstOnLine.has(token.line) && (isDays(token) || isValue(token)))
+        firstOnLine.set(token.line, token);
     }
-    for (const [line, first] of firstOnLine) if (isValue(first) && lineHasDays.has(line)) valueFirst.add(line);
+    for (const [line, first] of firstOnLine)
+      if (isValue(first) && lineHasDays.has(line)) valueFirst.add(line);
 
-    const apply = (value: Interval | "closed", days: readonly Day[], spec: number, explicit: boolean): void => {
+    const apply = (
+      value: Interval | "closed",
+      days: readonly Day[],
+      spec: number,
+      explicit: boolean,
+    ): void => {
       for (const day of days) {
         if (value === "closed") {
           if (!explicit) {
@@ -908,10 +951,13 @@ export const fromText = (text: string): Array<Hours & { readonly label: string |
         openedBy.set(day, Math.max(openedBy.get(day) ?? -1, spec));
       }
     };
-    const valueOf = (token: Token): { value: Interval | "closed"; inferred: boolean } | undefined => {
+    const valueOf = (
+      token: Token,
+    ): { value: Interval | "closed"; inferred: boolean } | undefined => {
       if (token.groups["closed"] !== undefined) return { value: "closed", inferred: false };
       if (token.groups["allday"] !== undefined) return { value: ALL_DAY, inferred: false };
-      const parts = token.groups["times"] === undefined ? undefined : splitRange(token.groups["times"]);
+      const parts =
+        token.groups["times"] === undefined ? undefined : splitRange(token.groups["times"]);
       const range = parts === undefined ? undefined : readRange(parts[0], parts[1]);
       return range === undefined ? undefined : { value: range.interval, inferred: range.inferred };
     };
@@ -940,7 +986,8 @@ export const fromText = (text: string): Array<Hours & { readonly label: string |
       if (previous !== undefined && token.line !== previous.line) {
         excepting = false;
         let broken = dangling.has(previous.line) && lastWasDay;
-        for (let line = previous.line; line < token.line && !broken; line += 1) broken = breaks.has(line);
+        for (let line = previous.line; line < token.line && !broken; line += 1)
+          broken = breaks.has(line);
         if (broken) {
           currentDays = [];
           lastWasDay = false;
@@ -1046,7 +1093,9 @@ export const fromText = (text: string): Array<Hours & { readonly label: string |
       // "Today's Hours" are one day's ("Now open" is an exhibition's)
       const oneDay = /\b(today|tonight|now)\b/i.test(`${above} ${body.join(" ")}`);
       const opens = !oneDay && (heading || /^open\b/i.test(body[0] ?? ""));
-      const said = new Set(ranges.map((token) => (token.groups["times"] ?? "24h").replace(/\s+/g, "")));
+      const said = new Set(
+        ranges.map((token) => (token.groups["times"] ?? "24h").replace(/\s+/g, "")),
+      );
       const first = ranges[0] === undefined ? undefined : valueOf(ranges[0]);
       if (opens && said.size === 1 && first !== undefined && first.value !== "closed") {
         addInterval(week, DAYS, first.value);
@@ -1070,7 +1119,9 @@ export const fromText = (text: string): Array<Hours & { readonly label: string |
     const tokens = tokensOf(line, 0);
     const names = tokens.some(
       (token) =>
-        token.days !== undefined || token.groups["closed"] !== undefined || token.groups["allday"] !== undefined,
+        token.days !== undefined ||
+        token.groups["closed"] !== undefined ||
+        token.groups["allday"] !== undefined,
     );
     // a clock with am/pm or minutes reads as hours on its own line; a bare
     // range ("12-14 Main St") only beside a day
@@ -1086,7 +1137,8 @@ export const fromText = (text: string): Array<Hours & { readonly label: string |
     if ((names || clock) && (line.length <= 160 || ranges >= 2)) {
       // a season starts a schedule of its own ("Summer: Mon-Sun 10am-8pm")
       const season = seasonOf(line);
-      const cut = block !== undefined && (season !== undefined || block.lines.length >= MAX_BLOCK_LINES);
+      const cut =
+        block !== undefined && (season !== undefined || block.lines.length >= MAX_BLOCK_LINES);
       if (cut) flush();
       block ??= { start: index, lines: [], season, cut };
       block.lines.push(index);
@@ -1128,7 +1180,9 @@ export const describeWeek = (week: Week): string => {
         value.length === 0
           ? `${span} closed`
           : `${span} ${value
-              .map(([open, close]) => (open === "00:00" && close === "00:00" ? "open 24 hours" : `${open}–${close}`))
+              .map(([open, close]) =>
+                open === "00:00" && close === "00:00" ? "open 24 hours" : `${open}–${close}`,
+              )
               .join(", ")}`,
       );
     }

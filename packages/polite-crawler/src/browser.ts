@@ -35,10 +35,13 @@ export const browserMissing = async (
     if (existsSync(executable)) return undefined;
     // the headless shell is in a folder next to the folder of the full build, with the same revision
     let folder = dirname(executable);
-    while (dirname(folder) !== folder && !/^chromium-\d+$/.test(basename(folder))) folder = dirname(folder);
+    while (dirname(folder) !== folder && !/^chromium-\d+$/.test(basename(folder)))
+      folder = dirname(folder);
     const revision = /^chromium-(\d+)$/.exec(basename(folder))?.[1];
     if (revision === undefined) return undefined;
-    return existsSync(join(dirname(folder), `chromium_headless_shell-${revision}`)) ? undefined : NO_BROWSER;
+    return existsSync(join(dirname(folder), `chromium_headless_shell-${revision}`))
+      ? undefined
+      : NO_BROWSER;
   } catch {
     return undefined;
   }

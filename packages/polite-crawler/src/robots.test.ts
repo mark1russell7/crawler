@@ -111,7 +111,8 @@ describe("robots.txt per RFC 9309", () => {
       by: "Claude-User",
     });
     expect(
-      decide(parseRobots("User-agent: *\nAllow: /\n"), ["PoliteCrawler", "Claude-User"], "/x").allowed,
+      decide(parseRobots("User-agent: *\nAllow: /\n"), ["PoliteCrawler", "Claude-User"], "/x")
+        .allowed,
     ).toBe(true);
   });
 
@@ -155,7 +156,10 @@ describe("the deciding rule", () => {
       "# comment\nUser-agent: *\nDisallow: /private\nAllow: /private/open\n\nUser-agent: GPTBot\nDisallow: /\n",
     );
     const refused = decide(robots, ["PoliteCrawler"], "/private/a");
-    expect(refused).toMatchObject({ allowed: false, rule: { allow: false, pattern: "/private", line: 3 } });
+    expect(refused).toMatchObject({
+      allowed: false,
+      rule: { allow: false, pattern: "/private", line: 3 },
+    });
     expect(refused.groups?.[0]).toMatchObject({ agents: ["*"], line: 2 });
     const opened = decide(robots, ["PoliteCrawler"], "/private/open/x");
     expect(opened).toMatchObject({ allowed: true, rule: { allow: true, line: 4 } });
@@ -185,7 +189,10 @@ describe("the matcher", () => {
       ["/$", "/a", false],
     ];
     for (const [pattern, path, expected] of cases) {
-      expect(matchesPattern(normalizePath(pattern), normalizePath(path)), `${pattern} ${path}`).toBe(expected);
+      expect(
+        matchesPattern(normalizePath(pattern), normalizePath(path)),
+        `${pattern} ${path}`,
+      ).toBe(expected);
     }
   });
 
@@ -197,13 +204,17 @@ describe("the matcher", () => {
       "*".repeat(500) + "x$",
       "/*" + "a*".repeat(12) + "b",
     ];
-    const text = "User-agent: *\n" + hostile.map((pattern) => "Disallow: " + pattern).join("\n") + "\n";
+    const text =
+      "User-agent: *\n" + hostile.map((pattern) => "Disallow: " + pattern).join("\n") + "\n";
     const robots = parseRobots(text);
     for (const length of [40, 120, 2000, 20_000]) {
       expect(decide(robots, ["bot"], "/" + "a".repeat(length)).allowed).toBe(true);
     }
     // a site with many hostile rules and a long path
-    const rules = Array.from({ length: 2000 }, (_, index) => "Disallow: /*a*a*a*a*a*a*" + String(index) + "b");
+    const rules = Array.from(
+      { length: 2000 },
+      (_, index) => "Disallow: /*a*a*a*a*a*a*" + String(index) + "b",
+    );
     const many = parseRobots("User-agent: *\n" + rules.join("\n") + "\n");
     expect(decide(many, ["bot"], "/" + "a".repeat(2000)).allowed).toBe(true);
     expect(performance.now() - started).toBeLessThan(2000);
@@ -231,7 +242,10 @@ describe("the fixes of the review", () => {
       "User-agent: PoliteCrawler\nCrawl-delay: 5\nUser-agent: OtherBot\nDisallow: /\n",
     );
     expect(robots.groups).toHaveLength(1);
-    expect(decide(robots, ["PoliteCrawler"], "/x")).toMatchObject({ allowed: false, crawlDelaySeconds: 5 });
+    expect(decide(robots, ["PoliteCrawler"], "/x")).toMatchObject({
+      allowed: false,
+      crawlDelaySeconds: 5,
+    });
   });
 
   it("applies a usage line in the group that it is in, and on its path", () => {
@@ -269,7 +283,11 @@ describe("the fixes of the review", () => {
     expect(allowed("User-agent: Crawler9\nDisallow: /\n", "Crawler9", "/")).toBe(false);
     expect(allowed("User-agent: MyBot\nDisallow: /\n", "MyBot/1.0", "/")).toBe(false);
     expect(
-      allowed("User-agent: MyBot\nDisallow: /\n", "Mozilla/5.0 (compatible; MyBot/1.0; +https://example.com/bot)", "/"),
+      allowed(
+        "User-agent: MyBot\nDisallow: /\n",
+        "Mozilla/5.0 (compatible; MyBot/1.0; +https://example.com/bot)",
+        "/",
+      ),
     ).toBe(false);
     expect(
       allowed(

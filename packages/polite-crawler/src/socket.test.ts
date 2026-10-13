@@ -67,7 +67,8 @@ const make = async (options: Partial<CrawlerOptions> = {}) => {
   });
   const captures = async (): Promise<CaptureRecord[]> => {
     const rows: CaptureRecord[] = [];
-    for await (const row of new CaptureLog(join(dir, "crawl")).scan({ source: "fetch" })) rows.push(row);
+    for await (const row of new CaptureLog(join(dir, "crawl")).scan({ source: "fetch" }))
+      rows.push(row);
     return rows;
   };
   return { crawler, events, captures, index };
@@ -81,7 +82,10 @@ describe("bodies on a real socket", () => {
     const zipped = gzipSync(page);
     const site = await serve((request, response) => {
       if (request.url === "/aws") {
-        response.writeHead(200, { "content-type": "text/plain", "content-encoding": "aws-chunked" });
+        response.writeHead(200, {
+          "content-type": "text/plain",
+          "content-encoding": "aws-chunked",
+        });
         response.end("plain words");
         return;
       }
@@ -90,10 +94,20 @@ describe("bodies on a real socket", () => {
       response.end(zipped.subarray(0, Math.floor(zipped.length * 0.6)));
     });
     const { crawler } = await make();
-    const aws = await crawler.fetch({ url: `${site.origin}/aws`, mode: "api", recipe: "t", minIntervalMs: 0 });
+    const aws = await crawler.fetch({
+      url: `${site.origin}/aws`,
+      mode: "api",
+      recipe: "t",
+      minIntervalMs: 0,
+    });
     expect(aws).toMatchObject({ outcome: "ok" });
     expect(text(aws.body)).toBe("plain words");
-    const cut = await crawler.fetch({ url: `${site.origin}/cut`, mode: "api", recipe: "t", minIntervalMs: 0 });
+    const cut = await crawler.fetch({
+      url: `${site.origin}/cut`,
+      mode: "api",
+      recipe: "t",
+      minIntervalMs: 0,
+    });
     expect(cut).toMatchObject({ outcome: "ok", truncated: true });
     expect(cut.note).toMatch(/^the compressed body ended early/);
     expect(page.startsWith(text(cut.body))).toBe(true);
@@ -145,14 +159,26 @@ describe("failures on a real socket", () => {
     servers.pop()!.close();
     const { crawler, events } = await make();
     for (let attempt = 0; attempt < 5; attempt += 1) {
-      const failed = await crawler.fetch({ url: `http://127.0.0.1:${String(port)}/a`, mode: "api", recipe: "t" });
+      const failed = await crawler.fetch({
+        url: `http://127.0.0.1:${String(port)}/a`,
+        mode: "api",
+        recipe: "t",
+      });
       expect(failed).toMatchObject({ outcome: "error", status: 0 });
     }
-    const stopped = await crawler.fetch({ url: `http://127.0.0.1:${String(port)}/a`, mode: "api", recipe: "t" });
+    const stopped = await crawler.fetch({
+      url: `http://127.0.0.1:${String(port)}/a`,
+      mode: "api",
+      recipe: "t",
+    });
     expect(stopped.outcome).toBe("skipped");
     expect(stopped.note).toMatch(/^host stopped until .*: 5 failures in a row$/);
     expect(events.filter((event) => event.type === "stop")).toEqual([
-      expect.objectContaining({ type: "stop", host: `127.0.0.1:${String(port)}`, reason: "5 failures in a row" }),
+      expect.objectContaining({
+        type: "stop",
+        host: `127.0.0.1:${String(port)}`,
+        reason: "5 failures in a row",
+      }),
     ]);
     expect(events.some((event) => event.type === "wait" && event.reason === "backoff")).toBe(true);
     expect(events.at(-1)).toMatchObject({ type: "skip" });
@@ -170,14 +196,26 @@ describe("failures on a real socket", () => {
         throw new Error("a listener that fails");
       },
     });
-    expect((await crawler.fetch({ url: `${site.origin}/yes`, mode: "page", recipe: "page" })).outcome).toBe("ok");
-    expect((await crawler.fetch({ url: `${site.origin}/no`, mode: "page", recipe: "page" })).outcome).toBe("skipped");
-    expect(seen).toEqual(["request /robots.txt", "response /robots.txt", "request /yes", "response /yes", "skip /no"]);
+    expect(
+      (await crawler.fetch({ url: `${site.origin}/yes`, mode: "page", recipe: "page" })).outcome,
+    ).toBe("ok");
+    expect(
+      (await crawler.fetch({ url: `${site.origin}/no`, mode: "page", recipe: "page" })).outcome,
+    ).toBe("skipped");
+    expect(seen).toEqual([
+      "request /robots.txt",
+      "response /robots.txt",
+      "request /yes",
+      "response /yes",
+      "skip /no",
+    ]);
   });
 });
 
 describe("a render through the crawler", () => {
-  const renderer = (behave: (url: string, options: RenderOptions) => Promise<string>): Renderer & { seen: RenderOptions[] } => {
+  const renderer = (
+    behave: (url: string, options: RenderOptions) => Promise<string>,
+  ): Renderer & { seen: RenderOptions[] } => {
     const seen: RenderOptions[] = [];
     return {
       seen,
@@ -203,7 +241,9 @@ describe("a render through the crawler", () => {
     expect(await options.allowRequest!(`${site.origin}/secret`)).toBe(false);
     expect(await options.allowRequest!(`${site.origin}/app.js`)).toBe(true);
     expect(await options.allowRequest!("http://10.0.0.1/x")).toBe(true);
-    const row = (await captures()).find((capture) => (capture.payload as { rendered?: boolean }).rendered === true)!;
+    const row = (await captures()).find(
+      (capture) => (capture.payload as { rendered?: boolean }).rendered === true,
+    )!;
     expect(row.payload).toMatchObject({ content_type: RENDERED_TYPE, outcome: "ok" });
   });
 
@@ -212,12 +252,16 @@ describe("a render through the crawler", () => {
       response.end(request.url === "/robots.txt" ? "User-agent: *\nAllow: /\n" : "x");
     });
     const browser = renderer((url) => {
-      if (url.endsWith("/file")) throw new RenderRefused("download", `${url} gives a file, not a page`);
+      if (url.endsWith("/file"))
+        throw new RenderRefused("download", `${url} gives a file, not a page`);
       throw new RenderRefused("refused", `the request for ${url} was refused`);
     });
     const { crawler } = await make({ renderer: browser });
     for (let attempt = 0; attempt < 6; attempt += 1) {
-      const refused = await crawler.render({ url: `${site.origin}/page${String(attempt)}`, recipe: "page" });
+      const refused = await crawler.render({
+        url: `${site.origin}/page${String(attempt)}`,
+        recipe: "page",
+      });
       expect(refused).toMatchObject({ outcome: "skipped" });
       expect(refused.note).toMatch(/was refused$/);
     }

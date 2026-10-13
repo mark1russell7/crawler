@@ -66,7 +66,9 @@ const keepJsonLd = (
     let size = JSON.stringify(record).length;
     let candidate = record;
     if (size > room) {
-      candidate = Object.fromEntries(Object.entries(record).filter(([key]) => !BULKY.includes(key)));
+      candidate = Object.fromEntries(
+        Object.entries(record).filter(([key]) => !BULKY.includes(key)),
+      );
       size = JSON.stringify(candidate).length;
     }
     if (size > room) {
@@ -369,14 +371,20 @@ const indexCapture = async (
  * question sends no request and reads nothing again. An extractor that throws gives no document and an
  * `error`, and the fetch still succeeds.
  */
-export const fetchAndIndex = async (runtime: CrawlRuntime, request: FetchRequest): Promise<Indexed> => {
+export const fetchAndIndex = async (
+  runtime: CrawlRuntime,
+  request: FetchRequest,
+): Promise<Indexed> => {
   const fetched = await runtime.crawler.fetch(request);
   if (fetched.outcome !== "ok" && fetched.outcome !== "not-modified") return { fetched, docs: [] };
   return { fetched, ...(await indexCapture(runtime, fetched, request.recipe, false)) };
 };
 
 /** This function renders a page in the headless browser and adds what the page shows to the index. */
-export const renderAndIndex = async (runtime: CrawlRuntime, request: RenderRequest): Promise<Indexed> => {
+export const renderAndIndex = async (
+  runtime: CrawlRuntime,
+  request: RenderRequest,
+): Promise<Indexed> => {
   const fetched = await runtime.crawler.render(request);
   if (fetched.outcome !== "ok") return { fetched, docs: [] };
   return { fetched, ...(await indexCapture(runtime, fetched, request.recipe, true)) };
@@ -452,7 +460,9 @@ export const fetchPage = async (
   const target = plain.docs[0]?.meta["redirect"];
   if (typeof target === "string" && target.length > 0 && plain.blocked === undefined) {
     const followed = await fetchAndIndex(runtime, plainRequest(target));
-    notes.push(`the page sends the reader on to ${followed.fetched.url}, so the crawler fetched that page`);
+    notes.push(
+      `the page sends the reader on to ${followed.fetched.url}, so the crawler fetched that page`,
+    );
     if (followed.error !== undefined) notes.push(followed.error);
     plain = followed;
   }
@@ -465,7 +475,8 @@ export const fetchPage = async (
     first?.kind === "page" &&
     (plain.fetched.contentType === undefined || HTML_TYPE.test(plain.fetched.contentType));
   const wanted =
-    options.render === "always" || (options.render === "auto" && first?.meta["needs_render"] === true);
+    options.render === "always" ||
+    (options.render === "auto" && first?.meta["needs_render"] === true);
   if (reachable && wanted) {
     if (plain.blocked !== undefined) notes.push("the crawler does not render a bot check");
     else if (first === undefined || !html) {
@@ -598,7 +609,8 @@ export interface VerifyOptions {
 
 const knownDoc = (runtime: CrawlRuntime, id: string): Doc => {
   const doc = runtime.index.get(id);
-  if (doc === undefined) throw new Error(`no stored document ${id}: find one with find(), or fetch its page`);
+  if (doc === undefined)
+    throw new Error(`no stored document ${id}: find one with find(), or fetch its page`);
   return doc;
 };
 
@@ -632,7 +644,10 @@ export const recordOverride = async (
     readonly labels?: Readonly<Record<string, string>> | undefined;
   },
   action: string,
-  marks: { readonly scope?: string | undefined; readonly labels?: Readonly<Record<string, string>> | undefined } = {},
+  marks: {
+    readonly scope?: string | undefined;
+    readonly labels?: Readonly<Record<string, string>> | undefined;
+  } = {},
 ): Promise<void> => {
   const at = runtime.now();
   const scope = marks.scope ?? doc.scope;
@@ -669,7 +684,9 @@ export const readDocument = async (
     throw new Error(`the document ${id} has no version from the capture ${options.capture}`);
   }
   const aiInput: AiInput =
-    doc.ai_input === "no" || version?.ai_input === "no" ? "no" : (version?.ai_input ?? doc.ai_input);
+    doc.ai_input === "no" || version?.ai_input === "no"
+      ? "no"
+      : (version?.ai_input ?? doc.ai_input);
   const userProvided = options.userProvided ?? false;
   const held = isHeldBack({ ai_input: aiInput }, userProvided);
   if (aiInput === "no" && userProvided) await recordOverride(runtime, doc, "read");
@@ -775,7 +792,9 @@ const examineQuote = (
   // the note does not depend on the quote, so it tells nothing about the held-back text
   const notes = [
     ...(incomplete
-      ? ["the reader stopped before the end of the file, so the quote can be in the part that it did not read"]
+      ? [
+          "the reader stopped before the end of the file, so the quote can be in the part that it did not read",
+        ]
       : []),
     ...(held > 0 && !userProvided
       ? [`the check did not examine the versions that asked not to be AI input (${String(held)})`]
@@ -902,10 +921,20 @@ interface ReplayTally {
   readonly errors: Array<{ readonly capture: string; readonly error: string }>;
 }
 
-const newTally = (): ReplayTally => ({ captures: 0, failed: 0, missing: 0, unknown: new Set(), errors: [] });
+const newTally = (): ReplayTally => ({
+  captures: 0,
+  failed: 0,
+  missing: 0,
+  unknown: new Set(),
+  errors: [],
+});
 
 /** This function replays the cache entry of one capture, as the crawler made it at the time of the fetch. */
-const replayLatest = (build: ReplayTarget, envelope: CaptureRecord, payload: CapturePayload): void => {
+const replayLatest = (
+  build: ReplayTarget,
+  envelope: CaptureRecord,
+  payload: CapturePayload,
+): void => {
   const { url, variant } = captureTarget(payload);
   const fetchedAt = payload.fetched_at ?? envelope.received_at;
   if (payload.outcome === "redirect") {
@@ -1005,11 +1034,14 @@ const replayRecord = async (
     extracted = await extractor(body, {
       url,
       contentType:
-        variant === "rendered" ? "text/html; charset=utf-8" : (payload.content_type ?? latest?.content_type ?? null),
+        variant === "rendered"
+          ? "text/html; charset=utf-8"
+          : (payload.content_type ?? latest?.content_type ?? null),
     });
   } catch (error) {
     tally.failed += 1;
-    if (tally.errors.length < MAX_ERRORS) tally.errors.push({ capture: envelope.id, error: messageOf(error) });
+    if (tally.errors.length < MAX_ERRORS)
+      tally.errors.push({ capture: envelope.id, error: messageOf(error) });
     return;
   }
   // a bot check is not the content, so it is not a version of the document
@@ -1049,7 +1081,9 @@ export const reindex = async (
   options: { readonly batch?: number | undefined } = {},
 ): Promise<ReindexResult> => {
   const since = runtime.now();
-  const build = runtime.index.beginRebuild(options.batch === undefined ? {} : { batch: options.batch });
+  const build = runtime.index.beginRebuild(
+    options.batch === undefined ? {} : { batch: options.batch },
+  );
   const tally = newTally();
   let damaged = 0;
   try {
@@ -1096,14 +1130,21 @@ const TAIL_SLACK_MS = 10 * 60_000;
 const missed = (runtime: CrawlRuntime, envelope: CaptureRecord): boolean => {
   if (envelope.kind !== "capture" && envelope.kind !== "revisit") return false;
   const payload = envelope.payload as CapturePayload | null;
-  if (payload === null || typeof payload !== "object" || typeof payload.url !== "string") return false;
+  if (payload === null || typeof payload !== "object" || typeof payload.url !== "string")
+    return false;
   const fetchedAt = payload.fetched_at ?? envelope.received_at;
   const { url, variant } = captureTarget(payload);
   const entry = runtime.index.latest(url, variant);
   if (payload.outcome === "redirect") return entry === undefined || entry.fetched_at < fetchedAt;
-  if (typeof payload.blob !== "string" || (payload.outcome !== "ok" && payload.outcome !== "not-modified")) return false;
+  if (
+    typeof payload.blob !== "string" ||
+    (payload.outcome !== "ok" && payload.outcome !== "not-modified")
+  )
+    return false;
   if (entry === undefined || entry.fetched_at < fetchedAt) return true;
-  return runtime.extractors.get(payload.recipe) !== undefined && !runtime.index.hasVersion(envelope.id);
+  return (
+    runtime.extractors.get(payload.recipe) !== undefined && !runtime.index.hasVersion(envelope.id)
+  );
 };
 
 /**
@@ -1120,7 +1161,8 @@ const missed = (runtime: CrawlRuntime, envelope: CaptureRecord): boolean => {
 export const catchUpIndex = async (runtime: CrawlRuntime): Promise<CatchUpResult | undefined> => {
   if (runtime.index.stale) return { mode: "rebuild", ...(await reindex(runtime)) };
   const newest = runtime.index.newestFetch();
-  const since = newest === undefined ? undefined : new Date(Date.parse(newest) - TAIL_SLACK_MS).toISOString();
+  const since =
+    newest === undefined ? undefined : new Date(Date.parse(newest) - TAIL_SLACK_MS).toISOString();
   const tally = newTally();
   let damaged = 0;
   const scan = runtime.captures.scan(

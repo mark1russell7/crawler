@@ -11,12 +11,22 @@ interface Decisions {
   readonly pagePath: string;
   readonly agents: readonly string[];
   readonly sites: Readonly<
-    Record<string, { readonly url: string; readonly sha256: string; readonly page: string; readonly home?: string }>
+    Record<
+      string,
+      {
+        readonly url: string;
+        readonly sha256: string;
+        readonly page: string;
+        readonly home?: string;
+      }
+    >
   >;
 }
 
 const corpus = new URL("../test/corpus/robots/", import.meta.url);
-const decisions = JSON.parse(await readFile(new URL("decisions.json", corpus), "utf8")) as Decisions;
+const decisions = JSON.parse(
+  await readFile(new URL("decisions.json", corpus), "utf8"),
+) as Decisions;
 
 /** The character of one verdict, as the study writes it. */
 const code = (decision: RobotsDecision, token: string): string => {
@@ -43,8 +53,12 @@ describe("the golden robots.txt corpus", () => {
       const robots = parseRobots(new TextDecoder("utf-8").decode(bytes));
       // the reader of the crawler reads each file of the corpus as a file, not as a web page
       expect(robotsFromResponse(200, "text/plain", bytes).unreachable, domain).toBeUndefined();
-      const page = decisions.agents.map((token) => code(decide(robots, [token], decisions.pagePath), token)).join("");
-      const home = decisions.agents.map((token) => code(decide(robots, [token], "/"), token)).join("");
+      const page = decisions.agents
+        .map((token) => code(decide(robots, [token], decisions.pagePath), token))
+        .join("");
+      const home = decisions.agents
+        .map((token) => code(decide(robots, [token], "/"), token))
+        .join("");
       expect(page, `${domain} page`).toBe(site.page);
       expect(home, `${domain} home`).toBe(site.home ?? site.page);
     }

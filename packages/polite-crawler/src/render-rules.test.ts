@@ -36,13 +36,17 @@ const fakeClock = (): Clock & { slept: number[] } => {
 const browser = (
   answer: (url: string) => Partial<Rendered>,
   requests: readonly string[] = [],
-): Renderer & { calls: Array<{ url: string; options: RenderOptions; decided: Record<string, boolean> }> } => {
-  const calls: Array<{ url: string; options: RenderOptions; decided: Record<string, boolean> }> = [];
+): Renderer & {
+  calls: Array<{ url: string; options: RenderOptions; decided: Record<string, boolean> }>;
+} => {
+  const calls: Array<{ url: string; options: RenderOptions; decided: Record<string, boolean> }> =
+    [];
   return {
     calls,
     async render(url, options) {
       const decided: Record<string, boolean> = {};
-      for (const request of [url, ...requests]) decided[request] = (await options.allowRequest?.(request)) ?? true;
+      for (const request of [url, ...requests])
+        decided[request] = (await options.allowRequest?.(request)) ?? true;
       calls.push({ url, options, decided });
       return { html: "<p>shown</p>", finalUrl: url, status: 200, headers: {}, ...answer(url) };
     },
@@ -82,7 +86,8 @@ const make = async (renderer: Renderer, options: Partial<CrawlerOptions> = {}) =
   };
   const captures = async (): Promise<CaptureRecord[]> => {
     const rows: CaptureRecord[] = [];
-    for await (const row of new CaptureLog(join(dir, "crawl")).scan({ source: "fetch" })) rows.push(row);
+    for await (const row of new CaptureLog(join(dir, "crawl")).scan({ source: "fetch" }))
+      rows.push(row);
     return rows;
   };
   return { crawler, agent, clock, robots, captures };
@@ -107,7 +112,10 @@ describe("the rules of a fetch, applied to a render", () => {
     robots("https://shop.example", "User-agent: *\nDisallow: /private\n");
     robots("https://cdn.example", "User-agent: *\nDisallow: /secret\n");
     // the crawler holds the robots.txt of the CDN after one fetch there
-    agent.get("https://cdn.example").intercept({ path: "/index.html", method: "GET" }).reply(200, "cdn");
+    agent
+      .get("https://cdn.example")
+      .intercept({ path: "/index.html", method: "GET" })
+      .reply(200, "cdn");
     await crawler.fetch({ url: "https://cdn.example/index.html", mode: "page", recipe: "page" });
     const shown = await crawler.render({ url: page, recipe: "page" });
     expect(shown.outcome).toBe("ok");
@@ -125,7 +133,9 @@ describe("the rules of a fetch, applied to a render", () => {
       "file:///etc/passwd": false,
       "data:text/plain,hello": true,
     });
-    const capture = (await captures()).find((row) => (row.payload as { rendered?: boolean }).rendered === true)!;
+    const capture = (await captures()).find(
+      (row) => (row.payload as { rendered?: boolean }).rendered === true,
+    )!;
     // the page and three requests went out; a data: URL is not a request on the network
     expect(capture.payload).toMatchObject({ subrequests: { allowed: 4, refused: 5 } });
   });
@@ -167,7 +177,11 @@ describe("the rules of a fetch, applied to a render", () => {
       render: async (url, options) => {
         const next = `${new URL(url).origin}/private/next`;
         expect(await options.allowRequest?.(next)).toBe(false);
-        throw new RenderRefused("refused", `the page moved: the request for ${next} was refused`, next);
+        throw new RenderRefused(
+          "refused",
+          `the page moved: the request for ${next} was refused`,
+          next,
+        );
       },
       close: () => Promise.resolve(),
     };
@@ -218,16 +232,27 @@ describe("the rules of a fetch, applied to a render", () => {
     const { crawler, robots, captures } = await make(slow);
     robots("https://shop.example", "User-agent: *\nAllow: /\n");
     const controller = new AbortController();
-    const pending = crawler.render({ url: "https://shop.example/x", recipe: "page", signal: controller.signal });
+    const pending = crawler.render({
+      url: "https://shop.example/x",
+      recipe: "page",
+      signal: controller.signal,
+    });
     await opened;
     controller.abort();
     // the browser had the page, so the render is an error, and the host does not count it
     expect(await pending).toMatchObject({ outcome: "error", note: "cancelled by the caller" });
     const closing = crawler.render({ url: "https://shop.example/y", recipe: "page" });
     setTimeout(() => void crawler.close(), 20);
-    expect(await closing).toMatchObject({ outcome: "skipped", note: "crawler closed", capture: undefined });
+    expect(await closing).toMatchObject({
+      outcome: "skipped",
+      note: "crawler closed",
+      capture: undefined,
+    });
     release();
-    const kinds = (await captures()).map((row) => [row.kind, (row.payload as { note?: string }).note ?? ""]);
+    const kinds = (await captures()).map((row) => [
+      row.kind,
+      (row.payload as { note?: string }).note ?? "",
+    ]);
     expect(kinds).toEqual([
       ["capture", ""],
       ["capture", "cancelled by the caller"],
@@ -284,7 +309,12 @@ describe("the renders at one time", () => {
     const { crawler, robots } = await make(browser.renderer);
     for (const host of HOSTS) robots(`https://${host}`, "User-agent: *\nAllow: /\n");
     const pages = HOSTS.map((host) => crawler.render({ url: `https://${host}/`, recipe: "page" }));
-    expect((await browser.drain(pages)).map((page) => page.outcome)).toEqual(["ok", "ok", "ok", "ok"]);
+    expect((await browser.drain(pages)).map((page) => page.outcome)).toEqual([
+      "ok",
+      "ok",
+      "ok",
+      "ok",
+    ]);
     expect(browser.most()).toBe(2);
   });
 
@@ -293,24 +323,42 @@ describe("the renders at one time", () => {
     const { crawler, robots, captures, clock } = await make(browser.renderer, { maxRenders: 1 });
     browser.useClock(clock);
     for (const host of HOSTS.slice(0, 2)) robots(`https://${host}`, "User-agent: *\nAllow: /\n");
-    const pages = HOSTS.slice(0, 2).map((host) => crawler.render({ url: `https://${host}/`, recipe: "page" }));
+    const pages = HOSTS.slice(0, 2).map((host) =>
+      crawler.render({ url: `https://${host}/`, recipe: "page" }),
+    );
     await browser.drain(pages);
     expect(browser.most()).toBe(1);
     // each render takes one second of the clock; the second page waited a second for the slot, not in its lease
-    const rendered = (await captures()).filter((row) => (row.payload as { rendered?: boolean }).rendered === true);
-    expect(rendered.map((row) => (row.payload as { elapsed_ms: number }).elapsed_ms)).toEqual([1000, 1000]);
+    const rendered = (await captures()).filter(
+      (row) => (row.payload as { rendered?: boolean }).rendered === true,
+    );
+    expect(rendered.map((row) => (row.payload as { elapsed_ms: number }).elapsed_ms)).toEqual([
+      1000, 1000,
+    ]);
   });
 
   it("refuses a count of renders that is not a whole number of 1 or more", async () => {
-    await expect(make(held().renderer, { maxRenders: 0 })).rejects.toThrow(/maxRenders must be an integer of 1 or more/);
+    await expect(make(held().renderer, { maxRenders: 0 })).rejects.toThrow(
+      /maxRenders must be an integer of 1 or more/,
+    );
   });
 });
 
 describe("a renderer with no browser", () => {
   for (const [name, failure] of [
-    ["says so with RenderRefused", () => new RenderRefused("browser", "rendering needs a browser: npx playwright-core install chromium-headless-shell")],
+    [
+      "says so with RenderRefused",
+      () =>
+        new RenderRefused(
+          "browser",
+          "rendering needs a browser: npx playwright-core install chromium-headless-shell",
+        ),
+    ],
     ["throws the error of a missing playwright-core", () => new Error(NO_PLAYWRIGHT)],
-    ["throws the error of Playwright for a missing executable", () => new Error("browserType.launch: Executable doesn't exist at /x/chrome")],
+    [
+      "throws the error of Playwright for a missing executable",
+      () => new Error("browserType.launch: Executable doesn't exist at /x/chrome"),
+    ],
   ] as const) {
     it(`renders no more pages, with no wait and no error capture, when it ${name}`, async () => {
       let calls = 0;
@@ -324,13 +372,16 @@ describe("a renderer with no browser", () => {
       const { crawler, robots, captures, clock } = await make(missing);
       robots("https://shop.example", "User-agent: *\nAllow: /\n");
       const pages = [];
-      for (const path of ["/a", "/b", "/c"]) pages.push(await crawler.render({ url: `https://shop.example${path}`, recipe: "page" }));
+      for (const path of ["/a", "/b", "/c"])
+        pages.push(await crawler.render({ url: `https://shop.example${path}`, recipe: "page" }));
       expect(calls).toBe(1);
       expect(pages.map((page) => page.outcome)).toEqual(["skipped", "skipped", "skipped"]);
       expect(pages.every((page) => /rendering needs/.test(page.note ?? ""))).toBe(true);
       // no backoff: the host waits only its usual pace between two pages
       expect(clock.slept.every((ms) => ms < 5000)).toBe(true);
-      const outcomes = (await captures()).map((row) => (row.payload as { outcome?: string }).outcome);
+      const outcomes = (await captures()).map(
+        (row) => (row.payload as { outcome?: string }).outcome,
+      );
       expect(outcomes).not.toContain("error");
     });
   }
@@ -350,11 +401,17 @@ describe("a renderer with no browser", () => {
       checks += 1;
       return Promise.resolve("rendering needs a browser");
     });
-    await expect(none.render("https://shop.example/a", options)).rejects.toMatchObject({ reason: "browser" });
-    await expect(none.render("https://shop.example/b", options)).rejects.toMatchObject({ reason: "browser" });
+    await expect(none.render("https://shop.example/a", options)).rejects.toMatchObject({
+      reason: "browser",
+    });
+    await expect(none.render("https://shop.example/b", options)).rejects.toMatchObject({
+      reason: "browser",
+    });
     expect([checks, rendered]).toEqual([1, 0]);
     const present = checkedRenderer(inner, () => Promise.resolve(undefined));
-    expect((await present.render("https://shop.example/c", options)).finalUrl).toBe("https://shop.example/c");
+    expect((await present.render("https://shop.example/c", options)).finalUrl).toBe(
+      "https://shop.example/c",
+    );
     expect(rendered).toBe(1);
   });
 });

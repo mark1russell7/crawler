@@ -39,7 +39,12 @@ const serve = async (handler: Handler) => {
   await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
   servers.push(server);
   const { port } = server.address() as AddressInfo;
-  return { origin: `http://127.0.0.1:${String(port)}`, port, hits, paths: () => hits.map((hit) => hit.path) };
+  return {
+    origin: `http://127.0.0.1:${String(port)}`,
+    port,
+    hits,
+    paths: () => hits.map((hit) => hit.path),
+  };
 };
 
 /** time that passes for real during a request, and jumps ahead when the crawler sleeps */
@@ -86,13 +91,15 @@ const make = async (options: Partial<CrawlerOptions> = {}) => {
   });
   const captures = async (): Promise<CaptureRecord[]> => {
     const rows: CaptureRecord[] = [];
-    for await (const row of new CaptureLog(join(dir, "crawl")).scan({ source: "fetch" })) rows.push(row);
+    for await (const row of new CaptureLog(join(dir, "crawl")).scan({ source: "fetch" }))
+      rows.push(row);
     return rows;
   };
   return { crawler, clock, index, blobs, dir, captures };
 };
 
-const payloadOf = (row: CaptureRecord): Record<string, unknown> => row.payload as Record<string, unknown>;
+const payloadOf = (row: CaptureRecord): Record<string, unknown> =>
+  row.payload as Record<string, unknown>;
 const text = (bytes: Uint8Array | undefined): string => new TextDecoder().decode(bytes);
 
 describe("bodies that fail, stop early or arrive slowly", () => {
@@ -107,14 +114,31 @@ describe("bodies that fail, stop early or arrive slowly", () => {
       response.end("fine");
     });
     const { crawler, clock, captures } = await make();
-    const reset = await crawler.fetch({ url: `${site.origin}/reset`, mode: "api", recipe: "t", minIntervalMs: 2000 });
-    expect(reset).toMatchObject({ outcome: "error", status: 200, body: undefined, blob: undefined });
+    const reset = await crawler.fetch({
+      url: `${site.origin}/reset`,
+      mode: "api",
+      recipe: "t",
+      minIntervalMs: 2000,
+    });
+    expect(reset).toMatchObject({
+      outcome: "error",
+      status: 200,
+      body: undefined,
+      blob: undefined,
+    });
     expect(reset.note).toMatch(/^body failed: /);
-    const ok = await crawler.fetch({ url: `${site.origin}/ok`, mode: "api", recipe: "t", minIntervalMs: 2000 });
+    const ok = await crawler.fetch({
+      url: `${site.origin}/ok`,
+      mode: "api",
+      recipe: "t",
+      minIntervalMs: 2000,
+    });
     expect(ok.outcome).toBe("ok");
     // the host rested after the failure: the floor, or the backoff when longer
     expect(clock.slept[0]).toBeGreaterThanOrEqual(2000);
-    const rows = (await captures()).map((row) => `${row.kind} ${String(payloadOf(row)["outcome"])}`);
+    const rows = (await captures()).map(
+      (row) => `${row.kind} ${String(payloadOf(row)["outcome"])}`,
+    );
     expect(rows).toEqual(["capture error", "capture ok"]);
   });
 
@@ -151,7 +175,12 @@ describe("bodies that fail, stop early or arrive slowly", () => {
       response.end("x".repeat(100));
     });
     const { crawler, index } = await make();
-    const cut = await crawler.fetch({ url: `${site.origin}/big`, mode: "api", recipe: "t", maxBytes: 40 });
+    const cut = await crawler.fetch({
+      url: `${site.origin}/big`,
+      mode: "api",
+      recipe: "t",
+      maxBytes: 40,
+    });
     expect(cut).toMatchObject({ outcome: "ok", truncated: true, note: "truncated at 40 bytes" });
     expect(cut.body).toHaveLength(40);
     expect(index.latest(cut.url)).toMatchObject({ etag: null, blob: cut.blob });
@@ -182,7 +211,13 @@ describe("bodies that fail, stop early or arrive slowly", () => {
     });
     const { crawler } = await make();
     const get = (path: string, maxBytes?: number) =>
-      crawler.fetch({ url: `${site.origin}${path}`, mode: "api", recipe: "t", minIntervalMs: 0, ...(maxBytes ? { maxBytes } : {}) });
+      crawler.fetch({
+        url: `${site.origin}${path}`,
+        mode: "api",
+        recipe: "t",
+        minIntervalMs: 0,
+        ...(maxBytes ? { maxBytes } : {}),
+      });
     for (const path of ["/gzip", "/deflate", "/raw", "/br", "/stacked"]) {
       expect(text((await get(path)).body), path).toBe(page);
     }
@@ -235,12 +270,21 @@ describe("a store that fails", () => {
   it("records a blob store failure as an error of the store, which does not count against the host", async () => {
     const site = await serve((_request, response) => response.end("x"));
     const full = new FileBlobStore(join(tmpdir(), "never-written"));
-    full.put = () => Promise.reject(Object.assign(new Error("ENOSPC: no space left on device"), { code: "ENOSPC" }));
+    full.put = () =>
+      Promise.reject(
+        Object.assign(new Error("ENOSPC: no space left on device"), { code: "ENOSPC" }),
+      );
     const { crawler } = await make({ blobs: full, politeness: { maxFailures: 1 } });
     const fetched = await crawler.fetch({ url: `${site.origin}/a`, mode: "api", recipe: "t" });
-    expect(fetched).toMatchObject({ outcome: "error", note: "blob store: ENOSPC: no space left on device", blob: undefined });
+    expect(fetched).toMatchObject({
+      outcome: "error",
+      note: "blob store: ENOSPC: no space left on device",
+      blob: undefined,
+    });
     // with one failure as the limit, a failure of the host would stop it here
-    expect((await crawler.fetch({ url: `${site.origin}/b`, mode: "api", recipe: "t" })).note).not.toMatch(/^host stopped/);
+    expect(
+      (await crawler.fetch({ url: `${site.origin}/b`, mode: "api", recipe: "t" })).note,
+    ).not.toMatch(/^host stopped/);
   });
 });
 
@@ -257,8 +301,15 @@ describe("robots.txt that the crawler cannot read in full", () => {
       response.end("secret page");
     });
     const { crawler } = await make();
-    const page = await crawler.fetch({ url: `${site.origin}/private`, mode: "page", recipe: "page" });
-    expect(page).toMatchObject({ outcome: "skipped", note: "robots.txt disallows it for PoliteCrawler" });
+    const page = await crawler.fetch({
+      url: `${site.origin}/private`,
+      mode: "page",
+      recipe: "page",
+    });
+    expect(page).toMatchObject({
+      outcome: "skipped",
+      note: "robots.txt disallows it for PoliteCrawler",
+    });
     expect(site.paths()).toEqual(["/robots.txt"]);
   });
 
@@ -307,12 +358,24 @@ describe("redirects", () => {
     });
     const { crawler, captures } = await make();
     const headers = { authorization: "Bearer TOKEN", "x-trace": "1" };
-    const moved = await crawler.fetch({ url: `${api.origin}/v1/works`, mode: "api", recipe: "t", headers, minIntervalMs: 0 });
+    const moved = await crawler.fetch({
+      url: `${api.origin}/v1/works`,
+      mode: "api",
+      recipe: "t",
+      headers,
+      minIntervalMs: 0,
+    });
     expect(text(moved.body)).toBe("moved here");
     expect(other.hits[0]!.headers["authorization"]).toBeUndefined();
     expect(other.hits[0]!.headers["x-trace"]).toBe("1");
     expect(other.paths()).toEqual(["/v2/works?q=x&api_key=SECRET123"]);
-    const same = await crawler.fetch({ url: `${api.origin}/same`, mode: "api", recipe: "t", headers, minIntervalMs: 0 });
+    const same = await crawler.fetch({
+      url: `${api.origin}/same`,
+      mode: "api",
+      recipe: "t",
+      headers,
+      minIntervalMs: 0,
+    });
     expect(text(same.body)).toBe("same origin");
     expect(api.hits.at(-1)!.headers["authorization"]).toBe("Bearer TOKEN");
     const log = JSON.stringify(await captures());
@@ -336,20 +399,30 @@ describe("redirects", () => {
       response.end();
     });
     const { crawler } = await make();
-    const get = (path: string) => crawler.fetch({ url: `${site.origin}${path}`, mode: "page", recipe: "page" });
-    const [bad, mail, file, good] = await Promise.all([get("/bad-host"), get("/mailto"), get("/file"), get("/good")]);
+    const get = (path: string) =>
+      crawler.fetch({ url: `${site.origin}${path}`, mode: "page", recipe: "page" });
+    const [bad, mail, file, good] = await Promise.all([
+      get("/bad-host"),
+      get("/mailto"),
+      get("/file"),
+      get("/good"),
+    ]);
     expect(bad).toMatchObject({ outcome: "error", note: "bad redirect target" });
     expect(mail).toMatchObject({ outcome: "skipped", note: "not an http(s) URL" });
     expect(file).toMatchObject({ outcome: "skipped", note: "not an http(s) URL" });
     expect(good.outcome).toBe("ok");
-    expect(await crawler.fetch({ url: "file:///C:/Windows/win.ini", mode: "page", recipe: "page" })).toMatchObject({
+    expect(
+      await crawler.fetch({ url: "file:///C:/Windows/win.ini", mode: "page", recipe: "page" }),
+    ).toMatchObject({
       outcome: "skipped",
       note: "not an http(s) URL",
     });
-    expect(await crawler.fetch({ url: "http://[::1", mode: "page", recipe: "page" })).toMatchObject({
-      outcome: "skipped",
-      note: "not a valid URL",
-    });
+    expect(await crawler.fetch({ url: "http://[::1", mode: "page", recipe: "page" })).toMatchObject(
+      {
+        outcome: "skipped",
+        note: "not a valid URL",
+      },
+    );
   });
 
   it("stops an endless chain with an error after five redirects", async () => {
@@ -359,7 +432,12 @@ describe("redirects", () => {
       response.end();
     });
     const { crawler } = await make();
-    const chain = await crawler.fetch({ url: `${site.origin}/0`, mode: "api", recipe: "t", minIntervalMs: 0 });
+    const chain = await crawler.fetch({
+      url: `${site.origin}/0`,
+      mode: "api",
+      recipe: "t",
+      minIntervalMs: 0,
+    });
     expect(chain).toMatchObject({ outcome: "error", note: "more than 5 redirects", status: 302 });
     expect(site.hits).toHaveLength(6);
   });
@@ -377,7 +455,12 @@ describe("redirects", () => {
     const { crawler } = await make();
     const day = 24 * 60 * 60 * 1000;
     for (let round = 0; round < 3; round += 1) {
-      const fetched = await crawler.fetch({ url: `${site.origin}/old`, mode: "api", recipe: "t", maxAgeMs: day });
+      const fetched = await crawler.fetch({
+        url: `${site.origin}/old`,
+        mode: "api",
+        recipe: "t",
+        maxAgeMs: day,
+      });
       expect(text(fetched.body)).toBe("the new page");
     }
     expect(site.paths()).toEqual(["/old", "/new"]);
@@ -394,8 +477,18 @@ describe("the cache", () => {
     });
     const { crawler } = await make();
     const day = 24 * 60 * 60 * 1000;
-    const intro = await crawler.fetch({ url: `${site.origin}/page#intro`, mode: "api", recipe: "t", maxAgeMs: day });
-    const pricing = await crawler.fetch({ url: `${site.origin}/page#pricing`, mode: "api", recipe: "t", maxAgeMs: day });
+    const intro = await crawler.fetch({
+      url: `${site.origin}/page#intro`,
+      mode: "api",
+      recipe: "t",
+      maxAgeMs: day,
+    });
+    const pricing = await crawler.fetch({
+      url: `${site.origin}/page#pricing`,
+      mode: "api",
+      recipe: "t",
+      maxAgeMs: day,
+    });
     expect(intro.url).toBe(`${site.origin}/page`);
     expect(pricing).toMatchObject({ fromCache: true, url: `${site.origin}/page` });
     const same = await Promise.all(
@@ -416,10 +509,20 @@ describe("the cache", () => {
       response.end("the body");
     });
     const { crawler, dir } = await make();
-    const first = await crawler.fetch({ url: `${site.origin}/r`, mode: "api", recipe: "t", minIntervalMs: 0 });
+    const first = await crawler.fetch({
+      url: `${site.origin}/r`,
+      mode: "api",
+      recipe: "t",
+      minIntervalMs: 0,
+    });
     const blob = first.blob!;
     await rm(join(dir, "blobs", blob.slice(0, 2), blob.slice(2, 4), blob), { force: true });
-    const second = await crawler.fetch({ url: `${site.origin}/r`, mode: "api", recipe: "t", minIntervalMs: 0 });
+    const second = await crawler.fetch({
+      url: `${site.origin}/r`,
+      mode: "api",
+      recipe: "t",
+      minIntervalMs: 0,
+    });
     expect(site.hits[1]!.headers["if-none-match"]).toBeUndefined();
     expect(second).toMatchObject({ outcome: "ok" });
     expect(text(second.body)).toBe("the body");
@@ -432,12 +535,21 @@ describe("the cache", () => {
         response.end();
         return;
       }
-      response.writeHead(200, { etag: '"v1"', "content-type": "text/html", "content-signal": "ai-input=no" });
+      response.writeHead(200, {
+        etag: '"v1"',
+        "content-type": "text/html",
+        "content-signal": "ai-input=no",
+      });
       response.end("<p>no AI</p>");
     });
     const { crawler, captures } = await make();
     await crawler.fetch({ url: `${site.origin}/p`, mode: "api", recipe: "t", minIntervalMs: 0 });
-    const again = await crawler.fetch({ url: `${site.origin}/p`, mode: "api", recipe: "t", minIntervalMs: 0 });
+    const again = await crawler.fetch({
+      url: `${site.origin}/p`,
+      mode: "api",
+      recipe: "t",
+      minIntervalMs: 0,
+    });
     expect(again).toMatchObject({ outcome: "not-modified", contentType: "text/html" });
     expect(again.signals.ai_input).toBe("no");
     const revisit = (await captures()).find((row) => row.kind === "revisit")!;
@@ -455,7 +567,14 @@ describe("the cache", () => {
     });
     const { crawler, clock } = await make();
     const get = (path: string, maxAgeMs: number | "auto", accept?: string) =>
-      crawler.fetch({ url: `${site.origin}${path}`, mode: "api", recipe: "t", maxAgeMs, minIntervalMs: 0, ...(accept ? { accept } : {}) });
+      crawler.fetch({
+        url: `${site.origin}${path}`,
+        mode: "api",
+        recipe: "t",
+        maxAgeMs,
+        minIntervalMs: 0,
+        ...(accept ? { accept } : {}),
+      });
     await get("/fresh", "auto");
     expect((await get("/fresh", "auto")).fromCache).toBe(true);
     clock.advance(61_000);
@@ -487,7 +606,8 @@ describe("waits, errors and stops", () => {
     process.on("warning", onWarning);
     try {
       const { crawler, clock } = await make();
-      const get = (path: string) => crawler.fetch({ url: `${site.origin}${path}`, mode: "api", recipe: "t" });
+      const get = (path: string) =>
+        crawler.fetch({ url: `${site.origin}${path}`, mode: "api", recipe: "t" });
       await get("/odd");
       // the backoff applies: half of the 5 s step, and half of the rest at random 0.5
       expect(clock.slept).toEqual([]);
@@ -507,15 +627,24 @@ describe("waits, errors and stops", () => {
 
   it("keeps client errors and requests to wait out of the stop count", async () => {
     const site = await serve((request, response) => {
-      const status = request.url?.startsWith("/bad") ? 400 : request.url?.startsWith("/busy") ? 503 : request.url === "/broken" ? 500 : 200;
+      const status = request.url?.startsWith("/bad")
+        ? 400
+        : request.url?.startsWith("/busy")
+          ? 503
+          : request.url === "/broken"
+            ? 500
+            : 200;
       response.writeHead(status);
       response.end("x");
     });
     const { crawler } = await make();
-    const get = (path: string) => crawler.fetch({ url: `${site.origin}${path}`, mode: "api", recipe: "t" });
-    for (let index = 0; index < 5; index += 1) expect((await get(`/bad${String(index)}`)).outcome).toBe("error");
+    const get = (path: string) =>
+      crawler.fetch({ url: `${site.origin}${path}`, mode: "api", recipe: "t" });
+    for (let index = 0; index < 5; index += 1)
+      expect((await get(`/bad${String(index)}`)).outcome).toBe("error");
     expect((await get("/good")).outcome).toBe("ok");
-    for (let index = 0; index < 4; index += 1) expect((await get(`/busy${String(index)}`)).outcome).toBe("unavailable");
+    for (let index = 0; index < 4; index += 1)
+      expect((await get(`/busy${String(index)}`)).outcome).toBe("unavailable");
     expect((await get("/broken")).outcome).toBe("error");
     expect((await get("/good")).outcome).toBe("ok");
   });
@@ -526,7 +655,8 @@ describe("waits, errors and stops", () => {
       response.end("x");
     });
     const { crawler, clock } = await make();
-    const get = (path: string) => crawler.fetch({ url: `${site.origin}${path}`, mode: "api", recipe: "t" });
+    const get = (path: string) =>
+      crawler.fetch({ url: `${site.origin}${path}`, mode: "api", recipe: "t" });
     expect((await get("/wp-admin/")).outcome).toBe("blocked");
     expect((await get("/blog/post")).note).toMatch(/^host stopped until .*: blocked$/);
     clock.advance(61 * 60 * 1000);
@@ -552,7 +682,8 @@ describe("waits, errors and stops", () => {
       response.end("page");
     });
     const { crawler, clock } = await make();
-    const get = (path: string) => crawler.fetch({ url: `${site.origin}${path}`, mode: "page", recipe: "page" });
+    const get = (path: string) =>
+      crawler.fetch({ url: `${site.origin}${path}`, mode: "page", recipe: "page" });
     const robotsAsked = () => site.paths().filter((path) => path === "/robots.txt").length;
     expect((await get("/public")).outcome).toBe("ok");
     robotsDown = true;
@@ -581,7 +712,8 @@ describe("waits, errors and stops", () => {
       response.end(request.url === "/robots.txt" ? "User-agent: *\nAllow: /\n" : "page");
     });
     const { crawler, clock } = await make();
-    const get = (path: string) => crawler.fetch({ url: `${site.origin}${path}`, mode: "page", recipe: "page" });
+    const get = (path: string) =>
+      crawler.fetch({ url: `${site.origin}${path}`, mode: "page", recipe: "page" });
     expect((await get("/a")).note).toBe(
       "robots.txt could not be read (status 503), so nothing on the site is fetched",
     );
@@ -605,8 +737,17 @@ describe("waits, errors and stops", () => {
     const { crawler } = await make();
     const url = `${site.origin}/members`;
     expect((await crawler.fetch({ url, mode: "page", recipe: "page" })).outcome).toBe("ok");
-    const asked = await crawler.fetch({ url, mode: "page", recipe: "page", onBehalfOf: ["Claude-User"], maxAgeMs: 86_400_000 });
-    expect(asked).toMatchObject({ outcome: "skipped", note: "robots.txt disallows it for Claude-User" });
+    const asked = await crawler.fetch({
+      url,
+      mode: "page",
+      recipe: "page",
+      onBehalfOf: ["Claude-User"],
+      maxAgeMs: 86_400_000,
+    });
+    expect(asked).toMatchObject({
+      outcome: "skipped",
+      note: "robots.txt disallows it for Claude-User",
+    });
   });
 
   it("records why a page was permitted: the robots.txt capture, the tokens and the rule", async () => {
@@ -680,7 +821,8 @@ describe("closing and cancelling", () => {
       clock: undefined,
       politeness: { apiIntervalMs: 2000 },
     });
-    const get = (path: string) => crawler.fetch({ url: `${site.origin}${path}`, mode: "api", recipe: "t" });
+    const get = (path: string) =>
+      crawler.fetch({ url: `${site.origin}${path}`, mode: "api", recipe: "t" });
     const first = get("/1");
     const queued = [get("/2"), get("/3")];
     await first;
@@ -702,7 +844,12 @@ describe("closing and cancelling", () => {
     const { crawler } = await make({ clock: undefined, politeness: { apiIntervalMs: 5000 } });
     await crawler.fetch({ url: `${site.origin}/1`, mode: "api", recipe: "t" });
     const controller = new AbortController();
-    const waiting = crawler.fetch({ url: `${site.origin}/2`, mode: "api", recipe: "t", signal: controller.signal });
+    const waiting = crawler.fetch({
+      url: `${site.origin}/2`,
+      mode: "api",
+      recipe: "t",
+      signal: controller.signal,
+    });
     setTimeout(() => controller.abort(), 50);
     expect(await waiting).toMatchObject({ outcome: "skipped", note: "cancelled by the caller" });
     expect(site.paths()).toEqual(["/1"]);
@@ -712,7 +859,9 @@ describe("closing and cancelling", () => {
 describe("the politeness policy", () => {
   it("gives one host its own pace", async () => {
     const site = await serve((_request, response) => response.end("x"));
-    const { crawler, clock } = await make({ politeness: { hosts: { "127.0.0.1": { apiIntervalMs: 7000 } } } });
+    const { crawler, clock } = await make({
+      politeness: { hosts: { "127.0.0.1": { apiIntervalMs: 7000 } } },
+    });
     await crawler.fetch({ url: `${site.origin}/a`, mode: "api", recipe: "t" });
     await crawler.fetch({ url: `${site.origin}/b`, mode: "api", recipe: "t" });
     expect(clock.slept).toHaveLength(1);
@@ -727,7 +876,9 @@ describe("the politeness policy", () => {
     await expect(make({ from: "ops@exämple.com" })).rejects.toThrow(/printable ASCII/);
     const site = await serve((_request, response) => response.end("x"));
     const { crawler } = await make();
-    expect(await crawler.fetch({ url: `${site.origin}/a`, mode: "api", recipe: "t", maxBytes: -1 })).toMatchObject({
+    expect(
+      await crawler.fetch({ url: `${site.origin}/a`, mode: "api", recipe: "t", maxBytes: -1 }),
+    ).toMatchObject({
       outcome: "skipped",
       note: "invalid option: maxBytes is -1",
     });

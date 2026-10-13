@@ -14,7 +14,17 @@ import {
   type ReactElement,
 } from "react";
 import type { AgentRow, PackedSite, Role, StudyAgent, StudySite, Summary } from "../lib/study.ts";
-import { ROLES, STATES, STUDY_DATA_ID, niceMax, percent, refused, ticks, unpack, verdictOf } from "../lib/study.ts";
+import {
+  ROLES,
+  STATES,
+  STUDY_DATA_ID,
+  niceMax,
+  percent,
+  refused,
+  ticks,
+  unpack,
+  verdictOf,
+} from "../lib/study.ts";
 
 const VERDICTS = [
   { code: "N", label: "Refused by name", glyph: "✕" },
@@ -25,7 +35,8 @@ const VERDICTS = [
   { code: "U", label: "Unreachable", glyph: "–" },
 ] as const;
 
-const label = (code: string): string => VERDICTS.find((verdict) => verdict.code === code)?.label ?? "";
+const label = (code: string): string =>
+  VERDICTS.find((verdict) => verdict.code === code)?.label ?? "";
 const cellClass = (code: string): string => `pc-v-${code === "." ? "o" : code}`;
 
 /* ---------------------------------------------------------------------------------------------- */
@@ -126,13 +137,20 @@ export function RefusalChart({
                     onFocus={() => setHover(row.token)}
                     onBlur={() => setHover(undefined)}
                   >
-                    <span className="pc-rbar-part pc-v-N" style={{ width: `${String((percent(row.byName, answered) / max) * 100)}%` }} />
-                    <span className="pc-rbar-part pc-v-S" style={{ width: `${String((percent(row.byStar, answered) / max) * 100)}%` }} />
+                    <span
+                      className="pc-rbar-part pc-v-N"
+                      style={{ width: `${String((percent(row.byName, answered) / max) * 100)}%` }}
+                    />
+                    <span
+                      className="pc-rbar-part pc-v-S"
+                      style={{ width: `${String((percent(row.byStar, answered) / max) * 100)}%` }}
+                    />
                     {hover === row.token ? (
                       <span className="pc-tip pc-rbar-tip" role="tooltip">
                         <strong>{row.token}</strong>: {row.refused} of {answered} sites refuse it.
                         <br />
-                        {row.byName} by name, {row.byStar} with all bots. {row.welcomed} sites permit it by name.
+                        {row.byName} by name, {row.byStar} with all bots. {row.welcomed} sites
+                        permit it by name.
                       </span>
                     ) : null}
                   </span>
@@ -144,7 +162,12 @@ export function RefusalChart({
       </div>
       <details className="pc-table-view">
         <summary>Show the numbers as a table</summary>
-        <div className="pc-table-wrap" tabIndex={0} role="region" aria-label="The refusals for each agent">
+        <div
+          className="pc-table-wrap"
+          tabIndex={0}
+          role="region"
+          aria-label="The refusals for each agent"
+        >
           <table className="pc-table">
             <thead>
               <tr>
@@ -179,7 +202,10 @@ export function RefusalChart({
   );
 }
 
-const MARKS: Record<Exclude<Role, "control">, { readonly label: string; readonly className: string }> = {
+const MARKS: Record<
+  Exclude<Role, "control">,
+  { readonly label: string; readonly className: string }
+> = {
   training: { label: "Training crawler", className: "pc-mark-training" },
   search: { label: "Search crawler", className: "pc-mark-search" },
   user: { label: "Acts for a person", className: "pc-mark-user" },
@@ -191,10 +217,16 @@ export function CompanyChart({
 }: {
   readonly companies: ReadonlyArray<{
     readonly owner: string;
-    readonly agents: ReadonlyArray<{ readonly token: string; readonly role: Role; readonly share: number }>;
+    readonly agents: ReadonlyArray<{
+      readonly token: string;
+      readonly role: Role;
+      readonly share: number;
+    }>;
   }>;
 }): ReactElement {
-  const max = niceMax(Math.max(...companies.flatMap((company) => company.agents.map((agent) => agent.share))));
+  const max = niceMax(
+    Math.max(...companies.flatMap((company) => company.agents.map((agent) => agent.share))),
+  );
   const [hover, setHover] = useState<string | undefined>(undefined);
   return (
     <figure className="pc-chart pc-study-chart not-content">
@@ -264,7 +296,12 @@ export function CompanyChart({
       </div>
       <details className="pc-table-view">
         <summary>Show the numbers as a table</summary>
-        <div className="pc-table-wrap" tabIndex={0} role="region" aria-label="The refusals for each company">
+        <div
+          className="pc-table-wrap"
+          tabIndex={0}
+          role="region"
+          aria-label="The refusals for each company"
+        >
           <table className="pc-table">
             <thead>
               <tr>
@@ -282,7 +319,9 @@ export function CompanyChart({
                     const agent = company.agents.find((candidate) => candidate.role === role);
                     return (
                       <td key={role}>
-                        {agent === undefined ? "–" : (
+                        {agent === undefined ? (
+                          "–"
+                        ) : (
                           <>
                             <code>{agent.token}</code> {agent.share.toFixed(1)}%
                           </>
@@ -361,7 +400,8 @@ const decidingLines = (site: StudySite | undefined, index: number): string | und
   const ref = site?.r?.[index];
   if (site === undefined || ref === undefined || ref === 0) return undefined;
   const [group, rule] = ref;
-  const text = (line: number): string => `line ${String(line)}: ${site.lines?.[String(line)] ?? ""}`;
+  const text = (line: number): string =>
+    `line ${String(line)}: ${site.lines?.[String(line)] ?? ""}`;
   return group > 0 ? `${text(group)}\n${text(rule)}` : text(rule);
 };
 
@@ -371,7 +411,11 @@ const PAGE = 25;
  * The grid and the table are two islands of one module, so they share this state. The table can
  * hydrate after the grid changes it: it reads the state when it starts, and then it listens.
  */
-const shared: { agent: number; pick: string | undefined; picks: number } = { agent: 0, pick: undefined, picks: 0 };
+const shared: { agent: number; pick: string | undefined; picks: number } = {
+  agent: 0,
+  pick: undefined,
+  picks: 0,
+};
 const listeners = new Set<() => void>();
 const publish = (change: Partial<typeof shared>): void => {
   Object.assign(shared, change);
@@ -411,7 +455,8 @@ export function StudyGrid({
     }
     return result;
   }, [sites, agent]);
-  const answered = (counts["N"] ?? 0) + (counts["S"] ?? 0) + (counts["n"] ?? 0) + (counts["."] ?? 0);
+  const answered =
+    (counts["N"] ?? 0) + (counts["S"] ?? 0) + (counts["n"] ?? 0) + (counts["."] ?? 0);
   const refusing = (counts["N"] ?? 0) + (counts["S"] ?? 0);
   const token = agents[agent]?.token ?? "";
 
@@ -443,7 +488,9 @@ export function StudyGrid({
     if (site === undefined) return;
     publish({ pick: site.domain, picks: shared.picks + 1 });
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    document.getElementById(TABLE_ID)?.scrollIntoView({ behavior: reduced ? "auto" : "smooth", block: "start" });
+    document
+      .getElementById(TABLE_ID)
+      ?.scrollIntoView({ behavior: reduced ? "auto" : "smooth", block: "start" });
   };
 
   const move = (index: number): void => {
@@ -454,9 +501,15 @@ export function StudyGrid({
 
   const onKey = (event: KeyboardEvent<HTMLDivElement>): void => {
     const grid = gridRef.current;
-    const columns = grid === null ? 40 : getComputedStyle(grid).gridTemplateColumns.split(" ").length;
+    const columns =
+      grid === null ? 40 : getComputedStyle(grid).gridTemplateColumns.split(" ").length;
     const at = focus ?? 0;
-    const step: Record<string, number> = { ArrowRight: 1, ArrowLeft: -1, ArrowDown: columns, ArrowUp: -columns };
+    const step: Record<string, number> = {
+      ArrowRight: 1,
+      ArrowLeft: -1,
+      ArrowDown: columns,
+      ArrowUp: -columns,
+    };
     if (event.key in step) {
       event.preventDefault();
       move(at + (step[event.key] ?? 0));
@@ -475,16 +528,20 @@ export function StudyGrid({
   };
 
   const tipSite = tip === undefined ? undefined : sites[tip.index];
-  const tipLines = tipSite === undefined ? undefined : decidingLines(details?.get(tipSite.domain), agent);
+  const tipLines =
+    tipSite === undefined ? undefined : decidingLines(details?.get(tipSite.domain), agent);
   const focused = focus === undefined ? undefined : sites[focus];
 
   return (
-    <section className="pc-tool pc-study-grid-tool not-content" aria-label="The domains, one square each">
+    <section
+      className="pc-tool pc-study-grid-tool not-content"
+      aria-label="The domains, one square each"
+    >
       <div className="pc-crawl-title">
         <strong>The top {sites.length.toLocaleString("en-US")} domains, one square each</strong>
         <span>
-          Select an agent. The squares go in the sequence of rank, from the top left. Select a square, or use the arrow
-          keys and Enter, to find its site in the table.
+          Select an agent. The squares go in the sequence of rank, from the top left. Select a
+          square, or use the arrow keys and Enter, to find its site in the table.
         </span>
       </div>
       <div className="pc-agent-picker">
@@ -542,7 +599,11 @@ export function StudyGrid({
           ))}
         </div>
         {tip !== undefined && tipSite !== undefined ? (
-          <div className="pc-tip pc-grid-tip" role="tooltip" style={{ left: `${String(tip.x)}px`, top: `${String(tip.y)}px` }}>
+          <div
+            className="pc-tip pc-grid-tip"
+            role="tooltip"
+            style={{ left: `${String(tip.x)}px`, top: `${String(tip.y)}px` }}
+          >
             <strong>
               {tipSite.rank}. {tipSite.domain}
             </strong>
@@ -553,7 +614,9 @@ export function StudyGrid({
           </div>
         ) : null}
         <p className="pc-sr" aria-live="polite">
-          {focused === undefined ? "" : `${String(focused.rank)}. ${focused.domain}: ${label(verdictOf(focused, agent)).toLowerCase()}`}
+          {focused === undefined
+            ? ""
+            : `${String(focused.rank)}. ${focused.domain}: ${label(verdictOf(focused, agent)).toLowerCase()}`}
         </p>
       </div>
       <ul className="pc-chart-legend pc-grid-legend">
@@ -566,8 +629,9 @@ export function StudyGrid({
         ))}
       </ul>
       <p className="pc-crawl-verdict" aria-live="polite">
-        <code>{token}</code>: {refusing} of the {answered} sites that answered refuse it ({percent(refusing, answered).toFixed(1)}%), and{" "}
-        {counts["N"]} of them name it. The share does not count the sites that blocked the request or were unreachable.
+        <code>{token}</code>: {refusing} of the {answered} sites that answered refuse it (
+        {percent(refusing, answered).toFixed(1)}%), and {counts["N"]} of them name it. The share
+        does not count the sites that blocked the request or were unreachable.
       </p>
     </section>
   );
@@ -622,7 +686,9 @@ export function StudyTable({
       if (filter === "refuses") return refused(verdictOf(site, agent));
       if (filter === "names")
         return agents.some(
-          (candidate, index) => candidate.role !== "control" && (verdictOf(site, index) === "N" || verdictOf(site, index) === "n"),
+          (candidate, index) =>
+            candidate.role !== "control" &&
+            (verdictOf(site, index) === "N" || verdictOf(site, index) === "n"),
         );
       if (filter === "blocked") return site.state === "b";
       if (filter === "none") return site.state === "u";
@@ -646,24 +712,44 @@ export function StudyTable({
   ];
 
   return (
-    <section className="pc-tool pc-study-table not-content" id={TABLE_ID} aria-label="Each site and its verdicts">
+    <section
+      className="pc-tool pc-study-table not-content"
+      id={TABLE_ID}
+      aria-label="Each site and its verdicts"
+    >
       <div className="pc-study-filters">
         <label className="pc-field">
           <span>Find a site</span>
-          <input type="search" value={query} placeholder="for example wikipedia" onChange={(event) => setQuery(event.currentTarget.value)} />
+          <input
+            type="search"
+            value={query}
+            placeholder="for example wikipedia"
+            onChange={(event) => setQuery(event.currentTarget.value)}
+          />
         </label>
         <div className="pc-toggle" role="group" aria-label="Show">
           {filters.map(([key, text]) => (
-            <button key={key} type="button" aria-pressed={filter === key} onClick={() => setFilter(key)}>
+            <button
+              key={key}
+              type="button"
+              aria-pressed={filter === key}
+              onClick={() => setFilter(key)}
+            >
               {text}
             </button>
           ))}
         </div>
       </div>
       <p className="pc-chart-muted pc-study-count" aria-live="polite">
-        {rows.length.toLocaleString("en-US")} {rows.length === 1 ? "domain" : "domains"}. Select a domain to see the lines that decided.
+        {rows.length.toLocaleString("en-US")} {rows.length === 1 ? "domain" : "domains"}. Select a
+        domain to see the lines that decided.
       </p>
-      <div className="pc-table-wrap pc-scroll" tabIndex={0} role="region" aria-label="The verdicts of each domain">
+      <div
+        className="pc-table-wrap pc-scroll"
+        tabIndex={0}
+        role="region"
+        aria-label="The verdicts of each domain"
+      >
         <table className="pc-table pc-verdict-table">
           <thead>
             <tr>
@@ -686,7 +772,11 @@ export function StudyTable({
               const isOpen = open === site.domain;
               const counted = site.state !== "b" && site.state !== "u";
               const row = (
-                <tr key={site.domain} className={`pc-vrow${isOpen ? " pc-vrow-open" : ""}`} onClick={() => toggle(site.domain)}>
+                <tr
+                  key={site.domain}
+                  className={`pc-vrow${isOpen ? " pc-vrow-open" : ""}`}
+                  onClick={() => toggle(site.domain)}
+                >
                   <td className="pc-vrank">{site.rank}</td>
                   <th scope="row">
                     <button
@@ -720,7 +810,9 @@ export function StudyTable({
                     })
                   ) : (
                     <td colSpan={agents.length} className={`pc-vstate pc-vstate-${site.state}`}>
-                      {site.state === "b" ? "Blocked at the edge: the rules are not known" : "Unreachable: no answer"}
+                      {site.state === "b"
+                        ? "Blocked at the edge: the rules are not known"
+                        : "Unreachable: no answer"}
                     </td>
                   )}
                 </tr>
@@ -730,7 +822,11 @@ export function StudyTable({
                     row,
                     <tr key={`${site.domain}:open`} className="pc-vdetail">
                       <td colSpan={agents.length + 2}>
-                        <SiteDetail site={site} detail={details?.get(site.domain)} agents={agents} />
+                        <SiteDetail
+                          site={site}
+                          detail={details?.get(site.domain)}
+                          agents={agents}
+                        />
                       </td>
                     </tr>,
                   ]
@@ -774,7 +870,8 @@ function SiteDetail({
   readonly detail: StudySite | undefined;
   readonly agents: readonly StudyAgent[];
 }): ReactElement {
-  if (detail === undefined) return <p className="pc-chart-muted">The page gets the lines from the dataset…</p>;
+  if (detail === undefined)
+    return <p className="pc-chart-muted">The page gets the lines from the dataset…</p>;
   const host = detail.host ?? detail.domain;
   const decided = agents
     .map((agent, index) => ({ agent, index, lines: decidingLines(detail, index) }))
@@ -824,7 +921,9 @@ function SiteDetail({
           ))}
         </ul>
       ) : site.state === "f" ? (
-        <p className="pc-chart-muted">No rule of the file applies to a page path for these agents.</p>
+        <p className="pc-chart-muted">
+          No rule of the file applies to a page path for these agents.
+        </p>
       ) : null}
     </div>
   );

@@ -62,17 +62,32 @@ const studyData = (url: string, title: string, description: string): unknown => 
         name: "The robots.txt rules for AI agents of the top 1,000 domains",
         description: `For each of the top ${String(summary.listSize)} domains of the Tranco list ${data.list.id}: the state of the answer, the robots.txt verdict for ${String(data.agents.length)} user agents (${data.agents.map((agent) => agent.token).join(", ")}), the lines that decided, the content signals and the crawl delays.`,
         url,
-        keywords: ["robots.txt", "AI crawlers", "GPTBot", "ClaudeBot", "Claude-User", "ChatGPT-User", "Google-Extended", "CCBot", "content signals", "RFC 9309"],
+        keywords: [
+          "robots.txt",
+          "AI crawlers",
+          "GPTBot",
+          "ClaudeBot",
+          "Claude-User",
+          "ChatGPT-User",
+          "Google-Extended",
+          "CCBot",
+          "content signals",
+          "RFC 9309",
+        ],
         creator: author,
         datePublished: STUDY_PUBLISHED,
         dateModified: modified,
         temporalCoverage: modified,
         isBasedOn: data.list.url,
         // the same data in the repository, and the package that made it
-        sameAs: ["https://github.com/mark1russell7/crawler/tree/main/packages/site/src/data", "https://www.npmjs.com/package/polite-crawler"],
+        sameAs: [
+          "https://github.com/mark1russell7/crawler/tree/main/packages/site/src/data",
+          "https://www.npmjs.com/package/polite-crawler",
+        ],
         license: DATA_LICENSE.url,
         isAccessibleForFree: true,
-        measurementTechnique: "One request for /robots.txt for each domain, decided with RFC 9309 by polite-crawler",
+        measurementTechnique:
+          "One request for /robots.txt for each domain, decided with RFC 9309 by polite-crawler",
         variableMeasured: [
           "The state of the answer: a robots.txt file, no file, blocked at the edge, or unreachable",
           ...data.agents.map((agent) => `The verdict for ${agent.token}`),
@@ -80,8 +95,16 @@ const studyData = (url: string, title: string, description: string): unknown => 
           "Crawl-delay",
         ],
         distribution: [
-          { "@type": "DataDownload", encodingFormat: "application/json", contentUrl: `${SITE}data/robots-study.json` },
-          { "@type": "DataDownload", encodingFormat: "text/csv", contentUrl: `${SITE}data/robots-study.csv` },
+          {
+            "@type": "DataDownload",
+            encodingFormat: "application/json",
+            contentUrl: `${SITE}data/robots-study.json`,
+          },
+          {
+            "@type": "DataDownload",
+            encodingFormat: "text/csv",
+            contentUrl: `${SITE}data/robots-study.csv`,
+          },
         ],
       },
     ],
@@ -111,7 +134,10 @@ const homeData = (description: string): unknown => ({
       operatingSystem: "Windows, macOS, Linux",
       softwareVersion: pkg.version,
       downloadUrl: "https://www.npmjs.com/package/polite-crawler",
-      sameAs: ["https://github.com/mark1russell7/crawler", "https://www.npmjs.com/package/polite-crawler"],
+      sameAs: [
+        "https://github.com/mark1russell7/crawler",
+        "https://www.npmjs.com/package/polite-crawler",
+      ],
       offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
       url: SITE,
       author,
@@ -171,7 +197,11 @@ export const onRequest = defineRouteMiddleware((context) => {
     setMeta("name", "description", description);
     setMeta("property", "og:description", description);
     setMeta("property", "article:published_time", STUDY_PUBLISHED);
-    setMeta("property", "article:modified_time", (study as unknown as Study).fetched.from.slice(0, 10));
+    setMeta(
+      "property",
+      "article:modified_time",
+      (study as unknown as Study).fetched.from.slice(0, 10),
+    );
     setMeta("property", "article:author", STUDY_AUTHOR.name);
   }
 
@@ -179,7 +209,10 @@ export const onRequest = defineRouteMiddleware((context) => {
   if (id === "404") {
     for (let index = head.length - 1; index >= 0; index -= 1) {
       const entry = head[index]!;
-      if ((entry.tag === "link" && entry.attrs?.["rel"] === "canonical") || (entry.tag === "meta" && entry.attrs?.["property"] === "og:url"))
+      if (
+        (entry.tag === "link" && entry.attrs?.["rel"] === "canonical") ||
+        (entry.tag === "meta" && entry.attrs?.["property"] === "og:url")
+      )
         head.splice(index, 1);
     }
     head.push({ tag: "meta", attrs: { name: "robots", content: "noindex" } });
@@ -187,7 +220,10 @@ export const onRequest = defineRouteMiddleware((context) => {
   }
 
   // the text font, before the style sheet asks for it
-  head.push({ tag: "link", attrs: { rel: "preload", href: font, as: "font", type: "font/woff2", crossorigin: true } });
+  head.push({
+    tag: "link",
+    attrs: { rel: "preload", href: font, as: "font", type: "font/woff2", crossorigin: true },
+  });
 
   if (home) head.push(jsonLd(homeData(description)));
   else head.push(jsonLd(breadcrumbs(url, title)));

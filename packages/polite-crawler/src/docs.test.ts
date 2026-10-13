@@ -39,13 +39,20 @@ describe("the versions of a document", () => {
   it("show the latest capture, also when its text is shorter, and keep the earlier versions", () => {
     const index = memory();
     index.upsert(
-      version("fetch.v1", "2026-10-01T00:00:00.000Z", "Hours: Tuesday to Sunday. We also cater weddings.", {
-        meta: { jsonld: [{ openingHours: "Tu-Su" }], description: "old" },
-      }),
+      version(
+        "fetch.v1",
+        "2026-10-01T00:00:00.000Z",
+        "Hours: Tuesday to Sunday. We also cater weddings.",
+        {
+          meta: { jsonld: [{ openingHours: "Tu-Su" }], description: "old" },
+        },
+      ),
       "2026-10-01T00:00:01.000Z",
     );
     const now = index.upsert(
-      version("fetch.v2", "2026-10-02T00:00:00.000Z", "CLOSED PERMANENTLY", { meta: { description: "new" } }),
+      version("fetch.v2", "2026-10-02T00:00:00.000Z", "CLOSED PERMANENTLY", {
+        meta: { description: "new" },
+      }),
       "2026-10-02T00:00:01.000Z",
     );
     expect(now).toMatchObject({
@@ -67,8 +74,14 @@ describe("the versions of a document", () => {
 
   it("keep the latest by fetch time when the captures come out of sequence", () => {
     const index = memory();
-    index.upsert(version("fetch.new", "2026-10-02T00:00:00.000Z", "new text"), "2026-10-03T00:00:00.000Z");
-    const doc = index.upsert(version("fetch.old", "2026-10-01T00:00:00.000Z", "old text"), "2026-10-03T00:00:00.000Z");
+    index.upsert(
+      version("fetch.new", "2026-10-02T00:00:00.000Z", "new text"),
+      "2026-10-03T00:00:00.000Z",
+    );
+    const doc = index.upsert(
+      version("fetch.old", "2026-10-01T00:00:00.000Z", "old text"),
+      "2026-10-03T00:00:00.000Z",
+    );
     expect(doc.text).toBe("new text");
   });
 
@@ -86,9 +99,15 @@ describe("the versions of a document", () => {
 
   it("lift a no for AI input when a later capture of the page does not say it", () => {
     const index = memory();
-    index.upsert(version("fetch.a", "2026-10-01T00:00:00.000Z", "text", { ai_input: "no" }), "2026-10-01T00:00:00.000Z");
+    index.upsert(
+      version("fetch.a", "2026-10-01T00:00:00.000Z", "text", { ai_input: "no" }),
+      "2026-10-01T00:00:00.000Z",
+    );
     expect(index.get("url:https://forno.example/")?.ai_input).toBe("no");
-    const lifted = index.upsert(version("fetch.b", "2026-10-02T00:00:00.000Z", "text", { ai_input: "yes" }), "2026-10-02T00:00:00.000Z");
+    const lifted = index.upsert(
+      version("fetch.b", "2026-10-02T00:00:00.000Z", "text", { ai_input: "yes" }),
+      "2026-10-02T00:00:00.000Z",
+    );
     expect(lifted.ai_input).toBe("yes");
   });
 
@@ -98,21 +117,33 @@ describe("the versions of a document", () => {
       version(capture, at, "Bistro", { blob, meta: { needs_render: true } });
     index.upsert(shell("fetch.p1", "2026-10-01T00:00:00.000Z", "aa"), "2026-10-01T00:00:00.000Z");
     index.upsert(
-      version("fetch.r1", "2026-10-01T00:00:05.000Z", "Bistro. Dinner Monday to Friday.", { rendered: true, blob: "rr" }),
+      version("fetch.r1", "2026-10-01T00:00:05.000Z", "Bistro. Dinner Monday to Friday.", {
+        rendered: true,
+        blob: "rr",
+      }),
       "2026-10-01T00:00:05.000Z",
     );
     // a revalidation of the same body: the render stays
-    const same = index.upsert(shell("fetch.p2", "2026-10-02T00:00:00.000Z", "aa"), "2026-10-02T00:00:00.000Z");
+    const same = index.upsert(
+      shell("fetch.p2", "2026-10-02T00:00:00.000Z", "aa"),
+      "2026-10-02T00:00:00.000Z",
+    );
     expect(same).toMatchObject({ capture: "fetch.r1", rendered: true });
     expect(same.captures).toContain("fetch.p2");
     // a new body: the plain text is the page now, until a new render
-    const changed = index.upsert(shell("fetch.p3", "2026-10-03T00:00:00.000Z", "bb"), "2026-10-03T00:00:00.000Z");
+    const changed = index.upsert(
+      shell("fetch.p3", "2026-10-03T00:00:00.000Z", "bb"),
+      "2026-10-03T00:00:00.000Z",
+    );
     expect(changed).toMatchObject({ capture: "fetch.p3", rendered: false });
   });
 
   it("hold back a render that stays current, when its capture refused AI input and a newer plain capture does not", () => {
     const index = memory();
-    index.upsert(version("fetch.p1", "2026-10-01T00:00:00.000Z", "Bistro", { blob: "aa", ai_input: "no" }), "x");
+    index.upsert(
+      version("fetch.p1", "2026-10-01T00:00:00.000Z", "Bistro", { blob: "aa", ai_input: "no" }),
+      "x",
+    );
     index.upsert(
       version("fetch.r1", "2026-10-01T00:00:05.000Z", "Bistro. The vault opens at noon.", {
         rendered: true,
@@ -121,7 +152,10 @@ describe("the versions of a document", () => {
       }),
       "x",
     );
-    const same = index.upsert(version("fetch.p2", "2026-10-02T00:00:00.000Z", "Bistro", { blob: "aa", ai_input: "yes" }), "x");
+    const same = index.upsert(
+      version("fetch.p2", "2026-10-02T00:00:00.000Z", "Bistro", { blob: "aa", ai_input: "yes" }),
+      "x",
+    );
     expect(same).toMatchObject({ capture: "fetch.r1", ai_input: "no" });
     expect(index.find("vault", { limit: 10 })).toEqual([]);
     expect(index.rankWithin("vault", [same.doc])).toEqual([]);
@@ -129,19 +163,48 @@ describe("the versions of a document", () => {
 
   it("choose the richer text of two recipes, or the newer text when both ask for it", () => {
     const index = memory();
-    const paper = (capture: string, recipe: string, at: string, text: string, extra: Partial<DocInput> = {}): DocInput => ({
+    const paper = (
+      capture: string,
+      recipe: string,
+      at: string,
+      text: string,
+      extra: Partial<DocInput> = {},
+    ): DocInput => ({
       ...version(capture, at, text, extra),
       doc: "doi:10.1/x",
       kind: "paper",
       recipe,
     });
-    index.upsert(paper("api.a", "europepmc", "2026-10-01T00:00:00.000Z", "Title. A long abstract about bread.", { meta: { pmid: "1" } }), "x");
-    const doc = index.upsert(paper("api.b", "crossref", "2026-10-02T00:00:00.000Z", "Title.", { meta: { year: 2020 } }), "x");
-    expect(doc).toMatchObject({ text: "Title. A long abstract about bread.", meta: { pmid: "1", year: 2020 } });
+    index.upsert(
+      paper(
+        "api.a",
+        "europepmc",
+        "2026-10-01T00:00:00.000Z",
+        "Title. A long abstract about bread.",
+        { meta: { pmid: "1" } },
+      ),
+      "x",
+    );
+    const doc = index.upsert(
+      paper("api.b", "crossref", "2026-10-02T00:00:00.000Z", "Title.", { meta: { year: 2020 } }),
+      "x",
+    );
+    expect(doc).toMatchObject({
+      text: "Title. A long abstract about bread.",
+      meta: { pmid: "1", year: 2020 },
+    });
     expect(doc.captures).toEqual(["api.a", "api.b"]);
     const latest = memory();
-    latest.upsert(paper("api.a", "one", "2026-10-01T00:00:00.000Z", "long old text", { merge: "latest" }), "x");
-    expect(latest.upsert(paper("api.b", "two", "2026-10-02T00:00:00.000Z", "new", { merge: "latest" }), "x").text).toBe("new");
+    latest.upsert(
+      paper("api.a", "one", "2026-10-01T00:00:00.000Z", "long old text", { merge: "latest" }),
+      "x",
+    );
+    expect(
+      latest.upsert(
+        paper("api.b", "two", "2026-10-02T00:00:00.000Z", "new", { merge: "latest" }),
+        "x",
+      ).text,
+    ).toBe("new");
   });
 
   it("keep the whole text of a cut text for a quote, and labels for lineage", () => {
@@ -194,17 +257,26 @@ describe("the search", () => {
     const index = memory();
     index.upsert(page("both", "sourdough bread and rye"), "x");
     index.upsert(page("one", "sourdough only, nothing else, a long text about sourdough"), "x");
-    expect(index.find("sourdough rye", { limit: 10 }).map((hit) => hit.doc)).toEqual(["both", "one"]);
+    expect(index.find("sourdough rye", { limit: 10 }).map((hit) => hit.doc)).toEqual([
+      "both",
+      "one",
+    ]);
     expect(index.find("sourdough rye", { limit: 1 }).map((hit) => hit.doc)).toEqual(["both"]);
   });
 
   it("does not match a long question by its common words", () => {
     const index = memory();
     index.upsert(page("bread", "Fresh sourdough bread every morning, and a family table."), "x");
-    index.upsert(page("filler", "the and of to in is for on with the and of to in is for on with a the"), "x");
-    const question = "what is the best bread on the menu for a family with kids in the morning and evening";
+    index.upsert(
+      page("filler", "the and of to in is for on with the and of to in is for on with a the"),
+      "x",
+    );
+    const question =
+      "what is the best bread on the menu for a family with kids in the morning and evening";
     expect(index.find(question, { limit: 10 }).map((hit) => hit.doc)).toEqual(["bread"]);
-    expect(index.rankWithin(question, ["bread", "filler"]).map((hit) => hit.doc)).toEqual(["bread"]);
+    expect(index.rankWithin(question, ["bread", "filler"]).map((hit) => hit.doc)).toEqual([
+      "bread",
+    ]);
   });
 
   it("leaves out a document that asked not to be AI input, and ranks many ids", () => {
@@ -213,7 +285,9 @@ describe("the search", () => {
     index.upsert(page("open", "the vault is public"), "x");
     expect(index.find("vault", { limit: 10 }).map((hit) => hit.doc)).toEqual(["open"]);
     const many = Array.from({ length: 40_000 }, (_, at) => `doc${String(at)}`);
-    expect(index.rankWithin("vault", [...many, "secret", "open"]).map((hit) => hit.doc)).toEqual(["open"]);
+    expect(index.rankWithin("vault", [...many, "secret", "open"]).map((hit) => hit.doc)).toEqual([
+      "open",
+    ]);
   });
 });
 
@@ -244,7 +318,11 @@ describe("the cache entries", () => {
       vary_key: "accept=text/html",
     });
     // an older answer does not replace a newer one
-    index.setLatest({ ...index.latest("https://forno.example/menu")!, capture: "fetch.old", fetched_at: "2025-01-01T00:00:00.000Z" });
+    index.setLatest({
+      ...index.latest("https://forno.example/menu")!,
+      capture: "fetch.old",
+      fetched_at: "2025-01-01T00:00:00.000Z",
+    });
     expect(index.latest("https://forno.example/menu")?.capture).toBe("fetch.r");
   });
 
@@ -284,7 +362,9 @@ describe("the index file", () => {
     cleanups.push(() => removeDir(dir));
     const path = join(dir, "index.sqlite");
     const old = new DatabaseSync(path);
-    old.exec("CREATE TABLE docs (doc TEXT PRIMARY KEY, text TEXT); INSERT INTO docs VALUES ('a', 'b');");
+    old.exec(
+      "CREATE TABLE docs (doc TEXT PRIMARY KEY, text TEXT); INSERT INTO docs VALUES ('a', 'b');",
+    );
     old.exec("CREATE VIRTUAL TABLE docs_fts USING fts5(title, text, content='docs');");
     old.close();
     const first = new DocIndex(path);
@@ -300,7 +380,15 @@ describe("the index file", () => {
     const index = memory();
     const db = (index as unknown as { db: DatabaseSync }).db;
     db.exec("BEGIN");
-    for (let at = 0; at < 50; at += 1) index.upsert(version(`fetch.${String(at)}`, `2026-10-01T00:00:${String(at).padStart(2, "0")}.000Z`, `text ${String(at)}`), "x");
+    for (let at = 0; at < 50; at += 1)
+      index.upsert(
+        version(
+          `fetch.${String(at)}`,
+          `2026-10-01T00:00:${String(at).padStart(2, "0")}.000Z`,
+          `text ${String(at)}`,
+        ),
+        "x",
+      );
     db.exec("COMMIT");
     expect(index.get("url:https://forno.example/")?.capture_count).toBe(50);
   });
@@ -330,12 +418,18 @@ describe("a rebuild", () => {
     index.upsert(version("fetch.c", "2026-10-03T00:00:00.000Z", "live text"), "z");
     expect(again.commit("2026-10-03T00:00:00.000Z")).toEqual({ docs: 1, urls: 0 });
     expect(index.get("url:https://forno.example/")?.text).toBe("live text");
-    expect(index.versions("url:https://forno.example/").map((row) => row.capture)).toEqual(["fetch.c", "fetch.b"]);
+    expect(index.versions("url:https://forno.example/").map((row) => row.capture)).toEqual([
+      "fetch.c",
+      "fetch.b",
+    ]);
   });
 
   it("carries the documents of a recipe with no extractor", () => {
     const index = memory();
-    index.upsert({ ...version("api.x", "2026-10-01T00:00:00.000Z", "rye"), doc: "menu:1", recipe: "menu" }, "x");
+    index.upsert(
+      { ...version("api.x", "2026-10-01T00:00:00.000Z", "rye"), doc: "menu:1", recipe: "menu" },
+      "x",
+    );
     index.upsert(version("fetch.p", "2026-10-01T00:00:00.000Z", "page text"), "x");
     const build = index.beginRebuild();
     expect(build.carry(new Set(["page"]))).toBe(1);

@@ -162,7 +162,9 @@ export const productToken = (value: string): string => {
   if (first !== "mozilla") return first;
   const compatible = /compatible;\s*([A-Za-z_-]+)/i.exec(text)?.[1];
   if (compatible !== undefined) return compatible.toLowerCase();
-  const products = [...text.matchAll(/([A-Za-z][A-Za-z_-]*)\/[\w.]+/g)].map((match) => (match[1] ?? "").toLowerCase());
+  const products = [...text.matchAll(/([A-Za-z][A-Za-z_-]*)\/[\w.]+/g)].map((match) =>
+    (match[1] ?? "").toLowerCase(),
+  );
   return products.find((product) => !BROWSER_PARTS.has(product)) ?? first;
 };
 
@@ -196,7 +198,9 @@ export const parseRobots = (input: string): Robots => {
   const fileSignals: RobotsSignal[] = [];
   let current: (typeof groups)[number] | undefined;
   let collectingAgents = false;
-  for (const [index, raw] of truncateUtf8(input, ROBOTS_MAX_BYTES).split(/\r\n|\r|\n/).entries()) {
+  for (const [index, raw] of truncateUtf8(input, ROBOTS_MAX_BYTES)
+    .split(/\r\n|\r|\n/)
+    .entries()) {
     const line = raw.replace(/#.*$/, "").trim();
     const colon = line.indexOf(":");
     if (colon <= 0) continue;
@@ -204,7 +208,13 @@ export const parseRobots = (input: string): Robots => {
     const value = line.slice(colon + 1).trim();
     if (key === "user-agent") {
       if (current === undefined || !collectingAgents) {
-        current = { agents: [], line: index + 1, rules: [], crawlDelaySeconds: undefined, signals: [] };
+        current = {
+          agents: [],
+          line: index + 1,
+          rules: [],
+          crawlDelaySeconds: undefined,
+          signals: [],
+        };
         groups.push(current);
       }
       current.agents.push(value.toLowerCase());
@@ -227,7 +237,11 @@ export const parseRobots = (input: string): Robots => {
       // only a rule ends the list of agents, so a crawl-delay between two agents keeps one group
       collectingAgents = false;
       if (value.length > 0)
-        current.rules.push({ allow: key === "allow", pattern: normalizePath(value), line: index + 1 });
+        current.rules.push({
+          allow: key === "allow",
+          pattern: normalizePath(value),
+          line: index + 1,
+        });
     } else if (key === "crawl-delay") {
       const seconds = Number(value);
       if (Number.isFinite(seconds) && seconds >= 0) current.crawlDelaySeconds = seconds;
@@ -384,7 +398,8 @@ export const signalsFor = (
       if (line.path !== undefined && !matchesPattern(line.path, path)) continue;
       const length = line.path?.length ?? 0;
       const before = best.get(line.key);
-      if (before === undefined || length > before.length) best.set(line.key, { length, lines: [line] });
+      if (before === undefined || length > before.length)
+        best.set(line.key, { length, lines: [line] });
       else if (length === before.length) before.lines.push(line);
     }
     for (const { lines: kept } of best.values()) chosen.push(...kept);
@@ -401,7 +416,8 @@ export const unreachableRobots = (reason: string): Robots => ({
 });
 
 /** This text is the reason when a robots.txt that answered 200 is a web page, not a robots.txt file. */
-export const HTML_ROBOTS = "robots.txt is a web page, not a robots.txt file (a login or challenge page)";
+export const HTML_ROBOTS =
+  "robots.txt is a web page, not a robots.txt file (a login or challenge page)";
 
 /**
  * This function tells if the body of a robots.txt is a web page. A server can send a challenge, a
@@ -412,7 +428,10 @@ export const HTML_ROBOTS = "robots.txt is a web page, not a robots.txt file (a l
 export const isHtmlRobots = (contentType: string | null | undefined, text: string): boolean => {
   const head = (text.charCodeAt(0) === 0xfeff ? text.slice(1) : text).slice(0, 4096);
   if (/^\s*<(!doctype|html|head|body)[\s>]/i.test(head)) return true;
-  return /html/i.test(contentType ?? "") && /<(html|head|body|script|meta|title|div|form)[\s>/]/i.test(head);
+  return (
+    /html/i.test(contentType ?? "") &&
+    /<(html|head|body|script|meta|title|div|form)[\s>/]/i.test(head)
+  );
 };
 
 /**

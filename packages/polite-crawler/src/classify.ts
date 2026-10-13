@@ -69,7 +69,14 @@ export const parseHttpDate = (value: string | undefined): number | undefined => 
     parts = [asctime[2]!, asctime[1]!, asctime[6]!, asctime[3]!, asctime[4]!, asctime[5]!];
   }
   if (parts === undefined) return undefined;
-  const [day, month, year, hour, minute, second] = parts as [string, string, string, string, string, string];
+  const [day, month, year, hour, minute, second] = parts as [
+    string,
+    string,
+    string,
+    string,
+    string,
+    string,
+  ];
   const at = Date.UTC(
     Number(year),
     MONTHS.indexOf(month),

@@ -320,7 +320,9 @@ describe("hours that are not the week", () => {
   });
 
   it("keeps a meal or the kitchen with no day of its own in the hours of the days above", () => {
-    expect(describeAll("Mon-Fri\nLunch 11am-2pm\nDinner 5pm-10pm")).toBe("Mon–Fri 11:00–14:00, 17:00–22:00");
+    expect(describeAll("Mon-Fri\nLunch 11am-2pm\nDinner 5pm-10pm")).toBe(
+      "Mon–Fri 11:00–14:00, 17:00–22:00",
+    );
     // under days with no time of their own, the service is the time of those days
     expect(describeAll("Sat-Sun\nBrunch 10am-2pm")).toBe("Sat–Sun 10:00–14:00");
     expect(describeAll("Tue-Sat 5pm-11pm\nKitchen 5pm-10pm")).toBe("Tue–Sat 17:00–23:00");

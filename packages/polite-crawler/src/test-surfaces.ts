@@ -24,7 +24,8 @@ export const CLI: string = join(dirname(fileURLToPath(import.meta.url)), "cli.ts
 export const TSX: string = pathToFileURL(createRequire(import.meta.url).resolve("tsx")).href;
 
 /** This function makes a temporary folder. */
-export const tempDir = (tag: string): Promise<string> => mkdtemp(join(tmpdir(), `polite-crawler-${tag}-`));
+export const tempDir = (tag: string): Promise<string> =>
+  mkdtemp(join(tmpdir(), `polite-crawler-${tag}-`));
 
 /** This function removes a temporary folder. Windows can hold a file for a short time, so it tries again. */
 export const removeDir = (dir: string): Promise<void> =>
@@ -105,7 +106,11 @@ export const BAKERY: string = `<!doctype html><html lang="en"><head><title>Forno
 export const MEMBERS: string = `<!doctype html><html lang="en"><head><title>Members</title></head>
 <body><p>The access code is 7319. ${"Words for members only. ".repeat(10)}</p></body></html>`;
 
-type Reply = { readonly status: number; readonly body: string; readonly headers?: Record<string, string> };
+type Reply = {
+  readonly status: number;
+  readonly body: string;
+  readonly headers?: Record<string, string>;
+};
 
 const ALLOW_ALL_RULES = "User-agent: *\nAllow: /\n";
 
@@ -117,7 +122,9 @@ const ALLOW_ALL_RULES = "User-agent: *\nAllow: /\n";
  * - `https://members.example/`: a page that asks not to be AI input.
  * - `https://menu.example/menu.json`: the menu of the bakery, as JSON.
  */
-export const mockSites = (robots: string = ALLOW_ALL_RULES): { readonly agent: MockAgent; readonly hits: string[] } => {
+export const mockSites = (
+  robots: string = ALLOW_ALL_RULES,
+): { readonly agent: MockAgent; readonly hits: string[] } => {
   const agent = new MockAgent();
   agent.disableNetConnect();
   const hits: string[] = [];
@@ -129,12 +136,21 @@ export const mockSites = (robots: string = ALLOW_ALL_RULES): { readonly agent: M
         hits.push(`${origin}${request.path}`);
         // each robots.txt is different: two equal bodies at the same time race in the blob store (T-5)
         const robotsFile = `# ${origin}\n${rules}`;
-        const reply: Reply = request.path === "/robots.txt" ? { status: 200, body: robotsFile } : answer(request.path);
-        return { statusCode: reply.status, data: reply.body, responseOptions: { headers: reply.headers ?? {} } };
+        const reply: Reply =
+          request.path === "/robots.txt" ? { status: 200, body: robotsFile } : answer(request.path);
+        return {
+          statusCode: reply.status,
+          data: reply.body,
+          responseOptions: { headers: reply.headers ?? {} },
+        };
       })
       .persist();
   };
-  site("https://bakery.example", () => ({ status: 200, body: BAKERY, headers: { "content-type": "text/html" } }), robots);
+  site(
+    "https://bakery.example",
+    () => ({ status: 200, body: BAKERY, headers: { "content-type": "text/html" } }),
+    robots,
+  );
   site("https://members.example", () => ({
     status: 200,
     body: MEMBERS,
@@ -172,7 +188,11 @@ export const seedStore = async (dir: string): Promise<void> => {
     await Promise.all([
       crawler.fetch("https://bakery.example/"),
       crawler.fetch("https://members.example/"),
-      fetchAndIndex(crawler.runtime, { url: "https://menu.example/menu.json", mode: "api", recipe: "menu" }),
+      fetchAndIndex(crawler.runtime, {
+        url: "https://menu.example/menu.json",
+        mode: "api",
+        recipe: "menu",
+      }),
     ]);
   } finally {
     await crawler.close();
@@ -222,14 +242,19 @@ export const startMcpChild = (
         const message = JSON.parse(line) as Record<string, unknown>;
         if (typeof message["method"] === "string" && message["id"] !== undefined) {
           // a request of the server, for example elicitation/create
-          write({ jsonrpc: "2.0", id: message["id"], result: answer(message["method"], message["params"]) });
+          write({
+            jsonrpc: "2.0",
+            id: message["id"],
+            result: answer(message["method"], message["params"]),
+          });
         } else if (typeof message["id"] === "number") waiting.get(message["id"])?.(message);
       } catch {
         // the test checks each line
       }
     }
   });
-  const write = (message: Record<string, unknown>): void => void child.stdin.write(`${JSON.stringify(message)}\n`);
+  const write = (message: Record<string, unknown>): void =>
+    void child.stdin.write(`${JSON.stringify(message)}\n`);
   const exited = new Promise<number | null>((done) => child.on("close", (code) => done(code)));
   return {
     child,
@@ -238,14 +263,18 @@ export const startMcpChild = (
     request: (method, params) =>
       new Promise((done, fail) => {
         id += 1;
-        const timer = setTimeout(() => fail(new Error(`no answer to ${method}. stderr: ${stderr}`)), 20_000);
+        const timer = setTimeout(
+          () => fail(new Error(`no answer to ${method}. stderr: ${stderr}`)),
+          20_000,
+        );
         waiting.set(id, (message) => {
           clearTimeout(timer);
           done(message);
         });
         write({ jsonrpc: "2.0", id, method, ...(params === undefined ? {} : { params }) });
       }),
-    notify: (method, params) => write({ jsonrpc: "2.0", method, ...(params === undefined ? {} : { params }) }),
+    notify: (method, params) =>
+      write({ jsonrpc: "2.0", method, ...(params === undefined ? {} : { params }) }),
     end: async () => {
       const started = Date.now();
       child.stdin.end();

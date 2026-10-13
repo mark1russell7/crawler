@@ -58,7 +58,8 @@ export const parseIPv4 = (text: string): Bytes | undefined => {
   const numbers: number[] = [];
   for (const part of parts) {
     let value: number;
-    if (/^0[xX][0-9a-fA-F]*$/.test(part)) value = part.length === 2 ? 0 : Number.parseInt(part.slice(2), 16);
+    if (/^0[xX][0-9a-fA-F]*$/.test(part))
+      value = part.length === 2 ? 0 : Number.parseInt(part.slice(2), 16);
     else if (/^0[0-7]+$/.test(part)) value = Number.parseInt(part.slice(1), 8);
     else if (/^(0|[1-9][0-9]*)$/.test(part)) value = Number(part);
     else return undefined;
@@ -198,7 +199,9 @@ const inRange = (entry: string, address: Bytes): boolean => {
   const base = literalOf(slash === -1 ? entry : entry.slice(0, slash));
   if (base === undefined || base.length !== address.length) return false;
   const bits = slash === -1 ? base.length * 8 : Number(entry.slice(slash + 1));
-  return Number.isInteger(bits) && bits >= 0 && bits <= base.length * 8 && inPrefix(address, base, bits);
+  return (
+    Number.isInteger(bits) && bits >= 0 && bits <= base.length * 8 && inPrefix(address, base, bits)
+  );
 };
 
 /** This function tells if an entry of `allowHosts` permits this host name or this address. */
@@ -221,7 +224,8 @@ const shown = (host: string): string => {
   if (bytes === undefined) return host;
   if (bytes.length === 4) return bytes.join(".");
   const groups: string[] = [];
-  for (let index = 0; index < 16; index += 2) groups.push(((bytes[index]! << 8) | bytes[index + 1]!).toString(16));
+  for (let index = 0; index < 16; index += 2)
+    groups.push(((bytes[index]! << 8) | bytes[index + 1]!).toString(16));
   return groups.join(":").replace(/(^|:)0(:0)+(:|$)/, "::");
 };
 
@@ -236,7 +240,9 @@ export const egressRefusal = (policy: EgressOptions, host: string): string | und
   const literal = literalOf(name);
   if (literal !== undefined) {
     const kind = addressKind(name);
-    return kind === undefined || permitted(policy, name, undefined) ? undefined : egressNote(shown(name), kind);
+    return kind === undefined || permitted(policy, name, undefined)
+      ? undefined
+      : egressNote(shown(name), kind);
   }
   for (const [pattern, kind] of NAME_KINDS) {
     if (pattern.test(name) && !permitted(policy, name, undefined)) return egressNote(name, kind);
@@ -266,7 +272,10 @@ const screen = (
     if (kind === undefined || permitted(policy, host, entry.address)) usable.push(entry);
     else refusal ??= new EgressRefused(shown(entry.address), kind);
   }
-  return { usable, refusal: usable.length === 0 ? (refusal ?? new EgressRefused(host, "unresolved")) : undefined };
+  return {
+    usable,
+    refusal: usable.length === 0 ? (refusal ?? new EgressRefused(host, "unresolved")) : undefined,
+  };
 };
 
 /**
@@ -320,17 +329,23 @@ export const checkEgress = async (
   if (addresses instanceof Error) return undefined;
   for (const entry of addresses) {
     const kind = addressKind(entry.address);
-    if (kind !== undefined && !permitted(policy, name, entry.address)) return egressNote(shown(entry.address), kind);
+    if (kind !== undefined && !permitted(policy, name, entry.address))
+      return egressNote(shown(entry.address), kind);
   }
   return undefined;
 };
 
 /** This function finds an `EgressRefused` in an error, its cause or its group of errors. */
 export const egressError = (error: unknown): EgressRefused | undefined => {
-  for (let current = error, depth = 0; current !== undefined && current !== null && depth < 5; depth += 1) {
+  for (
+    let current = error, depth = 0;
+    current !== undefined && current !== null && depth < 5;
+    depth += 1
+  ) {
     if (current instanceof EgressRefused) return current;
     if (current instanceof AggregateError) {
-      const inner = current.errors.find((item: unknown) => item instanceof EgressRefused) as EgressRefused | undefined;
+      const inner = current.errors.find((item: unknown) => item instanceof EgressRefused) as
+        EgressRefused | undefined;
       if (inner !== undefined) return inner;
     }
     current = (current as { cause?: unknown }).cause;

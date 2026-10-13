@@ -20,7 +20,13 @@
 import { readFile } from "node:fs/promises";
 import { describe, expect, it } from "vitest";
 import type { Robots } from "./robots.ts";
-import { decide, isProductToken, normalizePath, parseRobots, robotsFromResponse } from "./robots.ts";
+import {
+  decide,
+  isProductToken,
+  normalizePath,
+  parseRobots,
+  robotsFromResponse,
+} from "./robots.ts";
 
 const FILE = new URL("../test/corpus/google-robotstxt/robots_test.cc", import.meta.url);
 const source = await readFile(FILE, "latin1");
@@ -62,7 +68,20 @@ const DIFFERENCES: Readonly<Record<string, string>> = {
 const NOT_COUNTED = "not counted";
 
 /** These inputs of GetPathParamsQuery are not absolute URLs. polite-crawler decides only the path of an absolute http or https URL (the WHATWG URL parser), so they have no path to compare. */
-const NOT_URLS = new Set(["example.com", "example.com/", "example.com/a", "example.com/a/", "example.com/a/b?c=d&e=f#fragment", "a", "a/", "/a", "a/b", "example.com?a", "example.com/a;b#c", "//a/b/c"]);
+const NOT_URLS = new Set([
+  "example.com",
+  "example.com/",
+  "example.com/a",
+  "example.com/a/",
+  "example.com/a/b?c=d&e=f#fragment",
+  "a",
+  "a/",
+  "/a",
+  "a/b",
+  "example.com?a",
+  "example.com/a;b#c",
+  "//a/b/c",
+]);
 
 interface Case {
   readonly test: string;
@@ -105,7 +124,10 @@ type Value = number[];
 const text = (value: Value): string => new TextDecoder().decode(new Uint8Array(value));
 
 /** This function reads an expression of string literals and names: `"a" "b"`, `robotstxt`, `absl::string_view()`. */
-const valueOf = (expression: string, scope: ReadonlyArray<Map<string, Value>>): Value | undefined => {
+const valueOf = (
+  expression: string,
+  scope: ReadonlyArray<Map<string, Value>>,
+): Value | undefined => {
   const trimmed = expression.trim();
   if (trimmed === "absl::string_view()" || trimmed === "") return [];
   if (/^[A-Za-z_]\w*$/.test(trimmed)) {
@@ -116,7 +138,8 @@ const valueOf = (expression: string, scope: ReadonlyArray<Map<string, Value>>): 
     return undefined;
   }
   const literals = [...trimmed.matchAll(/"((?:[^"\\]|\\.)*)"/g)];
-  if (literals.length === 0 || trimmed.replace(/"((?:[^"\\]|\\.)*)"/g, "").trim() !== "") return undefined;
+  if (literals.length === 0 || trimmed.replace(/"((?:[^"\\]|\\.)*)"/g, "").trim() !== "")
+    return undefined;
   return literals.flatMap((literal) => bytesOf(literal[1]!));
 };
 
@@ -201,12 +224,21 @@ const pathOf = (url: string): string => {
   return `${parsed.pathname}${parsed.search}`;
 };
 
-const allowedBy = (robots: string, agent: string, url: string): boolean => decide(parseRobots(robots), [agent], pathOf(url)).allowed;
+const allowedBy = (robots: string, agent: string, url: string): boolean =>
+  decide(parseRobots(robots), [agent], pathOf(url)).allowed;
 
 /** The counts of the parse reporter of Google, from what `parseRobots` keeps: the agents and the rules of each group, and the sitemaps. */
 const report = (robots: Robots): Record<string, unknown> => ({
-  valid_directives: robots.groups.reduce((sum, group) => sum + group.agents.length + group.rules.length, 0) + robots.sitemaps.length,
-  last_line_seen: Math.max(0, ...robots.groups.flatMap((group) => [group.line ?? 0, ...group.rules.map((rule) => rule.line ?? 0)])),
+  valid_directives:
+    robots.groups.reduce((sum, group) => sum + group.agents.length + group.rules.length, 0) +
+    robots.sitemaps.length,
+  last_line_seen: Math.max(
+    0,
+    ...robots.groups.flatMap((group) => [
+      group.line ?? 0,
+      ...group.rules.map((rule) => rule.line ?? 0),
+    ]),
+  ),
   unknown_directives: NOT_COUNTED,
   sitemap: robots.sitemaps.join(""),
 });
@@ -221,7 +253,10 @@ const casesOf = (test: string, body: string, firstLine: number): Case[] => {
     while (scope.length - 1 > statement.depth) scope.pop();
     while (scope.length - 1 < statement.depth) scope.push(new Map());
     lastDepth = statement.depth;
-    const declared = /^(?:static\s+)?(?:const\s+)?(?:absl::string_view|std::string|char)\s+(\w+)(?:\[\])?\s*(?:=\s*([\s\S]*))?$/.exec(statement.text);
+    const declared =
+      /^(?:static\s+)?(?:const\s+)?(?:absl::string_view|std::string|char)\s+(\w+)(?:\[\])?\s*(?:=\s*([\s\S]*))?$/.exec(
+        statement.text,
+      );
     if (declared !== null) {
       const value = declared[2] === undefined ? [] : valueOf(declared[2], scope);
       if (value !== undefined) scope[scope.length - 1]!.set(declared[1]!, value);
@@ -234,10 +269,15 @@ const casesOf = (test: string, body: string, firstLine: number): Case[] => {
       owner?.set(append[1]!, [...owner.get(append[1]!)!, ...added]);
       continue;
     }
-    const allowed = /^EXPECT_(TRUE|FALSE)\(\s*IsUserAgentAllowed\(([\s\S]*)\)\s*\)$/.exec(statement.text);
+    const allowed = /^EXPECT_(TRUE|FALSE)\(\s*IsUserAgentAllowed\(([\s\S]*)\)\s*\)$/.exec(
+      statement.text,
+    );
     if (allowed !== null) {
-      const [robots, agent, url] = argumentsOf(allowed[2]!).map((argument) => valueOf(argument, scope));
-      if (robots === undefined || agent === undefined || url === undefined) throw new Error(`${test}:${String(statement.line)}: cannot read ${statement.text}`);
+      const [robots, agent, url] = argumentsOf(allowed[2]!).map((argument) =>
+        valueOf(argument, scope),
+      );
+      if (robots === undefined || agent === undefined || url === undefined)
+        throw new Error(`${test}:${String(statement.line)}: cannot read ${statement.text}`);
       cases.push({
         test,
         line: statement.line,
@@ -247,10 +287,19 @@ const casesOf = (test: string, body: string, firstLine: number): Case[] => {
       });
       continue;
     }
-    const valid = /^EXPECT_(TRUE|FALSE)\(\s*RobotsMatcher::IsValidUserAgentToObey\(([\s\S]*)\)\s*\)$/.exec(statement.text);
+    const valid =
+      /^EXPECT_(TRUE|FALSE)\(\s*RobotsMatcher::IsValidUserAgentToObey\(([\s\S]*)\)\s*\)$/.exec(
+        statement.text,
+      );
     if (valid !== null) {
       const agent = valueOf(valid[2]!, scope)!;
-      cases.push({ test, line: statement.line, what: `the token ${JSON.stringify(text(agent))}`, expected: valid[1] === "TRUE", actual: isProductToken(text(agent)) });
+      cases.push({
+        test,
+        line: statement.line,
+        what: `the token ${JSON.stringify(text(agent))}`,
+        expected: valid[1] === "TRUE",
+        actual: isProductToken(text(agent)),
+      });
       continue;
     }
     const parse = /^googlebot::ParseRobotsTxt\((\w+),\s*&report\)$/.exec(statement.text);
@@ -261,23 +310,52 @@ const casesOf = (test: string, body: string, firstLine: number): Case[] => {
     }
     const counted = /^EXPECT_EQ\((\w+),\s*report\.(\w+)\(\)\)$/.exec(statement.text);
     if (counted !== null) {
-      const expected = /^\d+$/.test(counted[1]!) ? Number(counted[1]) : text(valueOf(counted[1]!, scope)!);
-      cases.push({ test, line: statement.line, what: `report.${counted[2]!}()`, expected, actual: report(parsed!)[counted[2]!] });
+      const expected = /^\d+$/.test(counted[1]!)
+        ? Number(counted[1])
+        : text(valueOf(counted[1]!, scope)!);
+      cases.push({
+        test,
+        line: statement.line,
+        what: `report.${counted[2]!}()`,
+        expected,
+        actual: report(parsed!)[counted[2]!],
+      });
       continue;
     }
     const path = /^Test(Path|Escape)\(([\s\S]*)\)$/.exec(statement.text);
     if (path !== null) {
-      const [input, output] = argumentsOf(path[2]!).map((argument) => text(valueOf(argument, scope)!));
+      const [input, output] = argumentsOf(path[2]!).map((argument) =>
+        text(valueOf(argument, scope)!),
+      );
       if (path[1] === "Escape") {
-        cases.push({ test, line: statement.line, what: `the pattern ${JSON.stringify(input)}`, expected: output, actual: normalizePath(input!) });
+        cases.push({
+          test,
+          line: statement.line,
+          what: `the pattern ${JSON.stringify(input)}`,
+          expected: output,
+          actual: normalizePath(input!),
+        });
       } else if (NOT_URLS.has(input!)) {
-        cases.push({ test, line: statement.line, what: `the path of ${JSON.stringify(input)}`, expected: output, actual: "not a URL" });
+        cases.push({
+          test,
+          line: statement.line,
+          what: `the path of ${JSON.stringify(input)}`,
+          expected: output,
+          actual: "not a URL",
+        });
       } else {
-        cases.push({ test, line: statement.line, what: `the path of ${JSON.stringify(input)}`, expected: output, actual: normalizePath(pathOf(input!) || "/") });
+        cases.push({
+          test,
+          line: statement.line,
+          what: `the path of ${JSON.stringify(input)}`,
+          expected: output,
+          actual: normalizePath(pathOf(input!) || "/"),
+        });
       }
       continue;
     }
-    if (/EXPECT_|ASSERT_/.test(statement.text)) throw new Error(`${test}:${String(statement.line)}: no port for ${statement.text}`);
+    if (/EXPECT_|ASSERT_/.test(statement.text))
+      throw new Error(`${test}:${String(statement.line)}: no port for ${statement.text}`);
   }
   void lastDepth;
   return cases;
@@ -294,8 +372,20 @@ const longLineCases = (lines: readonly number[]): Case[] => {
     const length = max - long.length - "disallow: ".length + 1;
     while (long.length < length) long += "a";
     robots += `disallow: ${long}/qux\n`;
-    cases.push({ test, line: lines[0]!, what: '"FooBot" on "/fux"', expected: true, actual: allowedBy(robots, "FooBot", "http://foo.bar/fux") });
-    cases.push({ test, line: lines[1]!, what: '"FooBot" on the long path', expected: false, actual: allowedBy(robots, "FooBot", `http://foo.bar${long}/fux`) });
+    cases.push({
+      test,
+      line: lines[0]!,
+      what: '"FooBot" on "/fux"',
+      expected: true,
+      actual: allowedBy(robots, "FooBot", "http://foo.bar/fux"),
+    });
+    cases.push({
+      test,
+      line: lines[1]!,
+      what: '"FooBot" on the long path',
+      expected: false,
+      actual: allowedBy(robots, "FooBot", `http://foo.bar${long}/fux`),
+    });
   }
   {
     let robots = "user-agent: FooBot\ndisallow: /\n";
@@ -307,9 +397,27 @@ const longLineCases = (lines: readonly number[]): Case[] => {
       b += "b";
     }
     robots += `allow: ${a}/qux\nallow: ${b}/qux\n`;
-    cases.push({ test, line: lines[2]!, what: '"FooBot" on "/"', expected: false, actual: allowedBy(robots, "FooBot", "http://foo.bar/") });
-    cases.push({ test, line: lines[3]!, what: '"FooBot" on the first long path', expected: true, actual: allowedBy(robots, "FooBot", `http://foo.bar${a}/qux`) });
-    cases.push({ test, line: lines[4]!, what: '"FooBot" on the second long path', expected: true, actual: allowedBy(robots, "FooBot", `http://foo.bar${b}/fux`) });
+    cases.push({
+      test,
+      line: lines[2]!,
+      what: '"FooBot" on "/"',
+      expected: false,
+      actual: allowedBy(robots, "FooBot", "http://foo.bar/"),
+    });
+    cases.push({
+      test,
+      line: lines[3]!,
+      what: '"FooBot" on the first long path',
+      expected: true,
+      actual: allowedBy(robots, "FooBot", `http://foo.bar${a}/qux`),
+    });
+    cases.push({
+      test,
+      line: lines[4]!,
+      what: '"FooBot" on the second long path',
+      expected: true,
+      actual: allowedBy(robots, "FooBot", `http://foo.bar${b}/fux`),
+    });
   }
   return cases;
 };
@@ -321,7 +429,9 @@ for (const match of source.matchAll(/^TEST\(RobotsUnittest, (\w+)\) \{\n([\s\S]*
   const [, test, body] = match;
   const first = lineOf(match.index) + 1;
   if (test === "GoogleOnly_LineTooLong") {
-    const expects = [...body!.matchAll(/EXPECT_/g)].map((found) => first + body!.slice(0, found.index).split("\n").length - 1);
+    const expects = [...body!.matchAll(/EXPECT_/g)].map(
+      (found) => first + body!.slice(0, found.index).split("\n").length - 1,
+    );
     cases.push(...longLineCases(expects));
   } else {
     cases.push(...casesOf(test!, body!, first));
@@ -342,15 +452,20 @@ describe("the conformance cases of the robots.txt parser of Google", () => {
     const listed = new Set<string>();
     for (const one of cases) {
       const key = `${one.test}:${String(one.line)}`;
-      const reason = DIFFERENCES[key] ?? (one.actual === "not a URL" || one.actual === NOT_COUNTED ? String(one.actual) : undefined);
+      const reason =
+        DIFFERENCES[key] ??
+        (one.actual === "not a URL" || one.actual === NOT_COUNTED ? String(one.actual) : undefined);
       if (reason !== undefined) {
         listed.add(key);
         // a difference stays a difference, or this list needs an update
-        if (JSON.stringify(one.actual) === JSON.stringify(one.expected)) wrong.push(`${key} ${one.what}: now as Google, take it out of DIFFERENCES`);
+        if (JSON.stringify(one.actual) === JSON.stringify(one.expected))
+          wrong.push(`${key} ${one.what}: now as Google, take it out of DIFFERENCES`);
         continue;
       }
       if (JSON.stringify(one.actual) !== JSON.stringify(one.expected)) {
-        wrong.push(`${key} ${one.what}: Google ${JSON.stringify(one.expected)}, polite-crawler ${JSON.stringify(one.actual)}`);
+        wrong.push(
+          `${key} ${one.what}: Google ${JSON.stringify(one.expected)}, polite-crawler ${JSON.stringify(one.actual)}`,
+        );
       }
     }
     expect(wrong).toEqual([]);

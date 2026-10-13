@@ -37,7 +37,9 @@ const copy = async (text: string): Promise<boolean> => {
 
 /** The install lines. */
 export default function CopyInstall(): ReactElement {
-  const [state, setState] = useState<{ readonly command: string; readonly ok: boolean } | undefined>(undefined);
+  const [state, setState] = useState<
+    { readonly command: string; readonly ok: boolean } | undefined
+  >(undefined);
   return (
     <div className="pc-install">
       {COMMANDS.map(({ label, command }) => (
@@ -66,7 +68,9 @@ export default function CopyInstall(): ReactElement {
             {state?.command === command ? (state.ok ? "Copied" : "Not copied") : "Copy"}
           </button>
           <span className="pc-sr" aria-live="polite">
-            {state?.command === command && state.ok ? `The command for ${label} is on the clipboard.` : ""}
+            {state?.command === command && state.ok
+              ? `The command for ${label} is on the clipboard.`
+              : ""}
           </span>
           {state?.command === command && !state.ok ? (
             <p className="pc-install-error" role="status">

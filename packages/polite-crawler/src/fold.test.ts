@@ -55,36 +55,53 @@ describe("quote verification", () => {
 describe("the positions of a folded text", () => {
   it("point each unit back at its source", () => {
     fc.assert(
-      fc.property(fc.string({ unit: "grapheme", maxLength: 200 }), fc.constantFrom("quote", "search"), (text, mode) => {
-        const folded = foldText(text, mode as "quote" | "search");
-        expect(folded.start.length).toBe(folded.text.length);
-        for (let index = 0; index < folded.text.length; index += 1) {
-          expect(folded.start[index]!).toBeGreaterThanOrEqual(0);
-          expect(folded.end[index]!).toBeLessThanOrEqual(text.length);
-          expect(folded.start[index]!).toBeLessThan(folded.end[index]!);
-        }
-      }),
+      fc.property(
+        fc.string({ unit: "grapheme", maxLength: 200 }),
+        fc.constantFrom("quote", "search"),
+        (text, mode) => {
+          const folded = foldText(text, mode as "quote" | "search");
+          expect(folded.start.length).toBe(folded.text.length);
+          for (let index = 0; index < folded.text.length; index += 1) {
+            expect(folded.start[index]!).toBeGreaterThanOrEqual(0);
+            expect(folded.end[index]!).toBeLessThanOrEqual(text.length);
+            expect(folded.start[index]!).toBeLessThan(folded.end[index]!);
+          }
+        },
+      ),
     );
   });
 
   it("find each slice of a text after its quotes, dashes and spaces change", () => {
     fc.assert(
-      fc.property(fc.string({ unit: "grapheme-ascii", minLength: 40, maxLength: 300 }), fc.nat(), (text, at) => {
-        const start = at % (text.length - 20);
-        const quote = text.slice(start, start + 20);
-        fc.pre(quote.trim().length >= 3);
-        const retyped = quote.replace(/'/g, "’").replace(/-/g, "–").replace(/ /g, "  ").toUpperCase();
-        const hit = locate(text, retyped);
-        expect(hit.found).toBe(true);
-        expect(fold(text.slice(hit.start!, hit.end!), "quote")).toBe(fold(quote, "quote"));
-      }),
+      fc.property(
+        fc.string({ unit: "grapheme-ascii", minLength: 40, maxLength: 300 }),
+        fc.nat(),
+        (text, at) => {
+          const start = at % (text.length - 20);
+          const quote = text.slice(start, start + 20);
+          fc.pre(quote.trim().length >= 3);
+          const retyped = quote
+            .replace(/'/g, "’")
+            .replace(/-/g, "–")
+            .replace(/ /g, "  ")
+            .toUpperCase();
+          const hit = locate(text, retyped);
+          expect(hit.found).toBe(true);
+          expect(fold(text.slice(hit.start!, hit.end!), "quote")).toBe(fold(quote, "quote"));
+        },
+      ),
     );
   });
 });
 
 describe("search queries", () => {
   it("fold accents, case and Unicode forms, and split Chinese, Japanese and Thai into characters", () => {
-    expect(tokensOf("Café İstanbul STRASSE straße")).toEqual(["cafe", "istanbul", "strasse", "strasse"]);
+    expect(tokensOf("Café İstanbul STRASSE straße")).toEqual([
+      "cafe",
+      "istanbul",
+      "strasse",
+      "strasse",
+    ]);
     expect(tokensOf("東京都")).toEqual(["東", "京", "都"]);
     expect(tokensOf("مَدِينَة")).toEqual(tokensOf("مدينة"));
   });
@@ -97,7 +114,9 @@ describe("search queries", () => {
       parts: 3,
     });
     expect(parseQuery("e-mail")?.all).toBe('"e mail"');
-    expect(parseQuery("NEAR(a b) AND NOT c")?.all).toBe('"near a" AND "b" AND "and" AND "not" AND "c"');
+    expect(parseQuery("NEAR(a b) AND NOT c")?.all).toBe(
+      '"near a" AND "b" AND "and" AND "not" AND "c"',
+    );
     expect(parseQuery("NEAR(a b) AND NOT c")?.any).toBe('"near a" OR "b" OR "not" OR "c"');
     expect(parseQuery("東京")?.all).toBe('"東 京"');
     expect(parseQuery('"" *** ---')).toBeUndefined();
@@ -105,7 +124,9 @@ describe("search queries", () => {
   });
 
   it("leave the common English words out of the form that needs one part, when other words remain", () => {
-    const question = parseQuery("What is the best bread on the menu for a family with kids in the morning and evening")!;
+    const question = parseQuery(
+      "What is the best bread on the menu for a family with kids in the morning and evening",
+    )!;
     expect(question.parts).toBe(16);
     expect(question.all.split(" AND ")).toHaveLength(16);
     // the question has 18 words, and the reader reads 16 parts
@@ -121,7 +142,9 @@ describe("search queries", () => {
     expect(snippetOf("The bakery opens at dawn and bakes bread.", ["bread"])).toBe(
       "The bakery opens at dawn and bakes [bread].",
     );
-    expect(snippetOf("Café Central serves coffee.", ["cafe"])).toBe("[Café] Central serves coffee.");
+    expect(snippetOf("Café Central serves coffee.", ["cafe"])).toBe(
+      "[Café] Central serves coffee.",
+    );
     expect(snippetOf("nothing here", ["zebra"])).toBe("nothing here");
   });
 });

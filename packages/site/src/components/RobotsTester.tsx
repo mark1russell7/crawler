@@ -11,7 +11,12 @@ import { readSignals } from "polite-crawler/signals";
 import { TRAINING_BLOCK_PATHS, TRAINING_BLOCK_ROBOTS } from "../lib/recipes.ts";
 import { productToken, toPath } from "../lib/tester.ts";
 
-const PRESETS: ReadonlyArray<{ readonly id: string; readonly name: string; readonly text: string; readonly paths: string }> = [
+const PRESETS: ReadonlyArray<{
+  readonly id: string;
+  readonly name: string;
+  readonly text: string;
+  readonly paths: string;
+}> = [
   {
     id: "typical",
     name: "A typical site",
@@ -57,7 +62,8 @@ Disallow: /*?sessionid=
 Allow: /public/*.pdf$
 Disallow: /tmp
 `,
-    paths: "/report.pdf\n/report.pdf?page=2\n/public/menu.pdf\n/shop?sessionid=42\n/tmp/a\n/tmpfile",
+    paths:
+      "/report.pdf\n/report.pdf?page=2\n/public/menu.pdf\n/shop?sessionid=42\n/tmp/a\n/tmpfile",
   },
   {
     id: "signals",
@@ -88,7 +94,10 @@ const reason = (decision: RobotsDecision): string => {
   const rule = decision.rule;
   if (rule === undefined) return "no rule matches";
   const verb = rule.allow ? "Allow" : "Disallow";
-  const by = decision.by !== undefined && decision.by !== "PoliteCrawler" ? ` (the group for ${decision.by})` : "";
+  const by =
+    decision.by !== undefined && decision.by !== "PoliteCrawler"
+      ? ` (the group for ${decision.by})`
+      : "";
   return `line ${String(rule.line ?? "?")}: ${verb}: ${rule.pattern}${by}`;
 };
 
@@ -114,7 +123,9 @@ export default function RobotsTester(): ReactElement {
   const known = AGENTS.some((agent) => agent.toLowerCase() === token.toLowerCase());
   // the agent of the reader and the MCP server come first: they are the questions of most readers
   const columns: Column[] = [
-    ...(token.length > 0 && !known ? [{ key: "custom", label: token, title: custom.trim(), tokens: [token] }] : []),
+    ...(token.length > 0 && !known
+      ? [{ key: "custom", label: token, title: custom.trim(), tokens: [token] }]
+      : []),
     {
       key: "mcp",
       label: "MCP server",
@@ -132,11 +143,14 @@ export default function RobotsTester(): ReactElement {
         .map((target) => [target.path, target] as const),
     ).values(),
   ];
-  const decisionOf = (path: string, column: Column): RobotsDecision => decide(robots, column.tokens, path);
+  const decisionOf = (path: string, column: Column): RobotsDecision =>
+    decide(robots, column.tokens, path);
   const [chosenPath, chosenKey] = selected?.split("\u0000") ?? [];
   const chosenColumn = columns.find((column) => column.key === chosenKey);
   const chosen =
-    chosenPath !== undefined && chosenColumn !== undefined && targets.some((target) => target.path === chosenPath)
+    chosenPath !== undefined &&
+    chosenColumn !== undefined &&
+    targets.some((target) => target.path === chosenPath)
       ? { path: chosenPath, column: chosenColumn, decision: decisionOf(chosenPath, chosenColumn) }
       : undefined;
   const signals = readSignals(robots.signals, () => undefined);
@@ -179,7 +193,12 @@ export default function RobotsTester(): ReactElement {
         <div className="pc-tool-side">
           <label className="pc-field">
             <span>Paths or URLs to test, one on each line</span>
-            <textarea value={paths} spellcheck={false} rows={5} onChange={(event) => setPaths(event.currentTarget.value)} />
+            <textarea
+              value={paths}
+              spellcheck={false}
+              rows={5}
+              onChange={(event) => setPaths(event.currentTarget.value)}
+            />
           </label>
           <label className="pc-field">
             <span>Your own user agent: a token or a full User-Agent header</span>
@@ -214,21 +233,39 @@ export default function RobotsTester(): ReactElement {
             </div>
             <div>
               <dt>AI input</dt>
-              <dd>{signals.ai_input === "no" ? "refused: the text is kept but held back" : signals.ai_input === "yes" ? "permitted" : "not stated"}</dd>
+              <dd>
+                {signals.ai_input === "no"
+                  ? "refused: the text is kept but held back"
+                  : signals.ai_input === "yes"
+                    ? "permitted"
+                    : "not stated"}
+              </dd>
             </div>
           </dl>
         </div>
       </div>
 
-      <div className="pc-table-wrap" tabIndex={0} role="region" aria-label="The verdict for each path and each agent">
+      <div
+        className="pc-table-wrap"
+        tabIndex={0}
+        role="region"
+        aria-label="The verdict for each path and each agent"
+      >
         <table className="pc-table pc-tester-table">
           <thead>
             <tr>
               <th scope="col">Path</th>
               {columns.map((column) => (
-                <th scope="col" key={column.key} title={column.title} className={column.key === "mcp" ? "pc-tester-mcp" : undefined}>
+                <th
+                  scope="col"
+                  key={column.key}
+                  title={column.title}
+                  className={column.key === "mcp" ? "pc-tester-mcp" : undefined}
+                >
                   {column.label}
-                  {column.key === "mcp" ? <span className="pc-tester-sub">PoliteCrawler and Claude-User</span> : null}
+                  {column.key === "mcp" ? (
+                    <span className="pc-tester-sub">PoliteCrawler and Claude-User</span>
+                  ) : null}
                 </th>
               ))}
             </tr>
@@ -238,13 +275,18 @@ export default function RobotsTester(): ReactElement {
               <tr key={target.path}>
                 <th scope="row">
                   <code>{target.path}</code>
-                  {target.from !== undefined ? <span className="pc-tester-sub">from {target.from}</span> : null}
+                  {target.from !== undefined ? (
+                    <span className="pc-tester-sub">from {target.from}</span>
+                  ) : null}
                 </th>
                 {columns.map((column) => {
                   const decision = decisionOf(target.path, column);
                   const key = `${target.path}\u0000${column.key}`;
                   return (
-                    <td key={column.key} className={column.key === "mcp" ? "pc-tester-mcp" : undefined}>
+                    <td
+                      key={column.key}
+                      className={column.key === "mcp" ? "pc-tester-mcp" : undefined}
+                    >
                       <button
                         type="button"
                         className={`pc-verdict ${decision.allowed ? "pc-verdict-yes" : "pc-verdict-no"}`}
@@ -274,9 +316,13 @@ export default function RobotsTester(): ReactElement {
           {lines.map((line, index) => {
             const number = index + 1;
             const decided = chosen?.decision.rule?.line === number;
-            const inGroup = chosen?.decision.groups?.some((group) => group.line === number) ?? false;
+            const inGroup =
+              chosen?.decision.groups?.some((group) => group.line === number) ?? false;
             return (
-              <li key={index} className={decided ? "pc-line-decided" : inGroup ? "pc-line-group" : undefined}>
+              <li
+                key={index}
+                className={decided ? "pc-line-decided" : inGroup ? "pc-line-group" : undefined}
+              >
                 <code>{line.length > 0 ? line : " "}</code>
               </li>
             );

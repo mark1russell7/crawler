@@ -1,6 +1,15 @@
 import { describe, expect, it } from "vitest";
 import type { Segment } from "./sim.ts";
-import { SITES, Timeline, VirtualClock, askAgain, crawlImpolitely, crawlPolitely, endOf, peakOf } from "./sim.ts";
+import {
+  SITES,
+  Timeline,
+  VirtualClock,
+  askAgain,
+  crawlImpolitely,
+  crawlPolitely,
+  endOf,
+  peakOf,
+} from "./sim.ts";
 
 const run = async (crawl: typeof crawlPolitely) => {
   const clock = new VirtualClock();
@@ -14,7 +23,9 @@ const run = async (crawl: typeof crawlPolitely) => {
 };
 
 const requests = (lane: readonly Segment[]) =>
-  lane.filter((segment): segment is Extract<Segment, { kind: "request" }> => segment.kind === "request");
+  lane.filter(
+    (segment): segment is Extract<Segment, { kind: "request" }> => segment.kind === "request",
+  );
 
 describe("the polite crawl", () => {
   it("keeps one request in progress for each host, with a rest of 3 seconds or more between two", async () => {
@@ -43,7 +54,9 @@ describe("the polite crawl", () => {
   it("stops a host after a 403, and fetches nothing from a site that robots.txt refuses", async () => {
     const timeline = await run(crawlPolitely);
     expect(requests(timeline.lane("shop.example"))).toHaveLength(1);
-    expect(timeline.lane("shop.example").filter((segment) => segment.kind === "refused")).toHaveLength(2);
+    expect(
+      timeline.lane("shop.example").filter((segment) => segment.kind === "refused"),
+    ).toHaveLength(2);
     expect(requests(timeline.lane("members.example"))).toHaveLength(0);
     expect(endOf(timeline)).toBeLessThan(25_000);
   });
@@ -72,11 +85,18 @@ describe("the impolite crawl", () => {
 
   it("measures the requests at once to one host from the lanes", async () => {
     const timeline = await run(crawlImpolitely);
-    expect(peakOf(timeline.segments, endOf(timeline))).toBe(Math.max(...SITES.map((site) => site.pages.length)));
+    expect(peakOf(timeline.segments, endOf(timeline))).toBe(
+      Math.max(...SITES.map((site) => site.pages.length)),
+    );
     // two requests in sequence do not overlap
-    expect(peakOf([
-      { kind: "request", host: "a", start: 0, end: 100, status: 200, row: 0 },
-      { kind: "request", host: "a", start: 100, end: 200, status: 200, row: 0 },
-    ], 300)).toBe(1);
+    expect(
+      peakOf(
+        [
+          { kind: "request", host: "a", start: 0, end: 100, status: 200, row: 0 },
+          { kind: "request", host: "a", start: 100, end: 200, status: 200, row: 0 },
+        ],
+        300,
+      ),
+    ).toBe(1);
   });
 });

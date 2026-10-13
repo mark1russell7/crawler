@@ -48,8 +48,16 @@ const LIBRARY_PRESETS: readonly TsconfigPreset[] = ["node", "node-cjs", "ts"];
 // The library presets emit only declarations, because isolatedDeclarations is checked only when tsc emits them.
 function tsconfigOptions(preset: TsconfigPreset): Record<string, unknown> {
   const shared = { allowImportingTsExtensions: true, composite: false, incremental: false };
-  if (LIBRARY_PRESETS.includes(preset)) return { noEmit: false, emitDeclarationOnly: true, ...shared };
-  return { noEmit: true, ...shared, isolatedDeclarations: false, declaration: false, declarationMap: false, types: ["vite/client"] };
+  if (LIBRARY_PRESETS.includes(preset))
+    return { noEmit: false, emitDeclarationOnly: true, ...shared };
+  return {
+    noEmit: true,
+    ...shared,
+    isolatedDeclarations: false,
+    declaration: false,
+    declarationMap: false,
+    types: ["vite/client"],
+  };
 }
 
 // The base presets exclude *.test.ts, so tests get their own config, and "typecheck" checks both.
@@ -71,7 +79,9 @@ function testTsconfig(preset: TsconfigPreset): Record<string, unknown> {
 }
 
 // The vite and react presets reference types (vite/client, react-jsx) that only these packages provide.
-const PRESET_PACKAGES: Partial<Record<TsconfigPreset, { dependencies: string[]; devDependencies: string[] }>> = {
+const PRESET_PACKAGES: Partial<
+  Record<TsconfigPreset, { dependencies: string[]; devDependencies: string[] }>
+> = {
   vite: { dependencies: [], devDependencies: ["vite"] },
   react: {
     dependencies: ["react", "react-dom"],
@@ -79,7 +89,10 @@ const PRESET_PACKAGES: Partial<Record<TsconfigPreset, { dependencies: string[]; 
   },
 };
 
-function parseArgs(args: string[]): { name: string | undefined; preset: TsconfigPreset | undefined } {
+function parseArgs(args: string[]): {
+  name: string | undefined;
+  preset: TsconfigPreset | undefined;
+} {
   let name: string | undefined;
   let preset: TsconfigPreset | undefined;
   for (const a of args) {
@@ -99,14 +112,19 @@ function parseArgs(args: string[]): { name: string | undefined; preset: Tsconfig
 export async function addPackage(args: string[]): Promise<void> {
   const scope = await getScope();
   if (!scope) {
-    throw new Error("Could not derive package scope from root package.json (expected name to end with -monorepo).");
+    throw new Error(
+      "Could not derive package scope from root package.json (expected name to end with -monorepo).",
+    );
   }
   const parsed = parseArgs(args);
   let name = parsed.name;
   if (!name) {
     const answer = await p.text({
       message: `Package name (will be @${scope}/<name>)?`,
-      validate: (v) => (NAME_RE.test(v ?? "") ? undefined : "lowercase letters, digits, hyphens; must start with letter/digit"),
+      validate: (v) =>
+        NAME_RE.test(v ?? "")
+          ? undefined
+          : "lowercase letters, digits, hyphens; must start with letter/digit",
     });
     if (p.isCancel(answer)) {
       p.cancel("Cancelled.");
@@ -162,7 +180,10 @@ export async function addPackage(args: string[]): Promise<void> {
     compilerOptions: tsconfigOptions(preset),
   };
   await writeFile(resolve(dir, "tsconfig.json"), JSON.stringify(tsconfig, null, 2) + "\n");
-  await writeFile(resolve(dir, "tsconfig.test.json"), JSON.stringify(testTsconfig(preset), null, 2) + "\n");
+  await writeFile(
+    resolve(dir, "tsconfig.test.json"),
+    JSON.stringify(testTsconfig(preset), null, 2) + "\n",
+  );
 
   await writeFile(resolve(dir, "src", "index.ts"), `export {};\n`);
 
@@ -181,7 +202,13 @@ export async function addPackage(args: string[]): Promise<void> {
   // `pnpm add` resolves the newest versions and installs the workspace.
   const filter = `--filter=@${scope}/${name}`;
   if (presetPackages.dependencies.length > 0) {
-    execSync(`pnpm add ${filter} ${presetPackages.dependencies.join(" ")}`, { cwd: repoRoot, stdio: "inherit" });
+    execSync(`pnpm add ${filter} ${presetPackages.dependencies.join(" ")}`, {
+      cwd: repoRoot,
+      stdio: "inherit",
+    });
   }
-  execSync(`pnpm add -D ${filter} ${presetPackages.devDependencies.join(" ")}`, { cwd: repoRoot, stdio: "inherit" });
+  execSync(`pnpm add -D ${filter} ${presetPackages.devDependencies.join(" ")}`, {
+    cwd: repoRoot,
+    stdio: "inherit",
+  });
 }

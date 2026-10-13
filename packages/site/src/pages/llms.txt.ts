@@ -12,8 +12,10 @@ const SITE = "https://mark1russell7.github.io/crawler/";
 export const llmsText = (data: Study): string => {
   const summary = summarize(data);
   const rows = agentRows(data);
-  const share = (token: string): string => `${(rows.find((row) => row.token === token)?.share ?? 0).toFixed(1)}%`;
-  const fileShare = (token: string): string => `${(rows.find((row) => row.token === token)?.fileShare ?? 0).toFixed(1)}%`;
+  const share = (token: string): string =>
+    `${(rows.find((row) => row.token === token)?.share ?? 0).toFixed(1)}%`;
+  const fileShare = (token: string): string =>
+    `${(rows.find((row) => row.token === token)?.fileShare ?? 0).toFixed(1)}%`;
   const day = data.fetched.from.slice(0, 10);
   return `# polite-crawler
 
@@ -55,4 +57,6 @@ Install it with \`npm install polite-crawler\`. Use \`openCrawler({ dir })\` and
 };
 
 export const GET = (): Response =>
-  new Response(llmsText(study as unknown as Study), { headers: { "Content-Type": "text/plain; charset=utf-8" } });
+  new Response(llmsText(study as unknown as Study), {
+    headers: { "Content-Type": "text/plain; charset=utf-8" },
+  });

@@ -1,5 +1,9 @@
 /** The examples of the page reader. The page reads the first one at build time. */
-export const PAGE_SAMPLES: ReadonlyArray<{ readonly name: string; readonly url: string; readonly html: string }> = [
+export const PAGE_SAMPLES: ReadonlyArray<{
+  readonly name: string;
+  readonly url: string;
+  readonly html: string;
+}> = [
   {
     name: "A restaurant with JSON-LD",
     url: "https://forno.example/",

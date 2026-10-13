@@ -156,10 +156,17 @@ try {
     if (graph.has(file) || !files.has(file)) return;
     graph.add(file);
     const source = files.get(file).toString("utf8");
-    for (const [, specifier] of source.matchAll(/^\s*(?:import|export)\b[^"'`]*?\bfrom\s*["']([^"']+)["']|^\s*import\s*["']([^"']+)["']/gm)) {
+    for (const [, specifier] of source.matchAll(
+      /^\s*(?:import|export)\b[^"'`]*?\bfrom\s*["']([^"']+)["']|^\s*import\s*["']([^"']+)["']/gm,
+    )) {
       if (specifier === undefined) continue;
       if (specifier.startsWith(".")) walk(join(dirname(file), specifier).replace(/\\/g, "/"));
-      else packages.add(specifier.startsWith("@") ? specifier.split("/").slice(0, 2).join("/") : specifier.split("/")[0]);
+      else
+        packages.add(
+          specifier.startsWith("@")
+            ? specifier.split("/").slice(0, 2).join("/")
+            : specifier.split("/")[0],
+        );
     }
   };
   walk(rootTarget.replace(/^\.\//, ""));
@@ -304,10 +311,21 @@ export const check = async (): Promise<string> => {
   step("the size of the entry points for a browser");
   const { build } = await import("esbuild");
   // the sizes of version 0.1.0, and 20 percent more
-  const budgets = { robots: 2900, hours: 8700, classify: 1300, politeness: 3000, signals: 1100, html: 138_000 };
+  const budgets = {
+    robots: 2900,
+    hours: 8700,
+    classify: 1300,
+    politeness: 3000,
+    signals: 1100,
+    html: 138_000,
+  };
   for (const [name, budget] of Object.entries(budgets)) {
     const bundled = await build({
-      stdin: { contents: `export * from "${manifest.name}/${name}";`, resolveDir: consumer, loader: "js" },
+      stdin: {
+        contents: `export * from "${manifest.name}/${name}";`,
+        resolveDir: consumer,
+        loader: "js",
+      },
       bundle: true,
       platform: "browser",
       format: "esm",
@@ -316,7 +334,10 @@ export const check = async (): Promise<string> => {
       logLevel: "silent",
     });
     const size = gzipSync(bundled.outputFiles[0].contents).length;
-    check(size <= budget, `${manifest.name}/${name}: ${String(size)} bytes after gzip, the budget is ${String(budget)}`);
+    check(
+      size <= budget,
+      `${manifest.name}/${name}: ${String(size)} bytes after gzip, the budget is ${String(budget)}`,
+    );
   }
 
   // 4. The command

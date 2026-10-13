@@ -125,7 +125,11 @@ export class SqliteHostStateStore implements HostStateStore {
           : Math.min(this.pollMs, row.leased_until - now);
       }
       if (row.next_at > now) return row.next_at - now;
-      this.stmt("UPDATE hosts SET leased_until = ?, owner = ? WHERE host = ?").run(now + leaseMs, this.owner, host);
+      this.stmt("UPDATE hosts SET leased_until = ?, owner = ? WHERE host = ?").run(
+        now + leaseMs,
+        this.owner,
+        host,
+      );
       return 0;
     });
   }
@@ -140,7 +144,11 @@ export class SqliteHostStateStore implements HostStateStore {
       } else if (result === "failure") failures += 1;
       else if (result === "wait") waits += 1;
       if (failures !== row.failures || waits !== row.waits) {
-        this.stmt("UPDATE hosts SET failures = ?, waits = ? WHERE host = ?").run(failures, waits, host);
+        this.stmt("UPDATE hosts SET failures = ?, waits = ? WHERE host = ?").run(
+          failures,
+          waits,
+          host,
+        );
       }
       return { failures, waits };
     });
@@ -179,8 +187,7 @@ export class SqliteHostStateStore implements HostStateStore {
   stopped(host: string, now: number): HostStop | undefined {
     if (this.closed) throw new Error("the host state store is closed");
     const row = this.stmt("SELECT stop_until, stop_reason FROM hosts WHERE host = ?").get(host) as
-      | { stop_until: number | null; stop_reason: string | null }
-      | undefined;
+      { stop_until: number | null; stop_reason: string | null } | undefined;
     if (row === undefined || row.stop_until === null || row.stop_until <= now) return undefined;
     return {
       until: row.stop_until >= NO_END ? Number.POSITIVE_INFINITY : row.stop_until,
@@ -191,7 +198,9 @@ export class SqliteHostStateStore implements HostStateStore {
   reset(host?: string): void {
     this.step(() => {
       if (host === undefined) {
-        this.stmt("UPDATE hosts SET failures = 0, waits = 0, stop_until = NULL, stop_reason = NULL").run();
+        this.stmt(
+          "UPDATE hosts SET failures = 0, waits = 0, stop_until = NULL, stop_reason = NULL",
+        ).run();
       } else {
         this.stmt(
           "UPDATE hosts SET failures = 0, waits = 0, stop_until = NULL, stop_reason = NULL WHERE host = ?",

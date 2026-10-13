@@ -83,7 +83,7 @@ export const metaSignals = (html: string): string[] => {
   const head = html.slice(0, META_BYTES);
   const lower = head.toLowerCase();
   // each tag ends at the next ">": a "<meta" with no end stops the reading, so the time stays linear
-  for (let at = lower.indexOf("<meta"); at !== -1; ) {
+  for (let at = lower.indexOf("<meta"); at !== -1;) {
     const end = lower.indexOf(">", at);
     if (end === -1) break;
     const tag = head.slice(at, end + 1);
@@ -108,7 +108,13 @@ export const readSignals = (
   pageLines: readonly string[] = [],
 ): Signals => {
   const raw: string[] = [...robotsLines];
-  for (const name of ["content-usage", "content-signal", "x-robots-tag", "tdm-reservation", "tdm-policy"]) {
+  for (const name of [
+    "content-usage",
+    "content-signal",
+    "x-robots-tag",
+    "tdm-reservation",
+    "tdm-policy",
+  ]) {
     const value = header(name);
     if (value !== undefined) raw.push(`${name}: ${value}`);
   }

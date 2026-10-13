@@ -5,4 +5,6 @@
 import survey from "../../data/restaurant-survey.json";
 
 export const GET = (): Response =>
-  new Response(JSON.stringify(survey, null, 2), { headers: { "Content-Type": "application/json" } });
+  new Response(JSON.stringify(survey, null, 2), {
+    headers: { "Content-Type": "application/json" },
+  });

@@ -21,7 +21,13 @@ export interface FileBlobStoreOptions {
 const HASH = /^[0-9a-f]{64}$/;
 
 /** A rename can fail with these codes when a different writer puts the same blob at the same time. */
-const RACE_CODES: ReadonlySet<string> = new Set(["EPERM", "EEXIST", "EBUSY", "EACCES", "ENOTEMPTY"]);
+const RACE_CODES: ReadonlySet<string> = new Set([
+  "EPERM",
+  "EEXIST",
+  "EBUSY",
+  "EACCES",
+  "ENOTEMPTY",
+]);
 
 const blobPath = (root: string, hash: string): string =>
   join(root, hash.slice(0, 2), hash.slice(2, 4), hash);
@@ -99,7 +105,8 @@ export class FileBlobStore implements BlobStore {
   ): Promise<{ readonly hash: string; readonly existed: boolean }> {
     const target = blobPath(this.dir, hash);
     const existing = await statOf(target);
-    if (existing?.isFile() === true && existing.size === bytes.length) return { hash, existed: true };
+    if (existing?.isFile() === true && existing.size === bytes.length)
+      return { hash, existed: true };
     const folder = dirname(target);
     await mkdir(folder, { recursive: true, mode: 0o700 });
     const temporary = `${target}.${randomUUID()}.tmp`;
@@ -115,7 +122,8 @@ export class FileBlobStore implements BlobStore {
         await rename(temporary, target);
       } catch (error) {
         // a different writer put the same bytes first, and Windows does not replace a file in use
-        if (!RACE_CODES.has(codeOf(error)) || !(await FileBlobStore.holds(target, hash))) throw error;
+        if (!RACE_CODES.has(codeOf(error)) || !(await FileBlobStore.holds(target, hash)))
+          throw error;
         return { hash, existed: true };
       }
       if (this.sync) await syncFolder(folder);

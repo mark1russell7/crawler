@@ -48,7 +48,9 @@ export default function PageReader({ initial }: { readonly initial: PageRead }):
         worker.current?.terminate();
         worker.current = undefined;
       }
-      worker.current ??= new Worker(new URL("../lib/page-worker.ts", import.meta.url), { type: "module" });
+      worker.current ??= new Worker(new URL("../lib/page-worker.ts", import.meta.url), {
+        type: "module",
+      });
       worker.current.onmessage = (event: MessageEvent<{ id: number; result: PageRead }>) => {
         if (event.data.id === id) show(event.data.result);
       };
@@ -86,11 +88,20 @@ export default function PageReader({ initial }: { readonly initial: PageRead }):
         <div className="pc-tool-side">
           <label className="pc-field">
             <span>The URL of the page</span>
-            <input value={url} spellcheck={false} onChange={(event) => setUrl(event.currentTarget.value)} />
+            <input
+              value={url}
+              spellcheck={false}
+              onChange={(event) => setUrl(event.currentTarget.value)}
+            />
           </label>
           <label className="pc-field">
             <span>HTML</span>
-            <textarea value={html} rows={16} spellcheck={false} onChange={(event) => setHtml(event.currentTarget.value)} />
+            <textarea
+              value={html}
+              rows={16}
+              spellcheck={false}
+              onChange={(event) => setHtml(event.currentTarget.value)}
+            />
           </label>
         </div>
         <div className="pc-tool-side" aria-live="polite" aria-busy={busy}>
@@ -112,8 +123,12 @@ export default function PageReader({ initial }: { readonly initial: PageRead }):
                   <span>{`A meta refresh sends the reader to ${page.redirect}. The crawler does not render this page.`}</span>
                 </div>
               ) : (
-                <div className={`pc-callout ${page.needsRender ? "pc-callout-warn" : "pc-callout-ok"}`}>
-                  <strong>{page.needsRender ? "This page needs a browser" : "No browser necessary"}</strong>
+                <div
+                  className={`pc-callout ${page.needsRender ? "pc-callout-warn" : "pc-callout-ok"}`}
+                >
+                  <strong>
+                    {page.needsRender ? "This page needs a browser" : "No browser necessary"}
+                  </strong>
                   <span>
                     {page.needsRender
                       ? `The crawler renders it in a headless browser: ${page.renderReason ?? "it shows almost nothing"}.`
@@ -124,7 +139,9 @@ export default function PageReader({ initial }: { readonly initial: PageRead }):
               <dl className="pc-facts">
                 <div>
                   <dt>Title</dt>
-                  <dd>{page.titleFromUrl ? "none: the reader uses the URL" : page.title || "none"}</dd>
+                  <dd>
+                    {page.titleFromUrl ? "none: the reader uses the URL" : page.title || "none"}
+                  </dd>
                 </div>
                 <div>
                   <dt>Language</dt>
@@ -140,7 +157,9 @@ export default function PageReader({ initial }: { readonly initial: PageRead }):
                     {types}
                     {page.brokenJsonLd > 0 ? (
                       <span className="pc-tester-sub">
-                        {page.brokenJsonLd === 1 ? "1 JSON-LD block is not correct JSON" : `${String(page.brokenJsonLd)} JSON-LD blocks are not correct JSON`}
+                        {page.brokenJsonLd === 1
+                          ? "1 JSON-LD block is not correct JSON"
+                          : `${String(page.brokenJsonLd)} JSON-LD blocks are not correct JSON`}
                       </span>
                     ) : null}
                   </dd>
@@ -168,7 +187,10 @@ export default function PageReader({ initial }: { readonly initial: PageRead }):
               ) : null}
               <section className="pc-out" aria-label="The links">
                 <p className="pc-out-title">
-                  The links{page.linkCount > page.links.length ? `: the first ${String(page.links.length)} of ${String(page.linkCount)}` : ""}
+                  The links
+                  {page.linkCount > page.links.length
+                    ? `: the first ${String(page.links.length)} of ${String(page.linkCount)}`
+                    : ""}
                 </p>
                 {page.links.length === 0 ? (
                   <p className="pc-empty">No links.</p>

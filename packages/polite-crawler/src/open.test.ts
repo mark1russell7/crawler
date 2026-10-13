@@ -80,7 +80,8 @@ describe("openCrawler", () => {
     dir = await tempDir("open");
     const agent = new MockAgent();
     agent.disableNetConnect();
-    const sent: Array<{ readonly from: string | undefined; readonly agent: string | undefined }> = [];
+    const sent: Array<{ readonly from: string | undefined; readonly agent: string | undefined }> =
+      [];
     agent
       .get("https://bakery.example")
       .intercept({ path: () => true })
@@ -90,11 +91,24 @@ describe("openCrawler", () => {
         return { statusCode: 200, data: "User-agent: *\nAllow: /\n" };
       })
       .persist();
-    const ask = async (contact: string): Promise<{ readonly from: string | undefined; readonly agent: string | undefined }> => {
+    const ask = async (
+      contact: string,
+    ): Promise<{ readonly from: string | undefined; readonly agent: string | undefined }> => {
       sent.length = 0;
-      const runtime = createRuntime({ dir: dir!, contact, renderer: false, dispatcher: agent, clock: fakeClock() });
+      const runtime = createRuntime({
+        dir: dir!,
+        contact,
+        renderer: false,
+        dispatcher: agent,
+        clock: fakeClock(),
+      });
       try {
-        await runtime.crawler.fetch({ url: `https://bakery.example/${String(Math.random()).slice(2)}`, mode: "api", recipe: "x", maxAgeMs: 0 });
+        await runtime.crawler.fetch({
+          url: `https://bakery.example/${String(Math.random()).slice(2)}`,
+          mode: "api",
+          recipe: "x",
+          maxAgeMs: 0,
+        });
       } finally {
         await runtime.close();
       }
@@ -104,7 +118,9 @@ describe("openCrawler", () => {
     expect(url.from).toBeUndefined();
     expect(url.agent).toContain("; https://ops.example/contact)");
     expect(await ask("ops@example.com")).toMatchObject({ from: "ops@example.com" });
-    expect(await ask("Ops Team <ops@example.com>")).toMatchObject({ from: "Ops Team <ops@example.com>" });
+    expect(await ask("Ops Team <ops@example.com>")).toMatchObject({
+      from: "Ops Team <ops@example.com>",
+    });
     // a URL with an @ is still a URL
     expect(await ask("https://example.com/@ops")).toMatchObject({ from: undefined });
     expect(() => createRuntime({ dir: dir!, contact: "ops@exämple.com", renderer: false })).toThrow(
@@ -199,7 +215,13 @@ describe("openCrawler", () => {
     await fetchPage(first, "https://bakery.example/", { render: "never" });
     await first.close();
     // a second writer logs a capture and stops before the index of the store has it: its index is in memory
-    const lost = createRuntime({ dir, index: new DocIndex(":memory:"), renderer: false, dispatcher: agent, clock });
+    const lost = createRuntime({
+      dir,
+      index: new DocIndex(":memory:"),
+      renderer: false,
+      dispatcher: agent,
+      clock,
+    });
     const menu = await fetchPage(lost, "https://bakery.example/menu", { render: "never" });
     await lost.close();
 
@@ -210,7 +232,9 @@ describe("openCrawler", () => {
       expect(caught).toMatchObject({ mode: "tail", failed: 0, missing: 0 });
       expect(caught!.captures).toBeGreaterThanOrEqual(1);
       expect(store.index.get(menu.doc!)?.text).toContain("Forno Esempio");
-      expect(store.index.latest("https://bakery.example/menu")).toMatchObject({ capture: menu.capture });
+      expect(store.index.latest("https://bakery.example/menu")).toMatchObject({
+        capture: menu.capture,
+      });
       // the index missed nothing now
       expect(await catchUpIndex(store)).toBeUndefined();
     } finally {
@@ -231,13 +255,18 @@ describe("openCrawler", () => {
     }
   });
 
-  it.skipIf(process.platform === "win32")("refuses a part of the store that is a symbolic link", async () => {
-    const root = await tempDir("open");
-    dir = root;
-    const elsewhere = join(root, "elsewhere");
-    await mkdir(join(root, "store"), { recursive: true });
-    await mkdir(elsewhere);
-    await symlink(elsewhere, join(root, "store", "blobs"));
-    expect(() => openCrawler({ dir: join(root, "store"), renderer: false })).toThrow(/symbolic link/);
-  });
+  it.skipIf(process.platform === "win32")(
+    "refuses a part of the store that is a symbolic link",
+    async () => {
+      const root = await tempDir("open");
+      dir = root;
+      const elsewhere = join(root, "elsewhere");
+      await mkdir(join(root, "store"), { recursive: true });
+      await mkdir(elsewhere);
+      await symlink(elsewhere, join(root, "store", "blobs"));
+      expect(() => openCrawler({ dir: join(root, "store"), renderer: false })).toThrow(
+        /symbolic link/,
+      );
+    },
+  );
 });

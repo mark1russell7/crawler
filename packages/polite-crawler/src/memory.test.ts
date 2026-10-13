@@ -49,8 +49,14 @@ describe("the memory of a crawler", () => {
       keepAliveMaxTimeout: 10,
       connect: {
         lookup: (_host, options, done) => {
-          if ((options as { all?: boolean }).all === true) done(null, [{ address: "127.0.0.1", family: 4 }]);
-          else (done as unknown as (error: null, address: string, family: number) => void)(null, "127.0.0.1", 4);
+          if ((options as { all?: boolean }).all === true)
+            done(null, [{ address: "127.0.0.1", family: 4 }]);
+          else
+            (done as unknown as (error: null, address: string, family: number) => void)(
+              null,
+              "127.0.0.1",
+              4,
+            );
         },
       },
     });
@@ -81,7 +87,11 @@ describe("the memory of a crawler", () => {
     const crawl = (from: number, count: number) =>
       Promise.all(
         Array.from({ length: count }, (_, at) =>
-          crawler.fetch({ url: `http://h${String(from + at)}.example.test:${String(port)}/`, mode: "page", recipe: "page" }),
+          crawler.fetch({
+            url: `http://h${String(from + at)}.example.test:${String(port)}/`,
+            mode: "page",
+            recipe: "page",
+          }),
         ),
       );
     const results = await crawl(0, HOSTS);

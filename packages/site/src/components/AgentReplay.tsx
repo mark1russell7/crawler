@@ -138,10 +138,16 @@ export default function AgentReplay(): ReactElement {
 
   const shown = playing ? active : STEPS.length - 1;
   const requests = STEPS.slice(0, shown + 1).reduce((sum, step) => sum + step.requests, 0);
-  const fromStore = STEPS.slice(0, shown + 1).filter((step) => step.kind === "tool" && step.requests === 0).length;
+  const fromStore = STEPS.slice(0, shown + 1).filter(
+    (step) => step.kind === "tool" && step.requests === 0,
+  ).length;
 
   return (
-    <section className="pc-replay not-content" ref={frame} aria-label="An assistant that uses polite-crawler">
+    <section
+      className="pc-replay not-content"
+      ref={frame}
+      aria-label="An assistant that uses polite-crawler"
+    >
       <div className="pc-crawl-head">
         <div className="pc-crawl-title">
           <strong>An assistant cites what it read</strong>
@@ -165,7 +171,9 @@ export default function AgentReplay(): ReactElement {
             key={step.name}
             className={`pc-replay-step pc-replay-${step.kind}${index === active ? " pc-replay-on" : ""}${playing && index > active ? " pc-replay-later" : ""}`}
           >
-            <span className="pc-replay-who">{step.kind === "tool" ? <code>{step.name}</code> : step.name}</span>
+            <span className="pc-replay-who">
+              {step.kind === "tool" ? <code>{step.name}</code> : step.name}
+            </span>
             <div className="pc-replay-body">
               {step.kind === "person" ? <p className="pc-replay-ask">{step.note}</p> : null}
               {step.kind === "tool" ? (
@@ -176,7 +184,9 @@ export default function AgentReplay(): ReactElement {
                   <pre className="pc-replay-output">
                     <code>{step.output}</code>
                   </pre>
-                  <p className={`pc-replay-note${step.requests > 0 ? " pc-replay-net" : ""}`}>{step.note}</p>
+                  <p className={`pc-replay-note${step.requests > 0 ? " pc-replay-net" : ""}`}>
+                    {step.note}
+                  </p>
                 </>
               ) : null}
               {step.kind === "answer" ? (

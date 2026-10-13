@@ -75,8 +75,11 @@ const problems = [];
 let most = { path: "", bytes: 0 };
 
 // one sitemap, with each page and the date of its last change (a shallow clone has no dates, so it is not checked)
-const sitemaps = readdirSync(dist).filter((name) => /^sitemap.*\.xml$/.test(name)).sort();
-if (sitemaps.join(" ") !== "sitemap-0.xml sitemap-index.xml") problems.push(`the build has these sitemaps: ${sitemaps.join(", ")}`);
+const sitemaps = readdirSync(dist)
+  .filter((name) => /^sitemap.*\.xml$/.test(name))
+  .sort();
+if (sitemaps.join(" ") !== "sitemap-0.xml sitemap-index.xml")
+  problems.push(`the build has these sitemaps: ${sitemaps.join(", ")}`);
 else {
   const xml = readFileSync(join(dist, "sitemap-0.xml"), "utf8");
   const listed = [...xml.matchAll(/<url><loc>([^<]*)<\/loc>(<lastmod>[^<]+<\/lastmod>)?/g)];
@@ -86,16 +89,23 @@ else {
   }
   const git = join(dist, "..", "..", "..", ".git");
   if (existsSync(git) && !existsSync(join(git, "shallow"))) {
-    for (const [, loc, lastmod] of listed) if (lastmod === undefined) problems.push(`${loc}: no lastmod in the sitemap`);
+    for (const [, loc, lastmod] of listed)
+      if (lastmod === undefined) problems.push(`${loc}: no lastmod in the sitemap`);
   }
 }
 
 // the dataset of the study names its copy in the repository and the package that made it
 const study = readFileSync(join(dist, "notes", "robots-txt-ai-agents", "index.html"), "utf8");
-const graphs = [...study.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)].flatMap(([, json]) => JSON.parse(json)["@graph"] ?? []);
+const graphs = [
+  ...study.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g),
+].flatMap(([, json]) => JSON.parse(json)["@graph"] ?? []);
 const dataset = graphs.find((node) => node["@type"] === "Dataset");
-for (const same of ["https://github.com/mark1russell7/crawler/", "https://www.npmjs.com/package/polite-crawler"]) {
-  if (!(dataset?.sameAs ?? []).some((url) => url.startsWith(same))) problems.push(`the Dataset of the study has no sameAs ${same}`);
+for (const same of [
+  "https://github.com/mark1russell7/crawler/",
+  "https://www.npmjs.com/package/polite-crawler",
+]) {
+  if (!(dataset?.sameAs ?? []).some((url) => url.startsWith(same)))
+    problems.push(`the Dataset of the study has no sameAs ${same}`);
 }
 
 const browser = await chromium.launch();
@@ -120,7 +130,8 @@ for (const path of pages) {
   for (const ref of refs) {
     const url = new URL(ref, `${origin}${path}`);
     if (url.origin !== origin || ref.startsWith("#")) continue;
-    if (fileOf(url.pathname) === undefined) problems.push(`${path}: the link ${ref} goes to no file`);
+    if (fileOf(url.pathname) === undefined)
+      problems.push(`${path}: the link ${ref} goes to no file`);
   }
   // the islands hydrate when they come into view: scroll through the page once, then count the JavaScript
   await page.evaluate(async () => {
@@ -135,7 +146,10 @@ for (const path of pages) {
     const file = fileOf(script);
     return file === undefined ? sum : sum + gzipSync(readFileSync(file)).length;
   }, 0);
-  if (bytes > JS_BUDGET) problems.push(`${path}: ${String(bytes)} bytes of JavaScript (gzip), more than ${String(JS_BUDGET)}`);
+  if (bytes > JS_BUDGET)
+    problems.push(
+      `${path}: ${String(bytes)} bytes of JavaScript (gzip), more than ${String(JS_BUDGET)}`,
+    );
   if (bytes > most.bytes) most = { path, bytes };
   for (const width of [320, 375, 768, 1024]) {
     await page.setViewportSize({ width, height: 900 });
@@ -144,10 +158,12 @@ for (const path of pages) {
       scroll: document.documentElement.scrollWidth,
       client: document.documentElement.clientWidth,
     }));
-    if (scroll > client) problems.push(`${path}: the page is ${String(scroll)} px wide at ${String(width)} px`);
+    if (scroll > client)
+      problems.push(`${path}: the page is ${String(scroll)} px wide at ${String(width)} px`);
   }
   // the Pagefind UI loads at the first use of the search, not on each page (src/components/Search.astro)
-  if (await page.locator("#starlight__search > *").count()) problems.push(`${path}: the search UI loads before a reader uses it`);
+  if (await page.locator("#starlight__search > *").count())
+    problems.push(`${path}: the search UI loads before a reader uses it`);
   for (const error of errors) problems.push(`${path}: console error: ${error}`);
   await page.close();
 }
@@ -161,11 +177,14 @@ for (const path of pages) {
   const input = page.locator("#starlight__search input");
   try {
     await input.waitFor({ timeout: 10_000 });
-    if (!(await input.evaluate((node) => node === document.activeElement))) problems.push("search: the input has no focus after the first click");
+    if (!(await input.evaluate((node) => node === document.activeElement)))
+      problems.push("search: the input has no focus after the first click");
     await input.fill("robots.txt");
     await page.locator(".pagefind-ui__result").first().waitFor({ timeout: 10_000 });
   } catch (error) {
-    problems.push(`search: ${error instanceof Error ? (error.message.split("\n")[0] ?? "") : String(error)}`);
+    problems.push(
+      `search: ${error instanceof Error ? (error.message.split("\n")[0] ?? "") : String(error)}`,
+    );
   }
   await page.close();
 }
@@ -177,7 +196,12 @@ if (shots !== undefined) {
       { device: "desktop", viewport: { width: 1440, height: 900 } },
       { device: "phone", viewport: { width: 375, height: 812 } },
     ]) {
-      const shot = await browser.newContext({ viewport, colorScheme: scheme, reducedMotion: "reduce", deviceScaleFactor: 1 });
+      const shot = await browser.newContext({
+        viewport,
+        colorScheme: scheme,
+        reducedMotion: "reduce",
+        deviceScaleFactor: 1,
+      });
       for (const path of pages) {
         const page = await shot.newPage();
         await page.goto(`${origin}${path}`, { waitUntil: "networkidle" });
@@ -190,8 +214,15 @@ if (shots !== undefined) {
           window.scrollTo(0, 0);
         });
         await page.waitForTimeout(400);
-        const name = path.slice(BASE.length + 1).replace(/\/$/, "").replace(/\//g, "-") || "home";
-        await page.screenshot({ path: join(shots, `${name}-${device}-${scheme}.png`), fullPage: true });
+        const name =
+          path
+            .slice(BASE.length + 1)
+            .replace(/\/$/, "")
+            .replace(/\//g, "-") || "home";
+        await page.screenshot({
+          path: join(shots, `${name}-${device}-${scheme}.png`),
+          fullPage: true,
+        });
         await page.close();
       }
       await shot.close();
@@ -206,5 +237,9 @@ if (problems.length > 0) {
   console.error(`${String(problems.length)} problems in ${String(pages.length)} pages`);
   process.exit(1);
 }
-console.info(`${String(pages.length)} pages: the links go to files, no page scrolls sideways, and no page logs an error`);
-console.info(`the most JavaScript: ${String(most.bytes)} bytes (gzip) on ${most.path}, of ${String(JS_BUDGET)}`);
+console.info(
+  `${String(pages.length)} pages: the links go to files, no page scrolls sideways, and no page logs an error`,
+);
+console.info(
+  `the most JavaScript: ${String(most.bytes)} bytes (gzip) on ${most.path}, of ${String(JS_BUDGET)}`,
+);

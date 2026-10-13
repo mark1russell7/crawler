@@ -27,13 +27,19 @@ const site = (agent: MockAgent, origin: string, handler: (hit: Hit) => Answer): 
     .intercept({ path: () => true, method: "GET" })
     .reply((options) => {
       const headers: Record<string, string> = {};
-      for (const [name, value] of Object.entries((options.headers ?? {}) as Record<string, string>)) {
+      for (const [name, value] of Object.entries(
+        (options.headers ?? {}) as Record<string, string>,
+      )) {
         headers[name.toLowerCase()] = String(value);
       }
       const hit = { path: options.path, headers };
       hits.push(hit);
       const answer = handler(hit);
-      return { statusCode: answer.status, data: answer.body ?? "", responseOptions: { headers: answer.headers ?? {} } };
+      return {
+        statusCode: answer.status,
+        data: answer.body ?? "",
+        responseOptions: { headers: answer.headers ?? {} },
+      };
     })
     .persist();
   return hits;
@@ -41,7 +47,12 @@ const site = (agent: MockAgent, origin: string, handler: (hit: Hit) => Answer): 
 
 const ROBOTS = "User-agent: *\nAllow: /\n";
 
-const open = async (options: { renderer?: Renderer; extractors?: Parameters<typeof openCrawler>[0]["extractors"] } = {}) => {
+const open = async (
+  options: {
+    renderer?: Renderer;
+    extractors?: Parameters<typeof openCrawler>[0]["extractors"];
+  } = {},
+) => {
   const dir = await tempDir("runtime");
   const agent = new MockAgent();
   agent.disableNetConnect();
@@ -64,7 +75,8 @@ const open = async (options: { renderer?: Renderer; extractors?: Parameters<type
   return { dir, agent, clock, crawler, records };
 };
 
-const html = (body: string, head = ""): string => `<!doctype html><html><head><title>Forno</title>${head}</head><body>${body}</body></html>`;
+const html = (body: string, head = ""): string =>
+  `<!doctype html><html><head><title>Forno</title>${head}</head><body>${body}</body></html>`;
 const PARAGRAPH = `<p>${"Wood-fired bread every morning. ".repeat(10)}</p>`;
 
 describe("a page that changes", () => {
@@ -75,7 +87,9 @@ describe("a page that changes", () => {
       if (hit.path === "/robots.txt") return { status: 200, body: ROBOTS };
       const body =
         version === 1
-          ? html(`${PARAGRAPH}<p>Hours: Tuesday to Sunday.</p><p>We also cater weddings and large events.</p>`)
+          ? html(
+              `${PARAGRAPH}<p>Hours: Tuesday to Sunday.</p><p>We also cater weddings and large events.</p>`,
+            )
           : html(`${PARAGRAPH}<p>CLOSED PERMANENTLY</p>`);
       return { status: 200, body, headers: { "content-type": "text/html" } };
     });
@@ -93,10 +107,15 @@ describe("a page that changes", () => {
     const stale = await crawler.verify(second.doc!, "We also cater weddings");
     expect(stale).toMatchObject({ found: true, stale: true, capture: first.captures[0] });
     // a citation of the first capture stays true after the new fetch
-    const pinned = await crawler.verify(second.doc!, "We also cater weddings", { capture: first.captures[0] });
+    const pinned = await crawler.verify(second.doc!, "We also cater weddings", {
+      capture: first.captures[0],
+    });
     expect(pinned).toMatchObject({ found: true, stale: false, capture: first.captures[0] });
     expect(pinned.blob).toMatch(/^[0-9a-f]{64}$/);
-    expect((await crawler.verify(second.doc!, "We also cater weddings", { capture: second.captures[0] })).found).toBe(false);
+    expect(
+      (await crawler.verify(second.doc!, "We also cater weddings", { capture: second.captures[0] }))
+        .found,
+    ).toBe(false);
     expect(second.capture).toBe(second.captures[0]);
     const old = await crawler.read(second.doc!, { capture: first.captures[0], length: 20_000 });
     expect(old.text).toContain("Tuesday to Sunday");
@@ -113,7 +132,11 @@ describe("the cache after a rebuild", () => {
     const hits = site(agent, "https://bakery.example", (hit) => {
       if (hit.path === "/robots.txt") return { status: 200, body: ROBOTS };
       if (hit.headers["if-none-match"] === '"v1"') return { status: 304 };
-      return { status: 200, body: html(PARAGRAPH), headers: { etag: '"v1"', "content-type": "text/html; charset=utf-8" } };
+      return {
+        status: 200,
+        body: html(PARAGRAPH),
+        headers: { etag: '"v1"', "content-type": "text/html; charset=utf-8" },
+      };
     });
     const pages = (): number => hits.filter((hit) => hit.path === "/").length;
     await crawler.fetch("https://bakery.example/");
@@ -137,7 +160,11 @@ describe("the cache after a rebuild", () => {
     site(agent, "https://s.example", (hit) => {
       if (hit.path === "/robots.txt") return { status: 200, body: ROBOTS };
       if (hit.headers["if-none-match"] === '"t"') return { status: 304 };
-      return { status: 200, body: "<b>notes</b>", headers: { etag: '"t"', "content-type": "text/plain" } };
+      return {
+        status: 200,
+        body: "<b>notes</b>",
+        headers: { etag: '"t"', "content-type": "text/plain" },
+      };
     });
     expect((await crawler.fetch("https://s.example/notes.txt")).doc).toBeNull();
     const again = await crawler.fetch("https://s.example/notes.txt", { maxAge: "0s" });
@@ -148,8 +175,17 @@ describe("the cache after a rebuild", () => {
 
   it("gives no stored copy to a web page that answered a JSON request, also after a rebuild", async () => {
     const { agent, crawler } = await open();
-    site(agent, "https://api.example", () => ({ status: 200, body: "<html><body>Sign in</body></html>", headers: { "content-type": "text/html" } }));
-    const request = { url: "https://api.example/search?q=bread", mode: "api", recipe: "page", accept: "application/json" } as const;
+    site(agent, "https://api.example", () => ({
+      status: 200,
+      body: "<html><body>Sign in</body></html>",
+      headers: { "content-type": "text/html" },
+    }));
+    const request = {
+      url: "https://api.example/search?q=bread",
+      mode: "api",
+      recipe: "page",
+      accept: "application/json",
+    } as const;
     await fetchAndIndex(crawler.runtime, request);
     expect(crawler.runtime.index.latest(request.url)).toBeUndefined();
     await crawler.reindex();
@@ -163,23 +199,48 @@ describe("an extractor that throws", () => {
       extractors: {
         papers: (body) => {
           const parsed = JSON.parse(new TextDecoder().decode(body)) as { title: string };
-          return [{ doc: "doi:1", kind: "paper", title: parsed.title, text: parsed.title, url: null, meta: {} }];
+          return [
+            {
+              doc: "doi:1",
+              kind: "paper",
+              title: parsed.title,
+              text: parsed.title,
+              url: null,
+              meta: {},
+            },
+          ];
         },
       },
     });
     let maintenance = true;
     site(agent, "https://api.example", () =>
       maintenance
-        ? { status: 200, body: "<html>maintenance</html>", headers: { "content-type": "text/html" } }
-        : { status: 200, body: '{"title":"Bread"}', headers: { "content-type": "application/json" } },
+        ? {
+            status: 200,
+            body: "<html>maintenance</html>",
+            headers: { "content-type": "text/html" },
+          }
+        : {
+            status: 200,
+            body: '{"title":"Bread"}',
+            headers: { "content-type": "application/json" },
+          },
     );
-    const request = { url: "https://api.example/search?q=bread", mode: "api", recipe: "papers", minIntervalMs: 0 } as const;
+    const request = {
+      url: "https://api.example/search?q=bread",
+      mode: "api",
+      recipe: "papers",
+      minIntervalMs: 0,
+    } as const;
     const broken = await fetchAndIndex(crawler.runtime, request);
     expect(broken.fetched.outcome).toBe("ok");
     expect(broken.docs).toEqual([]);
     expect(broken.error).toMatch(/^extract failed \(papers\): /);
     maintenance = false;
-    const good = await fetchAndIndex(crawler.runtime, { ...request, url: "https://api.example/search?q=rye" });
+    const good = await fetchAndIndex(crawler.runtime, {
+      ...request,
+      url: "https://api.example/search?q=rye",
+    });
     expect(good.docs.map((doc) => doc.doc)).toEqual(["doi:1"]);
     const rebuilt = await crawler.reindex();
     expect(rebuilt).toMatchObject({ failed: 1, docs: 1 });
@@ -191,7 +252,9 @@ describe("a rebuild", () => {
   it("leaves the index as it was when the log fails in the middle", async () => {
     const { agent, crawler } = await open();
     site(agent, "https://a.example", (hit) =>
-      hit.path === "/robots.txt" ? { status: 200, body: ROBOTS } : { status: 200, body: html(PARAGRAPH), headers: { "content-type": "text/html" } },
+      hit.path === "/robots.txt"
+        ? { status: 200, body: ROBOTS }
+        : { status: 200, body: html(PARAGRAPH), headers: { "content-type": "text/html" } },
     );
     await crawler.fetch("https://a.example/");
     const before = crawler.runtime.index.counts();
@@ -212,7 +275,9 @@ describe("a rebuild", () => {
   it("skips and counts a damaged line, and reads a month of 130,000 records", async () => {
     const { agent, crawler, dir } = await open();
     site(agent, "https://a.example", (hit) =>
-      hit.path === "/robots.txt" ? { status: 200, body: ROBOTS } : { status: 200, body: html(PARAGRAPH), headers: { "content-type": "text/html" } },
+      hit.path === "/robots.txt"
+        ? { status: 200, body: ROBOTS }
+        : { status: 200, body: html(PARAGRAPH), headers: { "content-type": "text/html" } },
     );
     await crawler.fetch("https://a.example/");
     await crawler.runtime.log.close();
@@ -227,7 +292,16 @@ describe("a rebuild", () => {
   it("keeps the documents of a recipe that this runtime cannot read", async () => {
     const { crawler } = await open();
     crawler.runtime.index.upsert(
-      { doc: "menu:rye", kind: "menu", title: "Rye", text: "rye bread", url: null, meta: {}, captures: ["app.1"], recipe: "menu" },
+      {
+        doc: "menu:rye",
+        kind: "menu",
+        title: "Rye",
+        text: "rye bread",
+        url: null,
+        meta: {},
+        captures: ["app.1"],
+        recipe: "menu",
+      },
       "2026-10-07T12:00:00.000Z",
     );
     const rebuilt = await crawler.reindex();
@@ -249,7 +323,10 @@ describe("a page that is a bot check", () => {
     });
     const good = await crawler.fetch("https://shop.example/a");
     challenge = true;
-    const blocked = await crawler.fetch("https://shop.example/a", { maxAge: "0s", render: "always" });
+    const blocked = await crawler.fetch("https://shop.example/a", {
+      maxAge: "0s",
+      render: "always",
+    });
     expect(blocked).toMatchObject({ doc: null, rendered: false });
     expect(blocked.note).toContain("bot check (Cloudflare)");
     expect(blocked.note).toContain("the crawler does not render a bot check");
@@ -268,7 +345,12 @@ describe("the render rules of a page", () => {
       asked,
       render: (url) => {
         asked.push(url);
-        return Promise.resolve({ html: html("<p>shown</p>"), finalUrl: url, status: 200, headers: {} });
+        return Promise.resolve({
+          html: html("<p>shown</p>"),
+          finalUrl: url,
+          status: 200,
+          headers: {},
+        });
       },
       close: () => Promise.resolve(),
     };
@@ -280,12 +362,23 @@ describe("the render rules of a page", () => {
     site(agent, "https://docs.example", (hit) => {
       if (hit.path === "/robots.txt") return { status: 200, body: ROBOTS };
       if (hit.path === "/old") {
-        return { status: 200, body: html("", '<meta http-equiv="refresh" content="0; url=/new">'), headers: { "content-type": "text/html" } };
+        return {
+          status: 200,
+          body: html("", '<meta http-equiv="refresh" content="0; url=/new">'),
+          headers: { "content-type": "text/html" },
+        };
       }
-      if (hit.path === "/file.pdf") return { status: 200, body: "%PDF-1.4 broken", headers: { "content-type": "application/pdf" } };
+      if (hit.path === "/file.pdf")
+        return {
+          status: 200,
+          body: "%PDF-1.4 broken",
+          headers: { "content-type": "application/pdf" },
+        };
       return { status: 200, body: html(PARAGRAPH), headers: { "content-type": "text/html" } };
     });
-    const pdf = await fetchPage(crawler.runtime, "https://docs.example/file.pdf", { render: "always" });
+    const pdf = await fetchPage(crawler.runtime, "https://docs.example/file.pdf", {
+      render: "always",
+    });
     expect(pdf.rendered).toBe(false);
     expect(pdf.note).toContain("renders only an HTML page");
     const moved = await crawler.fetch("https://docs.example/old", { render: "never" });
@@ -306,7 +399,11 @@ describe("a page that asked not to be AI input", () => {
     site(agent, "https://news.example", (hit) =>
       hit.path === "/robots.txt"
         ? { status: 200, body: ROBOTS }
-        : { status: 200, body: PAGE, headers: { "content-type": "text/html", "content-signal": "ai-input=no" } },
+        : {
+            status: 200,
+            body: PAGE,
+            headers: { "content-type": "text/html", "content-signal": "ai-input=no" },
+          },
     );
     const page = await crawler.fetch("https://news.example/a");
     expect(page).toMatchObject({ held_back: true, title: null });
@@ -316,12 +413,22 @@ describe("a page that asked not to be AI input", () => {
     expect(read.meta["jsonld_types"]).toEqual(["Article"]);
     expect(await crawler.find("vault")).toEqual([]);
     expect(crawler.runtime.index.rankWithin("vault", [page.doc!])).toEqual([]);
-    expect(await crawler.verify(page.doc!, "the access code is 7319")).toMatchObject({ found: false, held_back: true, start: null });
-    expect(await crawler.verify(page.doc!, "the access code is 0000")).toMatchObject({ found: false, held_back: true, start: null });
+    expect(await crawler.verify(page.doc!, "the access code is 7319")).toMatchObject({
+      found: false,
+      held_back: true,
+      start: null,
+    });
+    expect(await crawler.verify(page.doc!, "the access code is 0000")).toMatchObject({
+      found: false,
+      held_back: true,
+      start: null,
+    });
     const unlocked = await crawler.read(page.doc!, { userProvided: true });
     expect(unlocked.text).toContain("BODY-ONLY");
     expect(unlocked.meta["description"]).toBe("DESCRIPTION-LEAK");
-    expect((await crawler.verify(page.doc!, "the access code is 7319", { userProvided: true })).found).toBe(true);
+    expect(
+      (await crawler.verify(page.doc!, "the access code is 7319", { userProvided: true })).found,
+    ).toBe(true);
     await crawler.runtime.log.flush();
     const overrides = (await records()).filter((row) => row.kind === "override");
     expect(overrides.length).toBeGreaterThanOrEqual(1);
@@ -333,7 +440,11 @@ describe("a page that asked not to be AI input", () => {
     site(agent, "https://news.example", (hit) => {
       if (hit.path === "/robots.txt") return { status: 200, body: ROBOTS };
       return refuses
-        ? { status: 200, body: PAGE, headers: { "content-type": "text/html", "content-signal": "ai-input=no" } }
+        ? {
+            status: 200,
+            body: PAGE,
+            headers: { "content-type": "text/html", "content-signal": "ai-input=no" },
+          }
         : { status: 200, body: html(PARAGRAPH), headers: { "content-type": "text/html" } };
     });
     const first = await crawler.fetch("https://news.example/a");
@@ -343,12 +454,25 @@ describe("a page that asked not to be AI input", () => {
     const quote = "the access code is 7319";
     // with no capture, the check examines only the versions that did not refuse
     const unpinned = await crawler.verify(second.doc!, quote);
-    expect(unpinned).toMatchObject({ found: false, start: null, end: null, excerpt: null, stale: false });
-    expect(unpinned.note).toContain("did not examine the versions that asked not to be AI input (1)");
+    expect(unpinned).toMatchObject({
+      found: false,
+      start: null,
+      end: null,
+      excerpt: null,
+      stale: false,
+    });
+    expect(unpinned.note).toContain(
+      "did not examine the versions that asked not to be AI input (1)",
+    );
     // the note does not depend on the quote
-    expect((await crawler.verify(second.doc!, "a quote that no version holds")).note).toBe(unpinned.note);
+    expect((await crawler.verify(second.doc!, "a quote that no version holds")).note).toBe(
+      unpinned.note,
+    );
     expect((await crawler.verify(second.doc!, "Wood-fired bread")).found).toBe(true);
-    expect(await crawler.verify(second.doc!, quote, { capture: first.capture! })).toMatchObject({ found: false, held_back: true });
+    expect(await crawler.verify(second.doc!, quote, { capture: first.capture! })).toMatchObject({
+      found: false,
+      held_back: true,
+    });
     const old = await crawler.read(second.doc!, { capture: first.capture! });
     expect(old).toMatchObject({ held_back: true, text: "", title: "" });
     expect(JSON.stringify(old.meta)).not.toMatch(/LEAK/);
@@ -367,15 +491,27 @@ describe("a page that asked not to be AI input", () => {
     site(agent, "https://news.example", (hit) =>
       hit.path === "/robots.txt"
         ? { status: 200, body: ROBOTS }
-        : { status: 200, body: PAGE, headers: { "content-type": "text/html", "content-signal": "ai-input=no" } },
+        : {
+            status: 200,
+            body: PAGE,
+            headers: { "content-type": "text/html", "content-signal": "ai-input=no" },
+          },
     );
-    const page = await crawler.fetch("https://news.example/a", { scope: "intimate", labels: { gift: "17" } });
+    const page = await crawler.fetch("https://news.example/a", {
+      scope: "intimate",
+      labels: { gift: "17" },
+    });
     await crawler.read(page.doc!, { userProvided: true });
     await crawler.verify(page.doc!, "the access code is 7319", { userProvided: true });
-    await recordOverride(crawler.runtime, crawler.runtime.index.get(page.doc!)!, "read", { scope: "private", labels: { by: "app" } });
+    await recordOverride(crawler.runtime, crawler.runtime.index.get(page.doc!)!, "read", {
+      scope: "private",
+      labels: { by: "app" },
+    });
     await crawler.runtime.log.flush();
     const overrides = (await records()).filter((row) => row.kind === "override");
-    expect(overrides.map((row) => [(row.payload as { action: string }).action, row.scope, row.labels])).toEqual([
+    expect(
+      overrides.map((row) => [(row.payload as { action: string }).action, row.scope, row.labels]),
+    ).toEqual([
       ["read", "intimate", { gift: "17" }],
       ["verify", "intimate", { gift: "17" }],
       ["read", "private", { by: "app" }],
@@ -387,13 +523,19 @@ describe("the freshness of a result", () => {
   it("says when the text was fetched and if the store answered", async () => {
     const { agent, crawler } = await open();
     site(agent, "https://a.example", (hit) =>
-      hit.path === "/robots.txt" ? { status: 200, body: ROBOTS } : { status: 200, body: html(PARAGRAPH), headers: { "content-type": "text/html" } },
+      hit.path === "/robots.txt"
+        ? { status: 200, body: ROBOTS }
+        : { status: 200, body: html(PARAGRAPH), headers: { "content-type": "text/html" } },
     );
     const first = await crawler.fetch("https://a.example/?utm_source=mail");
     expect(first).toMatchObject({ from_cache: false, fetched_at: "2026-10-07T12:00:01.000Z" });
     // the tracking parameter is not part of the cache key
     const second = await crawler.fetch("https://a.example/");
-    expect(second).toMatchObject({ from_cache: true, fetched_at: first.fetched_at, doc: first.doc });
+    expect(second).toMatchObject({
+      from_cache: true,
+      fetched_at: first.fetched_at,
+      doc: first.doc,
+    });
     const read = await crawler.read(first.doc!);
     expect(read.fetched_at).toBe(first.fetched_at);
   });

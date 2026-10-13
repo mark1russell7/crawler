@@ -8,7 +8,9 @@ import { fileURLToPath } from "node:url";
 import { chromium } from "playwright-core";
 import { formatDay, headline } from "../src/lib/study.ts";
 
-const study = JSON.parse(readFileSync(new URL("../src/data/robots-study.json", import.meta.url), "utf8"));
+const study = JSON.parse(
+  readFileSync(new URL("../src/data/robots-study.json", import.meta.url), "utf8"),
+);
 const gpt = study.agents.findIndex((agent) => agent.token === "GPTBot");
 const { gpt: row, summary } = headline(study);
 const facts = {
@@ -24,7 +26,10 @@ const cards = [
 ];
 const browser = await chromium.launch();
 for (const [card, png] of cards) {
-  const page = await browser.newPage({ viewport: { width: 1200, height: 630 }, deviceScaleFactor: 1 });
+  const page = await browser.newPage({
+    viewport: { width: 1200, height: 630 },
+    deviceScaleFactor: 1,
+  });
   await page.addInitScript((value) => {
     window.study = value;
   }, facts);

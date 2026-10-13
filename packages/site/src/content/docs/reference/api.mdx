@@ -145,3 +145,5 @@ The package is ESM only. These are its entry points:
 The entry points below `polite-crawler/mcp` have no Node.js dependency, so they operate in a browser too.
 
 The main entry point also exports `Crawler`, `CaptureLog`, `DocIndex`, `FileBlobStore`, `Extractors`, `fetchAndIndex`, `fetchPage`, `reindex` and `makeRecord`, for an application that builds its own runtime. It exports the readers that such an application uses: `extractPage`, `decodeBody`, `readPdf`, the hours reader, `parseRobots` and `decide`.
+
+The stable API is `openCrawler` with its results, `polite-crawler/mcp`, the reader entry points, the command line and the store on disk. The parts of the runtime are the engine: before version 1.0.0, a minor version can change them, and the changelog says so.

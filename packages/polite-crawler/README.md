@@ -230,6 +230,20 @@ The readers give more facts than before:
 
 `FetchRequest.maxAgeMs` can be `"auto"`: the crawler then uses the freshness that the server gave (`Cache-Control`, `Expires`, or 10 percent of the age of `Last-Modified`). `crawler.resetHosts(host?)` removes the stops and the failure counts of one host or of each host, for a process that runs for a long time.
 
+### Which parts are stable
+
+Before version 1.0.0, a minor version can change the API, and `CHANGELOG.md` tells what to change. Some parts change only for a strong reason. Other parts are the engine, and they change more often.
+
+These parts are the stable API:
+
+- `openCrawler` and the methods of `PoliteCrawler`: `fetch`, `find`, `read`, `verify`, `versions`, `reindex` and `close`.
+- The options and the results of these methods: `OpenOptions`, `FetchOptions`, `PageResult`, `Found`, `ReadResult`, `VerifyResult`, `DocVersion` and `ReindexResult`.
+- `polite-crawler/mcp`: `createMcpServer`, `startMcpServer` and the four tools.
+- The readers: `polite-crawler/robots`, `/hours`, `/html`, `/classify`, `/politeness` and `/signals`. The site and its tools use them in the browser.
+- The command line, its exit codes, the store on disk and `polite-crawler/record.schema.json`.
+
+The other exports of the root entry point are the engine. Examples are `createRuntime`, `catchUpIndex`, `Crawler`, `CaptureLog`, `DocIndex`, `FileBlobStore`, `SqliteHostStateStore`, `Extractors`, `fetchAndIndex` and `makeRecord`. An application can build on them. A minor version before 1.0.0 can change them, and its section in `CHANGELOG.md` says so.
+
 ## How the crawler is polite
 
 1. **robots.txt.** The crawler reads the robots.txt of each site and obeys it, as RFC 9309 specifies. A 401 or a 403 for robots.txt means that the site has no file. When the crawler cannot read robots.txt (a dead domain, a server error or a body that does not decode), it fetches nothing from the site. Then it tries again after some minutes, with a backoff from `Retry-After` up to 1 hour. A good copy of the file from the last 30 days applies in that time.

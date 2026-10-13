@@ -618,14 +618,23 @@ const onBoundary = (text: string, position: number): number => {
 
 /**
  * This function writes an `override` record to the capture log. A person gave the URL of a
- * held-back document directly, and the hold stops for one action (`read` or `verify`).
+ * held-back document directly, and the hold stops for one action (`read` or `verify`). The record
+ * takes the scope and the labels of `marks`, or else those of the document, as its captures do.
  */
 export const recordOverride = async (
   runtime: CrawlRuntime,
-  doc: { readonly doc: string; readonly url: string | null },
+  doc: {
+    readonly doc: string;
+    readonly url: string | null;
+    readonly scope?: string | undefined;
+    readonly labels?: Readonly<Record<string, string>> | undefined;
+  },
   action: string,
+  marks: { readonly scope?: string | undefined; readonly labels?: Readonly<Record<string, string>> | undefined } = {},
 ): Promise<void> => {
   const at = runtime.now();
+  const scope = marks.scope ?? doc.scope;
+  const labels = marks.labels ?? doc.labels;
   await runtime.log.append(
     makeRecord({
       source: "fetch",
@@ -633,6 +642,8 @@ export const recordOverride = async (
       payload: { doc: doc.doc, url: doc.url, action, reason: "a person provided this URL", at },
       received_at: at,
       external_id: doc.url ?? doc.doc,
+      ...(scope !== undefined ? { scope } : {}),
+      ...(labels !== undefined ? { labels } : {}),
     }),
   );
 };
@@ -821,7 +832,7 @@ export const verifyQuote = async (
   options: VerifyOptions = {},
 ): Promise<VerifyResult> => {
   const { result, override } = examineQuote(runtime, id, quote, options);
-  if (override) await recordOverride(runtime, result, "verify");
+  if (override) await recordOverride(runtime, knownDoc(runtime, id), "verify");
   return result;
 };
 

@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import type { CaptureRecord } from "./record.ts";
 import type { Renderer } from "./render.ts";
 import { openCrawler } from "./open.ts";
-import { fetchAndIndex, fetchPage, reindex } from "./runtime.ts";
+import { fetchAndIndex, fetchPage, recordOverride, reindex } from "./runtime.ts";
 import { fakeClock, removeDir, tempDir } from "./test-helpers.ts";
 
 const cleanups: Array<() => Promise<void> | void> = [];
@@ -350,6 +350,26 @@ describe("a page that asked not to be AI input", () => {
     await crawler.runtime.log.flush();
     const overrides = (await records()).filter((row) => row.kind === "override");
     expect(overrides.map((row) => (row.payload as { action: string }).action)).toEqual(["verify"]);
+  });
+
+  it("writes the override with the scope and the labels of the document, or of the caller", async () => {
+    const { agent, crawler, records } = await open();
+    site(agent, "https://news.example", (hit) =>
+      hit.path === "/robots.txt"
+        ? { status: 200, body: ROBOTS }
+        : { status: 200, body: PAGE, headers: { "content-type": "text/html", "content-signal": "ai-input=no" } },
+    );
+    const page = await crawler.fetch("https://news.example/a", { scope: "intimate", labels: { gift: "17" } });
+    await crawler.read(page.doc!, { userProvided: true });
+    await crawler.verify(page.doc!, "the access code is 7319", { userProvided: true });
+    await recordOverride(crawler.runtime, crawler.runtime.index.get(page.doc!)!, "read", { scope: "private", labels: { by: "app" } });
+    await crawler.runtime.log.flush();
+    const overrides = (await records()).filter((row) => row.kind === "override");
+    expect(overrides.map((row) => [(row.payload as { action: string }).action, row.scope, row.labels])).toEqual([
+      ["read", "intimate", { gift: "17" }],
+      ["verify", "intimate", { gift: "17" }],
+      ["read", "private", { by: "app" }],
+    ]);
   });
 });
 

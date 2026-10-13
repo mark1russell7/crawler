@@ -11,6 +11,11 @@
  *
  * The values can be structured fields (RFC 9651): `ai-input=?0`, `ai-input="no"` and `ai-input=no`
  * have the same meaning.
+ *
+ * The crawler also records two other kinds of statement, and they change nothing. The first is the
+ * `License` lines of RSL in robots.txt. The second is the TDMRep reservation of text and data
+ * mining: the headers `tdm-reservation` and `tdm-policy`, and the `<meta>` tags with these names.
+ * A TDM reservation is about mining, not about AI input, so it is not a no for AI input.
  */
 
 export type AiInput = "yes" | "no" | "unset";
@@ -65,6 +70,33 @@ const tags = (value: string): string[] =>
     // a tag can name a bot first: `googlebot: noai`
     .map((part) => part.slice(part.lastIndexOf(":") + 1).trim());
 
+/** The part of a page that `metaSignals` reads. The `<head>` comes first. */
+const META_BYTES = 65_536;
+
+/**
+ * This function reads the TDMRep tags of a page (`<meta name="tdm-reservation" content="1">` and
+ * `tdm-policy`) as lines for `readSignals`, for example `meta tdm-reservation: 1`. It reads the first
+ * 64 KB of the page, and its time grows in proportion to that length.
+ */
+export const metaSignals = (html: string): string[] => {
+  const lines: string[] = [];
+  const head = html.slice(0, META_BYTES);
+  const lower = head.toLowerCase();
+  // each tag ends at the next ">": a "<meta" with no end stops the reading, so the time stays linear
+  for (let at = lower.indexOf("<meta"); at !== -1; ) {
+    const end = lower.indexOf(">", at);
+    if (end === -1) break;
+    const tag = head.slice(at, end + 1);
+    at = lower.indexOf("<meta", end);
+    const name = /\bname\s*=\s*["']?([^"'\s>]+)/i.exec(tag)?.[1]?.toLowerCase();
+    if (name !== "tdm-reservation" && name !== "tdm-policy") continue;
+    const content = /\bcontent\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/i.exec(tag);
+    const value = (content?.[1] ?? content?.[2] ?? content?.[3] ?? "").trim();
+    if (value.length > 0) lines.push(`meta ${name}: ${value}`);
+  }
+  return lines;
+};
+
 /**
  * Read the signals from a site's robots.txt lines (`content-signal: …`,
  * `content-usage: …`) and the response's own headers. A "no" anywhere wins:
@@ -73,12 +105,14 @@ const tags = (value: string): string[] =>
 export const readSignals = (
   robotsLines: readonly string[],
   header: (name: string) => string | undefined,
+  pageLines: readonly string[] = [],
 ): Signals => {
   const raw: string[] = [...robotsLines];
-  for (const name of ["content-usage", "content-signal", "x-robots-tag"]) {
+  for (const name of ["content-usage", "content-signal", "x-robots-tag", "tdm-reservation", "tdm-policy"]) {
     const value = header(name);
     if (value !== undefined) raw.push(`${name}: ${value}`);
   }
+  raw.push(...pageLines);
   let verdict: AiInput = "unset";
   let deciding: string | undefined;
   let train: AiInput = "unset";

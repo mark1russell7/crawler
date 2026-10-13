@@ -363,4 +363,19 @@ describe("the polite fetcher", () => {
     });
     expect(fetched.signals.ai_input).toBe("no");
   });
+
+  it("records the TDMRep header and tags of a page with its signals, and keeps AI input unset", async () => {
+    const { agent, crawler } = await setup();
+    agent
+      .get("https://news.example")
+      .intercept({ path: "/tdm", method: "GET" })
+      .reply(200, '<html><head><meta name="tdm-reservation" content="1"></head><body><p>text</p></body></html>', {
+        headers: { "content-type": "text/html", "tdm-policy": "https://news.example/tdm.json" },
+      });
+    const fetched = await crawler.fetch({ url: "https://news.example/tdm", mode: "api", recipe: "t" });
+    expect(fetched.signals).toMatchObject({
+      ai_input: "unset",
+      raw: expect.arrayContaining(["tdm-policy: https://news.example/tdm.json", "meta tdm-reservation: 1"]) as unknown,
+    });
+  });
 });

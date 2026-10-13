@@ -48,4 +48,4 @@ When the store has a copy of a page, the request includes its `ETag` and its `La
 
 ## Content signals
 
-A site can state the uses of its content in robots.txt or in a header. Two formats exist: the `Content-Signal` lines of Cloudflare, and the `ai-use` of the IETF AIPREF draft. When a page refuses AI input, the crawler keeps the page but holds back its text from an AI reader. A training opt-out (`ai-train=no`) does not apply, because the crawler trains no model.
+A site can state the uses of its content in robots.txt or in a header. Two formats exist: the `Content-Signal` lines of Cloudflare, and the `ai-use` of the IETF AIPREF draft. When a page refuses AI input, the crawler keeps the page but holds back its text from an AI reader. A training opt-out (`ai-train=no`) does not apply, because the crawler trains no model. The crawler also records the RSL `License` lines of robots.txt and the TDMRep reservation (`tdm-reservation` and `tdm-policy`, in a header or a `<meta>` tag) with each capture. These records do not change what it does.

@@ -213,7 +213,8 @@ export const parseRobots = (input: string): Robots => {
       if (value.length > 0) sitemaps.push(value);
       continue;
     }
-    if (key === "content-signal" || key === "content-usage") {
+    // an RSL `License` line names the license of the content: the crawler records it with the other usage lines
+    if (key === "content-signal" || key === "content-usage" || key === "license") {
       signals.push(`${key}: ${value}`);
       (current?.signals ?? fileSignals).push(signalOf(key, value, index + 1));
       continue;

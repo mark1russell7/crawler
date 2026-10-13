@@ -62,4 +62,5 @@ The first version. It needs Node.js 22.19 or later, and it is ESM only.
   - A renderer throws `RenderRefused` for a page that it did not render, and the crawler does not count it as a failure of the host.
   - The default renderer checks one time that the browser is installed. With no browser, each page that needs JavaScript gets a note at once, with no wait and no error capture.
 - **Usage signals.** When a page asks not to be AI input (`ai-input=no`), the crawler keeps the page but holds back its text from the AI reader. The read gives no title, no text and only the structural metadata, the quote check gives no match, and the search leaves the page out.
+  - The capture records the RSL `License` lines of robots.txt and the TDMRep `tdm-reservation` and `tdm-policy` headers and `<meta>` tags. They do not change what the crawler does.
 - **The parts.** The entry points `polite-crawler/robots`, `/hours`, `/html`, `/classify`, `/politeness` and `/signals` have no Node.js dependency, so a browser can import them.

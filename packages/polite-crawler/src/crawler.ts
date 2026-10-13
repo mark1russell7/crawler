@@ -36,7 +36,7 @@ import { NO_PLAYWRIGHT, RenderRefused } from "./render.ts";
 import type { Robots, RobotsDecision } from "./robots.ts";
 import { decide, robotsFromResponse, robotsFromStatus, signalsFor, unreachableRobots } from "./robots.ts";
 import type { AiInput, Signals } from "./signals.ts";
-import { NO_SIGNALS, readSignals } from "./signals.ts";
+import { NO_SIGNALS, metaSignals, readSignals } from "./signals.ts";
 import { cacheKeyOf } from "./urls.ts";
 
 /**
@@ -329,6 +329,12 @@ const CONSTANT_HEADERS: ReadonlySet<string> = new Set(["accept-encoding", "user-
  * `aws-chunked` can send the name with the decoded body.
  */
 const IDENTITY_CODINGS: ReadonlySet<string> = new Set(["identity", "aws-chunked"]);
+
+/** This function reads the TDMRep `<meta>` tags at the start of an HTML body. */
+const pageSignals = (body: Uint8Array | undefined, contentType: string | undefined): string[] =>
+  body === undefined || !/html/i.test(contentType ?? "")
+    ? []
+    : metaSignals(new TextDecoder("latin1").decode(body.subarray(0, 65_536)));
 
 /** This function tells if an error of a renderer says that it has no browser: no `playwright-core`, or no browser on the disk. */
 const missingBrowser = (message: string): boolean =>
@@ -1588,7 +1594,7 @@ export class Crawler {
           }
 
           const revisit = outcome === "not-modified" && usable !== undefined;
-          let signals = readSignals(robotsLines, header);
+          let signals = readSignals(robotsLines, header, pageSignals(body, header("content-type")));
           if (revisit) {
             // a 304 updates the stored answer and does not replace it (RFC 9111 §4.3.4)
             const merged: AiInput =
@@ -2037,7 +2043,7 @@ export class Crawler {
         body = undefined;
       }
     }
-    const signals = readSignals(signalsFor(finalVerdict.robots, tokens, finalPath), header);
+    const signals = readSignals(signalsFor(finalVerdict.robots, tokens, finalPath), header, metaSignals(rendered.html));
     const status = rendered.status ?? 200;
     const fetchedAt = this.clock.now();
     const freshness = freshUntil(header, status, fetchedAt, header("last-modified"), policy.heuristicFreshnessCapMs);

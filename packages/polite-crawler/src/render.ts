@@ -452,7 +452,14 @@ export const playwrightRenderer = (
       let last = -1;
       let since = Date.now();
       while (Date.now() < settleEnd) {
-        const length = await within(page.evaluate(MEASURE) as Promise<number>, settleEnd - Date.now());
+        const measured = (page.evaluate(MEASURE) as Promise<number>).catch(async (error: unknown) => {
+          // a script of the page can start a navigation while the text is measured: the next poll measures the new document
+          if (!/destroyed|navigat/i.test(messageOf(error))) throw error;
+          await page.waitForLoadState("domcontentloaded", { timeout: left() }).catch(() => undefined);
+          // no length equals NaN, so the wait goes on
+          return Number.NaN;
+        });
+        const length = await within(measured, settleEnd - Date.now());
         // a page that keeps its thread busy does not answer: the reading below decides
         if (length === undefined) break;
         if (length !== last) {

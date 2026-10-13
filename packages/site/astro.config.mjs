@@ -87,7 +87,8 @@ export default defineConfig({
         "./src/styles/study.css",
         "./src/styles/home.css",
       ],
-      components: { Hero: "./src/components/Hero.astro" },
+      // the search loads the Pagefind UI at the first use (src/components/Search.astro)
+      components: { Hero: "./src/components/Hero.astro", Search: "./src/components/Search.astro" },
       // a long line of code wraps, so a code block never scrolls sideways on a phone
       expressiveCode: { defaultProps: { wrap: true } },
       // the title for search, the structured data and the description of the study (src/routeData.ts)

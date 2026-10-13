@@ -2,6 +2,7 @@
 // - each internal link and each asset of each page goes to a file of the build;
 // - no page scrolls sideways at 320, 375, 768 and 1024 pixels;
 // - no page logs an error in the console;
+// - no page loads the search UI before a reader uses the search, and the search finds pages;
 // - one sitemap lists each page, with the date of its last change.
 // With --shots <dir>, it also saves a screenshot of each page: desktop and phone, light and dark.
 //   pnpm --filter @crawler/site check [--shots <dir>]
@@ -121,7 +122,27 @@ for (const path of pages) {
     }));
     if (scroll > client) problems.push(`${path}: the page is ${String(scroll)} px wide at ${String(width)} px`);
   }
+  // the Pagefind UI loads at the first use of the search, not on each page (src/components/Search.astro)
+  if (await page.locator("#starlight__search > *").count()) problems.push(`${path}: the search UI loads before a reader uses it`);
   for (const error of errors) problems.push(`${path}: console error: ${error}`);
+  await page.close();
+}
+
+// the first click on the search button loads the search UI, and a query finds pages
+{
+  const page = await context.newPage();
+  page.on("pageerror", (error) => problems.push(`search: ${error.message}`));
+  await page.goto(`${origin}${BASE}/`, { waitUntil: "networkidle" });
+  await page.locator("button[data-open-modal]").click();
+  const input = page.locator("#starlight__search input");
+  try {
+    await input.waitFor({ timeout: 10_000 });
+    if (!(await input.evaluate((node) => node === document.activeElement))) problems.push("search: the input has no focus after the first click");
+    await input.fill("robots.txt");
+    await page.locator(".pagefind-ui__result").first().waitFor({ timeout: 10_000 });
+  } catch (error) {
+    problems.push(`search: ${error instanceof Error ? (error.message.split("\n")[0] ?? "") : String(error)}`);
+  }
   await page.close();
 }
 

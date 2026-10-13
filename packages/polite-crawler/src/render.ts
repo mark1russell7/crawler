@@ -478,12 +478,17 @@ export const playwrightRenderer = (
         }
         await sleep(Math.min(POLL_MS, settleEnd - Date.now()));
       }
-      const serialized = (await page.evaluate(SERIALIZE).catch(async (error: unknown) => {
-        // a navigation can replace the document while it is read
-        if (!/destroyed|navigat/i.test(messageOf(error))) throw error;
-        await page.waitForLoadState("domcontentloaded", { timeout: left() }).catch(() => undefined);
-        return page.evaluate(SERIALIZE);
-      })) as Serialized;
+      // a navigation can replace the document while it is read: the read waits for the new document
+      // and tries again, until the deadline (a page can navigate many times in a row)
+      let serialized: Serialized | undefined;
+      while (serialized === undefined) {
+        try {
+          serialized = (await page.evaluate(SERIALIZE)) as Serialized;
+        } catch (error) {
+          if (!/destroyed|navigat/i.test(messageOf(error)) || Date.now() >= deadline) throw error;
+          await page.waitForLoadState("domcontentloaded", { timeout: left() }).catch(() => undefined);
+        }
+      }
       // a later navigation that the route refused leaves the browser on its error page, which is not the page
       if (refused !== undefined && page.url().startsWith("chrome-error:")) {
         throw new RenderRefused("refused", `the page moved: ${refused.message}`, refused.url);

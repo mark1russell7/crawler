@@ -700,6 +700,14 @@ const DATE_RANGE = new RegExp(
 /** These words tell that a line is for one occasion, not for the week. */
 const OCCASION =
   /\b(?:holidays?|christmas|xmas|thanksgiving|easter|hanukkah|new year['’]?s?|nye|memorial day|labou?r day|independence day|valentine['’]?s|mother['’]?s day|father['’]?s day|private (?:events?|parties|party|hire|dining)|special events?|events? only|today|tonight)\b/i;
+/**
+ * These words name a service or an event beside the opening hours ("Happy hour 6-8pm", "Delivery
+ * 6pm-9pm", "Live music 9pm-12am"). Some lines have no day and name a service before their hours.
+ * Under a line with days and hours, such a line is not the week. A meal ("Lunch", "Dinner") or
+ * "Kitchen" stays a part of the opening hours.
+ */
+const SERVICE =
+  /\b(?:happy hours?|delivery|deliveries|take[- ]?out|take[- ]?away|pick[- ]?up|curbside|drive[- ]?(?:thru|through)|live (?:music|jazz|band)|music|dj|karaoke|trivia|bingo|open mic|brunch|bottomless)\b/i;
 const SEASON =
   /^(?:summer|winter|spring|autumn|fall|off[- ]?season|high season|low season|peak season)\b|\b(?:summer|winter|spring|autumn|fall|off[- ]?season)(?=\s?(?:hours|schedule|season|:|\())/i;
 
@@ -761,7 +769,9 @@ const JOINERS = /^(?:[\s,&/:;.()|–—-]|\band\b|\bor\b|\bfrom\b|\bopen\b|\bhou
  * is a judgment, not a parse. A season ("Summer:", "June-August") starts a new candidate.
  *
  * A line about a date or an occasion ("Dec 24: 9am-2pm", "New Year's Eve 8pm-1am", "Private events
- * 11am-3pm") is not the week. The reader leaves it out, and the candidate is `partial`.
+ * 11am-3pm") is not the week. A line with no day that names a service before its hours ("Happy hour
+ * 6-8pm") under a line with days and hours is not the week either. The reader leaves it out, and
+ * the candidate is `partial`.
  */
 export const fromText = (text: string): Array<Hours & { readonly label: string | null }> => {
   const original = text.split(/\n+/).map((line) => line.trim());
@@ -794,9 +804,19 @@ export const fromText = (text: string): Array<Hours & { readonly label: string |
       const value = onLine.find(
         (token) => token.groups["times"] !== undefined || token.groups["clock"] !== undefined,
       );
+      // "Happy hour 6-8pm" under "Mon-Fri 9am-5pm" is not more opening hours of those days; under
+      // "Sat-Sun" alone ("Brunch 10am-2pm") it is the only time those days have
+      const above = at > 0 ? perLine[at - 1]! : [];
+      const service =
+        !weekly &&
+        value !== undefined &&
+        SERVICE.test(line.slice(0, value.start)) &&
+        above.some((token) => token.days !== undefined) &&
+        above.some((token) => token.groups["times"] !== undefined || token.groups["closed"] !== undefined);
       return (
         (date !== null && (value === undefined || date.index < value.start)) ||
-        (!weekly && OCCASION.test(line))
+        (!weekly && OCCASION.test(line)) ||
+        service
       );
     });
     const tokens: Token[] = [];

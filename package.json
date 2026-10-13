@@ -12,7 +12,7 @@
     "template": "tsx packages/cli/src/index.ts repo",
     "browser": "pnpm --filter polite-crawler exec playwright-core install chromium-headless-shell",
     "build": "pnpm --filter polite-crawler build",
-    "check": "pnpm typecheck && pnpm lint && pnpm test && pnpm lint:ste && pnpm build && pnpm smoke",
+    "check": "pnpm format:check && pnpm typecheck && pnpm lint && pnpm test && pnpm lint:ste && pnpm build && pnpm smoke",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "lint": "oxlint --type-aware",

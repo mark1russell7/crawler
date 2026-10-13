@@ -132,7 +132,20 @@ describe("the hours reader on generated input", () => {
 
   it("reads any schema.org value without a throw", () => {
     const value = fc.oneof(
-      fc.constantFrom(null, undefined, 1, true, {}, [], "Monday", "9", "09:00", "24:00", "9:00 PM", "Mo-Fr 09:00-17:00"),
+      fc.constantFrom(
+        null,
+        undefined,
+        1,
+        true,
+        {},
+        [],
+        "Monday",
+        "9",
+        "09:00",
+        "24:00",
+        "9:00 PM",
+        "Mo-Fr 09:00-17:00",
+      ),
       fc.string({ maxLength: 40 }),
       fc.dictionary(fc.string({ maxLength: 8 }), fc.string({ maxLength: 12 })),
     );
@@ -150,9 +163,9 @@ describe("the hours reader on generated input", () => {
 
   it("never guesses an opening longer than 16 hours, and keeps a long one only when the clocks say it", () => {
     const hour = fc.integer({ min: 0, max: 24 });
-    const time = fc.tuple(hour, fc.constantFrom("", ":00", ":30"), fc.constantFrom("", "am", "pm", " p.m.")).map(
-      ([value, minute, meridiem]) => `${String(value)}${minute}${meridiem}`,
-    );
+    const time = fc
+      .tuple(hour, fc.constantFrom("", ":00", ":30"), fc.constantFrom("", "am", "pm", " p.m."))
+      .map(([value, minute, meridiem]) => `${String(value)}${minute}${meridiem}`);
     fc.assert(
       fc.property(time, time, (start, end) => {
         const range = readRange(start, end);
@@ -203,7 +216,8 @@ describe("the hours reader on generated input", () => {
         const [found] = fromText(text);
         expect(found, text).toBeDefined();
         expect(found!.week[day], text).toEqual([]);
-        for (const other of DAYS) if (other !== day) expect(found!.week[other]!.length, text).toBe(1);
+        for (const other of DAYS)
+          if (other !== day) expect(found!.week[other]!.length, text).toBe(1);
       }),
       { numRuns: 300, seed: 20_261_012 },
     );
@@ -219,6 +233,7 @@ describe("the time of the hours reader", () => {
   /**
    * The time for 4n stays near four times the time for n: it is not the sixteen of a square. The
    * best of three runs keeps a pause of the collector out, and the floor keeps a busy machine out.
+   * A test that uses it tries again two times: a square fails each try, and a busy machine does not.
    */
   const linear = (make: (n: number) => () => unknown): void => {
     make(2000)();
@@ -229,7 +244,7 @@ describe("the time of the hours reader", () => {
     expect(large).toBeLessThan(2000);
   };
 
-  it("grows in proportion to the input on hostile text", () => {
+  it("grows in proportion to the input on hostile text", { retry: 2, timeout: 60_000 }, () => {
     linear((n) => () => fromText(`Hours\n1${" ".repeat(n)}x`));
     linear((n) => () => fromText(`Hours\nMon 1${" ".repeat(n)}x`));
     linear((n) => () => fromText(`Hours\n${"1 ".repeat(n)}x`));
@@ -237,5 +252,5 @@ describe("the time of the hours reader", () => {
     linear((n) => () => fromText("Mon 9am-5pm ".repeat(n / 12)));
     linear((n) => () => fromCompact(`Mo${" ".repeat(n)}x`));
     linear((n) => () => fromSchemaOrg({ openingHours: `Mo${" ".repeat(n)}#` }));
-  }, 60_000);
+  });
 });

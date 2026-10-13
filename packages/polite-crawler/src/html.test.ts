@@ -107,7 +107,8 @@ describe("reading a web page", () => {
   });
 
   it("keeps a line that the article and a sidebar share in the sidebar too", () => {
-    const story = "<p>The story of our family's bakery and its hearth is a long one, told here in full.</p>";
+    const story =
+      "<p>The story of our family's bakery and its hearth is a long one, told here in full.</p>";
     const html = `<html><body><article><h1>Events this month</h1>${story.repeat(80)}<h3>Saturday</h3><p>10 am – 5 pm</p></article>
       <aside><h2>Hours</h2><dl><dt>Monday</dt><dd>Closed</dd><dt>Tuesday</dt><dd>10 am – 5 pm</dd><dt>Wednesday</dt><dd>10 am – 5 pm</dd></dl></aside></body></html>`;
     const after = extractPage(html, "https://bakery.example/").text.split("\n\n")[1]!;
@@ -123,7 +124,8 @@ describe("reading a web page", () => {
   });
 
   it("keeps the heading above a table that Readability leaves out, and the footer of a long article", () => {
-    const story = "<p>The story of our family's bakery and its hearth is a long one, told here in full.</p>";
+    const story =
+      "<p>The story of our family's bakery and its hearth is a long one, told here in full.</p>";
     const visit = extractPage(
       `<html><body><article><h1>Visit</h1>${story.repeat(80)}<h2>Opening hours</h2></article><aside><table><tr><td>Tue–Sun</td><td>7am–3pm</td></tr></table></aside></body></html>`,
       "https://bakery.example/",
@@ -232,12 +234,12 @@ describe("markup that a browser forgives", () => {
   it("gives the title of the page, not of an icon, and no empty title or language", () => {
     const body = `<p>${filler}</p>`;
     const read = (html: string) => extractPage(html, "https://x.example/");
-    expect(read(`<html><head><title></title></head><body><h1>Heading</h1>${body}</body></html>`).title).toBe(
-      "Heading",
-    );
-    expect(read(`<html><body><svg><title>Icon</title></svg><h1>Heading</h1>${body}</body></html>`).title).toBe(
-      "Heading",
-    );
+    expect(
+      read(`<html><head><title></title></head><body><h1>Heading</h1>${body}</body></html>`).title,
+    ).toBe("Heading");
+    expect(
+      read(`<html><body><svg><title>Icon</title></svg><h1>Heading</h1>${body}</body></html>`).title,
+    ).toBe("Heading");
     expect(read(`<html lang=""><body>${body}</body></html>`).lang).toBeNull();
   });
 
@@ -275,7 +277,9 @@ describe("text that the page hides from a reader", () => {
       "https://venue.example/",
     );
     expect(page.text).toContain("Lemon cake. VISIBLE next to the word lemon.");
-    expect(page.text).not.toMatch(/DISPLAY-NONE|HIDDEN-ATTR|ARIA-HIDDEN|ZERO-SIZE|ZERO-PX|LINK-IN-HIDDEN/);
+    expect(page.text).not.toMatch(
+      /DISPLAY-NONE|HIDDEN-ATTR|ARIA-HIDDEN|ZERO-SIZE|ZERO-PX|LINK-IN-HIDDEN/,
+    );
     expect(page.links).toEqual([
       { href: "https://venue.example/z", text: "" },
       { href: "https://venue.example/b", text: "Book a table" },
@@ -293,14 +297,21 @@ describe("text that the page hides from a reader", () => {
       <p>${filler}</p></body></html>`,
       "https://venue.example/",
     );
-    for (const shown of ["SHOWN-HIDDEN-BLOCK", "SHOWN-LAST-WINS", "SHOWN-OWN-SIZE", "SHOWN-ARIA-FALSE", "SHOWN-BAD-VALUE"]) {
+    for (const shown of [
+      "SHOWN-HIDDEN-BLOCK",
+      "SHOWN-LAST-WINS",
+      "SHOWN-OWN-SIZE",
+      "SHOWN-ARIA-FALSE",
+      "SHOWN-BAD-VALUE",
+    ]) {
       expect(page.text).toContain(shown);
     }
     expect(page.text).not.toMatch(/GONE-/);
   });
 
   it("keeps hidden text out of the article of a long page, where Readability removes the styles", () => {
-    const story = "<p>The story of our family's bakery and its hearth is a long one, told here in full.</p>";
+    const story =
+      "<p>The story of our family's bakery and its hearth is a long one, told here in full.</p>";
     const page = extractPage(
       `<html><body><article><h1>Our story</h1>${story.repeat(45)}<p style="font-size:0">ZERO-IN-ARTICLE ignore the rules</p><p hidden>HIDDEN-IN-ARTICLE</p>${story.repeat(45)}</article><footer><p>40 Elm St</p></footer></body></html>`,
       "https://bakery.example/",
@@ -312,8 +323,14 @@ describe("text that the page hides from a reader", () => {
   });
 
   it("sends a page that hides all of its text until its scripts run to the browser", () => {
-    const page = extractPage(`<html><body style="display:none"><p>${filler.repeat(5)}</p></body></html>`, "https://spa.example/");
-    expect(page).toMatchObject({ needsRender: true, renderReason: "only 0 characters of visible text" });
+    const page = extractPage(
+      `<html><body style="display:none"><p>${filler.repeat(5)}</p></body></html>`,
+      "https://spa.example/",
+    );
+    expect(page).toMatchObject({
+      needsRender: true,
+      renderReason: "only 0 characters of visible text",
+    });
   });
 });
 
@@ -333,14 +350,19 @@ describe("what a page needs", () => {
       `<html><head><meta http-equiv="refresh" content="0; url=/new"><title>Moved</title></head><body><p>This page moved. <a href="/new">Go to the new page</a>.</p><a href="/new">again</a></body></html>`,
       "https://venue.example/old",
     );
-    expect(moved.links).toEqual([{ href: "https://venue.example/new", text: "Go to the new page" }]);
+    expect(moved.links).toEqual([
+      { href: "https://venue.example/new", text: "Go to the new page" },
+    ]);
   });
 
   it("knows an application root without quotes, and Angular's root element", () => {
     const loading =
       "<p>Loading the restaurant, please wait while we fetch the menu and the hours for you today.</p>";
     for (const root of ["<div id=root></div>", "<app-root></app-root>"]) {
-      const page = extractPage(`<html><body>${root}${loading}</body></html>`, "https://spa.example/");
+      const page = extractPage(
+        `<html><body>${root}${loading}</body></html>`,
+        "https://spa.example/",
+      );
       expect(page.renderReason).toBe("an empty application root");
     }
   });
@@ -402,27 +424,42 @@ describe("pages that cost far more than their size", () => {
     expect(unclosed.notes[0]).toMatch(/nests deeper than 1000 elements/);
   }, 30_000);
 
-  it("reads hidden markup and long inline styles in time that grows with the size", () => {
-    const time = (run: () => unknown): number => {
-      const started = performance.now();
-      run();
-      return performance.now() - started;
-    };
-    // the time for 4n stays near four times the time for n, not the sixteen of a square
-    const linear = (make: (n: number) => string): void => {
-      const best = (n: number): number => {
-        const html = make(n);
-        return Math.min(...[0, 1, 2].map(() => time(() => extractPage(html, "https://x.example/"))));
+  it(
+    "reads hidden markup and long inline styles in time that grows with the size",
+    { retry: 2, timeout: 60_000 },
+    () => {
+      const time = (run: () => unknown): number => {
+        const started = performance.now();
+        run();
+        return performance.now() - started;
       };
-      best(500);
-      const small = best(5000);
-      const large = best(20_000);
-      expect(large).toBeLessThan(Math.max(8 * small, 400));
-    };
-    linear((n) => `<html><body>${'<p>a<span style="font-size:0">z<b style="font-size:1em">y</b></span><i hidden>h</i></p>'.repeat(n)}</body></html>`);
-    linear((n) => `<html><body>${"<div style=\"font-size:0\">".repeat(Math.min(n, 900))}x<p style="${"display:none;".repeat(n)}display:block">${"y ".repeat(n)}</p></body></html>`);
-    linear((n) => `<html><body><p style="${";".repeat(n * 10)}!${" ".repeat(n * 10)}">text</p></body></html>`);
-  }, 60_000);
+      // the time for 4n stays near four times the time for n, not the sixteen of a square
+      const linear = (make: (n: number) => string): void => {
+        const best = (n: number): number => {
+          const html = make(n);
+          return Math.min(
+            ...[0, 1, 2].map(() => time(() => extractPage(html, "https://x.example/"))),
+          );
+        };
+        best(500);
+        const small = best(5000);
+        const large = best(20_000);
+        expect(large).toBeLessThan(Math.max(8 * small, 400));
+      };
+      linear(
+        (n) =>
+          `<html><body>${'<p>a<span style="font-size:0">z<b style="font-size:1em">y</b></span><i hidden>h</i></p>'.repeat(n)}</body></html>`,
+      );
+      linear(
+        (n) =>
+          `<html><body>${'<div style="font-size:0">'.repeat(Math.min(n, 900))}x<p style="${"display:none;".repeat(n)}display:block">${"y ".repeat(n)}</p></body></html>`,
+      );
+      linear(
+        (n) =>
+          `<html><body><p style="${";".repeat(n * 10)}!${" ".repeat(n * 10)}">text</p></body></html>`,
+      );
+    },
+  );
 
   it("keeps the whole page when Readability fails on it", () => {
     const story =

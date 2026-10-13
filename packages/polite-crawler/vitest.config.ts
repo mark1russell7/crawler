@@ -14,9 +14,10 @@ export default defineConfig({
     coverage: {
       provider: "v8",
       include: ["src/**/*.ts"],
-      exclude: ["src/**/*.test.ts", "src/**/*.spec.ts"],
+      // The test helpers are in src because of the rootDir of the tsconfig. They are not the source.
+      exclude: ["src/**/*.test.ts", "src/**/*.spec.ts", "src/test-*.ts"],
       reporter: ["text", "html", "json-summary"],
-      thresholds: { statements: 84, branches: 72, functions: 82, lines: 88 },
+      thresholds: { statements: 87, branches: 80, functions: 88, lines: 90 },
     },
   },
 });

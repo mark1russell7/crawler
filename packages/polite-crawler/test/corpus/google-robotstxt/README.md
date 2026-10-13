@@ -1,6 +1,6 @@
 # The conformance cases of the robots.txt parser of Google
 
-This folder holds `robots_test.cc` of [google/robotstxt](https://github.com/google/robotstxt), the robots.txt parser of Google. The file is byte for byte as it was at commit `a67394c800908229d21e58b0ae802830608c9a5e`. It keeps its license header: Copyright 2019 Google LLC, under the [Apache License, Version 2.0](https://www.apache.org/licenses/LICENSE-2.0).
+This folder holds `robots_test.cc` of [google/robotstxt](https://github.com/google/robotstxt), the robots.txt parser of Google. The file is byte for byte as it was at commit `a67394c800908229d21e58b0ae802830608c9a5e`. It keeps its license header: Copyright 2019 Google LLC, under the [Apache License, Version 2.0](https://www.apache.org/licenses/LICENSE-2.0). The file `LICENSE` in this folder is the license text of the same commit. The project of Google has no `NOTICE` file.
 
 ## The test
 

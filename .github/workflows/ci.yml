@@ -72,10 +72,9 @@ jobs:
 
       - run: pnpm test
 
-      # The coverage does not fail the job yet. The thresholds are in packages/polite-crawler/vitest.config.ts.
+      # The thresholds are in packages/polite-crawler/vitest.config.ts.
       - name: Coverage
         if: matrix.coverage
-        continue-on-error: true
         run: pnpm --filter polite-crawler test:coverage
       - name: Upload the coverage report
         if: matrix.coverage && !cancelled()
@@ -104,6 +103,8 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      # Prettier: the code, the JSON and the YAML. .prettierignore names what it does not format.
+      - run: pnpm format:check
       - run: pnpm typecheck
       # oxlint, with the type-aware rules (no-floating-promises, no-misused-promises)
       - run: pnpm lint

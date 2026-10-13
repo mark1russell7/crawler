@@ -3,8 +3,10 @@ import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { MockAgent } from "undici";
 import { afterEach, describe, expect, it } from "vitest";
+import { DocIndex } from "./docs.ts";
 import type { PoliteCrawler } from "./open.ts";
-import { defaultUserAgent, durationMs, openCrawler } from "./open.ts";
+import { createRuntime, defaultUserAgent, durationMs, openCrawler } from "./open.ts";
+import { catchUpIndex, fetchPage } from "./runtime.ts";
 import { fakeClock, removeDir, tempDir } from "./test-helpers.ts";
 
 const HTML = `<!doctype html><html lang="en"><head><title>Forno Esempio</title>
@@ -74,6 +76,42 @@ describe("openCrawler", () => {
     expect(defaultUserAgent("ops@example.com")).toContain("; ops@example.com)");
   });
 
+  it("sends a mailbox in From and the User-Agent, and a URL in the User-Agent only", async () => {
+    dir = await tempDir("open");
+    const agent = new MockAgent();
+    agent.disableNetConnect();
+    const sent: Array<{ readonly from: string | undefined; readonly agent: string | undefined }> = [];
+    agent
+      .get("https://bakery.example")
+      .intercept({ path: () => true })
+      .reply((request) => {
+        const headers = request.headers as Record<string, string>;
+        sent.push({ from: headers["from"], agent: headers["user-agent"] });
+        return { statusCode: 200, data: "User-agent: *\nAllow: /\n" };
+      })
+      .persist();
+    const ask = async (contact: string): Promise<{ readonly from: string | undefined; readonly agent: string | undefined }> => {
+      sent.length = 0;
+      const runtime = createRuntime({ dir: dir!, contact, renderer: false, dispatcher: agent, clock: fakeClock() });
+      try {
+        await runtime.crawler.fetch({ url: `https://bakery.example/${String(Math.random()).slice(2)}`, mode: "api", recipe: "x", maxAgeMs: 0 });
+      } finally {
+        await runtime.close();
+      }
+      return sent.at(-1)!;
+    };
+    const url = await ask("https://ops.example/contact");
+    expect(url.from).toBeUndefined();
+    expect(url.agent).toContain("; https://ops.example/contact)");
+    expect(await ask("ops@example.com")).toMatchObject({ from: "ops@example.com" });
+    expect(await ask("Ops Team <ops@example.com>")).toMatchObject({ from: "Ops Team <ops@example.com>" });
+    // a URL with an @ is still a URL
+    expect(await ask("https://example.com/@ops")).toMatchObject({ from: undefined });
+    expect(() => createRuntime({ dir: dir!, contact: "ops@exämple.com", renderer: false })).toThrow(
+      /^contact "ops@exämple.com" has a character that an HTTP header cannot hold/,
+    );
+  });
+
   it("reads durations", () => {
     expect(durationMs("24h")).toBe(86_400_000);
     expect(durationMs("30m")).toBe(1_800_000);
@@ -120,6 +158,77 @@ describe("openCrawler", () => {
     crawler = openCrawler({ dir: dir!, renderer: false, clock: fakeClock() });
     const read = await crawler.read(page.doc!);
     expect(read.text).toContain("Forno Esempio");
+  });
+
+  it("gives the first reindex the counts of the rebuild at open, and replays the log one time", async () => {
+    const polite = await setup();
+    await polite.fetch("https://bakery.example/");
+    await polite.close();
+    const path = join(dir!, "index.sqlite");
+    for (const suffix of ["-wal", "-shm", ""]) await removeDir(`${path}${suffix}`);
+    crawler = openCrawler({ dir: dir!, renderer: false, clock: fakeClock() });
+    // the rebuild at open began its scan already: count the scans after it
+    let scans = 0;
+    const captures = crawler.runtime.captures;
+    const scan = captures.scan.bind(captures);
+    (captures as { scan: typeof scan }).scan = (...args) => {
+      scans += 1;
+      return scan(...args);
+    };
+    const first = await crawler.reindex();
+    expect(first).toMatchObject({ docs: 1, urls: 2 });
+    expect(first).not.toHaveProperty("mode");
+    expect(scans).toBe(0);
+    // a later reindex replays the log
+    expect(await crawler.reindex()).toEqual(first);
+    expect(scans).toBe(1);
+  });
+
+  it("gives an index at open the captures that a different writer logged and did not index", async () => {
+    dir = await tempDir("open");
+    const agent = new MockAgent();
+    agent.disableNetConnect();
+    const site = agent.get("https://bakery.example");
+    site.intercept({ path: "/robots.txt" }).reply(200, "User-agent: *\nAllow: /\n").persist();
+    site
+      .intercept({ path: (path) => path !== "/robots.txt" })
+      .reply(200, HTML, { headers: { "content-type": "text/html; charset=utf-8" } })
+      .persist();
+    const clock = fakeClock();
+    const first = createRuntime({ dir, renderer: false, dispatcher: agent, clock });
+    await fetchPage(first, "https://bakery.example/", { render: "never" });
+    await first.close();
+    // a second writer logs a capture and stops before the index of the store has it: its index is in memory
+    const lost = createRuntime({ dir, index: new DocIndex(":memory:"), renderer: false, dispatcher: agent, clock });
+    const menu = await fetchPage(lost, "https://bakery.example/menu", { render: "never" });
+    await lost.close();
+
+    const store = createRuntime({ dir, renderer: false, clock });
+    try {
+      expect(store.index.get(menu.doc!)).toBeUndefined();
+      const caught = await catchUpIndex(store);
+      expect(caught).toMatchObject({ mode: "tail", failed: 0, missing: 0 });
+      expect(caught!.captures).toBeGreaterThanOrEqual(1);
+      expect(store.index.get(menu.doc!)?.text).toContain("Forno Esempio");
+      expect(store.index.latest("https://bakery.example/menu")).toMatchObject({ capture: menu.capture });
+      // the index missed nothing now
+      expect(await catchUpIndex(store)).toBeUndefined();
+    } finally {
+      await store.close();
+    }
+
+    // an application with createRuntime rebuilds a stale index with the same call, one time
+    const path = join(dir, "index.sqlite");
+    for (const suffix of ["-wal", "-shm", ""]) await removeDir(`${path}${suffix}`);
+    const fresh = createRuntime({ dir, renderer: false, clock });
+    try {
+      expect(fresh.index.stale).toBe(true);
+      expect(await catchUpIndex(fresh)).toMatchObject({ mode: "rebuild", docs: 2 });
+      expect(fresh.index.stale).toBe(false);
+      expect(await catchUpIndex(fresh)).toBeUndefined();
+    } finally {
+      await fresh.close();
+    }
   });
 
   it.skipIf(process.platform === "win32")("refuses a part of the store that is a symbolic link", async () => {

@@ -12,7 +12,8 @@ import {
   policyFor,
   realClock,
 } from "./politeness.ts";
-import { readSignals } from "./signals.ts";
+import { parseRobots, signalsFor } from "./robots.ts";
+import { metaSignals, readSignals } from "./signals.ts";
 
 const headers =
   (values: Record<string, string>) =>
@@ -87,6 +88,29 @@ describe("usage signals", () => {
       headers({ "content-signal": "ai-input=no" }),
     );
     expect(decided).toMatchObject({ ai_input: "no", ai_train: "no", deciding: "content-signal: ai-input=no" });
+  });
+  it("records the RSL license and the TDMRep reservation, and changes no verdict with them", () => {
+    const robots = parseRobots("User-agent: *\nAllow: /\nLicense: https://example.com/license.xml\n");
+    const lines = signalsFor(robots, ["PoliteCrawler"], "/menu");
+    expect(lines).toEqual(["license: https://example.com/license.xml"]);
+    const page = metaSignals(
+      `<head><meta name="tdm-reservation" content="1"><meta content='https://example.com/tdm.json' name=TDM-Policy><meta name="description" content="x"></head>`,
+    );
+    expect(page).toEqual(["meta tdm-reservation: 1", "meta tdm-policy: https://example.com/tdm.json"]);
+    const read = readSignals(lines, headers({ "tdm-reservation": "1", "tdm-policy": "https://example.com/p.json" }), page);
+    expect(read.raw).toEqual([
+      "license: https://example.com/license.xml",
+      "tdm-reservation: 1",
+      "tdm-policy: https://example.com/p.json",
+      "meta tdm-reservation: 1",
+      "meta tdm-policy: https://example.com/tdm.json",
+    ]);
+    expect(read).toMatchObject({ ai_input: "unset" });
+    expect(read.ai_train).toBeUndefined();
+    // the tags of a large page are read in linear time
+    const started = performance.now();
+    expect(metaSignals("<meta name=a ".repeat(50_000))).toEqual([]);
+    expect(performance.now() - started).toBeLessThan(1000);
   });
 });
 

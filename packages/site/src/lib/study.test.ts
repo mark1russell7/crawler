@@ -1,4 +1,5 @@
 import { readFileSync } from "node:fs";
+import { HTML_ROBOTS } from "polite-crawler/robots";
 import { describe, expect, it } from "vitest";
 import type { Study } from "./study.ts";
 import {
@@ -41,7 +42,7 @@ const study: Study = {
     { rank: 3, domain: "c.example", status: 404, state: "none", p: "..." },
     { rank: 4, domain: "d.example", status: 0, state: "unreachable", reason: "no response", p: "UUU" },
     { rank: 5, domain: "e.example", status: 403, state: "blocked", reason: "status 403", p: "BBB" },
-    { rank: 6, domain: "f.example", status: 200, state: "none", html: true, p: "..." },
+    { rank: 6, domain: "f.example", status: 200, state: "unreachable", html: true, reason: HTML_ROBOTS, p: "UUU" },
   ],
 };
 
@@ -52,10 +53,14 @@ describe("the answer of a domain", () => {
     expect(ok("User-agent: *\nDisallow: /private\n")).toEqual({ state: "file", html: false });
   });
 
-  it("reads a 404 and a 410 as no file, and an HTML page in place of the file as no file", () => {
+  it("reads a 404 and a 410 as no file, and an HTML page in place of the file as unreachable, as the crawler does", () => {
     expect(answerOf({ status: 404, outcome: "not-found" }).state).toBe("none");
     expect(answerOf({ status: 410, outcome: "error" }).state).toBe("none");
-    expect(ok("<!doctype html><title>Welcome</title><p>Home</p>", "text/html")).toEqual({ state: "none", html: true });
+    // polite-crawler reads no rules from a web page (isHtmlRobots), so it fetches nothing from the site
+    expect(ok("<!doctype html><title>Welcome</title><p>Home</p>", "text/html")).toEqual({ state: "unreachable", html: true, reason: HTML_ROBOTS });
+    // a robots.txt that a server sends as text/html, and an empty body, are files, as for the crawler
+    expect(ok("User-agent: *\nDisallow: /x\n", "text/html")).toEqual({ state: "file", html: false });
+    expect(ok("", "text/html")).toEqual({ state: "file", html: false });
   });
 
   it("puts each other 4xx, each 5xx and a challenge at the edge, not with the sites that permit", () => {
@@ -77,7 +82,7 @@ describe("the answer of a domain", () => {
 
   it("does not take a normal page with a form CAPTCHA for a bot wall", () => {
     const home = `<html><head><title>Example Shop: shoes and bags</title></head><body><form><div class="g-recaptcha"></div></form></body></html>`;
-    expect(ok(home, "text/html")).toEqual({ state: "none", html: true });
+    expect(ok(home, "text/html")).toEqual({ state: "unreachable", html: true, reason: HTML_ROBOTS });
   });
 
   it("keeps the stored copy for a 304, and does not count it as no answer", () => {
@@ -94,20 +99,24 @@ describe("the answer of a domain", () => {
     });
     expect(answerOf({ status: 0, outcome: "error", note: "no response: getaddrinfo ENOTFOUND x.example" }).state).toBe("unreachable");
     expect(answerOf({ status: 200, outcome: "ok", contentType: "text/plain", note: "undecodable body" }).state).toBe("unreachable");
-    expect(answerOf({ status: 200, outcome: "ok", contentType: "text/html", note: "undecodable body" })).toEqual({ state: "none", html: true });
+    expect(answerOf({ status: 200, outcome: "ok", contentType: "text/html", note: "undecodable body" })).toEqual({
+      state: "unreachable",
+      html: true,
+      reason: HTML_ROBOTS,
+    });
   });
 });
 
 describe("the numbers of the study", () => {
   it("counts the refusals over the sites that answered, and over the sites with a file", () => {
     const gpt = agentRows(study).find((row) => row.token === "GPTBot");
-    // 4 sites answered (2 files, 2 with no file); the blocked and the unreachable site do not count
-    expect(gpt).toMatchObject({ byName: 1, byStar: 1, refused: 2, share: 50, fileShare: 100 });
+    // 3 sites answered (2 files, 1 with no file); the blocked and the 2 unreachable sites do not count
+    expect(gpt).toMatchObject({ byName: 1, byStar: 1, refused: 2, share: 66.7, fileShare: 100 });
   });
 
   it("counts each state, and the pairs of a training crawler and an agent for a person", () => {
     const summary = summarize(study);
-    expect(summary).toMatchObject({ listSize: 6, answered: 4, withFile: 2, noFile: 2, html: 1, blocked: 1, unreachable: 1 });
+    expect(summary).toMatchObject({ listSize: 6, answered: 3, withFile: 2, noFile: 1, html: 1, blocked: 1, unreachable: 2 });
     expect(summary.blockedStatuses).toEqual([{ status: 403, sites: 1 }]);
     expect(summary.trainingNotUser["OpenAI"]).toBe(1);
     expect(summary.blocksEveryBot).toBe(1);
@@ -126,8 +135,8 @@ describe("the numbers of the study", () => {
     expect(companies(study)[0]).toEqual({
       owner: "OpenAI",
       agents: [
-        { token: "GPTBot", role: "training", share: 50 },
-        { token: "ChatGPT-User", role: "user", share: 25 },
+        { token: "GPTBot", role: "training", share: 66.7 },
+        { token: "ChatGPT-User", role: "user", share: 33.3 },
       ],
     });
   });
@@ -151,7 +160,7 @@ describe("the data for the browser and the CSV", () => {
     expect(sites).toHaveLength(6);
     expect(sites[0]).toEqual({ rank: 1, domain: "a.example", state: "f", codes: "N.." });
     expect(sites[3]).toEqual({ rank: 4, domain: "d.example", state: "u", codes: "" });
-    expect(sites[5]).toEqual({ rank: 6, domain: "f.example", state: "h", codes: "..." });
+    expect(sites[5]).toEqual({ rank: 6, domain: "f.example", state: "u", codes: "" });
     expect(verdictOf(sites[4]!, 0)).toBe("B");
     expect(verdictOf(sites[3]!, 0)).toBe("U");
   });

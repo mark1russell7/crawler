@@ -226,6 +226,41 @@ export interface FtsQuery {
 const MAX_PARTS = 16;
 
 /**
+ * These English words are in almost every document. In the form that needs one part, they match
+ * each document and cost the most time. Thus that form leaves them out when other words remain.
+ */
+const STOP_WORDS: ReadonlySet<string> = new Set([
+  "a",
+  "an",
+  "and",
+  "are",
+  "as",
+  "at",
+  "be",
+  "by",
+  "for",
+  "from",
+  "how",
+  "in",
+  "is",
+  "it",
+  "of",
+  "on",
+  "or",
+  "that",
+  "the",
+  "this",
+  "to",
+  "was",
+  "what",
+  "when",
+  "where",
+  "which",
+  "who",
+  "with",
+]);
+
+/**
  * This function reads a search query. The syntax:
  *
  * - A word is a term. The index folds case, accents and Unicode forms, so `cafe` finds `Café`. It
@@ -236,11 +271,11 @@ const MAX_PARTS = 16;
  * - Other punctuation is not syntax. The words `AND`, `OR`, `NOT` and `NEAR` are words.
  *
  * The function gives no query for a text with no word. It reads 16 parts or fewer. Each part is
- * quoted, so the text of a user cannot become FTS5 syntax.
+ * quoted, so the text of a user cannot become FTS5 syntax. The form that needs one part (`any`)
+ * leaves out the common English words (`STOP_WORDS`) when other words remain.
  */
 export const parseQuery = (q: string): FtsQuery | undefined => {
-  const parts: string[] = [];
-  const terms: string[] = [];
+  const parts: Array<{ readonly text: string; readonly term: string; readonly stop: boolean }> = [];
   for (const match of q.matchAll(/"([^"]*)"(\*?)|([^\s"]+)/g)) {
     if (parts.length >= MAX_PARTS) break;
     const phrase = match[1] !== undefined;
@@ -248,11 +283,21 @@ export const parseQuery = (q: string): FtsQuery | undefined => {
     const prefix = phrase ? match[2] === "*" : raw.endsWith("*");
     const tokens = tokensOf(phrase ? raw : raw.replace(/\*+$/, ""));
     if (tokens.length === 0) continue;
-    parts.push(`"${tokens.join(" ")}"${prefix ? " *" : ""}`);
-    terms.push(tokens[0]!);
+    parts.push({
+      text: `"${tokens.join(" ")}"${prefix ? " *" : ""}`,
+      term: tokens[0]!,
+      stop: !phrase && !prefix && tokens.length === 1 && STOP_WORDS.has(tokens[0]!),
+    });
   }
   if (parts.length === 0) return undefined;
-  return { all: parts.join(" AND "), any: parts.join(" OR "), terms, parts: parts.length };
+  const words = parts.filter((part) => !part.stop);
+  const any = words.length > 0 ? words : parts;
+  return {
+    all: parts.map((part) => part.text).join(" AND "),
+    any: any.map((part) => part.text).join(" OR "),
+    terms: any.map((part) => part.term),
+    parts: parts.length,
+  };
 };
 
 /** This function gives the FTS5 query that matches one part or more of a query. It is the form of version 0.1. */

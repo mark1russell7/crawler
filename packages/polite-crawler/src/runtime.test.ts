@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import type { CaptureRecord } from "./record.ts";
 import type { Renderer } from "./render.ts";
 import { openCrawler } from "./open.ts";
-import { fetchAndIndex, fetchPage, reindex } from "./runtime.ts";
+import { fetchAndIndex, fetchPage, recordOverride, reindex } from "./runtime.ts";
 import { fakeClock, removeDir, tempDir } from "./test-helpers.ts";
 
 const cleanups: Array<() => Promise<void> | void> = [];
@@ -144,6 +144,16 @@ describe("the cache after a rebuild", () => {
     expect(again).toMatchObject({ outcome: "not-modified", doc: null });
     await crawler.reindex();
     expect(crawler.runtime.index.counts().docs).toBe(0);
+  });
+
+  it("gives no stored copy to a web page that answered a JSON request, also after a rebuild", async () => {
+    const { agent, crawler } = await open();
+    site(agent, "https://api.example", () => ({ status: 200, body: "<html><body>Sign in</body></html>", headers: { "content-type": "text/html" } }));
+    const request = { url: "https://api.example/search?q=bread", mode: "api", recipe: "page", accept: "application/json" } as const;
+    await fetchAndIndex(crawler.runtime, request);
+    expect(crawler.runtime.index.latest(request.url)).toBeUndefined();
+    await crawler.reindex();
+    expect(crawler.runtime.index.latest(request.url)).toBeUndefined();
   });
 });
 
@@ -315,6 +325,61 @@ describe("a page that asked not to be AI input", () => {
     await crawler.runtime.log.flush();
     const overrides = (await records()).filter((row) => row.kind === "override");
     expect(overrides.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("stays held back in an earlier version after the page drops the signal", async () => {
+    const { agent, crawler, records } = await open();
+    let refuses = true;
+    site(agent, "https://news.example", (hit) => {
+      if (hit.path === "/robots.txt") return { status: 200, body: ROBOTS };
+      return refuses
+        ? { status: 200, body: PAGE, headers: { "content-type": "text/html", "content-signal": "ai-input=no" } }
+        : { status: 200, body: html(PARAGRAPH), headers: { "content-type": "text/html" } };
+    });
+    const first = await crawler.fetch("https://news.example/a");
+    refuses = false;
+    const second = await crawler.fetch("https://news.example/a", { maxAge: "0s" });
+    expect(second).toMatchObject({ held_back: false, capture_count: 2 });
+    const quote = "the access code is 7319";
+    // with no capture, the check examines only the versions that did not refuse
+    const unpinned = await crawler.verify(second.doc!, quote);
+    expect(unpinned).toMatchObject({ found: false, start: null, end: null, excerpt: null, stale: false });
+    expect(unpinned.note).toContain("did not examine the versions that asked not to be AI input (1)");
+    // the note does not depend on the quote
+    expect((await crawler.verify(second.doc!, "a quote that no version holds")).note).toBe(unpinned.note);
+    expect((await crawler.verify(second.doc!, "Wood-fired bread")).found).toBe(true);
+    expect(await crawler.verify(second.doc!, quote, { capture: first.capture! })).toMatchObject({ found: false, held_back: true });
+    const old = await crawler.read(second.doc!, { capture: first.capture! });
+    expect(old).toMatchObject({ held_back: true, text: "", title: "" });
+    expect(JSON.stringify(old.meta)).not.toMatch(/LEAK/);
+    expect(await crawler.find("vault")).toEqual([]);
+    expect((await crawler.versions(second.doc!)).map((row) => row.title)).toEqual(["Forno", ""]);
+    // a person who gave the URL opens the earlier version, and the crawler logs it
+    const opened = await crawler.verify(second.doc!, quote, { userProvided: true });
+    expect(opened).toMatchObject({ found: true, stale: true, capture: first.capture });
+    await crawler.runtime.log.flush();
+    const overrides = (await records()).filter((row) => row.kind === "override");
+    expect(overrides.map((row) => (row.payload as { action: string }).action)).toEqual(["verify"]);
+  });
+
+  it("writes the override with the scope and the labels of the document, or of the caller", async () => {
+    const { agent, crawler, records } = await open();
+    site(agent, "https://news.example", (hit) =>
+      hit.path === "/robots.txt"
+        ? { status: 200, body: ROBOTS }
+        : { status: 200, body: PAGE, headers: { "content-type": "text/html", "content-signal": "ai-input=no" } },
+    );
+    const page = await crawler.fetch("https://news.example/a", { scope: "intimate", labels: { gift: "17" } });
+    await crawler.read(page.doc!, { userProvided: true });
+    await crawler.verify(page.doc!, "the access code is 7319", { userProvided: true });
+    await recordOverride(crawler.runtime, crawler.runtime.index.get(page.doc!)!, "read", { scope: "private", labels: { by: "app" } });
+    await crawler.runtime.log.flush();
+    const overrides = (await records()).filter((row) => row.kind === "override");
+    expect(overrides.map((row) => [(row.payload as { action: string }).action, row.scope, row.labels])).toEqual([
+      ["read", "intimate", { gift: "17" }],
+      ["verify", "intimate", { gift: "17" }],
+      ["read", "private", { by: "app" }],
+    ]);
   });
 });
 

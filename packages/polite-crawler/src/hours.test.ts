@@ -319,11 +319,25 @@ describe("hours that are not the week", () => {
     );
   });
 
+  it("keeps a meal or the kitchen with no day of its own in the hours of the days above", () => {
+    expect(describeAll("Mon-Fri\nLunch 11am-2pm\nDinner 5pm-10pm")).toBe("Mon–Fri 11:00–14:00, 17:00–22:00");
+    // under days with no time of their own, the service is the time of those days
+    expect(describeAll("Sat-Sun\nBrunch 10am-2pm")).toBe("Sat–Sun 10:00–14:00");
+    expect(describeAll("Tue-Sat 5pm-11pm\nKitchen 5pm-10pm")).toBe("Tue–Sat 17:00–23:00");
+    expect(describeAll("Mon-Fri\nHours 9am-5pm")).toBe("Mon–Fri 09:00–17:00");
+    expect(fromText("Mon-Fri 9am-5pm\nHours 10am-4pm")[0]!.partial).toBeUndefined();
+  });
+
   it("leaves out a line for a date or an occasion, and says so", () => {
     for (const text of [
       "Mon-Fri 9am-5pm\nNew Year's Eve 8pm-1am",
       "Mon-Fri 9am-5pm\nDec 24: 9am-2pm\nDec 25: Closed",
       "Mon-Fri 9am-5pm\nPrivate events available 11am-3pm",
+      // a service or an event with no day of its own is not more opening hours of the days above
+      "Mon-Fri 9am-5pm\nHappy hour 6-8pm",
+      "Mon-Fri 9am-5pm\nDelivery 6pm-9pm",
+      "Mon-Fri 9am-5pm\nLive music 9pm-12am",
+      "Mon-Fri 9am-5pm\nBrunch 10am-2pm",
     ]) {
       const [found] = fromText(text);
       expect(describeWeek(found!.week)).toBe("Mon–Fri 09:00–17:00");
@@ -347,11 +361,13 @@ describe("hours that are not the week", () => {
   });
 
   it("gives each season a schedule of its own, and names it", () => {
-    const seasons = fromText("Summer: Mon-Sun 10am-8pm\nWinter: Sat-Sun 10am-4pm");
+    const seasons = fromText("Hours\nSummer: Mon-Sun 10am-8pm\nWinter: Sat-Sun 10am-4pm");
     expect(seasons.map((hours) => [hours.season, describeWeek(hours.week)])).toEqual([
       ["Summer", "Mon–Sun 10:00–20:00"],
       ["Winter", "Sat–Sun 10:00–16:00"],
     ]);
+    // the line above the winter schedule is the last line of the summer schedule, not a label
+    expect(seasons.map((hours) => hours.label)).toEqual(["Hours", null]);
     expect(fromText("Hours (June-August)\nMon-Sun 7am-10pm")[0]!.season).toBe("June-August");
   });
 });

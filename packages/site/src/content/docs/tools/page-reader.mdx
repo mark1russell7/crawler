@@ -20,7 +20,7 @@ The tool uses `extractPage` from polite-crawler, the same code that reads each p
 ## What the crawler reads
 
 - **The JSON-LD.** Many pages describe themselves with schema.org data in a `<script type="application/ld+json">` element. For a venue, this data gives the name, the address, the phone number and sometimes the opening hours. For a product, it gives the price.
-- **The visible text.** The crawler reads the text of the whole document and leaves out the scripts, the styles and the head. A table row becomes one line, so "Monday 10 am–5 pm" stays together.
+- **The visible text.** The crawler reads the text of the whole document and leaves out the scripts, the styles and the head. It also leaves out the text that the page hides: `display: none` in a `style` attribute, `hidden`, `aria-hidden="true"` and a font size of zero. A table row becomes one line, so "Monday 10 am–5 pm" stays together.
 - **The links.** The crawler keeps the links with their text. A recipe can then follow the link "Hours & Location" to the page that has the hours.
 
 On a long page that looks like an article, the main text from [Readability](https://github.com/mozilla/readability) comes first, and the other lines of the page follow it. Readability removes footers, sidebars and tables, but a venue often keeps its hours there.

@@ -650,7 +650,7 @@ export function StudyTable({
       <div className="pc-study-filters">
         <label className="pc-field">
           <span>Find a site</span>
-          <input type="search" value={query} placeholder="for example wikipedia" onChange={(event) => setQuery(event.target.value)} />
+          <input type="search" value={query} placeholder="for example wikipedia" onChange={(event) => setQuery(event.currentTarget.value)} />
         </label>
         <div className="pc-toggle" role="group" aria-label="Show">
           {filters.map(([key, text]) => (
@@ -758,8 +758,6 @@ const answerText = (site: PackedSite, detail: StudySite): string => {
       return `Blocked at the edge: ${detail.reason ?? status}. The study cannot tell the rules of the site.`;
     case "m":
       return `${status}: no file. The site states no rules, so each agent is permitted.`;
-    case "h":
-      return `${status}, but an HTML page and not a robots.txt file. The page states no rules, so each agent is permitted.`;
     case "f":
       return detail.status === 304
         ? `Status 304: the file is the copy that the same run fetched before, through a different domain. ${String(detail.bytes ?? 0)} bytes, ${String(detail.groups ?? 0)} groups.`

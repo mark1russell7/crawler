@@ -25,7 +25,7 @@ These options apply to each command:
 | Option | Default | What it does |
 | --- | --- | --- |
 | `--dir <path>` | `$POLITE_CRAWLER_DIR`, or `~/.polite-crawler` | The store. A path that starts with `~` is in your home folder, and a relative path starts at the working folder. |
-| `--contact <text>` | `$POLITE_CRAWLER_CONTACT` | An email or a URL for the `From` header. |
+| `--contact <text>` | `$POLITE_CRAWLER_CONTACT` | An email (in `From` and the `User-Agent`) or a URL (in the `User-Agent` only). |
 | `--allow-private` | `$POLITE_CRAWLER_ALLOW_PRIVATE=1` | Fetch loopback, private and link-local addresses too. By default, the crawler refuses them. |
 | `--no-browser` | | Do not open the headless browser. |
 | `--json` | | Print JSON. |

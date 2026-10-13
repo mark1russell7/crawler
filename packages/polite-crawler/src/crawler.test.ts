@@ -3,6 +3,7 @@ import { gzipSync } from "node:zlib";
 import { MockAgent } from "undici";
 import { afterEach, describe, expect, it } from "vitest";
 import { FileBlobStore } from "./blobs.ts";
+import type { CrawlerOptions } from "./crawler.ts";
 import { Crawler } from "./crawler.ts";
 import { DocIndex } from "./docs.ts";
 import { CaptureLog } from "./log.ts";
@@ -39,7 +40,7 @@ const fakeClock = (): Clock & { slept: number[] } => {
   };
 };
 
-const setup = async () => {
+const setup = async (options: Partial<CrawlerOptions> = {}) => {
   dir = await tempDir("crawler");
   const agent = new MockAgent();
   agent.disableNetConnect();
@@ -56,6 +57,7 @@ const setup = async () => {
     clock,
     random: () => 0.5,
     dispatcher: agent,
+    ...options,
   });
   const captures = async (): Promise<CaptureRecord[]> => {
     await log.close();
@@ -362,5 +364,119 @@ describe("the polite fetcher", () => {
       recipe: "t",
     });
     expect(fetched.signals.ai_input).toBe("no");
+  });
+
+  it("records the TDMRep header and tags of a page with its signals, and keeps AI input unset", async () => {
+    const { agent, crawler } = await setup();
+    agent
+      .get("https://news.example")
+      .intercept({ path: "/tdm", method: "GET" })
+      .reply(200, '<html><head><meta name="tdm-reservation" content="1"></head><body><p>text</p></body></html>', {
+        headers: { "content-type": "text/html", "tdm-policy": "https://news.example/tdm.json" },
+      });
+    const fetched = await crawler.fetch({ url: "https://news.example/tdm", mode: "api", recipe: "t" });
+    expect(fetched.signals).toMatchObject({
+      ai_input: "unset",
+      raw: expect.arrayContaining(["tdm-policy: https://news.example/tdm.json", "meta tdm-reservation: 1"]) as unknown,
+    });
+  });
+
+  it("keeps no stored copy of a web page that answers a JSON request, and asks again the next time", async () => {
+    const { agent, crawler, index, captures } = await setup();
+    let calls = 0;
+    agent
+      .get("https://api.example")
+      .intercept({ path: "/data", method: "GET" })
+      .reply(() => {
+        calls += 1;
+        return calls === 1
+          ? { statusCode: 200, data: "<html><body>Please sign in</body></html>", responseOptions: { headers: { "content-type": "text/html; charset=utf-8" } } }
+          : { statusCode: 200, data: '{"ok":true}', responseOptions: { headers: { "content-type": "application/json" } } };
+      })
+      .persist();
+    const request = { url: "https://api.example/data", mode: "api", recipe: "t", accept: "application/json", maxAgeMs: 3_600_000 } as const;
+    const first = await crawler.fetch(request);
+    expect(first.outcome).toBe("ok");
+    expect(first.note).toContain("the server sent text/html; charset=utf-8, and the request accepts application/json");
+    expect(index.latest("https://api.example/data")).toBeUndefined();
+    const second = await crawler.fetch(request);
+    expect(second).toMatchObject({ outcome: "ok", fromCache: false });
+    expect(calls).toBe(2);
+    // the JSON answer is the stored copy, so a third request sends nothing
+    expect(await crawler.fetch(request)).toMatchObject({ fromCache: true });
+    expect(calls).toBe(2);
+    const records = await captures();
+    expect(records[0]!.payload).toMatchObject({ unasked: true });
+    expect(records[1]!.payload).not.toHaveProperty("unasked");
+  });
+
+  it("keeps an HTML answer that the request admits, and refuses one with q=0", async () => {
+    const { agent, crawler, index } = await setup();
+    agent
+      .get("https://api.example")
+      .intercept({ path: (path) => path.startsWith("/page"), method: "GET" })
+      .reply(200, "<html><body>page</body></html>", { headers: { "content-type": "text/html" } })
+      .persist();
+    const ask = async (path: string, accept: string): Promise<boolean> => {
+      await crawler.fetch({ url: `https://api.example${path}`, mode: "api", recipe: "t", accept });
+      return index.latest(`https://api.example${path}`) !== undefined;
+    };
+    expect(await ask("/page1", "text/html,*/*;q=0.5")).toBe(true);
+    expect(await ask("/page2", "application/json, text/*")).toBe(true);
+    expect(await ask("/page3", "application/json, text/html;q=0")).toBe(false);
+  });
+});
+
+describe("the records of a robots.txt fetch", () => {
+  const RANK = ["public", "private", "intimate"];
+
+  it("take the most private scope of the requests that wait for the fetch, and their labels", async () => {
+    const { agent, crawler, captures } = await setup({ scope: "public", scopeRank: (scope) => RANK.indexOf(scope) });
+    const site = agent.get("https://shop.example");
+    // the robots.txt answers late, so both pages wait for the one fetch
+    site.intercept({ path: "/robots.txt", method: "GET" }).reply(200, "User-agent: *\nAllow: /\n").delay(100);
+    site.intercept({ path: "/a", method: "GET" }).reply(200, "a").persist();
+    site.intercept({ path: "/b", method: "GET" }).reply(200, "b").persist();
+    await Promise.all([
+      crawler.fetch({ url: "https://shop.example/a", mode: "page", recipe: "page", scope: "private", labels: { from: "a" } }),
+      crawler.fetch({ url: "https://shop.example/b", mode: "page", recipe: "page", scope: "intimate", labels: { gift: "b" } }),
+    ]);
+    const robots = (await captures()).filter((row) => (row.payload as { recipe?: string }).recipe === "robots.txt");
+    expect(robots).toHaveLength(1);
+    expect(robots[0]).toMatchObject({ scope: "intimate", labels: { from: "a", gift: "b" } });
+  });
+
+  it("take the scope of the one request that starts the fetch, not the scope of the crawler", async () => {
+    const { agent, crawler, captures } = await setup({ scope: "public" });
+    const site = agent.get("https://quiet.example");
+    site.intercept({ path: "/robots.txt", method: "GET" }).reply(200, "User-agent: *\nAllow: /\n");
+    site.intercept({ path: "/a", method: "GET" }).reply(200, "a");
+    await crawler.fetch({ url: "https://quiet.example/a", mode: "page", recipe: "page", scope: "intimate", labels: { gift: "17" } });
+    const rows = await captures();
+    expect(rows.map((row) => [(row.payload as { recipe?: string }).recipe, row.scope, row.labels])).toEqual([
+      ["robots.txt", "intimate", { gift: "17" }],
+      ["page", "intimate", { gift: "17" }],
+    ]);
+  });
+});
+
+describe("an application that links the bot page of polite-crawler", () => {
+  const ask = async (options: Partial<CrawlerOptions>): Promise<Record<string, string>> => {
+    const { agent, crawler } = await setup(options);
+    const site = agent.get("https://shop.example");
+    site.intercept({ path: "/robots.txt", method: "GET" }).reply(200, "User-agent: PoliteCrawler\nDisallow: /private\n").persist();
+    site.intercept({ path: (path) => path !== "/robots.txt", method: "GET" }).reply(200, "page").persist();
+    const out: Record<string, string> = {};
+    for (const path of ["/private", "/open"]) {
+      out[path] = (await crawler.fetch({ url: `https://shop.example${path}`, mode: "page", recipe: "page" })).outcome;
+    }
+    return out;
+  };
+
+  it("obeys the rules for PoliteCrawler too, unless it turns that off or does not link the page", async () => {
+    const linked = { token: "MyApp", userAgent: "MyApp/1.0 (+https://mark1russell7.github.io/crawler/bot/)" };
+    expect(await ask(linked)).toEqual({ "/private": "skipped", "/open": "ok" });
+    expect(await ask({ ...linked, obeyDefaultToken: false })).toEqual({ "/private": "ok", "/open": "ok" });
+    expect(await ask({ token: "MyApp", userAgent: "MyApp/1.0 (+https://myapp.example/bot)" })).toEqual({ "/private": "ok", "/open": "ok" });
   });
 });

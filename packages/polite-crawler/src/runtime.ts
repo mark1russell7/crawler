@@ -1,6 +1,6 @@
 import type { BlobStore } from "./blobs.ts";
 import type { Crawler, FetchRequest, Fetched, RenderRequest } from "./crawler.ts";
-import type { Doc, DocIndex, ExtractedDoc, Found, IndexBuild, Variant } from "./docs.ts";
+import type { Doc, DocInput, ExtractedDoc, Found, Latest, ReadingIndex, Variant } from "./docs.ts";
 import { locate } from "./docs.ts";
 import type { PageExtract } from "./html.ts";
 import { extractPage, typesOf } from "./html.ts";
@@ -214,7 +214,8 @@ export class Extractors {
 
 export interface CrawlRuntime {
   readonly crawler: Crawler;
-  readonly index: DocIndex;
+  /** This index keeps the documents and the cache entries. `DocIndex` is the SQLite index. */
+  readonly index: ReadingIndex;
   readonly blobs: BlobStore;
   /** This reader is the read side of the capture log. The function `reindex` replays it. */
   readonly captures: CaptureReader;
@@ -243,6 +244,8 @@ export interface CapturePayload {
   readonly truncated?: boolean;
   /** This value is true when the server cut a compressed body. The capture is not a copy to keep. */
   readonly cut?: boolean;
+  /** This value is true when an API answered with a web page that the request did not accept. The capture is not a copy to keep. */
+  readonly unasked?: boolean;
   /** This time (ISO 8601) is the end of the freshness that the server gave. Captures before version 0.2 do not have it. */
   readonly fresh_until?: string | null;
   /** This text holds the request headers that the response varies on. Captures before version 0.2 do not have it. */
@@ -617,14 +620,23 @@ const onBoundary = (text: string, position: number): number => {
 
 /**
  * This function writes an `override` record to the capture log. A person gave the URL of a
- * held-back document directly, and the hold stops for one action (`read` or `verify`).
+ * held-back document directly, and the hold stops for one action (`read` or `verify`). The record
+ * takes the scope and the labels of `marks`, or else those of the document, as its captures do.
  */
 export const recordOverride = async (
   runtime: CrawlRuntime,
-  doc: { readonly doc: string; readonly url: string | null },
+  doc: {
+    readonly doc: string;
+    readonly url: string | null;
+    readonly scope?: string | undefined;
+    readonly labels?: Readonly<Record<string, string>> | undefined;
+  },
   action: string,
+  marks: { readonly scope?: string | undefined; readonly labels?: Readonly<Record<string, string>> | undefined } = {},
 ): Promise<void> => {
   const at = runtime.now();
+  const scope = marks.scope ?? doc.scope;
+  const labels = marks.labels ?? doc.labels;
   await runtime.log.append(
     makeRecord({
       source: "fetch",
@@ -632,6 +644,8 @@ export const recordOverride = async (
       payload: { doc: doc.doc, url: doc.url, action, reason: "a person provided this URL", at },
       received_at: at,
       external_id: doc.url ?? doc.doc,
+      ...(scope !== undefined ? { scope } : {}),
+      ...(labels !== undefined ? { labels } : {}),
     }),
   );
 };
@@ -683,26 +697,26 @@ export const readDocument = async (
 };
 
 /**
- * This function finds a quote in a stored document, with `locate`, and writes nothing. It is the
- * synchronous part of `verifyQuote`. A held-back document gives `found: false` and no positions,
- * unless `userProvided`, and this function does not log the override.
+ * This function examines the versions of a document for a quote, and writes nothing. It also tells
+ * if `userProvided` opened a held-back version, so that `verifyQuote` logs the override.
  */
-export const checkQuote = (
+const examineQuote = (
   runtime: CrawlRuntime,
   id: string,
   quote: string,
-  options: VerifyOptions = {},
-): VerifyResult => {
+  options: VerifyOptions,
+): { readonly result: VerifyResult; readonly override: boolean } => {
   const doc = knownDoc(runtime, id);
   const pinned =
     options.capture === undefined ? undefined : runtime.index.versionText(id, options.capture);
   if (options.capture !== undefined && pinned === undefined) {
     throw new Error(`the document ${id} has no version from the capture ${options.capture}`);
   }
+  const userProvided = options.userProvided ?? false;
   const base = { doc: doc.doc, url: doc.url, captures: doc.captures };
   const aiInput: AiInput = doc.ai_input === "no" || pinned?.ai_input === "no" ? "no" : doc.ai_input;
-  if (isHeldBack({ ai_input: aiInput }, options.userProvided ?? false)) {
-    return {
+  if (isHeldBack({ ai_input: aiInput }, userProvided)) {
+    const result: VerifyResult = {
       ...base,
       found: false,
       start: null,
@@ -718,13 +732,18 @@ export const checkQuote = (
       held_back: true,
       note: HELD_BACK,
     };
+    return { result, override: false };
   }
   const current = pinned ?? runtime.index.versionText(id);
   const candidates =
     pinned !== undefined
       ? [pinned]
       : [...(current === undefined ? [] : [current]), ...runtime.index.earlierTexts(id)];
+  // a version that asked not to be AI input stays held back after the page drops the signal
+  const held = candidates.filter((version) => version.ai_input === "no").length;
+  const override = userProvided && (aiInput === "no" || held > 0);
   for (const [index, version] of candidates.entries()) {
+    if (isHeldBack(version, userProvided)) continue;
     let hit = locate(version.text, quote);
     let inFull = false;
     if (!hit.found && version.full_text !== undefined) {
@@ -733,7 +752,7 @@ export const checkQuote = (
     }
     if (!hit.found) continue;
     const stale = pinned === undefined && index > 0;
-    return {
+    const result: VerifyResult = {
       ...base,
       found: true,
       start: hit.start,
@@ -749,10 +768,20 @@ export const checkQuote = (
       held_back: false,
       note: stale ? "only an earlier capture of the document holds the quote" : null,
     };
+    return { result, override };
   }
   const incomplete =
     current !== undefined && current.meta["truncated"] === true && current.full_text === undefined;
-  return {
+  // the note does not depend on the quote, so it tells nothing about the held-back text
+  const notes = [
+    ...(incomplete
+      ? ["the reader stopped before the end of the file, so the quote can be in the part that it did not read"]
+      : []),
+    ...(held > 0 && !userProvided
+      ? [`the check did not examine the versions that asked not to be AI input (${String(held)})`]
+      : []),
+  ];
+  const result: VerifyResult = {
     ...base,
     found: false,
     start: null,
@@ -766,11 +795,23 @@ export const checkQuote = (
     complete: !incomplete,
     count: 0,
     held_back: false,
-    note: incomplete
-      ? "the reader stopped before the end of the file, so the quote can be in the part that it did not read"
-      : null,
+    note: notes.length > 0 ? notes.join("; ") : null,
   };
+  return { result, override };
 };
+
+/**
+ * This function finds a quote in a stored document, with `locate`, and writes nothing. It is the
+ * synchronous part of `verifyQuote`. A held-back document gives `found: false` and no positions,
+ * unless `userProvided`, and this function does not log the override. With no capture, it does not
+ * examine a version that asked not to be AI input, also when a later capture dropped the signal.
+ */
+export const checkQuote = (
+  runtime: CrawlRuntime,
+  id: string,
+  quote: string,
+  options: VerifyOptions = {},
+): VerifyResult => examineQuote(runtime, id, quote, options).result;
 
 /**
  * This function finds a quote in a stored document, with `locate`. It tells which capture holds the
@@ -782,7 +823,9 @@ export const checkQuote = (
  * - When the reader cut a text, it also examines the whole text.
  *
  * A held-back document gives `found: false` and no positions, so a quote cannot test its text,
- * unless `userProvided`. The crawler logs an override with `userProvided`.
+ * unless `userProvided`. The same rule applies to each version. A version that asked not to be AI
+ * input stays held back after a later capture drops the signal. The crawler logs an override when
+ * `userProvided` opens a held-back version.
  */
 export const verifyQuote = async (
   runtime: CrawlRuntime,
@@ -790,12 +833,8 @@ export const verifyQuote = async (
   quote: string,
   options: VerifyOptions = {},
 ): Promise<VerifyResult> => {
-  const result = checkQuote(runtime, id, quote, options);
-  const doc = knownDoc(runtime, id);
-  const pinned = options.capture === undefined ? undefined : runtime.index.versionText(id, options.capture);
-  if (options.userProvided === true && (doc.ai_input === "no" || pinned?.ai_input === "no")) {
-    await recordOverride(runtime, doc, "verify");
-  }
+  const { result, override } = examineQuote(runtime, id, quote, options);
+  if (override) await recordOverride(runtime, knownDoc(runtime, id), "verify");
   return result;
 };
 
@@ -847,8 +886,26 @@ const captureTarget = (
   return { url: payload.url, variant: payload.rendered === true ? "rendered" : "plain" };
 };
 
+/** A replay writes into a new generation of the index (a rebuild), or into the index itself (the tail of the log). */
+interface ReplayTarget {
+  upsert(input: DocInput, now: string): unknown;
+  setLatest(entry: Latest): void;
+  latest(url: string, variant?: Variant): Latest | undefined;
+}
+
+/** These are the counts of a replay. */
+interface ReplayTally {
+  captures: number;
+  failed: number;
+  missing: number;
+  readonly unknown: Set<string>;
+  readonly errors: Array<{ readonly capture: string; readonly error: string }>;
+}
+
+const newTally = (): ReplayTally => ({ captures: 0, failed: 0, missing: 0, unknown: new Set(), errors: [] });
+
 /** This function replays the cache entry of one capture, as the crawler made it at the time of the fetch. */
-const replayLatest = (build: IndexBuild, envelope: CaptureRecord, payload: CapturePayload): void => {
+const replayLatest = (build: ReplayTarget, envelope: CaptureRecord, payload: CapturePayload): void => {
   const { url, variant } = captureTarget(payload);
   const fetchedAt = payload.fetched_at ?? envelope.received_at;
   if (payload.outcome === "redirect") {
@@ -877,8 +934,8 @@ const replayLatest = (build: IndexBuild, envelope: CaptureRecord, payload: Captu
     }
     return;
   }
-  // a body that the server cut was never the stored copy
-  if (payload.cut === true) return;
+  // a body that the server cut, or a web page in place of the data of an API, was never the stored copy
+  if (payload.cut === true || payload.unasked === true) return;
   const previous = build.latest(url, variant);
   const revisit = envelope.kind === "revisit" || payload.outcome === "not-modified";
   const truncated = payload.truncated === true;
@@ -912,6 +969,70 @@ const replayLatest = (build: IndexBuild, envelope: CaptureRecord, payload: Captu
   });
 };
 
+/** This function replays one record of the log: its cache entry, and the documents that its extractor gives. */
+const replayRecord = async (
+  runtime: CrawlRuntime,
+  target: ReplayTarget,
+  envelope: CaptureRecord,
+  tally: ReplayTally,
+): Promise<void> => {
+  if (envelope.kind !== "capture" && envelope.kind !== "revisit") return;
+  const payload = envelope.payload as CapturePayload | null;
+  if (payload === null || typeof payload !== "object" || typeof payload.url !== "string") return;
+  if (payload.outcome === "redirect") {
+    replayLatest(target, envelope, payload);
+    return;
+  }
+  if (typeof payload.blob !== "string") return;
+  if (payload.outcome !== "ok" && payload.outcome !== "not-modified") return;
+  tally.captures += 1;
+  replayLatest(target, envelope, payload);
+  const extractor = runtime.extractors.get(payload.recipe);
+  if (extractor === undefined) {
+    // the crawler reads robots.txt for itself; it gives no document
+    if (payload.recipe !== "robots.txt") tally.unknown.add(payload.recipe);
+    return;
+  }
+  const body = await runtime.blobs.get(payload.blob);
+  if (body === undefined) {
+    tally.missing += 1;
+    return;
+  }
+  const { url, variant } = captureTarget(payload);
+  const latest = target.latest(url, variant);
+  let extracted: ReadonlyArray<ExtractedDoc>;
+  try {
+    extracted = await extractor(body, {
+      url,
+      contentType:
+        variant === "rendered" ? "text/html; charset=utf-8" : (payload.content_type ?? latest?.content_type ?? null),
+    });
+  } catch (error) {
+    tally.failed += 1;
+    if (tally.errors.length < MAX_ERRORS) tally.errors.push({ capture: envelope.id, error: messageOf(error) });
+    return;
+  }
+  // a bot check is not the content, so it is not a version of the document
+  if (extracted.some((doc) => blockedBy(doc) !== undefined)) return;
+  for (const doc of extracted) {
+    target.upsert(
+      {
+        ...doc,
+        captures: [envelope.id],
+        capture: envelope.id,
+        fetched_at: payload.fetched_at ?? envelope.received_at,
+        blob: payload.blob,
+        recipe: payload.recipe,
+        rendered: variant === "rendered",
+        ai_input: payload.signals?.ai_input ?? "unset",
+        ...(envelope.scope !== undefined ? { scope: envelope.scope } : {}),
+        ...(envelope.labels !== undefined ? { labels: envelope.labels } : {}),
+      },
+      envelope.received_at,
+    );
+  }
+};
+
 /**
  * This function builds the reading index again from the capture log and the blobs. The index is a
  * projection, and this function is the proof that its deletion loses nothing. These are its rules:
@@ -929,12 +1050,8 @@ export const reindex = async (
 ): Promise<ReindexResult> => {
   const since = runtime.now();
   const build = runtime.index.beginRebuild(options.batch === undefined ? {} : { batch: options.batch });
-  let captures = 0;
-  let failed = 0;
-  let missing = 0;
+  const tally = newTally();
   let damaged = 0;
-  const unknown = new Set<string>();
-  const errors: Array<{ readonly capture: string; readonly error: string }> = [];
   try {
     const scan = runtime.captures.scan(
       { source: "fetch" },
@@ -944,79 +1061,89 @@ export const reindex = async (
         },
       },
     );
-    for await (const envelope of scan) {
-      if (envelope.kind !== "capture" && envelope.kind !== "revisit") continue;
-      const payload = envelope.payload as CapturePayload | null;
-      if (payload === null || typeof payload !== "object" || typeof payload.url !== "string") continue;
-      if (payload.outcome === "redirect") {
-        replayLatest(build, envelope, payload);
-        continue;
-      }
-      if (typeof payload.blob !== "string") continue;
-      if (payload.outcome !== "ok" && payload.outcome !== "not-modified") continue;
-      captures += 1;
-      replayLatest(build, envelope, payload);
-      const extractor = runtime.extractors.get(payload.recipe);
-      if (extractor === undefined) {
-        // the crawler reads robots.txt for itself; it gives no document
-        if (payload.recipe !== "robots.txt") unknown.add(payload.recipe);
-        continue;
-      }
-      const body = await runtime.blobs.get(payload.blob);
-      if (body === undefined) {
-        missing += 1;
-        continue;
-      }
-      const { url, variant } = captureTarget(payload);
-      const latest = build.latest(url, variant);
-      let extracted: ReadonlyArray<ExtractedDoc>;
-      try {
-        extracted = await extractor(body, {
-          url,
-          contentType:
-            variant === "rendered"
-              ? "text/html; charset=utf-8"
-              : (payload.content_type ?? latest?.content_type ?? null),
-        });
-      } catch (error) {
-        failed += 1;
-        if (errors.length < MAX_ERRORS) errors.push({ capture: envelope.id, error: messageOf(error) });
-        continue;
-      }
-      // a bot check is not the content, so it is not a version of the document
-      if (extracted.some((doc) => blockedBy(doc) !== undefined)) continue;
-      for (const doc of extracted) {
-        build.upsert(
-          {
-            ...doc,
-            captures: [envelope.id],
-            capture: envelope.id,
-            fetched_at: payload.fetched_at ?? envelope.received_at,
-            blob: payload.blob,
-            recipe: payload.recipe,
-            rendered: variant === "rendered",
-            ai_input: payload.signals?.ai_input ?? "unset",
-            ...(envelope.scope !== undefined ? { scope: envelope.scope } : {}),
-            ...(envelope.labels !== undefined ? { labels: envelope.labels } : {}),
-          },
-          envelope.received_at,
-        );
-      }
-    }
+    for await (const envelope of scan) await replayRecord(runtime, build, envelope, tally);
     const carried = build.carry(new Set(runtime.extractors.recipes()));
     const counts = build.commit(since);
     return {
-      captures,
+      captures: tally.captures,
       ...counts,
-      failed,
-      missing,
+      failed: tally.failed,
+      missing: tally.missing,
       damaged,
       carried,
-      unknown_recipes: [...unknown].sort(),
-      errors,
+      unknown_recipes: [...tally.unknown].sort(),
+      errors: tally.errors,
     };
   } catch (error) {
     build.abort();
     throw error;
   }
+};
+
+/** The result of `catchUpIndex`. */
+export interface CatchUpResult extends ReindexResult {
+  /**
+   * The value `rebuild` tells that the index was stale, and the function built it again from the
+   * whole log. The value `tail` tells that it read only the captures that the index missed.
+   */
+  readonly mode: "rebuild" | "tail";
+}
+
+/** The tail starts this long before the newest cache entry. Two writers and their clocks can differ. */
+const TAIL_SLACK_MS = 10 * 60_000;
+
+/** This function tells if the index missed a record of the log: no cache entry as new as it, or no version of its documents. */
+const missed = (runtime: CrawlRuntime, envelope: CaptureRecord): boolean => {
+  if (envelope.kind !== "capture" && envelope.kind !== "revisit") return false;
+  const payload = envelope.payload as CapturePayload | null;
+  if (payload === null || typeof payload !== "object" || typeof payload.url !== "string") return false;
+  const fetchedAt = payload.fetched_at ?? envelope.received_at;
+  const { url, variant } = captureTarget(payload);
+  const entry = runtime.index.latest(url, variant);
+  if (payload.outcome === "redirect") return entry === undefined || entry.fetched_at < fetchedAt;
+  if (typeof payload.blob !== "string" || (payload.outcome !== "ok" && payload.outcome !== "not-modified")) return false;
+  if (entry === undefined || entry.fetched_at < fetchedAt) return true;
+  return runtime.extractors.get(payload.recipe) !== undefined && !runtime.index.hasVersion(envelope.id);
+};
+
+/**
+ * This function brings the reading index up to the capture log, with no request. `openCrawler`
+ * uses it at open. An application that uses `createRuntime` uses it the same way:
+ *
+ * - A stale index (a new schema, or a deleted file) is built again with `reindex`.
+ * - An index that is behind the log gets the captures that it missed. A process can stop between
+ *   the log and the index, and SQLite can lose its last transactions after a power cut. The
+ *   function reads the log from a short time before the newest cache entry.
+ *
+ * It gives the counts, or undefined when the index missed nothing.
+ */
+export const catchUpIndex = async (runtime: CrawlRuntime): Promise<CatchUpResult | undefined> => {
+  if (runtime.index.stale) return { mode: "rebuild", ...(await reindex(runtime)) };
+  const newest = runtime.index.newestFetch();
+  const since = newest === undefined ? undefined : new Date(Date.parse(newest) - TAIL_SLACK_MS).toISOString();
+  const tally = newTally();
+  let damaged = 0;
+  const scan = runtime.captures.scan(
+    { source: "fetch", ...(since === undefined ? {} : { since }) },
+    {
+      onDamaged: () => {
+        damaged += 1;
+      },
+    },
+  );
+  for await (const envelope of scan) {
+    if (missed(runtime, envelope)) await replayRecord(runtime, runtime.index, envelope, tally);
+  }
+  if (tally.captures === 0) return undefined;
+  return {
+    mode: "tail",
+    captures: tally.captures,
+    ...runtime.index.counts(),
+    failed: tally.failed,
+    missing: tally.missing,
+    damaged,
+    carried: 0,
+    unknown_recipes: [...tally.unknown].sort(),
+    errors: tally.errors,
+  };
 };

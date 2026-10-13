@@ -126,6 +126,9 @@ export const normalizePath = (value: string): string => {
   return out;
 };
 
+/** This function tells if a text is a product token: letters, `_` and `-` only, and one or more (RFC 9309, section 2.2.1). */
+export const isProductToken = (value: string): boolean => /^[A-Za-z_-]+$/.test(value);
+
 /** This function gives the first product token of a user agent: `Googlebot/2.1` gives `googlebot`. */
 const tokenOf = (value: string): string =>
   (/^[A-Za-z_-]+/.exec(value.trim())?.[0] ?? "").toLowerCase();
@@ -213,7 +216,8 @@ export const parseRobots = (input: string): Robots => {
       if (value.length > 0) sitemaps.push(value);
       continue;
     }
-    if (key === "content-signal" || key === "content-usage") {
+    // an RSL `License` line names the license of the content: the crawler records it with the other usage lines
+    if (key === "content-signal" || key === "content-usage" || key === "license") {
       signals.push(`${key}: ${value}`);
       (current?.signals ?? fileSignals).push(signalOf(key, value, index + 1));
       continue;

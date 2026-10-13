@@ -68,6 +68,8 @@ const studyData = (url: string, title: string, description: string): unknown => 
         dateModified: modified,
         temporalCoverage: modified,
         isBasedOn: data.list.url,
+        // the same data in the repository, and the package that made it
+        sameAs: ["https://github.com/mark1russell7/crawler/tree/main/packages/site/src/data", "https://www.npmjs.com/package/polite-crawler"],
         license: DATA_LICENSE.url,
         isAccessibleForFree: true,
         measurementTechnique: "One request for /robots.txt for each domain, decided with RFC 9309 by polite-crawler",

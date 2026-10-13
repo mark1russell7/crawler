@@ -25,6 +25,7 @@
     "@arethetypeswrong/cli": "^0.18.5",
     "@mark1russell7/cue": "github:mark1russell7/cue",
     "@mark1russell7/ste-lint": "github:mark1russell7/ste-lint",
+    "esbuild": "0.28.2",
     "oxlint": "^1.87.0",
     "oxlint-tsgolint": "^7.0.2004",
     "prettier": "^3.9.10",

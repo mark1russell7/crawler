@@ -9,6 +9,24 @@ import { VERSION } from "./version.ts";
 // This file imports only Node.js and the version at start. A command loads the crawler, and only
 // `mcp` loads the MCP server, so `--version` and `--help` answer at once.
 
+// node:sqlite of Node.js 22 writes "SQLite is an experimental feature" to the standard error at
+// each start. The command removes only that warning, before the store loads node:sqlite.
+const emitWarning = process.emitWarning.bind(process) as (warning: string | Error, ...rest: unknown[]) => void;
+process.emitWarning = ((warning: string | Error, ...rest: unknown[]): void => {
+  const first: unknown = rest[0];
+  const kind =
+    typeof first === "string"
+      ? first
+      : typeof first === "object" && first !== null && "type" in first
+        ? first.type
+        : warning instanceof Error
+          ? warning.name
+          : undefined;
+  const text = typeof warning === "string" ? warning : warning.message;
+  if (kind === "ExperimentalWarning" && text.startsWith("SQLite is an experimental feature")) return;
+  emitWarning(warning, ...rest);
+}) as typeof process.emitWarning;
+
 const HELP = `polite-crawler ${VERSION}: fetch a source once, keep it, read it many times.
 
 Usage:
@@ -21,7 +39,8 @@ Usage:
 
 Options:
   --dir <path>       the store (default $POLITE_CRAWLER_DIR, or ~/.polite-crawler)
-  --contact <text>   an email or URL for the From header ($POLITE_CRAWLER_CONTACT)
+  --contact <text>   an email (From and User-Agent) or a URL (User-Agent only)
+                     ($POLITE_CRAWLER_CONTACT)
   --allow-private    fetch loopback and private addresses too ($POLITE_CRAWLER_ALLOW_PRIVATE=1)
   --no-browser       never open the headless browser
   --json             print JSON

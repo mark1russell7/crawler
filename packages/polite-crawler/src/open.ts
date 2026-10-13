@@ -2,10 +2,11 @@ import { existsSync, lstatSync, mkdirSync, realpathSync, statSync } from "node:f
 import { join } from "node:path";
 import type { Dispatcher } from "undici";
 import type { BlobStore } from "./blobs.ts";
+import { checkedRenderer } from "./browser.ts";
 import { FileBlobStore } from "./blobs.ts";
 import type { CrawlEvent } from "./crawler.ts";
 import { Crawler } from "./crawler.ts";
-import type { DocVersion, Found } from "./docs.ts";
+import type { DocVersion, Found, ReadingIndex } from "./docs.ts";
 import { DocIndex } from "./docs.ts";
 import type { EgressOptions } from "./egress.ts";
 import { SqliteHostStateStore } from "./hoststate.ts";
@@ -26,21 +27,18 @@ import type {
 } from "./runtime.ts";
 import {
   Extractors,
+  catchUpIndex,
   fetchPage,
   findDocuments,
   readDocument,
   reindex,
   verifyQuote,
 } from "./runtime.ts";
-import { VERSION } from "./version.ts";
+import { BOT_PAGE, DEFAULT_TOKEN, VERSION } from "./version.ts";
 
 export type { ReadOptions, ReadResult, VerifyOptions, VerifyResult } from "./runtime.ts";
 
-/** This is the product token that robots.txt rules match when an application gives no token. */
-export const DEFAULT_TOKEN = "PoliteCrawler";
-
-/** This page tells a site owner what the crawler is and how to control it. */
-export const BOT_PAGE = "https://mark1russell7.github.io/crawler/bot/";
+export { BOT_PAGE, DEFAULT_TOKEN } from "./version.ts";
 
 /**
  * This function gives the default `User-Agent` header. The header names the crawler, its version
@@ -48,6 +46,16 @@ export const BOT_PAGE = "https://mark1russell7.github.io/crawler/bot/";
  */
 export const defaultUserAgent = (contact?: string): string =>
   `${DEFAULT_TOKEN}/${VERSION} (+${BOT_PAGE}${contact === undefined ? "" : `; ${contact}`})`;
+
+/** A mailbox is `name@host`, or a name and `<name@host>`. A URL is not a mailbox, also when it holds an `@`. */
+const MAILBOX = /^(?:[^\s<>@:/]+@[^\s<>@/]+|[^<>]*<[^\s<>@:/]+@[^\s<>@/]+>)$/;
+
+/**
+ * This function tells if a contact is a mailbox. The `From` header holds only a mailbox (RFC 9110,
+ * section 10.1.2). Thus the crawler sends a mailbox in `From` and in the `User-Agent`, and a URL in
+ * the `User-Agent` only.
+ */
+export const isMailbox = (contact: string): boolean => MAILBOX.test(contact.trim());
 
 /** A duration is a count of milliseconds, or a text, for example `"30m"`, `"24h"` or `"7d"`. */
 export type Duration = number | string;
@@ -93,8 +101,8 @@ export interface RuntimeOptions {
   readonly log?: CaptureLog | undefined;
   /** This blob store replaces `<dir>/blobs`. */
   readonly blobs?: BlobStore | undefined;
-  /** This index replaces `<dir>/index.sqlite`. */
-  readonly index?: DocIndex | undefined;
+  /** This index replaces `<dir>/index.sqlite`. A runtime takes any `ReadingIndex`. */
+  readonly index?: ReadingIndex | undefined;
   /**
    * This store keeps the pace and the stops of each host. The default with `dir` is a SQLite file
    * (`hosts.sqlite`), so the processes on one store share the pace. With no `dir`, it is in memory.
@@ -104,12 +112,21 @@ export interface RuntimeOptions {
   readonly token?: string | undefined;
   /** This text is the full `User-Agent` header. The default names the crawler and its page. */
   readonly userAgent?: string | undefined;
-  /** This address goes into the `From` header and the `User-Agent` header. The crawler sends no contact without it. */
+  /**
+   * This address goes into the `User-Agent` header. A mailbox (`ops@example.com`) also goes into the
+   * `From` header, and a URL does not. The crawler sends no contact without it.
+   */
   readonly contact?: string | undefined;
-  /** This browser renders the pages that need JavaScript. The value `false` turns rendering off. */
+  /**
+   * This browser renders the pages that need JavaScript. The value `false` turns rendering off. The
+   * default checks one time that `playwright-core` and its browser are installed. With no browser,
+   * each page that needs JavaScript gets a note at once, with no wait.
+   */
   readonly renderer?: Renderer | false | undefined;
   /** This value is the number of sites that the crawler fetches from at one time. The default is 16. */
   readonly maxActive?: number | undefined;
+  /** This value is the number of pages that the browser renders at one time. The default is 2: each render holds a browser context. */
+  readonly maxRenders?: number | undefined;
   /** This `undici` dispatcher sends the requests. Tests give a mock agent, and a proxy is possible. */
   readonly dispatcher?: Dispatcher | undefined;
   /** This policy controls the addresses that the crawler fetches. By default, it fetches only public addresses. */
@@ -122,6 +139,10 @@ export interface RuntimeOptions {
   readonly random?: (() => number) | undefined;
   /** This label goes into each capture record. */
   readonly scope?: string | undefined;
+  /** With the value false, the crawler does not also obey the group of `PoliteCrawler` when its `User-Agent` links the bot page (`CrawlerOptions.obeyDefaultToken`). */
+  readonly obeyDefaultToken?: boolean | undefined;
+  /** This function ranks the scopes, the most private highest. A shared fetch of a robots.txt records the scope with the highest rank (`CrawlerOptions.scopeRank`). */
+  readonly scopeRank?: ((scope: string) => number) | undefined;
   /** This function gets an event for each request, response, wait, stop and skip. */
   readonly onEvent?: ((event: CrawlEvent) => void) | undefined;
   /** These extractors read the captures of the recipes of an application. The recipe `page` is built in. */
@@ -172,6 +193,10 @@ export const createRuntime = (options: RuntimeOptions): StoreRuntime => {
   if (dir === undefined && (options.log === undefined || options.blobs === undefined || options.index === undefined)) {
     throw new Error("a runtime needs dir, or a log, a blob store and an index");
   }
+  const contact = options.contact;
+  if (contact !== undefined && !/^[\t -~]*$/.test(contact)) {
+    throw new Error(`contact "${contact}" has a character that an HTTP header cannot hold: use printable ASCII`);
+  }
   if (dir !== undefined) guardStore(dir);
   const owned: Array<() => Promise<void> | void> = [];
   const log = options.log ?? new CaptureLog(join(dir!, "captures"));
@@ -192,16 +217,18 @@ export const createRuntime = (options: RuntimeOptions): StoreRuntime => {
     }
   }
   const clock = options.clock ?? realClock;
-  const renderer = options.renderer === false ? undefined : (options.renderer ?? playwrightRenderer());
+  // the default browser is checked one time: with none, each page gets its note at once
+  const renderer = options.renderer === false ? undefined : (options.renderer ?? checkedRenderer(playwrightRenderer()));
   const crawler = new Crawler({
     token: options.token ?? DEFAULT_TOKEN,
-    userAgent: options.userAgent ?? defaultUserAgent(options.contact),
-    from: options.contact,
+    userAgent: options.userAgent ?? defaultUserAgent(contact),
+    from: contact !== undefined && isMailbox(contact) ? contact.trim() : undefined,
     log,
     blobs,
     index,
     renderer,
     maxActive: options.maxActive,
+    maxRenders: options.maxRenders,
     dispatcher: options.dispatcher,
     egress: options.egress,
     politeness: options.politeness,
@@ -209,6 +236,8 @@ export const createRuntime = (options: RuntimeOptions): StoreRuntime => {
     clock,
     random: options.random,
     scope: options.scope,
+    scopeRank: options.scopeRank,
+    obeyDefaultToken: options.obeyDefaultToken,
     onEvent: options.onEvent,
   });
   const extractors = new Extractors();
@@ -289,9 +318,13 @@ export interface PoliteCrawler {
    * punctuation and Unicode forms. It tells which capture holds the quote.
    */
   verify(doc: string, quote: string, options?: VerifyOptions): Promise<VerifyResult>;
-  /** This method gives the versions of a stored document, the newest first. */
+  /** This method gives the versions of a stored document, the newest first. A held-back version shows no title. */
   versions(doc: string, options?: { readonly limit?: number }): Promise<DocVersion[]>;
-  /** This method builds the index again from the capture log and the stored bodies, with no request. */
+  /**
+   * This method builds the index again from the capture log and the stored bodies, with no request.
+   * When the crawler rebuilt a stale index at open, the first reindex gives the counts of that
+   * rebuild, unless a fetch came before it.
+   */
   reindex(): Promise<ReindexResult>;
   /** This method closes the browser, the log files and the index. A second close does nothing. */
   close(): Promise<void>;
@@ -301,7 +334,8 @@ export interface PoliteCrawler {
  * This function opens a crawler on a folder. The folder keeps the capture log (`captures/`), the
  * response bodies (`blobs/`), the search index (`index.sqlite`) and the state of each host
  * (`hosts.sqlite`). The index is a projection: `reindex` makes it again from the log and the bodies.
- * An index of an earlier version opens empty, and the crawler rebuilds it first.
+ * At open, `catchUpIndex` rebuilds an index of an earlier version, and gives an index that is
+ * behind the log the captures that it missed.
  *
  * Each method gives a promise, and none throws before its promise. After `close`, each method
  * rejects.
@@ -309,11 +343,19 @@ export interface PoliteCrawler {
 export const openCrawler = (options: OpenOptions): PoliteCrawler => {
   const runtime = createRuntime(options);
   let closed = false;
-  // an index that opened empty (a new schema, or a deleted file) is rebuilt from a log that exists
-  const ready: Promise<unknown> =
-    runtime.index.stale && existsSync(join(options.dir, "captures"))
-      ? reindex(runtime).catch(() => undefined)
-      : Promise.resolve();
+  // the rebuild at open, which the first reindex() gives when no fetch came before it
+  let rebuilt: ReindexResult | undefined;
+  const ready: Promise<unknown> = existsSync(join(options.dir, "captures"))
+    ? catchUpIndex(runtime).then(
+        (done) => {
+          if (done?.mode === "rebuild") {
+            const { mode, ...counts } = done;
+            rebuilt = mode === "rebuild" ? counts : undefined;
+          }
+        },
+        () => undefined,
+      )
+    : Promise.resolve();
   const live = async (): Promise<void> => {
     if (closed) throw new Error("the crawler is closed");
     await ready;
@@ -323,6 +365,7 @@ export const openCrawler = (options: OpenOptions): PoliteCrawler => {
     runtime,
     async fetch(url, fetchOptions = {}) {
       await live();
+      rebuilt = undefined;
       const maxAge = fetchOptions.maxAge ?? "24h";
       return fetchPage(runtime, url, {
         render: fetchOptions.render ?? "auto",
@@ -347,11 +390,18 @@ export const openCrawler = (options: OpenOptions): PoliteCrawler => {
     },
     async versions(id, versionOptions = {}) {
       await live();
-      return runtime.index.versions(id, versionOptions);
+      // a held-back version shows no title, as a read of its capture does
+      const held = runtime.index.get(id)?.ai_input === "no";
+      return runtime.index
+        .versions(id, versionOptions)
+        .map((version) => (held || version.ai_input === "no" ? { ...version, title: "" } : version));
     },
     async reindex() {
       await live();
-      return reindex(runtime);
+      // the index that the open rebuilt is the index that a second replay of the log makes
+      const done = rebuilt;
+      rebuilt = undefined;
+      return done ?? reindex(runtime);
     },
     async close() {
       closed = true;

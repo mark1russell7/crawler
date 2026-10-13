@@ -223,6 +223,8 @@ interface DomNode {
   readonly firstChild?: DomNode | null | undefined;
   readonly nextSibling?: DomNode | null | undefined;
   readonly parentNode?: DomNode | null | undefined;
+  /** This method takes the node out of its parent. */
+  readonly remove?: (() => void) | undefined;
 }
 
 interface DomElement extends DomNode {
@@ -414,11 +416,67 @@ const attribute = (node: DomNode, name: string): string | null =>
 const isShadowRoot = (node: DomNode): boolean =>
   attribute(node, "shadowrootmode") !== null || attribute(node, "shadowroot") !== null;
 
+/** The reader reads only these properties of an inline style. */
+const STYLE_PROPERTIES = new Set(["display", "font-size"]);
+
+/**
+ * This function reads `display` and `font-size` from the `style` attribute of an element. The last
+ * declaration wins, and an `!important` declaration wins over a declaration that is not important.
+ * It reads no style sheet. Its time grows in proportion to the length of the attribute.
+ */
+const inlineStyle = (node: DomNode): ReadonlyMap<string, string> => {
+  const found = new Map<string, string>();
+  const style = attribute(node, "style");
+  if (style === null || style.length === 0) return found;
+  const important = new Set<string>();
+  for (const declaration of style.split(";")) {
+    const colon = declaration.indexOf(":");
+    if (colon === -1) continue;
+    const property = declaration.slice(0, colon).trim().toLowerCase();
+    if (!STYLE_PROPERTIES.has(property)) continue;
+    let value = declaration.slice(colon + 1).trim().toLowerCase();
+    const bang = value.lastIndexOf("!");
+    const strong = bang !== -1 && value.slice(bang + 1).trim() === "important";
+    if (strong) value = value.slice(0, bang).trim();
+    if (important.has(property) && !strong) continue;
+    if (strong) important.add(property);
+    found.set(property, value);
+  }
+  return found;
+};
+
+/**
+ * This function tells if a reader of the page does not get an element and its content. A browser
+ * does not show an element with `display: none` or with the attribute `hidden` (unless its inline
+ * style sets a different display). A screen reader skips an element with `aria-hidden="true"`, and
+ * a model reads a page as a screen reader does.
+ */
+const notRendered = (node: DomNode, style: ReadonlyMap<string, string>): boolean => {
+  const display = style.get("display");
+  if (display === "none") return true;
+  if (display === undefined && attribute(node, "hidden") !== null) return true;
+  return attribute(node, "aria-hidden")?.trim().toLowerCase() === "true";
+};
+
+/** A font size of zero: `0`, `0px`, `0em` or `0%`. */
+const ZERO_SIZE = /^\+?(?:0+(?:\.0*)?|\.0+)(?:[a-z]{1,4}|%)?$/;
+/** These sizes are a part of the size of the parent, so a part of zero stays zero. */
+const RELATIVE_SIZE = /^(?:\+?[\d.]+(?:em|ex|ch|cap|ic|lh|%)|larger|smaller|inherit|unset|revert|revert-layer)$/;
+
+/** This function tells if the text of an element has a zero size. A child that sets a size of its own shows its text again. */
+const zeroSize = (fontSize: string | undefined, parentZero: boolean): boolean => {
+  if (fontSize === undefined) return parentZero;
+  if (ZERO_SIZE.test(fontSize)) return true;
+  return parentZero && RELATIVE_SIZE.test(fontSize);
+};
+
 interface Walked {
   readonly text: string;
   readonly elements: number;
   readonly links: number;
   readonly depth: number;
+  /** These nodes are not text for a reader: the elements that `notRendered` refuses, and the text of a zero size. */
+  readonly unseen: readonly DomNode[];
 }
 
 interface Frame {
@@ -428,11 +486,18 @@ interface Frame {
   /** linkedom gives a document type no `nextSibling`, so the few children of a document are read as a list. */
   readonly list: ArrayLike<DomNode> | undefined;
   index: number;
+  /** This value is true when the text of the element has a zero size. */
+  readonly zero: boolean;
 }
 
-/** This function walks a tree with a stack of its own. Thus the depth of the markup cannot overflow the stack. */
+/**
+ * This function walks a tree with a stack of its own. Thus the depth of the markup cannot overflow
+ * the stack. It reads only the text that a reader gets (refer to `notRendered` and `zeroSize`), and it
+ * gives the nodes that it did not read.
+ */
 const walkText = (root: DomNode): Walked => {
   const parts: string[] = [];
+  const unseen: DomNode[] = [];
   // a link or a button ends a word even where the markup runs it into the
   // next ("Offers from AmexGlobal Dining Access"), though not before a stop
   let seam = false;
@@ -442,6 +507,10 @@ const walkText = (root: DomNode): Walked => {
   const stack: Frame[] = [];
   const enter = (node: DomNode): void => {
     if (node.nodeType === 3) {
+      if (stack[stack.length - 1]?.zero === true) {
+        unseen.push(node);
+        return;
+      }
       const text = node.textContent ?? "";
       if (seam && /^[^\s.,;:!?)\]–—-]/.test(text)) parts.push(" ");
       if (text.length > 0) seam = false;
@@ -457,7 +526,14 @@ const walkText = (root: DomNode): Walked => {
     } else if (SKIP.has(name)) {
       return;
     }
+    let zero = stack[stack.length - 1]?.zero ?? false;
     if (node.nodeType === 1) {
+      const style = inlineStyle(node);
+      if (notRendered(node, style)) {
+        unseen.push(node);
+        return;
+      }
+      zero = zeroSize(style.get("font-size"), zero);
       elements += 1;
       if (name === "a") links += 1;
       if (BLOCK.has(name)) parts.push("\n");
@@ -465,8 +541,8 @@ const walkText = (root: DomNode): Walked => {
     }
     stack.push(
       container.nodeType === 1
-        ? { name, next: container.firstChild, list: undefined, index: 0 }
-        : { name, next: undefined, list: container.childNodes, index: 0 },
+        ? { name, next: container.firstChild, list: undefined, index: 0, zero }
+        : { name, next: undefined, list: container.childNodes, index: 0, zero },
     );
     if (stack.length > depth) depth = stack.length;
   };
@@ -506,7 +582,7 @@ const walkText = (root: DomNode): Walked => {
     )
     .filter((line) => line.length > 0)
     .join("\n");
-  return { text, elements, links, depth };
+  return { text, elements, links, depth, unseen };
 };
 
 /** This function gives the text that a reader sees, with one line for each block. */
@@ -872,34 +948,6 @@ export const extractPage = (html: string, pageUrl: string): PageExtract => {
       ? canonicalUrl(refreshUrl.href)
       : null;
 
-  const seen = new Set<string>(self === undefined ? [] : [self]);
-  const links: PageLink[] = [];
-  if (redirect !== null) {
-    seen.add(redirect);
-    links.push({ href: redirect, text: "" });
-  }
-  for (const anchor of doc.querySelectorAll("a[href]")) {
-    if (links.length >= MAX_LINKS) break;
-    const url = resolve(anchor.getAttribute("href") ?? "");
-    if (url === undefined) continue;
-    const href = canonicalUrl(url.href);
-    const text =
-      (anchor.textContent ?? "").replace(/\s+/g, " ").trim() ||
-      anchor.getAttribute("aria-label")?.trim() ||
-      anchor.getAttribute("title")?.trim() ||
-      anchor.querySelector("img[alt]")?.getAttribute("alt")?.trim() ||
-      "";
-    // the link to the target of a meta refresh gets the text of the first anchor that names it
-    if (href === redirect && links[0]?.href === redirect && links[0].text === "") {
-      links[0] = { href, text: text.slice(0, 120) };
-      continue;
-    }
-    // a link to the page itself ("#menu") is no link
-    if (seen.has(href)) continue;
-    seen.add(href);
-    links.push({ href, text: text.slice(0, 120) });
-  }
-
   const canonical = (() => {
     const node = [...doc.querySelectorAll("link[rel][href]")].find((link) =>
       (link.getAttribute("rel") ?? "").toLowerCase().split(/\s+/).includes("canonical"),
@@ -941,6 +989,37 @@ export const extractPage = (html: string, pageUrl: string): PageExtract => {
   // documentElement at all, and document.body can be a decoy (see DomDocument;
   // a homepage read as 0 characters and went to the browser for nothing)
   const walked = walkText(doc);
+  // the links and Readability read only what a reader gets: text that the page hides goes now
+  for (const node of walked.unseen) node.remove?.();
+
+  const seen = new Set<string>(self === undefined ? [] : [self]);
+  const links: PageLink[] = [];
+  if (redirect !== null) {
+    seen.add(redirect);
+    links.push({ href: redirect, text: "" });
+  }
+  for (const anchor of doc.querySelectorAll("a[href]")) {
+    if (links.length >= MAX_LINKS) break;
+    const url = resolve(anchor.getAttribute("href") ?? "");
+    if (url === undefined) continue;
+    const href = canonicalUrl(url.href);
+    const text =
+      (anchor.textContent ?? "").replace(/\s+/g, " ").trim() ||
+      anchor.getAttribute("aria-label")?.trim() ||
+      anchor.getAttribute("title")?.trim() ||
+      anchor.querySelector("img[alt]")?.getAttribute("alt")?.trim() ||
+      "";
+    // the link to the target of a meta refresh gets the text of the first anchor that names it
+    if (href === redirect && links[0]?.href === redirect && links[0].text === "") {
+      links[0] = { href, text: text.slice(0, 120) };
+      continue;
+    }
+    // a link to the page itself ("#menu") is no link
+    if (seen.has(href)) continue;
+    seen.add(href);
+    links.push({ href, text: text.slice(0, 120) });
+  }
+
   const all = walked.text;
   let text = capText(all);
   let cut = text.length < all.length;

@@ -54,6 +54,7 @@
     "./classify": "./src/classify.ts",
     "./politeness": "./src/politeness.ts",
     "./signals": "./src/signals.ts",
+    "./record.schema.json": "./record.schema.json",
     "./package.json": "./package.json"
   },
   "bin": {
@@ -62,6 +63,7 @@
   "files": [
     "build",
     "!build/cli.d.mts",
+    "record.schema.json",
     "README.md",
     "LICENSE"
   ],
@@ -142,6 +144,7 @@
         "types": "./build/signals.d.mts",
         "default": "./build/signals.mjs"
       },
+      "./record.schema.json": "./record.schema.json",
       "./package.json": "./package.json"
     }
   }

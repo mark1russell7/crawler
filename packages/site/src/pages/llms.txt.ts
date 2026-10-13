@@ -50,6 +50,7 @@ Install it with \`npm install polite-crawler\`. Use \`openCrawler({ dir })\` and
 
 - [What 300 restaurant websites taught a crawler](${SITE}notes/restaurant-websites/): a survey
 - [The source](https://github.com/mark1russell7/crawler)
+- [Sitemap](${SITE}sitemap-index.xml): each page of the site, with the date of its last change
 `;
 };
 

@@ -91,9 +91,9 @@ The Tranco list ranks domains, not websites. Many of the top domains serve a con
 The study puts each answer into one of four states:
 
 - **A robots.txt file** ({s.withFile} sites). The verdicts come from the rules of the file.
-- **No file** ({s.noFile} sites). {s.noFile - s.html} sites gave a 404 or a 410. {s.html} sites gave an HTML page in place of the file, for example a home page or a sign-in page. These sites state no rules, so each agent is permitted.
+- **No file** ({s.noFile} sites). These sites gave a 404 or a 410, or an empty file. They state no rules, so each agent is permitted.
 - **Blocked at the edge** ({s.blocked} sites). The server answered with a refusal, a challenge or an error in place of the file. {blocked403} sites gave a 403, and {s.challenges} gave a challenge, for example a CAPTCHA page. The other sites gave a different 4xx, a 429 or a 5xx.
-- **Unreachable** ({s.unreachable} domains). The crawler got no file that it could read. {s.dns} domains have no address in the DNS. The other domains gave a TLS error, a timeout or a closed connection. {s.redirects} sent more than 5 redirects, and {s.undecodable} sent a body that the crawler could not decode.
+- **Unreachable** ({s.unreachable} domains). The crawler got no file that it could read. {s.dns} domains have no address in the DNS. In place of the file, {s.html} sites gave an HTML page (a home page or a sign-in page), so the crawler fetches nothing there. The other domains gave a TLS error, a timeout or a closed connection. {s.redirects} sent more than 5 redirects, and {s.undecodable} sent a body that the crawler could not decode.
 
 The shares on this page count the files and the sites with no file: {s.answered} sites. They do not count the blocked or the unreachable domains.
 
@@ -103,7 +103,7 @@ RFC 9309 tells a crawler what to do when it cannot read robots.txt. A 4xx means 
 
 This study asks a different question: what does a site tell each AI agent? A 403 to the request of the study does not answer that question. The edge of the site refused one request before it gave the file, so the rules for GPTBot stay unknown. Thus the study counts only a 404 and a 410 as "no file". It counts each other 4xx as a block, not as a site that permits each agent.
 
-The crawler itself also stops at a 403. After a 403, a 401 or a challenge, it sends no more requests to the site in that run.
+The crawler itself also stops at a 403. After a 403 or a 401, it sends no more requests to the site for 1 hour, and after a challenge for 24 hours. The stop stays when the crawler starts again.
 
 ## Content signals
 

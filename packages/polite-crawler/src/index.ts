@@ -4,7 +4,7 @@
  * - `openCrawler`, with its options and its results.
  * - The parts of the runtime that an application uses to build its own: `createRuntime`, `Crawler`,
  *   `CaptureLog`, `DocIndex`, `FileBlobStore`, `SqliteHostStateStore`, `Extractors`,
- *   `fetchAndIndex`, `fetchPage` and `reindex`.
+ *   `fetchAndIndex`, `fetchPage`, `reindex` and `catchUpIndex`.
  * - The read, the verification and the rule for a held-back page over a runtime: `readDocument`,
  *   `verifyQuote`, `findDocuments`, `isHeldBack`, `heldBackMeta` and `recordOverride`.
  * - The readers that an application uses with the runtime: pages, PDF files and opening hours.
@@ -17,6 +17,7 @@
  */
 export type { BlobStore } from "./blobs.ts";
 export { FileBlobStore } from "./blobs.ts";
+export { checkedRenderer } from "./browser.ts";
 export type {
   CacheEntry,
   CacheIndex,
@@ -36,6 +37,7 @@ export type {
   ExtractedDoc,
   Found,
   Latest,
+  ReadingIndex,
   Variant,
   Verified,
   VersionText,
@@ -77,6 +79,7 @@ export {
   createRuntime,
   defaultUserAgent,
   durationMs,
+  isMailbox,
   openCrawler,
 } from "./open.ts";
 export type { PdfOptions, PdfText } from "./pdf.ts";
@@ -93,12 +96,13 @@ export type {
 export { DEFAULT_POLICY, MemoryHostStateStore, realClock } from "./politeness.ts";
 export type { CaptureRecord, RecordInput } from "./record.ts";
 export { makeRecord } from "./record.ts";
-export type { PlaywrightRenderer, RenderOptions, Renderer, Rendered } from "./render.ts";
+export type { PlaywrightRenderer, RefusedReason, RenderOptions, Renderer, Rendered } from "./render.ts";
 export { NO_PLAYWRIGHT, RenderRefused, playwrightRenderer } from "./render.ts";
 export type { Robots, RobotsDecision, RobotsGroup, RobotsRule, RobotsSignal } from "./robots.ts";
 export { ALLOW_ALL, decide, parseRobots } from "./robots.ts";
 export type {
   CapturePayload,
+  CatchUpResult,
   CrawlRuntime,
   Extractor,
   Indexed,
@@ -109,6 +113,7 @@ export type {
 export {
   Extractors,
   HELD_BACK,
+  catchUpIndex,
   fetchAndIndex,
   fetchPage,
   findDocuments,

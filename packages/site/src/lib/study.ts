@@ -4,6 +4,7 @@
  * home page, the share card and llms.txt. All of them read the dataset through these functions, so no
  * page keeps a copy of a number.
  */
+import { HTML_ROBOTS, isHtmlRobots } from "polite-crawler/robots";
 
 export type Role = "training" | "search" | "user" | "control";
 
@@ -164,14 +165,15 @@ export const wallOf = (text: string): string | undefined => {
   return undefined;
 };
 
-export const isHtml = (contentType: string | undefined, text: string): boolean =>
-  /html/i.test(contentType ?? "") || /^\s*<(!doctype|html|head|body)/i.test(text);
-
 /**
  * This function puts one answer into one of the four states. RFC 9309 reads a 4xx as "no file", and
  * the crawler then fetches each path. The study asks a different question: what does the site tell
  * each AI agent? A 403 to the request of the study tells nothing about the rules for GPTBot, so only
  * a 404 and a 410 are "no file".
+ *
+ * A web page in place of the file (a home page or a sign-in page) is a file that the crawler cannot
+ * read, as `isHtmlRobots` of polite-crawler decides. The crawler then fetches nothing from the site.
+ * Thus the study counts such a site as unreachable, not as a site with no rules.
  */
 export const answerOf = (raw: RawAnswer): Answer => {
   const { status, outcome, note } = raw;
@@ -191,13 +193,13 @@ export const answerOf = (raw: RawAnswer): Answer => {
   if (!kept && (status < 200 || status >= 300)) return { state: "blocked", html: false, reason: `status ${String(status)}` };
   if (raw.text === undefined) {
     // a page too large to decode is still a page, and a bot wall is small
-    if (/html/i.test(raw.contentType ?? "")) return { state: "none", html: true };
+    if (/html/i.test(raw.contentType ?? "")) return { state: "unreachable", html: true, reason: HTML_ROBOTS };
     return { state: "unreachable", html: false, reason: note ?? `status ${String(status)} with no body` };
   }
-  if (!isHtml(raw.contentType, raw.text)) return { state: "file", html: false };
+  if (!isHtmlRobots(raw.contentType, raw.text)) return { state: "file", html: false };
   const wall = wallOf(raw.text);
   if (wall !== undefined) return { state: "blocked", html: true, reason: `${wall} in place of the file, status ${String(status)}` };
-  return { state: "none", html: true };
+  return { state: "unreachable", html: true, reason: HTML_ROBOTS };
 };
 
 /* ---------------------------------------------------------------------------------------------- */
@@ -286,7 +288,7 @@ export interface Summary {
   readonly answered: number;
   readonly withFile: number;
   readonly noFile: number;
-  /** of the sites with no file: an HTML page in place of the file */
+  /** of the unreachable sites: an HTML page in place of the file, which the crawler cannot read */
   readonly html: number;
   readonly blocked: number;
   /** of the blocked sites: a challenge page or a WAF challenge, not only a status */
@@ -362,7 +364,7 @@ export const summarize = (study: Study): Summary => {
     answered: sites.length,
     withFile: of("file").length,
     noFile: of("none").length,
-    html: of("none").filter((site) => site.html === true).length,
+    html: unreachable.filter((site) => site.html === true).length,
     blocked: blocked.length,
     challenges: blocked.filter((site) => /challenge|CAPTCHA|block in place/i.test(site.reason ?? "")).length,
     blockedStatuses: [...statuses]
@@ -423,10 +425,10 @@ export const headline = (study: Study): { readonly gpt: AgentRow; readonly claud
 export const STUDY_DATA_ID = "pc-study-packed";
 
 /** The packed state of a site: f a file, h an HTML page in place of it, m no file, b blocked, u unreachable. */
-export type PackedState = "f" | "h" | "m" | "b" | "u";
+export type PackedState = "f" | "m" | "b" | "u";
 
 const packState = (site: StudySite): PackedState =>
-  site.state === "file" ? "f" : site.state === "none" ? (site.html === true ? "h" : "m") : site.state === "blocked" ? "b" : "u";
+  site.state === "file" ? "f" : site.state === "none" ? "m" : site.state === "blocked" ? "b" : "u";
 
 /**
  * The sites for the grid and the table, packed into one text: `rank domain state codes` on each

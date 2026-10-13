@@ -1,6 +1,7 @@
 import { existsSync } from "node:fs";
 import { basename, dirname, join } from "node:path";
-import { NO_PLAYWRIGHT } from "./render.ts";
+import type { Renderer } from "./render.ts";
+import { NO_PLAYWRIGHT, RenderRefused } from "./render.ts";
 
 /** The text of the note when `playwright-core` is installed, but its browser is not. */
 export const NO_BROWSER =
@@ -41,4 +42,26 @@ export const browserMissing = async (
   } catch {
     return undefined;
   }
+};
+
+/**
+ * This function gives a renderer that checks one time, before its first page, that the browser is
+ * on the disk (`browserMissing`). With no browser, each page gets a `RenderRefused` with the reason
+ * `browser` at once, and the renderer opens nothing. `createRuntime` puts its default renderer in
+ * it, so a library with no browser costs no wait and no error capture.
+ */
+export const checkedRenderer = (
+  renderer: Renderer,
+  check: () => Promise<string | undefined> = () => browserMissing(),
+): Renderer => {
+  let missing: Promise<string | undefined> | undefined;
+  return {
+    async render(url, options) {
+      missing ??= check().catch(() => undefined);
+      const reason = await missing;
+      if (reason !== undefined) throw new RenderRefused("browser", reason);
+      return renderer.render(url, options);
+    },
+    close: () => renderer.close(),
+  };
 };

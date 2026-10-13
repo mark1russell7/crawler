@@ -1,16 +1,22 @@
 // This script checks the built site in dist/ (build it first with SITE_BASE=/crawler):
 // - each internal link and each asset of each page goes to a file of the build;
 // - no page scrolls sideways at 320, 375, 768 and 1024 pixels;
-// - no page logs an error in the console.
+// - no page logs an error in the console;
+// - no page loads the search UI before a reader uses the search, and the search finds pages;
+// - with each island hydrated, no page loads more than JS_BUDGET bytes of JavaScript (gzip);
+// - one sitemap lists each page, with the date of its last change.
 // With --shots <dir>, it also saves a screenshot of each page: desktop and phone, light and dark.
 //   pnpm --filter @crawler/site check [--shots <dir>]
 import { existsSync, mkdirSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { createServer } from "node:http";
 import { extname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { gzipSync } from "node:zlib";
 import { chromium } from "playwright-core";
 
 const BASE = "/crawler";
+// The JavaScript of a page with each island hydrated, gzip. Preact gives 21 KB at most; React gave 82 KB.
+const JS_BUDGET = 40_000;
 const dist = fileURLToPath(new URL("../dist/", import.meta.url));
 const shotsAt = process.argv.indexOf("--shots");
 const shots = shotsAt === -1 ? undefined : process.argv[shotsAt + 1];
@@ -66,11 +72,41 @@ walk(dist, "");
 pages.sort((a, b) => a.localeCompare(b));
 
 const problems = [];
+let most = { path: "", bytes: 0 };
+
+// one sitemap, with each page and the date of its last change (a shallow clone has no dates, so it is not checked)
+const sitemaps = readdirSync(dist).filter((name) => /^sitemap.*\.xml$/.test(name)).sort();
+if (sitemaps.join(" ") !== "sitemap-0.xml sitemap-index.xml") problems.push(`the build has these sitemaps: ${sitemaps.join(", ")}`);
+else {
+  const xml = readFileSync(join(dist, "sitemap-0.xml"), "utf8");
+  const listed = [...xml.matchAll(/<url><loc>([^<]*)<\/loc>(<lastmod>[^<]+<\/lastmod>)?/g)];
+  const inSitemap = new Set(listed.map(([, loc]) => new URL(loc).pathname));
+  for (const path of pages.filter((path) => path !== `${BASE}/404/`)) {
+    if (!inSitemap.has(path)) problems.push(`${path}: not in the sitemap`);
+  }
+  const git = join(dist, "..", "..", "..", ".git");
+  if (existsSync(git) && !existsSync(join(git, "shallow"))) {
+    for (const [, loc, lastmod] of listed) if (lastmod === undefined) problems.push(`${loc}: no lastmod in the sitemap`);
+  }
+}
+
+// the dataset of the study names its copy in the repository and the package that made it
+const study = readFileSync(join(dist, "notes", "robots-txt-ai-agents", "index.html"), "utf8");
+const graphs = [...study.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)].flatMap(([, json]) => JSON.parse(json)["@graph"] ?? []);
+const dataset = graphs.find((node) => node["@type"] === "Dataset");
+for (const same of ["https://github.com/mark1russell7/crawler/", "https://www.npmjs.com/package/polite-crawler"]) {
+  if (!(dataset?.sameAs ?? []).some((url) => url.startsWith(same))) problems.push(`the Dataset of the study has no sameAs ${same}`);
+}
+
 const browser = await chromium.launch();
 const context = await browser.newContext();
 for (const path of pages) {
   const page = await context.newPage();
   const errors = [];
+  const scripts = new Set();
+  page.on("request", (request) => {
+    if (request.resourceType() === "script") scripts.add(new URL(request.url()).pathname);
+  });
   page.on("console", (message) => {
     if (message.type() === "error") errors.push(message.text());
   });
@@ -86,6 +122,21 @@ for (const path of pages) {
     if (url.origin !== origin || ref.startsWith("#")) continue;
     if (fileOf(url.pathname) === undefined) problems.push(`${path}: the link ${ref} goes to no file`);
   }
+  // the islands hydrate when they come into view: scroll through the page once, then count the JavaScript
+  await page.evaluate(async () => {
+    for (let y = 0; y < document.body.scrollHeight; y += 600) {
+      window.scrollTo(0, y);
+      await new Promise((resolve) => setTimeout(resolve, 60));
+    }
+    window.scrollTo(0, 0);
+  });
+  await page.waitForLoadState("networkidle");
+  const bytes = [...scripts].reduce((sum, script) => {
+    const file = fileOf(script);
+    return file === undefined ? sum : sum + gzipSync(readFileSync(file)).length;
+  }, 0);
+  if (bytes > JS_BUDGET) problems.push(`${path}: ${String(bytes)} bytes of JavaScript (gzip), more than ${String(JS_BUDGET)}`);
+  if (bytes > most.bytes) most = { path, bytes };
   for (const width of [320, 375, 768, 1024]) {
     await page.setViewportSize({ width, height: 900 });
     await page.waitForTimeout(150);
@@ -95,7 +146,27 @@ for (const path of pages) {
     }));
     if (scroll > client) problems.push(`${path}: the page is ${String(scroll)} px wide at ${String(width)} px`);
   }
+  // the Pagefind UI loads at the first use of the search, not on each page (src/components/Search.astro)
+  if (await page.locator("#starlight__search > *").count()) problems.push(`${path}: the search UI loads before a reader uses it`);
   for (const error of errors) problems.push(`${path}: console error: ${error}`);
+  await page.close();
+}
+
+// the first click on the search button loads the search UI, and a query finds pages
+{
+  const page = await context.newPage();
+  page.on("pageerror", (error) => problems.push(`search: ${error.message}`));
+  await page.goto(`${origin}${BASE}/`, { waitUntil: "networkidle" });
+  await page.locator("button[data-open-modal]").click();
+  const input = page.locator("#starlight__search input");
+  try {
+    await input.waitFor({ timeout: 10_000 });
+    if (!(await input.evaluate((node) => node === document.activeElement))) problems.push("search: the input has no focus after the first click");
+    await input.fill("robots.txt");
+    await page.locator(".pagefind-ui__result").first().waitFor({ timeout: 10_000 });
+  } catch (error) {
+    problems.push(`search: ${error instanceof Error ? (error.message.split("\n")[0] ?? "") : String(error)}`);
+  }
   await page.close();
 }
 
@@ -136,3 +207,4 @@ if (problems.length > 0) {
   process.exit(1);
 }
 console.info(`${String(pages.length)} pages: the links go to files, no page scrolls sideways, and no page logs an error`);
+console.info(`the most JavaScript: ${String(most.bytes)} bytes (gzip) on ${most.path}, of ${String(JS_BUDGET)}`);

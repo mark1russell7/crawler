@@ -1,5 +1,10 @@
 // The site of polite-crawler: the guide, the tools and the reference. GitHub Pages serves it at /crawler/.
-import react from "@astrojs/react";
+import { execFileSync } from "node:child_process";
+import { existsSync } from "node:fs";
+import { join } from "node:path";
+import { fileURLToPath } from "node:url";
+import preact from "@astrojs/preact";
+import sitemap from "@astrojs/sitemap";
 import starlight from "@astrojs/starlight";
 import { defineConfig } from "astro/config";
 
@@ -8,11 +13,38 @@ const site = "https://mark1russell7.github.io";
 // The share card of each page (Open Graph and Twitter). scripts/og-image.mjs renders it.
 const card = `${site}${base}/og.png`;
 
+const docs = fileURLToPath(new URL("./src/content/docs/", import.meta.url));
+
+/**
+ * This function gives the date of the last commit of the page of a URL, as "Last updated" shows it.
+ * With no git history (a shallow clone), it gives no date, and the sitemap has no lastmod.
+ */
+const lastmodOf = (url) => {
+  const path = new URL(url).pathname.slice(base.length).replace(/^\/+|\/+$/g, "") || "index";
+  for (const file of [`${path}.mdx`, `${path}.md`, `${path}/index.mdx`, `${path}/index.md`]) {
+    const full = join(docs, file);
+    if (!existsSync(full)) continue;
+    try {
+      return execFileSync("git", ["log", "-1", "--format=%cI", "--", full], { encoding: "utf8" }).trim() || undefined;
+    } catch {
+      return undefined;
+    }
+  }
+  return undefined;
+};
+
 export default defineConfig({
   site,
   base,
   trailingSlash: "ignore",
   integrations: [
+    // the sitemap of the site, with the date of each page: Starlight adds no second one when this one is here
+    sitemap({
+      serialize: (item) => {
+        const lastmod = lastmodOf(item.url);
+        return lastmod === undefined ? item : { ...item, lastmod };
+      },
+    }),
     starlight({
       title: "polite-crawler",
       description:
@@ -55,7 +87,8 @@ export default defineConfig({
         "./src/styles/study.css",
         "./src/styles/home.css",
       ],
-      components: { Hero: "./src/components/Hero.astro" },
+      // the search loads the Pagefind UI at the first use (src/components/Search.astro)
+      components: { Hero: "./src/components/Hero.astro", Search: "./src/components/Search.astro" },
       // a long line of code wraps, so a code block never scrolls sideways on a phone
       expressiveCode: { defaultProps: { wrap: true } },
       // the title for search, the structured data and the description of the study (src/routeData.ts)
@@ -70,6 +103,7 @@ export default defineConfig({
         { label: "For site owners", items: ["bot", "block-ai-training-crawlers"] },
       ],
     }),
-    react(),
+    // the islands are React code that runs on Preact (preact/compat): 9 KB of runtime in place of 69 KB (gzip)
+    preact({ compat: true }),
   ],
 });

@@ -1,4 +1,4 @@
-import type { Browser, BrowserContext, Page, Route } from "playwright-core";
+import type { APIResponse, Browser, BrowserContext, Page, Request, Route } from "playwright-core";
 
 /**
  * The renderer opens the headless browser only for a page that shows almost nothing without
@@ -11,6 +11,9 @@ import type { Browser, BrowserContext, Page, Route } from "playwright-core";
  * - Each request of the page goes through a route, the first navigation too. The route refuses
  *   images, fonts and media by their resource type. It asks `allowRequest` about each other
  *   request, and it sends `headers` with it.
+ * - Playwright routes only the first request of a redirect chain. Thus with `allowRequest`, the
+ *   route sends each request itself, follows each redirect itself and asks about each step. The
+ *   browser then gets each body whole, not as a stream.
  * - No download, no popup, no service worker and no dialog.
  * - A wait until the visible text stops growing, with a limit. Playwright discourages
  *   `networkidle`. The text includes open shadow roots and the frames of the same origin.
@@ -41,6 +44,8 @@ export interface RenderOptions {
    * egress policy and robots.txt to the requests of the page.
    */
   readonly allowRequest?: ((url: string) => Promise<boolean> | boolean) | undefined;
+  /** This value is the maximum number of redirects of one request of the page. The default is 5, as for a plain fetch. */
+  readonly maxRedirects?: number | undefined;
   /** When this signal aborts, the renderer stops the page: it closes the context, and the render rejects. */
   readonly signal?: AbortSignal | undefined;
 }
@@ -50,27 +55,39 @@ export interface Renderer {
   close(): Promise<void>;
 }
 
+/** The reason of a `RenderRefused`. */
+export type RefusedReason = "refused" | "download" | "scheme" | "browser";
+
 /**
  * This error tells that the renderer did not render the page, and that the page or the site is
  * not at fault. The reason is one of these:
  *
- * - `refused`: `allowRequest` refused the first navigation.
+ * - `refused`: `allowRequest` refused the first navigation, a step of its redirects, or a later
+ *   navigation of the page that left it on an error page. `url` names the refused URL.
  * - `download`: the URL gives a file, not a page.
  * - `scheme`: the URL is not an http or https URL.
+ * - `browser`: the renderer has no browser (`playwright-core` or its browser is not installed). The
+ *   crawler then renders no more pages, and gives each one the note at once.
  *
  * A crawler does not count this error as a failure of the host.
  */
 export class RenderRefused extends Error {
-  readonly reason: "refused" | "download" | "scheme";
-  constructor(reason: "refused" | "download" | "scheme", message: string) {
+  readonly reason: RefusedReason;
+  /** This URL is the request that `allowRequest` or the limit of redirects refused, when the reason is `refused`. */
+  readonly url: string | undefined;
+  constructor(reason: RefusedReason, message: string, url?: string) {
     super(message);
     this.name = "RenderRefused";
     this.reason = reason;
+    this.url = url;
   }
 }
 
 /** The browser does not ask for these. The text of a page needs none of them. */
 const BLOCKED_TYPES = new Set(["image", "font", "media"]);
+/** These statuses send the request on to the URL in `Location` (the Fetch standard). */
+const REDIRECTS = new Set([301, 302, 303, 307, 308]);
+const MAX_REDIRECTS = 5;
 
 /** The text is stable when it does not grow for this time. */
 const SETTLED_MS = 1000;
@@ -194,12 +211,16 @@ export interface PlaywrightRenderer extends Renderer {
 export const playwrightRenderer = (
   options: {
     readonly idleMs?: number;
-    /** This function starts the browser. The default is the headless shell of Playwright. */
-    readonly launch?: (() => Promise<Browser>) | undefined;
+    /**
+     * This function starts the browser: it gives a `Browser` of `playwright-core`. The default is
+     * the headless shell of Playwright. The type names no type of `playwright-core`, so a program
+     * with no `playwright-core` can check its types.
+     */
+    readonly launch?: (() => Promise<object>) | undefined;
   } = {},
 ): PlaywrightRenderer => {
   const idleMs = options.idleMs ?? 120_000;
-  const start = options.launch ?? launch;
+  const start = (options.launch ?? launch) as () => Promise<Browser>;
   let browser: Promise<Browser> | undefined;
   let inFlight = 0;
   let idle: ReturnType<typeof setTimeout> | undefined;
@@ -254,14 +275,18 @@ export const playwrightRenderer = (
 
   const renderPage = async (
     url: string,
-    { userAgent, timeoutMs, headers, allowRequest, signal }: RenderOptions,
+    { userAgent, timeoutMs, headers, allowRequest, maxRedirects = MAX_REDIRECTS, signal }: RenderOptions,
   ): Promise<Rendered> => {
     if (signal?.aborted === true) throw signal.reason instanceof Error ? signal.reason : new Error("the render was cancelled");
     const deadline = Date.now() + timeoutMs;
     const left = (): number => Math.max(1, deadline - Date.now());
     let running: Browser | undefined;
     let context: BrowserContext | undefined;
-    let refused = false;
+    let shownPage: Page | undefined;
+    /** The last navigation of the page that the route refused: the reason, and the refused URL. */
+    let refused: { readonly message: string; readonly url: string } | undefined;
+    /** The last navigation of the page that the route answered: the URL that the browser asked for, and the URL of the answer. */
+    let navigated: { readonly asked: string; readonly final: string } | undefined;
     const extra = Object.fromEntries(
       Object.entries(headers ?? {}).map(([name, value]) => [name.toLowerCase(), value]),
     );
@@ -271,31 +296,112 @@ export const playwrightRenderer = (
       acceptDownloads: false,
       viewport: { width: 1280, height: 900 },
     };
+    const ask = async (url: string): Promise<boolean> =>
+      allowRequest === undefined
+        ? true
+        : Promise.resolve()
+            .then(() => allowRequest(url))
+            .catch(() => false);
+    /**
+     * This function sends one request of the page and follows its redirects. Each step is a new
+     * decision of `allowRequest`, and a step past `maxRedirects` is refused. It gives the answer,
+     * or the reason of a refusal.
+     *
+     * These rules are the rules of a browser. Each step gets the cookies of its own URL from the
+     * context. A credential does not go to a different origin. A 303, or a 301 or 302 after a POST,
+     * changes the request to a GET.
+     */
+    const follow = async (
+      route: Route,
+      sent: Record<string, string> | undefined,
+    ): Promise<{ readonly response: APIResponse; readonly url: string } | { readonly refusal: string; readonly url: string }> => {
+      const request = route.request();
+      let url = request.url();
+      let method = request.method();
+      let headers: Record<string, string> = { ...request.headers(), ...extra };
+      let response = await route.fetch({ maxRedirects: 0, timeout: left(), ...(sent === undefined ? {} : { headers: sent }) });
+      for (let hop = 0; ; hop += 1) {
+        const location = REDIRECTS.has(response.status()) ? response.headers()["location"] : undefined;
+        if (location === undefined) return { response, url };
+        let next: URL;
+        try {
+          next = new URL(location, url);
+        } catch {
+          return { refusal: `${url} redirects to a URL that does not parse`, url };
+        }
+        if (hop >= maxRedirects) {
+          return { refusal: `${request.url()} redirects more than ${String(maxRedirects)} times`, url: next.href };
+        }
+        if (!(await ask(next.href))) {
+          return { refusal: `the request for ${next.href}, a redirect of ${url}, was refused`, url: next.href };
+        }
+        const status = response.status();
+        const get = status === 303 || ((status === 301 || status === 302) && method === "POST");
+        const crossOrigin = next.origin !== new URL(url).origin;
+        headers = Object.fromEntries(
+          Object.entries(headers).filter(
+            ([name]) =>
+              name !== "cookie" &&
+              !(crossOrigin && name === "authorization") &&
+              !(get && (name === "content-type" || name === "content-length")),
+          ),
+        );
+        if (get) method = "GET";
+        const body = get ? undefined : (request.postDataBuffer() ?? undefined);
+        response = await context!.request.fetch(next.href, {
+          method,
+          headers,
+          maxRedirects: 0,
+          timeout: left(),
+          ...(body === undefined ? {} : { data: body }),
+        });
+        url = next.href;
+      }
+    };
+    /** This function tells if a request is a navigation of the page itself, not of a frame or a popup. */
+    const ofPage = (request: Request): boolean => {
+      if (!request.isNavigationRequest()) return false;
+      try {
+        return request.frame().parentFrame() === null && request.frame().page() === shownPage;
+      } catch {
+        // a popup asks for its first page before it has a frame
+        return false;
+      }
+    };
     const decide = async (route: Route): Promise<void> => {
       const request = route.request();
+      const main = ofPage(request);
       try {
         if (BLOCKED_TYPES.has(request.resourceType())) {
           await route.abort("blockedbyclient");
           return;
         }
-        if (allowRequest !== undefined) {
-          const allowed = await Promise.resolve()
-            .then(() => allowRequest(request.url()))
-            .catch(() => false);
-          if (!allowed) {
-            if (request.isNavigationRequest() && request.frame().parentFrame() === null) refused = true;
-            await route.abort("blockedbyclient");
-            return;
-          }
-        }
-        if (Object.keys(extra).length === 0) {
-          await route.continue();
+        if (!(await ask(request.url()))) {
+          if (main) refused = { message: `the request for ${request.url()} was refused`, url: request.url() };
+          await route.abort("blockedbyclient");
           return;
         }
-        const sent = Object.fromEntries(
-          Object.entries(await request.allHeaders()).filter(([name]) => !name.startsWith(":")),
-        );
-        await route.continue({ headers: { ...sent, ...extra } });
+        const sent =
+          Object.keys(extra).length === 0
+            ? undefined
+            : {
+                ...Object.fromEntries(
+                  Object.entries(await request.allHeaders()).filter(([name]) => !name.startsWith(":") && name !== "host"),
+                ),
+                ...extra,
+              };
+        if (allowRequest === undefined) {
+          await route.continue(sent === undefined ? undefined : { headers: sent });
+          return;
+        }
+        const answer = await follow(route, sent);
+        if ("refusal" in answer) {
+          if (main) refused = { message: answer.refusal, url: answer.url };
+          await route.abort("blockedbyclient");
+          return;
+        }
+        if (main) navigated = { asked: request.url(), final: answer.url };
+        await route.fulfill({ response: answer.response });
       } catch {
         // the page closed while the request waited: nothing to answer
       }
@@ -329,6 +435,7 @@ export const playwrightRenderer = (
         });
       }
       const page: Page = await context.newPage();
+      shownPage = page;
       // a popup is not the page, and a dialog waits for no one
       context.on("page", (other) => {
         if (other !== page) void other.close().catch(() => undefined);
@@ -343,7 +450,7 @@ export const playwrightRenderer = (
           timeout: Math.max(1, left() - READ_RESERVE_MS),
         });
       } catch (error) {
-        if (refused) throw new RenderRefused("refused", `the request for ${url} was refused`);
+        if (refused !== undefined) throw new RenderRefused("refused", refused.message, refused.url);
         if (/Download is starting/i.test(messageOf(error))) {
           throw new RenderRefused("download", `${url} gives a file, not a page`);
         }
@@ -354,7 +461,14 @@ export const playwrightRenderer = (
       let last = -1;
       let since = Date.now();
       while (Date.now() < settleEnd) {
-        const length = await within(page.evaluate(MEASURE) as Promise<number>, settleEnd - Date.now());
+        const measured = (page.evaluate(MEASURE) as Promise<number>).catch(async (error: unknown) => {
+          // a script of the page can start a navigation while the text is measured: the next poll measures the new document
+          if (!/destroyed|navigat/i.test(messageOf(error))) throw error;
+          await page.waitForLoadState("domcontentloaded", { timeout: left() }).catch(() => undefined);
+          // no length equals NaN, so the wait goes on
+          return Number.NaN;
+        });
+        const length = await within(measured, settleEnd - Date.now());
         // a page that keeps its thread busy does not answer: the reading below decides
         if (length === undefined) break;
         if (length !== last) {
@@ -368,15 +482,26 @@ export const playwrightRenderer = (
         }
         await sleep(Math.min(POLL_MS, settleEnd - Date.now()));
       }
-      const serialized = (await page.evaluate(SERIALIZE).catch(async (error: unknown) => {
-        // a navigation can replace the document while it is read
-        if (!/destroyed|navigat/i.test(messageOf(error))) throw error;
-        await page.waitForLoadState("domcontentloaded", { timeout: left() }).catch(() => undefined);
-        return page.evaluate(SERIALIZE);
-      })) as Serialized;
+      // a navigation can replace the document while it is read: the read waits for the new document
+      // and tries again, until the deadline (a page can navigate many times in a row)
+      let serialized: Serialized | undefined;
+      while (serialized === undefined) {
+        try {
+          serialized = (await page.evaluate(SERIALIZE)) as Serialized;
+        } catch (error) {
+          if (!/destroyed|navigat/i.test(messageOf(error)) || Date.now() >= deadline) throw error;
+          await page.waitForLoadState("domcontentloaded", { timeout: left() }).catch(() => undefined);
+        }
+      }
+      // a later navigation that the route refused leaves the browser on its error page, which is not the page
+      if (refused !== undefined && page.url().startsWith("chrome-error:")) {
+        throw new RenderRefused("refused", `the page moved: ${refused.message}`, refused.url);
+      }
+      // the route followed the redirects of the navigation, so the browser shows the first URL
+      const shown = page.url().replace(/#.*$/s, "");
       return {
         html: withFrames(serialized),
-        finalUrl: page.url(),
+        finalUrl: navigated !== undefined && shown === navigated.asked ? navigated.final : page.url(),
         status: response?.status() ?? null,
         headers: response?.headers() ?? {},
       };

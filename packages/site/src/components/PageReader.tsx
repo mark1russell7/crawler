@@ -86,11 +86,11 @@ export default function PageReader({ initial }: { readonly initial: PageRead }):
         <div className="pc-tool-side">
           <label className="pc-field">
             <span>The URL of the page</span>
-            <input value={url} spellCheck={false} onChange={(event) => setUrl(event.target.value)} />
+            <input value={url} spellcheck={false} onChange={(event) => setUrl(event.currentTarget.value)} />
           </label>
           <label className="pc-field">
             <span>HTML</span>
-            <textarea value={html} rows={16} spellCheck={false} onChange={(event) => setHtml(event.target.value)} />
+            <textarea value={html} rows={16} spellcheck={false} onChange={(event) => setHtml(event.currentTarget.value)} />
           </label>
         </div>
         <div className="pc-tool-side" aria-live="polite" aria-busy={busy}>

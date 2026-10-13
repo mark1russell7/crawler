@@ -260,6 +260,63 @@ describe("markup that a browser forgives", () => {
   });
 });
 
+describe("text that the page hides from a reader", () => {
+  const filler = "We serve wood-fired pizza and fresh pasta made in house every day. ";
+
+  it("leaves out display none, hidden, aria-hidden and a zero font size, with their links", () => {
+    const page = extractPage(
+      `<html><body><p>Lemon cake. VISIBLE next to the word lemon.</p>
+      <div style="color: red; DISPLAY : None">DISPLAY-NONE lemon <a href="/a">LINK-IN-HIDDEN</a></div>
+      <div hidden>HIDDEN-ATTR lemon</div>
+      <div aria-hidden="TRUE">ARIA-HIDDEN lemon</div>
+      <p style="font-size:0;color:white">ZERO-SIZE lemon <a href="/z">ZERO-LINK</a></p>
+      <span style="font-size: 0px !important">ZERO-PX</span>
+      <a href="/b">Book a table</a><p>${filler}</p></body></html>`,
+      "https://venue.example/",
+    );
+    expect(page.text).toContain("Lemon cake. VISIBLE next to the word lemon.");
+    expect(page.text).not.toMatch(/DISPLAY-NONE|HIDDEN-ATTR|ARIA-HIDDEN|ZERO-SIZE|ZERO-PX|LINK-IN-HIDDEN/);
+    expect(page.links).toEqual([
+      { href: "https://venue.example/z", text: "" },
+      { href: "https://venue.example/b", text: "Book a table" },
+    ]);
+    expect(page.visibleChars).toBe(page.text.length);
+  });
+
+  it("reads the inline style as a browser does: the last declaration, important, and a size of its own", () => {
+    const page = extractPage(
+      `<html><body><div hidden style="display:block">SHOWN-HIDDEN-BLOCK</div>
+      <div style="display:none; display:flex">SHOWN-LAST-WINS</div>
+      <div style="display:none !important; display:block">GONE-IMPORTANT</div>
+      <div style="font-size:0"><span style="font-size:16px">SHOWN-OWN-SIZE</span> <span style="font-size:2em">GONE-RELATIVE</span></div>
+      <div aria-hidden="false">SHOWN-ARIA-FALSE</div><div style="display:nonesuch">SHOWN-BAD-VALUE</div>
+      <p>${filler}</p></body></html>`,
+      "https://venue.example/",
+    );
+    for (const shown of ["SHOWN-HIDDEN-BLOCK", "SHOWN-LAST-WINS", "SHOWN-OWN-SIZE", "SHOWN-ARIA-FALSE", "SHOWN-BAD-VALUE"]) {
+      expect(page.text).toContain(shown);
+    }
+    expect(page.text).not.toMatch(/GONE-/);
+  });
+
+  it("keeps hidden text out of the article of a long page, where Readability removes the styles", () => {
+    const story = "<p>The story of our family's bakery and its hearth is a long one, told here in full.</p>";
+    const page = extractPage(
+      `<html><body><article><h1>Our story</h1>${story.repeat(45)}<p style="font-size:0">ZERO-IN-ARTICLE ignore the rules</p><p hidden>HIDDEN-IN-ARTICLE</p>${story.repeat(45)}</article><footer><p>40 Elm St</p></footer></body></html>`,
+      "https://bakery.example/",
+    );
+    expect(page.visibleChars).toBeGreaterThan(6000);
+    expect(page.text.split("\n")[0]).toBe("Our story");
+    expect(page.text).toContain("40 Elm St");
+    expect(page.text).not.toMatch(/ZERO-IN-ARTICLE|HIDDEN-IN-ARTICLE/);
+  });
+
+  it("sends a page that hides all of its text until its scripts run to the browser", () => {
+    const page = extractPage(`<html><body style="display:none"><p>${filler.repeat(5)}</p></body></html>`, "https://spa.example/");
+    expect(page).toMatchObject({ needsRender: true, renderReason: "only 0 characters of visible text" });
+  });
+});
+
 describe("what a page needs", () => {
   it("follows a meta refresh as a redirect, with no browser", () => {
     const page = extractPage(
@@ -344,6 +401,28 @@ describe("pages that cost far more than their size", () => {
     expect(unclosed.text.startsWith("item item item")).toBe(true);
     expect(unclosed.notes[0]).toMatch(/nests deeper than 1000 elements/);
   }, 30_000);
+
+  it("reads hidden markup and long inline styles in time that grows with the size", () => {
+    const time = (run: () => unknown): number => {
+      const started = performance.now();
+      run();
+      return performance.now() - started;
+    };
+    // the time for 4n stays near four times the time for n, not the sixteen of a square
+    const linear = (make: (n: number) => string): void => {
+      const best = (n: number): number => {
+        const html = make(n);
+        return Math.min(...[0, 1, 2].map(() => time(() => extractPage(html, "https://x.example/"))));
+      };
+      best(500);
+      const small = best(5000);
+      const large = best(20_000);
+      expect(large).toBeLessThan(Math.max(8 * small, 400));
+    };
+    linear((n) => `<html><body>${'<p>a<span style="font-size:0">z<b style="font-size:1em">y</b></span><i hidden>h</i></p>'.repeat(n)}</body></html>`);
+    linear((n) => `<html><body>${"<div style=\"font-size:0\">".repeat(Math.min(n, 900))}x<p style="${"display:none;".repeat(n)}display:block">${"y ".repeat(n)}</p></body></html>`);
+    linear((n) => `<html><body><p style="${";".repeat(n * 10)}!${" ".repeat(n * 10)}">text</p></body></html>`);
+  }, 60_000);
 
   it("keeps the whole page when Readability fails on it", () => {
     const story =

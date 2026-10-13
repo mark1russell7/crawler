@@ -27,7 +27,7 @@ npm install playwright-core
 npx playwright-core install chromium-headless-shell
 ```
 
-Without the browser, the crawler reads each page as plain HTML.
+Without the browser, the crawler reads each page as plain HTML. It checks for the browser one time, so a page that needs JavaScript gets a note at once, with no wait.
 
 The package is ESM only, and it includes its TypeScript declarations. It has these entry points:
 
@@ -132,6 +132,8 @@ text (characters 0 to 4000 of 25000):
 
 - Each answer has a new random id. A page cannot close its envelope early, because the server changes the name of the tag in the page text to `untrusted_web_content`. The positions in the text stay the same.
 - The first block of each answer is JSON from the crawler. It has the outcomes, the document ids, the capture ids and the age of each copy. The same data is in the structured content of the result.
+- The reader leaves out the text that the page hides from a reader, and the links in it. These are the elements with `display: none` in their `style` attribute, the attribute `hidden` or `aria-hidden="true"`. Text with a font size of zero goes too.
+- The reader reads only the `style` attribute, not the style sheets. It does not read `visibility`, `opacity`, colors or positions, because many sites hide text with them until an animation shows it. Thus a page can still hide some text, and the envelope stays necessary.
 
 ### Pages that refuse AI input
 
@@ -148,7 +150,7 @@ The crawler records each release in the capture log.
 | Option | Variable | What it does |
 | --- | --- | --- |
 | `--dir <path>` | `POLITE_CRAWLER_DIR` | The folder of the store. The default is `~/.polite-crawler`. |
-| `--contact <text>` | `POLITE_CRAWLER_CONTACT` | An email address or a URL for the `From` header. |
+| `--contact <text>` | `POLITE_CRAWLER_CONTACT` | An email address (in `From` and the `User-Agent`) or a URL (in the `User-Agent` only). |
 | `--allow-private` | `POLITE_CRAWLER_ALLOW_PRIVATE=1` | Fetch loopback, private and link-local addresses too. |
 | `--allow-user-provided` | `POLITE_CRAWLER_ALLOW_USER_PROVIDED=1` | Let `user_provided` work when the client cannot ask the user. |
 | `--no-browser` | | Do not open a headless browser. |
@@ -183,6 +185,7 @@ await crawler.close();
 - `versions(doc)` gives the versions of a document, the newest first.
 - `find` reads a query syntax. Text in double quotes is a phrase, and `bake*` is a prefix. The documents that hold each word come first. Case, accents and Unicode forms do not change a match, and Chinese, Japanese and Thai words match too.
 - A page that asks not to be AI input is held back in each result. `fetch` gives no title, and `read` gives no title, no text and only the structural metadata. `verify` gives `found: false`, and `find` leaves the page out. Only `userProvided` lifts the hold, and the crawler logs it.
+- The hold applies to each version too. When a later capture does not ask it, the current text is not held back, but the earlier versions that asked it stay held back. `verify` with no `capture` does not examine them, `read` and `verify` of their capture hold them back, and `versions` shows no title for them.
 
 The MCP server is in its own entry point:
 
@@ -199,14 +202,15 @@ const server = createMcpServer(openCrawler({ dir: "./crawl" }), { onBehalfOf: ["
 
 The root entry point also exports the parts of the runtime, for an application that builds its own:
 
-- `createRuntime`: the parts of a store, made in one place. `openCrawler` uses it. Give `dir`, or your own `log`, `blobs` and `index`.
+- `createRuntime`: the parts of a store, made in one place. `openCrawler` uses it. Give `dir`, or your own `log`, `blobs` and `index` (any `ReadingIndex`).
+- `catchUpIndex(runtime)`: the step of `openCrawler` at open. It rebuilds a stale index, and gives an index that is behind the log the captures that it missed. Use it after `createRuntime`.
 - `Crawler`, `CaptureLog`, `DocIndex`, `FileBlobStore`, `SqliteHostStateStore`, `Extractors`, `fetchAndIndex`, `fetchPage` and `reindex`.
 - `readDocument`, `verifyQuote`, `findDocuments`, `isHeldBack`, `heldBackMeta` and `recordOverride`: the read, the verification and the rule for a held-back page, over a runtime.
 - `extractPage`, `typesOf`, `decodeBody` and `bodyEncoding`: the page reader and the decoder of a body in its declared encoding.
 - `readPdf` and `isPdf`: the PDF reader. `PdfOptions` sets limits on the pages, the characters, the time and the inflated bytes.
 - `fromText`, `fromSchemaOrg`, `fromCompact` and `describeWeek`: the opening-hours reader.
 - `parseRobots` and `decide`: the robots.txt parser and matcher.
-- `RenderRefused`: the error of a renderer that did not render a page, with the reason `refused`, `download` or `scheme`. A crawler does not count it as a failure of the host.
+- `RenderRefused`: the error of a renderer that did not render a page, with the reason `refused`, `download`, `scheme` or `browser`. A crawler does not count it as a failure of the host. After the reason `browser`, the crawler renders no more pages.
 
 The readers give more facts than before:
 
@@ -221,10 +225,27 @@ The readers give more facts than before:
 - `politeness`: the limits of the policy, for each host or for some hosts (`hosts: { "*.example.org": { pageIntervalMs: 10_000 } }`). `DEFAULT_POLICY` has the defaults. A value that is not valid throws a `RangeError`.
 - `hostState`: the store of the pace, the counts and the stops of each host (`HostStateStore`). The default keeps them in memory (`MemoryHostStateStore`). `SqliteHostStateStore` keeps them in a file that processes share.
 - `onEvent`: a function that gets an event for each request, response, wait, stop and skip.
+- `obeyDefaultToken`: a crawler with a token of your own also obeys the group of `PoliteCrawler` when its `User-Agent` links the bot page of polite-crawler. Site owners read that page. The stricter rules apply. Set false when you host a bot page of your own.
+- `maxRenders`: the pages that the browser renders at one time. The default is 2, because each render holds a browser context. A render waits for a slot before the lease of its host, so the wait is not time of the host.
+- `scope`, `labels` and `scopeRank`: the labels of each record. One fetch of a robots.txt can serve requests of different scopes. Its record takes the labels of each request and the scope with the highest `scopeRank`, the most private one.
 
 `openCrawler` takes `egress`, `politeness` and `hostState` too, and also `clock`, `scope`, `onEvent` and `extractors`. Its default `hostState` is the file `hosts.sqlite` in the store. Thus the processes on one store share the pace and the stops of each host.
 
 `FetchRequest.maxAgeMs` can be `"auto"`: the crawler then uses the freshness that the server gave (`Cache-Control`, `Expires`, or 10 percent of the age of `Last-Modified`). `crawler.resetHosts(host?)` removes the stops and the failure counts of one host or of each host, for a process that runs for a long time.
+
+### Which parts are stable
+
+Before version 1.0.0, a minor version can change the API, and `CHANGELOG.md` tells what to change. Some parts change only for a strong reason. Other parts are the engine, and they change more often.
+
+These parts are the stable API:
+
+- `openCrawler` and the methods of `PoliteCrawler`: `fetch`, `find`, `read`, `verify`, `versions`, `reindex` and `close`.
+- The options and the results of these methods: `OpenOptions`, `FetchOptions`, `PageResult`, `Found`, `ReadResult`, `VerifyResult`, `DocVersion` and `ReindexResult`.
+- `polite-crawler/mcp`: `createMcpServer`, `startMcpServer` and the four tools.
+- The readers: `polite-crawler/robots`, `/hours`, `/html`, `/classify`, `/politeness` and `/signals`. The site and its tools use them in the browser.
+- The command line, its exit codes, the store on disk and `polite-crawler/record.schema.json`.
+
+The other exports of the root entry point are the engine. Examples are `createRuntime`, `catchUpIndex`, `Crawler`, `CaptureLog`, `DocIndex`, `FileBlobStore`, `SqliteHostStateStore`, `Extractors`, `fetchAndIndex` and `makeRecord`. An application can build on them. A minor version before 1.0.0 can change them, and its section in `CHANGELOG.md` says so.
 
 ## How the crawler is polite
 
@@ -232,9 +253,9 @@ The readers give more facts than before:
 2. **One request at a time for each host.** A host rests for 3 seconds or more between two requests, and longer after a slow response. Many hosts run in parallel, so a crawl is fast across sites and gentle on each one.
 3. **Stops.** A 401 or a 403 stops the host for 1 hour, and a challenge or a 402 for 24 hours. Five failures in sequence stop the host for 1 hour. A `Retry-After` longer than 1 hour stops the host for that time, up to 30 days. The note of a skipped fetch says `host stopped until <time>: <reason>`. The crawler does not try again with a different identity.
 4. **Failures and backoff.** A client error (a 404, for example), a 429 and a 503 do not count toward a stop. After an error or a request to wait, the crawler waits 5 seconds, then longer, up to 300 seconds, with random jitter.
-5. **An honest `User-Agent`.** The default is `PoliteCrawler/0.1.0 (+https://mark1russell7.github.io/crawler/bot/)`. The `contact` option adds an address. The constructor of `Crawler` throws an error for a bad option. Examples are a token that is not a product token, a `User-Agent` or a `From` that HTTP cannot send, and a `maxActive` less than 1.
-6. **Public addresses only.** By default, the crawler fetches only `http:` and `https:` URLs on public addresses. It checks the address after DNS and at each redirect. A refusal is a skipped fetch with the note `egress policy: <address> is a loopback address; set allowPrivate to fetch it`.
-7. **Usage signals.** When a page asks not to be AI input (`ai-input=no` content signals), the crawler keeps it but holds back its text from the AI reader.
+5. **An honest `User-Agent`.** The default is `PoliteCrawler/0.1.0 (+https://mark1russell7.github.io/crawler/bot/)`. The `contact` option adds an address. An email address also goes into the `From` header, and a URL does not, because `From` holds only a mailbox. The constructor of `Crawler` throws an error for a bad option. Examples are a token that is not a product token, a `User-Agent` or a `From` that HTTP cannot send, and a `maxActive` less than 1.
+6. **Public addresses only.** By default, the crawler fetches only `http:` and `https:` URLs on public addresses. It checks the address after DNS and at each redirect. In the headless browser, it checks each request of the page and each redirect of that request. A refusal is a skipped fetch with the note `egress policy: <address> is a loopback address; set allowPrivate to fetch it`.
+7. **Usage signals.** When a page asks not to be AI input (`ai-input=no` content signals), the crawler keeps it but holds back its text from the AI reader. The crawler also records the RSL `License` lines of robots.txt and the TDMRep reservation (the `tdm-reservation` and `tdm-policy` headers and `<meta>` tags) with each capture. These records change nothing, because a reservation of text and data mining is not a refusal of AI input.
 
 To block the crawler, a site owner adds this group to robots.txt:
 
@@ -252,9 +273,12 @@ Disallow: /
 | `index.sqlite` | The search index. It is a projection: `polite-crawler reindex` builds it again from the other two. |
 | `hosts.sqlite` | The pace, the counts and the stops of each host. The processes on one store share it. |
 
+The package publishes the JSON Schema of a line of the log: `polite-crawler/record.schema.json`. A program that reads the log can check each record with it.
+
 - The index keeps each capture of a document as a version. The current version is the latest capture by fetch time, or a render of the same page body. The earlier versions stay, so a citation that names a capture stays true after the page changes.
 - The capture log and the bodies go to the disk before a fetch finishes. `reindex` skips a damaged line of the log and a damaged body, and it counts them.
 - `reindex` builds a new index beside the old one and changes to it at the end. A rebuild that fails keeps the old index. The documents of a recipe that the runtime cannot read stay.
+- At open, the crawler rebuilds an index of an earlier version. An index that is behind the log (a process stopped between the log and the index) gets the captures that it missed.
 - An index of an earlier version of the package opens empty, and `openCrawler` builds it again from the log.
 - Two or more processes can use one store. The index waits for the lock of a different process.
 

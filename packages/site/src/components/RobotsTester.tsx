@@ -168,10 +168,10 @@ export default function RobotsTester(): ReactElement {
           <span>robots.txt</span>
           <textarea
             value={text}
-            spellCheck={false}
+            spellcheck={false}
             rows={12}
             onChange={(event) => {
-              setText(event.target.value);
+              setText(event.currentTarget.value);
               setSelected(undefined);
             }}
           />
@@ -179,15 +179,15 @@ export default function RobotsTester(): ReactElement {
         <div className="pc-tool-side">
           <label className="pc-field">
             <span>Paths or URLs to test, one on each line</span>
-            <textarea value={paths} spellCheck={false} rows={5} onChange={(event) => setPaths(event.target.value)} />
+            <textarea value={paths} spellcheck={false} rows={5} onChange={(event) => setPaths(event.currentTarget.value)} />
           </label>
           <label className="pc-field">
             <span>Your own user agent: a token or a full User-Agent header</span>
             <input
               value={custom}
               placeholder="For example MyBot/1.0"
-              spellCheck={false}
-              onChange={(event) => setCustom(event.target.value)}
+              spellcheck={false}
+              onChange={(event) => setCustom(event.currentTarget.value)}
             />
           </label>
           {token.length > 0 ? (

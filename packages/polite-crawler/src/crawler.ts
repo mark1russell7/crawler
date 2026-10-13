@@ -21,6 +21,7 @@ import type {
 import {
   DEFAULT_POLICY,
   HostScheduler,
+  MAX_STOP_MS,
   HostStopped,
   checkPolicy,
   equalJitterMs,
@@ -31,11 +32,13 @@ import {
 import type { CaptureRecord } from "./record.ts";
 import { makeRecord } from "./record.ts";
 import type { Rendered, Renderer } from "./render.ts";
-import { RenderRefused } from "./render.ts";
+import type { RefusedReason } from "./render.ts";
+import { NO_PLAYWRIGHT, RenderRefused } from "./render.ts";
 import type { Robots, RobotsDecision } from "./robots.ts";
-import { decide, robotsFromResponse, robotsFromStatus, signalsFor, unreachableRobots } from "./robots.ts";
+import { decide, isProductToken, robotsFromResponse, robotsFromStatus, signalsFor, unreachableRobots } from "./robots.ts";
 import type { AiInput, Signals } from "./signals.ts";
-import { NO_SIGNALS, readSignals } from "./signals.ts";
+import { NO_SIGNALS, metaSignals, readSignals } from "./signals.ts";
+import { BOT_PAGE, DEFAULT_TOKEN } from "./version.ts";
 import { cacheKeyOf } from "./urls.ts";
 
 /**
@@ -212,12 +215,31 @@ export interface CrawlerOptions {
   /** This value is the number of hosts that get requests at one time. The default is 16. */
   readonly maxActive?: number | undefined;
   /**
+   * This value tells if the crawler also obeys the robots.txt group of `PoliteCrawler`. That applies
+   * when the `User-Agent` links the bot page of polite-crawler (`BOT_PAGE`) and the token is different.
+   * Site owners read that page, and they write their rules for `PoliteCrawler`. The most restrictive
+   * of the groups applies, as for `onBehalfOf`. The default is true. Set false for a bot page of your own.
+   */
+  readonly obeyDefaultToken?: boolean | undefined;
+  /**
+   * This value is the number of pages that the browser renders at one time. The default is 2. Each
+   * render is a browser context of its own, which holds much memory. A render waits for a slot before
+   * the lease of its host, so the wait does not count toward the time of the host.
+   */
+  readonly maxRenders?: number | undefined;
+  /**
    * This undici dispatcher sends the requests. With a dispatcher of your own, the crawler checks
    * only literal addresses. Put `egressLookup` in its connection options to check the address after DNS.
    */
   readonly dispatcher?: Dispatcher | undefined;
   /** This label goes into each capture record as it is. */
   readonly scope?: string | undefined;
+  /**
+   * This function ranks the scopes of the requests, the most private scope highest. One fetch of a
+   * robots.txt can serve requests of different scopes. Its record then takes the scope with the
+   * highest rank, and the labels of each request. With no function, the first request gives the scope.
+   */
+  readonly scopeRank?: ((scope: string) => number) | undefined;
   /** This browser renders the pages that need JavaScript. Without it, the crawler renders no page. */
   readonly renderer?: Renderer | undefined;
   /** This policy controls the addresses that the crawler fetches. By default, the crawler fetches only public addresses. */
@@ -290,11 +312,8 @@ export const DEFAULT_SECRET_PARAMS: readonly string[] = [
 
 const ERROR_BODY_BYTES = 64 * 1024;
 const ROBOTS_BYTES = 512 * 1024;
-/** This value is the longest stop that a `Retry-After` can give: 30 days. */
-const MAX_STOP_MS = 30 * 24 * 60 * 60 * 1000;
 const LAST_DATE_MS = 8.64e15;
 const WEB_PROTOCOLS: ReadonlySet<string> = new Set(["http:", "https:"]);
-const PRODUCT_TOKEN = /^[A-Za-z_-]+$/;
 const HEADER_TEXT = /^[\t -~]*$/;
 const PERMANENT_REDIRECTS: ReadonlySet<number> = new Set([301, 308]);
 const HEURISTIC_STATUSES: ReadonlySet<number> = new Set([
@@ -328,6 +347,79 @@ const CONSTANT_HEADERS: ReadonlySet<string> = new Set(["accept-encoding", "user-
  * `aws-chunked` can send the name with the decoded body.
  */
 const IDENTITY_CODINGS: ReadonlySet<string> = new Set(["identity", "aws-chunked"]);
+
+/**
+ * This function tells if an answer is a web page that the request did not ask for. The answer is
+ * HTML, and the `Accept` of the request admits no HTML (`application/json`). A login or an error
+ * page in place of the data of an API is such an answer. A media range with `q=0` admits nothing.
+ */
+const unaskedPage = (accept: string | undefined, contentType: string | undefined): boolean => {
+  const type = (contentType ?? "").split(";")[0]!.trim().toLowerCase();
+  if (accept === undefined || accept.trim() === "" || (type !== "text/html" && type !== "application/xhtml+xml")) return false;
+  return !accept.split(",").some((range) => {
+    const [media = "", ...params] = range.split(";").map((part) => part.trim().toLowerCase());
+    const q = params.find((param) => param.startsWith("q="));
+    if (q !== undefined && Number(q.slice(2)) === 0) return false;
+    return media === "*/*" || media === type || (media.endsWith("/*") && type.startsWith(media.slice(0, -1)));
+  });
+};
+
+/** This function reads the TDMRep `<meta>` tags at the start of an HTML body. */
+const pageSignals = (body: Uint8Array | undefined, contentType: string | undefined): string[] =>
+  body === undefined || !/html/i.test(contentType ?? "")
+    ? []
+    : metaSignals(new TextDecoder("latin1").decode(body.subarray(0, 65_536)));
+
+/** A count of slots: `max` holders at one time at most, and the others wait in sequence. */
+class Slots {
+  private used = 0;
+  private readonly waiting: Array<() => void> = [];
+
+  constructor(private readonly max: number) {}
+
+  /** This method gives a function that frees the slot. It rejects when the signal aborts before a slot is free. */
+  async acquire(signal: AbortSignal): Promise<() => void> {
+    if (this.used < this.max) {
+      this.used += 1;
+      return this.releaser();
+    }
+    await new Promise<void>((resolve, reject) => {
+      const stop = (): void => {
+        const at = this.waiting.indexOf(go);
+        if (at !== -1) this.waiting.splice(at, 1);
+        reject(signal.reason instanceof Error ? signal.reason : new Error("cancelled"));
+      };
+      const go = (): void => {
+        signal.removeEventListener("abort", stop);
+        resolve();
+      };
+      if (signal.aborted) {
+        stop();
+        return;
+      }
+      this.waiting.push(go);
+      signal.addEventListener("abort", stop, { once: true });
+    });
+    // the slot of the holder that freed it passes to this waiter, so the count stays
+    return this.releaser();
+  }
+
+  private releaser(): () => void {
+    let freed = false;
+    return () => {
+      if (freed) return;
+      freed = true;
+      const next = this.waiting.shift();
+      if (next !== undefined) next();
+      else this.used -= 1;
+    };
+  }
+}
+
+/** This function tells if an error of a renderer says that it has no browser: no `playwright-core`, or no browser on the disk. */
+const missingBrowser = (message: string): boolean =>
+  message.startsWith(NO_PLAYWRIGHT) ||
+  /Executable doesn't exist|Cannot find (?:module|package) 'playwright-core'/.test(message);
 
 /** This text tells why the crawler did not fetch a page: a rule of the site, or no robots.txt to read. */
 const robotsRefusal = (robots: Robots, by: string): string =>
@@ -694,8 +786,15 @@ interface RobotsVerdict {
   readonly stale?: string | undefined;
 }
 
+/** The scope and the labels of the requests that wait for one fetch of a robots.txt. The record of the fetch reads them when it is written. */
+interface Waiting {
+  scope: string | undefined;
+  labels: Record<string, string> | undefined;
+}
+
 interface RobotsEntry {
   readonly at: number;
+  readonly waiting: Waiting;
   ttlMs: number;
   verdict: Promise<RobotsVerdict>;
   value: RobotsVerdict | undefined;
@@ -727,8 +826,10 @@ type RenderDone =
   | { readonly kind: "failed"; readonly note: string; readonly elapsedMs: number }
   | {
       readonly kind: "refused";
-      readonly reason: "refused" | "download" | "scheme";
+      readonly reason: RefusedReason;
       readonly note: string;
+      /** This URL is the request that the renderer refused. */
+      readonly url?: string | undefined;
       readonly elapsedMs: number;
     }
   | { readonly kind: "cancelled"; readonly elapsedMs: number }
@@ -824,9 +925,15 @@ export class Crawler {
   private readonly closing = new AbortController();
   private closed = false;
   private closingDone: Promise<void> | undefined;
+  /** This note tells why the renderer has no browser. After the first page that finds it, the crawler renders nothing. */
+  private renderOff: string | undefined;
+  /** The renders that run at one time (`maxRenders`). */
+  private readonly renders: Slots;
+  /** These tokens apply because the `User-Agent` links the bot page (`obeyDefaultToken`). */
+  private readonly pageTokens: readonly string[];
 
   constructor(private readonly options: CrawlerOptions) {
-    if (!PRODUCT_TOKEN.test(options.token)) {
+    if (!isProductToken(options.token)) {
       throw new Error(
         `the token "${options.token}" is not a product token: use only letters, "_" and "-" (RFC 9309)`,
       );
@@ -846,6 +953,18 @@ export class Crawler {
     this.scheduler = new HostScheduler(this.clock, options.maxActive ?? 16, {
       store: options.hostState,
     });
+    // the bot page tells site owners to write rules for PoliteCrawler, so an application that links it obeys them
+    this.pageTokens =
+      options.obeyDefaultToken !== false &&
+      options.token.toLowerCase() !== DEFAULT_TOKEN.toLowerCase() &&
+      options.userAgent.includes(BOT_PAGE)
+        ? [DEFAULT_TOKEN]
+        : [];
+    const maxRenders = options.maxRenders ?? 2;
+    if (!Number.isInteger(maxRenders) || maxRenders < 1) {
+      throw new RangeError(`maxRenders must be an integer of 1 or more, not ${String(maxRenders)}`);
+    }
+    this.renders = new Slots(maxRenders);
     this.ownsDispatcher = options.dispatcher === undefined;
     this.dispatcher =
       options.dispatcher ??
@@ -1153,8 +1272,8 @@ export class Crawler {
     if (spec.invalid !== undefined) return answer(spec.invalid);
     const refused = egressRefusal(this.egress, target.hostname);
     if (refused !== undefined) return answer(refused);
-    const tokens = [this.options.token, ...(spec.onBehalfOf ?? [])];
-    const badToken = tokens.find((token) => !PRODUCT_TOKEN.test(token));
+    const tokens = [this.options.token, ...(spec.onBehalfOf ?? []), ...this.pageTokens];
+    const badToken = tokens.find((token) => !isProductToken(token));
     if (spec.mode === "page" && badToken !== undefined) return answer(`not a valid product token: "${badToken}"`);
     const host = hostKey(target);
     const policy = this.policyOf(target);
@@ -1163,7 +1282,7 @@ export class Crawler {
     // the rules for an agent apply before a stored copy answers it
     let verdict: RobotsVerdict | undefined;
     if (spec.mode === "page") {
-      verdict = tokens.length > 1 ? await this.robotsFor(target, policy) : this.knownRobots(target);
+      verdict = tokens.length > 1 ? await this.robotsFor(target, policy, spec) : this.knownRobots(target);
       if (verdict !== undefined) {
         const decision = decide(verdict.robots, tokens, path);
         if (!decision.allowed) {
@@ -1185,7 +1304,7 @@ export class Crawler {
     let crawlDelaySeconds = 0;
     let check: Record<string, unknown> | undefined;
     if (spec.mode === "page") {
-      verdict ??= await this.robotsFor(target, policy);
+      verdict ??= await this.robotsFor(target, policy, spec);
       const decision = decide(verdict.robots, tokens, path);
       check = robotsCheck(verdict, tokens, decision);
       if (!decision.allowed) {
@@ -1281,20 +1400,31 @@ export class Crawler {
    * policy. An unreachable verdict stays for some minutes, with a backoff and the `Retry-After`
    * of the server. During that time the last good copy applies, when there is one (RFC 9309 §2.4).
    */
-  private robotsFor(target: URL, policy: PolitenessPolicy): Promise<RobotsVerdict> {
+  private robotsFor(
+    target: URL,
+    policy: PolitenessPolicy,
+    marks: { readonly scope?: string | undefined; readonly labels?: Readonly<Record<string, string>> | undefined } = {},
+  ): Promise<RobotsVerdict> {
     const key = originKey(target);
     const now = this.clock.now();
     const cached = this.robots.get(key);
-    if (cached !== undefined && now - cached.at < cached.ttlMs) return cached.verdict;
+    if (cached !== undefined && now - cached.at < cached.ttlMs) {
+      // a request that joins a fetch in progress adds its scope and its labels to the record
+      if (cached.value === undefined) this.join(cached.waiting, marks);
+      return cached.verdict;
+    }
+    const waiting: Waiting = { scope: undefined, labels: undefined };
+    this.join(waiting, marks);
     const entry: RobotsEntry = {
       at: now,
+      waiting,
       ttlMs: policy.robotsTtlMs,
       verdict: Promise.resolve({ robots: unreachableRobots("not read yet"), capture: undefined }),
       value: undefined,
       misses: cached?.misses ?? 0,
       good: cached?.good,
     };
-    entry.verdict = this.fetchRobots(target, policy)
+    entry.verdict = this.fetchRobots(target, policy, waiting)
       .catch((error: unknown) => ({
         robots: unreachableRobots(`robots.txt failed: ${messageOf(error)}`),
         capture: undefined,
@@ -1348,7 +1478,19 @@ export class Crawler {
     }
   }
 
-  private async fetchRobots(target: URL, policy: PolitenessPolicy): Promise<RobotsRead> {
+  /** This method adds the scope and the labels of one request to the requests that wait for a robots.txt. The most private scope wins. */
+  private join(
+    waiting: Waiting,
+    marks: { readonly scope?: string | undefined; readonly labels?: Readonly<Record<string, string>> | undefined },
+  ): void {
+    const scope = marks.scope ?? this.options.scope;
+    const rank = this.options.scopeRank;
+    if (waiting.scope === undefined) waiting.scope = scope;
+    else if (scope !== undefined && rank !== undefined && rank(scope) > rank(waiting.scope)) waiting.scope = scope;
+    if (marks.labels !== undefined) waiting.labels = { ...marks.labels, ...waiting.labels };
+  }
+
+  private async fetchRobots(target: URL, policy: PolitenessPolicy, waiting: Waiting): Promise<RobotsRead> {
     let url = new URL("/robots.txt", target.origin);
     const unreachable = (reason: string, capture: string | undefined, retryAfterMs?: number): RobotsRead => ({
       robots: unreachableRobots(reason),
@@ -1364,6 +1506,13 @@ export class Crawler {
           accept: "text/plain",
           maxBytes: ROBOTS_BYTES,
           minIntervalMs: policy.apiIntervalMs,
+          // the record reads the requests that wait at the time that it is written, not at the start
+          get scope() {
+            return waiting.scope;
+          },
+          get labels() {
+            return waiting.labels;
+          },
         },
         this.closing.signal,
       );
@@ -1404,7 +1553,15 @@ export class Crawler {
     };
     const secretParams = request_.secretParams ?? [];
     const sent = this.requestHeaders(request_);
-    const marks = { scope: request_.scope, labels: request_.labels };
+    // read when a record is written: more requests can wait for the fetch of a robots.txt by then
+    const marks = {
+      get scope() {
+        return request_.scope;
+      },
+      get labels() {
+        return request_.labels;
+      },
+    };
     const admission = await this.admit({
       transport: "http",
       url: request_.url,
@@ -1578,7 +1735,7 @@ export class Crawler {
           }
 
           const revisit = outcome === "not-modified" && usable !== undefined;
-          let signals = readSignals(robotsLines, header);
+          let signals = readSignals(robotsLines, header, pageSignals(body, header("content-type")));
           if (revisit) {
             // a 304 updates the stored answer and does not replace it (RFC 9111 §4.3.4)
             const merged: AiInput =
@@ -1590,6 +1747,12 @@ export class Crawler {
             signals = { ...signals, ai_input: merged };
           }
           const contentType = header("content-type") ?? (revisit ? (usable.content_type ?? undefined) : undefined);
+          // a web page in place of the data of an API (a login or an error page) is not the stored copy
+          const unasked = request_.mode === "api" && outcome === "ok" && unaskedPage(request_.accept, contentType);
+          if (unasked) {
+            const said = `the server sent ${contentType ?? ""}, and the request accepts ${request_.accept ?? ""}, so the crawler keeps no stored copy of it`;
+            note = note === undefined ? said : `${note}; ${said}`;
+          }
           const etag = header("etag") ?? (revisit ? usable.etag : null) ?? null;
           const lastModified = header("last-modified") ?? (revisit ? usable.last_modified : null) ?? null;
           const fetchedAt = this.clock.now();
@@ -1623,6 +1786,7 @@ export class Crawler {
               signals,
               ...(truncated ? { truncated: true } : {}),
               ...(cut ? { cut: true } : {}),
+              ...(unasked ? { unasked: true } : {}),
               ...cacheHeaders,
               ...(freshness !== null ? { fresh_until: freshness } : {}),
               ...(varyKey !== null ? { vary_key: varyKey } : {}),
@@ -1634,7 +1798,7 @@ export class Crawler {
           );
           const fetchedIso = new Date(fetchedAt).toISOString();
           // a body that the server cut is not a copy to keep: the next request asks for the whole body
-          if (capture !== undefined && (outcome === "ok" || outcome === "not-modified") && blob !== undefined && !cut) {
+          if (capture !== undefined && (outcome === "ok" || outcome === "not-modified") && blob !== undefined && !cut && !unasked) {
             this.store({
               url,
               capture,
@@ -1764,6 +1928,38 @@ export class Crawler {
   }
 
   /**
+   * This method tells why the browser did not go on to a URL that the page moved to: the egress
+   * policy or robots.txt. For a different site, it uses a robots.txt that the crawler holds. It
+   * gives undefined for the page itself, or for a URL that it cannot read.
+   */
+  private async movedRefusal(
+    raw: string,
+    page: URL,
+    robots: Robots,
+    tokens: readonly string[],
+  ): Promise<{ readonly note: string; readonly url: string } | undefined> {
+    let target: URL;
+    try {
+      target = new URL(raw);
+    } catch {
+      return undefined;
+    }
+    target.hash = "";
+    if (target.href === page.href) return undefined;
+    const url = redact(target);
+    const moved = `the page moved to ${url}`;
+    if (!WEB_PROTOCOLS.has(target.protocol)) return { note: `${moved}, which is not an http(s) URL`, url };
+    const egress = await checkEgress(this.egress, target);
+    if (egress !== undefined) return { note: `${moved}: ${egress}`, url };
+    const rules = originKey(target) === originKey(page) ? robots : this.knownRobots(target)?.robots;
+    if (rules !== undefined) {
+      const decision = decide(rules, tokens, `${target.pathname}${target.search}`);
+      if (!decision.allowed) return { note: `${moved}: ${robotsRefusal(rules, decision.by ?? this.options.token)}`, url };
+    }
+    return undefined;
+  }
+
+  /**
    * This method renders a page in the headless browser and captures what the page shows. The rules
    * of a fetch apply:
    *
@@ -1814,6 +2010,7 @@ export class Crawler {
       },
       async ({ target, skip }) => {
         if (renderer === undefined) return skip("no browser configured for rendering");
+        if (this.renderOff !== undefined) return skip(this.renderOff);
         // the browser does its own DNS, so the check here resolves the name too
         const resolved = await checkEgress(this.egress, target);
         return resolved === undefined ? undefined : skip(resolved);
@@ -1830,6 +2027,14 @@ export class Crawler {
     const allowRequest = this.allowRequestFor(target, verdict.robots, tokens, signal, tally);
     const rest = (elapsedMs: number): RestInput => ({ kind: "render", elapsedMs, crawlDelaySeconds });
 
+    // the wait for a slot of the browser comes before the lease of the host, so the host does not wait for it
+    let release: () => void;
+    try {
+      release = await this.renders.acquire(signal);
+    } catch {
+      if (this.closed) return closedResult(url);
+      return skip("cancelled by the caller");
+    }
     let done: RenderDone;
     try {
       done = await this.scheduler.run(
@@ -1844,6 +2049,7 @@ export class Crawler {
                 timeoutMs: policy.renderTimeoutMs,
                 ...(this.options.from !== undefined ? { headers: { from: this.options.from } } : {}),
                 allowRequest,
+                maxRedirects: policy.maxRedirects,
                 signal,
               }),
               signal,
@@ -1868,8 +2074,16 @@ export class Crawler {
             if (request_.signal?.aborted === true) {
               return { value: { kind: "cancelled", elapsedMs }, delayMs: restAfter(policy, rest(0)).ms };
             }
-            if (error instanceof RenderRefused) {
-              // a refused navigation, a file or a scheme is no fault of the host
+            // a renderer of an application that has no browser is no fault of the host either
+            const refused =
+              error instanceof RenderRefused
+                ? error
+                : missingBrowser(messageOf(error))
+                  ? new RenderRefused("browser", `rendering needs a browser: ${messageOf(error)}`)
+                  : undefined;
+            if (refused !== undefined) {
+              if (refused.reason === "browser") this.renderOff = refused.message;
+              // a refused navigation, a file, a scheme or no browser is no fault of the host
               const delayMs = this.settle(host, policy, {
                 outcome: "skipped",
                 status: 0,
@@ -1878,7 +2092,10 @@ export class Crawler {
                 robotsFile: false,
                 result: "neutral",
               });
-              return { value: { kind: "refused", reason: error.reason, note: error.message, elapsedMs }, delayMs };
+              return {
+                value: { kind: "refused", reason: refused.reason, note: refused.message, url: refused.url, elapsedMs },
+                delayMs,
+              };
             }
             const delayMs = this.settle(host, policy, {
               outcome: "error",
@@ -1897,13 +2114,18 @@ export class Crawler {
       if (this.closed) return closedResult(url);
       if (request_.signal?.aborted === true) return skip("cancelled by the caller");
       throw error;
+    } finally {
+      release();
     }
 
     if (done.kind === "closed" || this.closed) return closedResult(url);
     const subrequests = { allowed: tally.allowed, refused: tally.refused, hosts: [...tally.hosts] };
     if (done.kind === "refused") {
       this.emit({ type: "response", url, host, status: 0, outcome: done.reason === "download" ? "not-html" : "skipped", elapsedMs: done.elapsedMs });
-      if (done.reason !== "download") return skip(done.note, { robots_check: check, subrequests });
+      if (done.reason !== "download") {
+        const moved = done.url === undefined ? undefined : await this.movedRefusal(done.url, target, verdict.robots, tokens);
+        return skip(moved?.note ?? done.note, { robots_check: check, subrequests, ...(moved === undefined ? {} : { final_url: moved.url }) });
+      }
       const capture = await this.record(
         "capture",
         { ...base, url, status: 0, outcome: "not-html", note: done.note, elapsed_ms: done.elapsedMs, robots_check: check, subrequests },
@@ -1955,7 +2177,7 @@ export class Crawler {
       const refusal = await checkEgress(this.egress, finalTarget);
       if (refusal !== undefined) return skip(`${moved}: ${refusal}`, { final_url: finalUrl });
       if (originKey(finalTarget) !== originKey(target)) {
-        finalVerdict = await this.robotsFor(finalTarget, this.policyOf(finalTarget));
+        finalVerdict = await this.robotsFor(finalTarget, this.policyOf(finalTarget), request_);
       }
       const finalDecision = decide(finalVerdict.robots, tokens, finalPath);
       if (!finalDecision.allowed) {
@@ -1979,7 +2201,7 @@ export class Crawler {
         body = undefined;
       }
     }
-    const signals = readSignals(signalsFor(finalVerdict.robots, tokens, finalPath), header);
+    const signals = readSignals(signalsFor(finalVerdict.robots, tokens, finalPath), header, metaSignals(rendered.html));
     const status = rendered.status ?? 200;
     const fetchedAt = this.clock.now();
     const freshness = freshUntil(header, status, fetchedAt, header("last-modified"), policy.heuristicFreshnessCapMs);

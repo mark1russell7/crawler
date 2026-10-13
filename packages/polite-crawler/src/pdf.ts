@@ -10,7 +10,8 @@ import { getDocumentProxy, getMeta } from "unpdf";
  *
  * - Inflates the compressed streams first, with a limit, and refuses a file that inflates past it.
  * - Reads one page at a time, and lets other work run between the pages.
- * - Stops at a page limit, a text limit and a time limit, and says so (`truncated`).
+ * - Stops at a page limit, a text limit and a time limit, and says so (`truncated`). The time limit
+ *   stops a page in the middle too, and the text limit cuts the text of a page.
  */
 export interface PdfText {
   /** This is the title in the file, or null when the file names no real title ("Microsoft Word - menu.docx"). */
@@ -27,18 +28,23 @@ export interface PdfText {
 export interface PdfOptions {
   /** The reader reads no more pages than this. The default is 500. */
   readonly maxPages?: number | undefined;
-  /** The reader stops when the text has this many characters. The default is 200,000. */
+  /** The reader stops when the text has this many characters, in the middle of a page too. The default is 200,000. */
   readonly maxChars?: number | undefined;
-  /** The reader stops after this time in milliseconds, between two pages. The default is 20,000. */
+  /** The reader stops after this time in milliseconds, in the middle of a page too. The default is 20,000. */
   readonly timeBudgetMs?: number | undefined;
-  /** The reader refuses a file whose streams inflate to more bytes than this. The default is 32 MB. */
+  /** The reader refuses a file whose streams inflate to more bytes than this. The default is 8 MB. */
   readonly maxInflatedBytes?: number | undefined;
 }
 
 const MAX_PAGES = 500;
 const MAX_CHARS = 200_000;
 const TIME_BUDGET_MS = 20_000;
-const MAX_INFLATED_BYTES = 32 * 1024 * 1024;
+/**
+ * The text streams of 35 stored menus and papers inflate to 0.6 MB or less. The parser of pdf.js
+ * reads a page with no pause. Thus a page of 8 MB of text operators stops the process for
+ * approximately one second.
+ */
+const MAX_INFLATED_BYTES = 8 * 1024 * 1024;
 
 /** This function finds a PDF from its first bytes or its content type. Some servers put bytes before `%PDF-`. */
 export const isPdf = (body: Uint8Array, contentType: string | null): boolean => {
@@ -146,6 +152,27 @@ interface TextItem {
 /** This function lets the other work of the process run, for example another request. */
 const pause = (): Promise<void> => new Promise((resolve) => setImmediate(resolve));
 
+/** This function gives the value of a promise, or undefined when the time ends first. */
+const within = async <T>(promise: Promise<T>, ms: number): Promise<T | undefined> => {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const late = new Promise<undefined>((resolve) => {
+    timer = setTimeout(() => resolve(undefined), Math.max(0, ms));
+  });
+  try {
+    return await Promise.race([promise, late]);
+  } finally {
+    clearTimeout(timer);
+  }
+};
+
+/** This function keeps the first characters of a text, and does not cut a surrogate pair. */
+const cutText = (text: string, length: number): string => {
+  let end = Math.max(0, length);
+  const code = text.charCodeAt(end);
+  if (end > 0 && end < text.length && code >= 0xdc00 && code <= 0xdfff) end -= 1;
+  return text.slice(0, end).trimEnd();
+};
+
 export const readPdf = async (bytes: Uint8Array, options: PdfOptions = {}): Promise<PdfText> => {
   const maxPages = options.maxPages ?? MAX_PAGES;
   const maxChars = options.maxChars ?? MAX_CHARS;
@@ -169,16 +196,24 @@ export const readPdf = async (bytes: Uint8Array, options: PdfOptions = {}): Prom
     let note: string | null = null;
     const last = Math.min(pdf.numPages, maxPages);
     if (pdf.numPages > maxPages) note = `the reader stops after ${String(maxPages)} pages`;
+    const late = (number: number): string =>
+      `the reader stops after ${String(Math.round(budgetMs / 1000))} seconds, at page ${String(number - 1)}`;
     for (let number = 1; number <= last; number += 1) {
       if (number > 1) {
         await pause();
         if (Date.now() - started > budgetMs) {
-          note = `the reader stops after ${String(Math.round(budgetMs / 1000))} seconds, at page ${String(number - 1)}`;
+          note = late(number);
           break;
         }
       }
       const page = await pdf.getPage(number);
-      const content = await page.getTextContent();
+      // pdf.js reads a content stream with no pause, so this limit stops only a page that waits (for
+      // a font, for example). The limit of the inflated bytes keeps one page near one second
+      const content = await within(page.getTextContent(), budgetMs - (Date.now() - started));
+      if (content === undefined) {
+        note = `the reader stops after ${String(Math.round(budgetMs / 1000))} seconds, in page ${String(number)}`;
+        break;
+      }
       const text = tidy(
         (content.items as readonly TextItem[])
           .filter((item) => item.str !== undefined)
@@ -187,6 +222,12 @@ export const readPdf = async (bytes: Uint8Array, options: PdfOptions = {}): Prom
       );
       page.cleanup();
       if (text.length > 0) {
+        // the text and the blank lines between the pages so far, and the room that is left
+        if (text.length > maxChars - chars) {
+          texts.push(cutText(text, maxChars - chars));
+          note = `the reader stops at ${String(maxChars)} characters, at page ${String(number)}`;
+          break;
+        }
         texts.push(text);
         chars += text.length + 2;
       }

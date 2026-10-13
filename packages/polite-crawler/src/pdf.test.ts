@@ -133,9 +133,34 @@ describe("PDFs that cost more than their size", () => {
     const pages = await readPdf(pdf, { maxPages: 2 });
     expect(pages).toMatchObject({ text: "Page One\n\nPage Two", pages: 3, truncated: true });
     expect(pages.note).toBe("the reader stops after 2 pages");
+    // the limit cuts the text of a page, and counts the blank line between two pages
     const chars = await readPdf(pdf, { maxChars: 5 });
-    expect(chars).toMatchObject({ text: "Page One", truncated: true });
+    expect(chars).toMatchObject({ text: "Page", truncated: true, note: "the reader stops at 5 characters, at page 1" });
+    const two = await readPdf(pdf, { maxChars: 12 });
+    expect(two).toMatchObject({ text: "Page One\n\nPa", note: "the reader stops at 12 characters, at page 2" });
   });
+
+  /** One page of text operators that inflate to about this many megabytes, in a file of less than 100 KB. */
+  const heavyPage = (megabytes: number): Uint8Array => {
+    const operator = "ET BT /F1 12 Tf 1 0 0 1 72 720 Tm (A) Tj ";
+    const bomb = pagesPdf([`BT ${operator.repeat(Math.floor((megabytes * 1024 * 1024) / operator.length))} ET`], { flate: true });
+    expect(bomb.length).toBeLessThan(100_000);
+    return bomb;
+  };
+
+  it("refuses by default a small file that inflates past 8 MB", async () => {
+    const read = await readPdf(heavyPage(9));
+    expect(read).toMatchObject({ text: "", pages: 0, note: "the streams of the file inflate past 8 MB" });
+  });
+
+  it("reads the heaviest page under the limit in little time, and cuts its text to the character limit", async () => {
+    // a page of 31 MB took 7 seconds and 400 MB, and gave 756,000 characters past a limit of 200,000
+    const started = Date.now();
+    const read = await readPdf(heavyPage(7.5), { maxChars: 1000 });
+    expect(Date.now() - started).toBeLessThan(5000);
+    expect(read.text.length).toBeLessThanOrEqual(1000);
+    expect(read).toMatchObject({ truncated: true, note: "the reader stops at 1000 characters, at page 1" });
+  }, 30_000);
 
   it("refuses a file whose streams inflate past the limit, and reads no page of it", async () => {
     const bomb = pagesPdf([`BT /F1 12 Tf 72 720 Td ${"(A) Tj ".repeat(300_000)} ET`], { flate: true });

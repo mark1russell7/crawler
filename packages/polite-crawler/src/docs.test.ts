@@ -198,6 +198,15 @@ describe("the search", () => {
     expect(index.find("sourdough rye", { limit: 1 }).map((hit) => hit.doc)).toEqual(["both"]);
   });
 
+  it("does not match a long question by its common words", () => {
+    const index = memory();
+    index.upsert(page("bread", "Fresh sourdough bread every morning, and a family table."), "x");
+    index.upsert(page("filler", "the and of to in is for on with the and of to in is for on with a the"), "x");
+    const question = "what is the best bread on the menu for a family with kids in the morning and evening";
+    expect(index.find(question, { limit: 10 }).map((hit) => hit.doc)).toEqual(["bread"]);
+    expect(index.rankWithin(question, ["bread", "filler"]).map((hit) => hit.doc)).toEqual(["bread"]);
+  });
+
   it("leaves out a document that asked not to be AI input, and ranks many ids", () => {
     const index = memory();
     index.upsert(page("secret", "the vault opens at noon", { ai_input: "no" }), "x");

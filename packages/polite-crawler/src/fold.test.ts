@@ -97,10 +97,24 @@ describe("search queries", () => {
       parts: 3,
     });
     expect(parseQuery("e-mail")?.all).toBe('"e mail"');
-    expect(parseQuery("NEAR(a b) AND NOT c")?.any).toBe('"near a" OR "b" OR "and" OR "not" OR "c"');
+    expect(parseQuery("NEAR(a b) AND NOT c")?.all).toBe('"near a" AND "b" AND "and" AND "not" AND "c"');
+    expect(parseQuery("NEAR(a b) AND NOT c")?.any).toBe('"near a" OR "b" OR "not" OR "c"');
     expect(parseQuery("東京")?.all).toBe('"東 京"');
     expect(parseQuery('"" *** ---')).toBeUndefined();
     expect(parseQuery("😀")).toBeUndefined();
+  });
+
+  it("leave the common English words out of the form that needs one part, when other words remain", () => {
+    const question = parseQuery("What is the best bread on the menu for a family with kids in the morning and evening")!;
+    expect(question.parts).toBe(16);
+    expect(question.all.split(" AND ")).toHaveLength(16);
+    // the question has 18 words, and the reader reads 16 parts
+    expect(question.any).toBe('"best" OR "bread" OR "menu" OR "family" OR "kids" OR "morning"');
+    expect(question.terms).toEqual(["best", "bread", "menu", "family", "kids", "morning"]);
+    // only common words, a phrase or a prefix: each part stays
+    expect(parseQuery("the of")?.any).toBe('"the" OR "of"');
+    expect(parseQuery('"the who" bread')?.any).toBe('"the who" OR "bread"');
+    expect(parseQuery("the* bread")?.any).toBe('"the" * OR "bread"');
   });
 
   it("mark the first match in a snippet", () => {

@@ -211,12 +211,16 @@ export interface PlaywrightRenderer extends Renderer {
 export const playwrightRenderer = (
   options: {
     readonly idleMs?: number;
-    /** This function starts the browser. The default is the headless shell of Playwright. */
-    readonly launch?: (() => Promise<Browser>) | undefined;
+    /**
+     * This function starts the browser: it gives a `Browser` of `playwright-core`. The default is
+     * the headless shell of Playwright. The type names no type of `playwright-core`, so a program
+     * with no `playwright-core` can check its types.
+     */
+    readonly launch?: (() => Promise<object>) | undefined;
   } = {},
 ): PlaywrightRenderer => {
   const idleMs = options.idleMs ?? 120_000;
-  const start = options.launch ?? launch;
+  const start = (options.launch ?? launch) as () => Promise<Browser>;
   let browser: Promise<Browser> | undefined;
   let inFlight = 0;
   let idle: ReturnType<typeof setTimeout> | undefined;

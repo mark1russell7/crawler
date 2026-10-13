@@ -9,8 +9,10 @@
 //   1. The packed manifest: every entry point is in the tarball, and server.json agrees with it.
 //   2. An empty project installs the tarball from disk, with its dependencies from npm.
 //   3. Every subpath imports, and a store opens (SQLite with FTS5).
-//   4. The command runs: --version, --help, find, and an MCP handshake over standard input and output.
-//   5. attw (the esm-only profile) and publint examine the tarball.
+//   4. A TypeScript project type-checks its use of each entry point (nodenext, and bundler).
+//   5. The entry points for a browser stay inside their size budgets (gzip, bundled with esbuild).
+//   6. The command runs: --version, --help, find, and an MCP handshake over standard input and output.
+//   7. attw (the esm-only profile) and publint examine the tarball.
 
 import { spawn, spawnSync } from "node:child_process";
 import {
@@ -26,7 +28,7 @@ import { tmpdir } from "node:os";
 import { delimiter, dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
-import { gunzipSync } from "node:zlib";
+import { gunzipSync, gzipSync } from "node:zlib";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const packageDir = join(root, "packages", "polite-crawler");
@@ -235,6 +237,87 @@ console.log("opened a store, find gave " + String(found.length) + " results");
   const imported = run("node", ["check.mjs"], { cwd: consumer });
   show(imported.stdout);
   must("every subpath imports, and a store opens", imported);
+
+  // 3b. A TypeScript project checks its use of each entry point, with each kind of module resolution
+  step("a TypeScript project type-checks");
+  writeFileSync(
+    join(consumer, "types.ts"),
+    `import { catchUpIndex, createRuntime, openCrawler, type PageResult, type ReadResult, type VerifyResult } from "polite-crawler";
+import { createMcpServer, startMcpServer } from "polite-crawler/mcp";
+import { decide, parseRobots } from "polite-crawler/robots";
+import { describeWeek, fromText } from "polite-crawler/hours";
+import { extractPage, type PageExtract } from "polite-crawler/html";
+import { classify } from "polite-crawler/classify";
+import { DEFAULT_POLICY } from "polite-crawler/politeness";
+import { readSignals, type Signals } from "polite-crawler/signals";
+import schema from "polite-crawler/record.schema.json" with { type: "json" };
+
+export const check = async (): Promise<string> => {
+  const crawler = openCrawler({ dir: "./store-types", renderer: false, contact: "ops@example.com" });
+  const page: PageResult = await crawler.fetch("https://example.com/");
+  const read: ReadResult = await crawler.read(page.doc ?? "");
+  const verified: VerifyResult = await crawler.verify(read.doc, "Example");
+  const server = createMcpServer(crawler, { onBehalfOf: ["Claude-User"] });
+  const runtime = createRuntime({ dir: "./store-runtime", renderer: false });
+  const caught = await catchUpIndex(runtime);
+  const allowed: boolean = decide(parseRobots("User-agent: *\\nDisallow: /x\\n"), ["PoliteCrawler"], "/").allowed;
+  const week: string = describeWeek(fromText("Mon-Fri 9am-5pm")[0]!.week);
+  const extract: PageExtract = extractPage("<p>x</p>", "https://example.com/");
+  const signals: Signals = readSignals([], () => undefined);
+  const outcome: string = classify(200, () => undefined, Date.now()).outcome;
+  return [allowed, week, extract.title, signals.ai_input, verified.found, DEFAULT_POLICY.pageIntervalMs, schema.title, typeof server, typeof startMcpServer, caught?.mode, outcome].join();
+};
+`,
+  );
+  const typeRoots = [join(packageDir, "node_modules", "@types")];
+  const tsc = join(root, "node_modules", "typescript", "bin", "tsc");
+  for (const [label, module, moduleResolution] of [
+    ["module nodenext", "nodenext", "nodenext"],
+    ["module preserve, resolution bundler", "preserve", "bundler"],
+  ]) {
+    const config = `tsconfig.${moduleResolution}.json`;
+    writeFileSync(
+      join(consumer, config),
+      `${JSON.stringify(
+        {
+          compilerOptions: {
+            strict: true,
+            noEmit: true,
+            skipLibCheck: false,
+            target: "es2022",
+            module,
+            moduleResolution,
+            resolveJsonModule: true,
+            types: ["node"],
+            typeRoots,
+          },
+          files: ["types.ts"],
+        },
+        null,
+        2,
+      )}\n`,
+    );
+    must(`tsc --noEmit, ${label}`, run("node", [tsc, "-p", config], { cwd: consumer }));
+  }
+
+  // 3c. The entry points that a browser uses stay small: the gzip size of each one, bundled and minified
+  step("the size of the entry points for a browser");
+  const { build } = await import("esbuild");
+  // the sizes of version 0.1.0, and 20 percent more
+  const budgets = { robots: 2900, hours: 8700, classify: 1300, politeness: 3000, signals: 1100, html: 138_000 };
+  for (const [name, budget] of Object.entries(budgets)) {
+    const bundled = await build({
+      stdin: { contents: `export * from "${manifest.name}/${name}";`, resolveDir: consumer, loader: "js" },
+      bundle: true,
+      platform: "browser",
+      format: "esm",
+      minify: true,
+      write: false,
+      logLevel: "silent",
+    });
+    const size = gzipSync(bundled.outputFiles[0].contents).length;
+    check(size <= budget, `${manifest.name}/${name}: ${String(size)} bytes after gzip, the budget is ${String(budget)}`);
+  }
 
   // 4. The command
   step("the command line");

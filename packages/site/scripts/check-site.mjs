@@ -1,7 +1,8 @@
 // This script checks the built site in dist/ (build it first with SITE_BASE=/crawler):
 // - each internal link and each asset of each page goes to a file of the build;
 // - no page scrolls sideways at 320, 375, 768 and 1024 pixels;
-// - no page logs an error in the console.
+// - no page logs an error in the console;
+// - one sitemap lists each page, with the date of its last change.
 // With --shots <dir>, it also saves a screenshot of each page: desktop and phone, light and dark.
 //   pnpm --filter @crawler/site check [--shots <dir>]
 import { existsSync, mkdirSync, readFileSync, readdirSync, statSync } from "node:fs";
@@ -66,6 +67,23 @@ walk(dist, "");
 pages.sort((a, b) => a.localeCompare(b));
 
 const problems = [];
+
+// one sitemap, with each page and the date of its last change (a shallow clone has no dates, so it is not checked)
+const sitemaps = readdirSync(dist).filter((name) => /^sitemap.*\.xml$/.test(name)).sort();
+if (sitemaps.join(" ") !== "sitemap-0.xml sitemap-index.xml") problems.push(`the build has these sitemaps: ${sitemaps.join(", ")}`);
+else {
+  const xml = readFileSync(join(dist, "sitemap-0.xml"), "utf8");
+  const listed = [...xml.matchAll(/<url><loc>([^<]*)<\/loc>(<lastmod>[^<]+<\/lastmod>)?/g)];
+  const inSitemap = new Set(listed.map(([, loc]) => new URL(loc).pathname));
+  for (const path of pages.filter((path) => path !== `${BASE}/404/`)) {
+    if (!inSitemap.has(path)) problems.push(`${path}: not in the sitemap`);
+  }
+  const git = join(dist, "..", "..", "..", ".git");
+  if (existsSync(git) && !existsSync(join(git, "shallow"))) {
+    for (const [, loc, lastmod] of listed) if (lastmod === undefined) problems.push(`${loc}: no lastmod in the sitemap`);
+  }
+}
+
 const browser = await chromium.launch();
 const context = await browser.newContext();
 for (const path of pages) {

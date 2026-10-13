@@ -1,5 +1,10 @@
 // The site of polite-crawler: the guide, the tools and the reference. GitHub Pages serves it at /crawler/.
+import { execFileSync } from "node:child_process";
+import { existsSync } from "node:fs";
+import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import react from "@astrojs/react";
+import sitemap from "@astrojs/sitemap";
 import starlight from "@astrojs/starlight";
 import { defineConfig } from "astro/config";
 
@@ -8,11 +13,38 @@ const site = "https://mark1russell7.github.io";
 // The share card of each page (Open Graph and Twitter). scripts/og-image.mjs renders it.
 const card = `${site}${base}/og.png`;
 
+const docs = fileURLToPath(new URL("./src/content/docs/", import.meta.url));
+
+/**
+ * This function gives the date of the last commit of the page of a URL, as "Last updated" shows it.
+ * With no git history (a shallow clone), it gives no date, and the sitemap has no lastmod.
+ */
+const lastmodOf = (url) => {
+  const path = new URL(url).pathname.slice(base.length).replace(/^\/+|\/+$/g, "") || "index";
+  for (const file of [`${path}.mdx`, `${path}.md`, `${path}/index.mdx`, `${path}/index.md`]) {
+    const full = join(docs, file);
+    if (!existsSync(full)) continue;
+    try {
+      return execFileSync("git", ["log", "-1", "--format=%cI", "--", full], { encoding: "utf8" }).trim() || undefined;
+    } catch {
+      return undefined;
+    }
+  }
+  return undefined;
+};
+
 export default defineConfig({
   site,
   base,
   trailingSlash: "ignore",
   integrations: [
+    // the sitemap of the site, with the date of each page: Starlight adds no second one when this one is here
+    sitemap({
+      serialize: (item) => {
+        const lastmod = lastmodOf(item.url);
+        return lastmod === undefined ? item : { ...item, lastmod };
+      },
+    }),
     starlight({
       title: "polite-crawler",
       description:

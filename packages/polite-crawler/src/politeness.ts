@@ -547,6 +547,12 @@ export interface PolitenessPolicy {
   readonly heuristicFreshnessCapMs: number;
 }
 
+/**
+ * This value is the longest stop that a `Retry-After` can give: 30 days. A wait longer than
+ * `maxRetryAfterMs` stops the host for the time that the server asks, up to this value.
+ */
+export const MAX_STOP_MS: number = 30 * 24 * 60 * 60 * 1000;
+
 export const DEFAULT_POLICY: PolitenessPolicy = {
   pageIntervalMs: 3000,
   apiIntervalMs: 1000,

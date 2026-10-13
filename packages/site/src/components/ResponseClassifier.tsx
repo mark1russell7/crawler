@@ -6,12 +6,14 @@ import { useState, type ReactElement } from "react";
 import type { Outcome } from "polite-crawler/classify";
 import { STOPS_HOST, classify } from "polite-crawler/classify";
 import { DEFAULT_POLICY } from "polite-crawler/politeness";
+import { afterRetry } from "../lib/response.ts";
 
 const EXAMPLES: ReadonlyArray<{ readonly name: string; readonly status: string; readonly headers: string }> = [
   { name: "200", status: "200", headers: "content-type: text/html" },
   { name: "304 Not Modified", status: "304", headers: 'etag: "a1b2"' },
   { name: "429 with Retry-After", status: "429", headers: "retry-after: 120" },
   { name: "503 with a date", status: "503", headers: "retry-after: Wed, 21 Oct 2026 07:28:00 GMT" },
+  { name: "429, wait of two days", status: "429", headers: "retry-after: 172800" },
   { name: "403", status: "403", headers: "" },
   { name: "Cloudflare challenge", status: "403", headers: "cf-mitigated: challenge" },
   { name: "AWS WAF", status: "202", headers: "x-amzn-waf-action: challenge" },
@@ -55,6 +57,9 @@ export default function ResponseClassifier(): ReactElement {
   const code = Number(status);
   const now = Date.parse("2026-10-21T07:00:00Z");
   const result = Number.isInteger(code) ? classify(code, (name) => map.get(name.toLowerCase()), now) : undefined;
+  // a Retry-After of more than 1 hour stops the host, as a refusal does
+  const retry = afterRetry(result?.retryAfterMs);
+  const stops = result !== undefined && (STOPS_HOST.has(result.outcome) || retry.kind === "stop");
   return (
     <div className="pc-tool not-content">
       <div className="pc-presets" role="group" aria-label="Examples">
@@ -89,17 +94,17 @@ export default function ResponseClassifier(): ReactElement {
             <p className="pc-empty">Write a status code, for example 429.</p>
           ) : (
             <>
-              <div className={`pc-callout ${STOPS_HOST.has(result.outcome) ? "pc-callout-stop" : result.outcome === "ok" || result.outcome === "not-modified" ? "pc-callout-ok" : "pc-callout-warn"}`}>
+              <div className={`pc-callout ${stops ? "pc-callout-stop" : result.outcome === "ok" || result.outcome === "not-modified" ? "pc-callout-ok" : "pc-callout-warn"}`}>
                 <strong>
                   <code>{result.outcome}</code>
-                  {STOPS_HOST.has(result.outcome) ? `: the host stops for ${STOP_FOR[result.outcome] ?? "a time"}` : ""}
+                  {STOPS_HOST.has(result.outcome) ? `: the host stops for ${STOP_FOR[result.outcome] ?? "a time"}` : retry.kind === "stop" ? ": the host stops" : ""}
                 </strong>
                 <span>{NEXT[result.outcome]}</span>
               </div>
               <dl className="pc-facts">
                 <div>
-                  <dt>Wait from Retry-After</dt>
-                  <dd>{result.retryAfterMs === undefined ? "none" : `${String(Math.round(result.retryAfterMs / 1000))} s`}</dd>
+                  <dt>{retry.label}</dt>
+                  <dd>{retry.text}</dd>
                 </div>
                 <div>
                   <dt>Note</dt>

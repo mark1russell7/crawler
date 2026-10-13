@@ -21,6 +21,7 @@ import type {
 import {
   DEFAULT_POLICY,
   HostScheduler,
+  MAX_STOP_MS,
   HostStopped,
   checkPolicy,
   equalJitterMs,
@@ -311,8 +312,6 @@ export const DEFAULT_SECRET_PARAMS: readonly string[] = [
 
 const ERROR_BODY_BYTES = 64 * 1024;
 const ROBOTS_BYTES = 512 * 1024;
-/** This value is the longest stop that a `Retry-After` can give: 30 days. */
-const MAX_STOP_MS = 30 * 24 * 60 * 60 * 1000;
 const LAST_DATE_MS = 8.64e15;
 const WEB_PROTOCOLS: ReadonlySet<string> = new Set(["http:", "https:"]);
 const HEADER_TEXT = /^[\t -~]*$/;

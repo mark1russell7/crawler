@@ -189,6 +189,8 @@ export interface McpChild {
   notify(method: string, params?: Record<string, unknown>): void;
   /** This method closes the standard input, and gives the exit code and the time to exit. */
   end(): Promise<{ readonly code: number | null; readonly ms: number }>;
+  /** This method stops the server when it still runs, and waits for its exit. It is for the end of a test that failed. */
+  stop(): Promise<void>;
 }
 
 /**
@@ -256,6 +258,10 @@ export const startMcpChild = (
         throw new Error("the MCP server did not stop in 10 s after its standard input closed");
       }
       return { code, ms: Date.now() - started };
+    },
+    stop: async () => {
+      if (child.exitCode === null && child.signalCode === null) child.kill();
+      await exited;
     },
   };
 };

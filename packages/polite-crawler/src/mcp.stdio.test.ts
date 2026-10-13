@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, onTestFinished } from "vitest";
 import type { LocalSite, McpChild } from "./test-surfaces.ts";
 import {
   PLAIN_PAGE,
@@ -44,6 +44,8 @@ const start = async (
   answer?: (method: string, params: unknown) => unknown,
 ): Promise<{ readonly server: McpChild; readonly initialized: Record<string, unknown> }> => {
   const server = startMcpChild(args, env, answer);
+  // a test that fails stops its server too, so the server does not hold the store
+  onTestFinished(() => server.stop());
   const initialized = await server.request("initialize", {
     protocolVersion: "2025-06-18",
     capabilities,
@@ -93,12 +95,14 @@ describe("the MCP server over standard input and output", () => {
     const verified = await callTool(server, "crawl_verify", { doc: "url:https://bakery.example/", quote: "wood-fired bread" });
     expect(JSON.parse(verified.content[0]!.text)).toMatchObject({ found: true });
 
+    // the site is shared: a different test can ask it for a page before this test
+    const before = site.hits.length;
     const fetched = await callTool(server, "crawl_fetch", { urls: ["mailto:someone@example.com", `${site.origin}/a`] });
     expect(fetched.isError).toBeUndefined();
     const pages = JSON.parse(fetched.content[0]!.text) as Array<{ outcome: string; note: string }>;
     expect(pages.map((page) => page.outcome)).toEqual(["error", "skipped"]);
     expect(pages[1]?.note).toContain("egress policy");
-    expect(site.hits).toEqual([]);
+    expect(site.hits.slice(before)).toEqual([]);
 
     const unknown = await callTool(server, "crawl_read", { doc: "url:https://nowhere.example/" });
     expect(unknown.isError).toBe(true);
@@ -146,26 +150,21 @@ describe("the MCP server over standard input and output", () => {
 
   it("turns rendering off at start when no browser is installed, and says so on the standard error", async () => {
     const browsers = await tempDir("no-browsers");
-    try {
-      const { server } = await start(["--dir", store], childEnv({ PLAYWRIGHT_BROWSERS_PATH: browsers }));
-      await server.request("tools/list");
-      await server.end();
-      expect(server.stderr()).toContain("polite-crawler: rendering is off: rendering needs a browser");
-      expectOnlyJsonRpc(server);
-    } finally {
-      await removeDir(browsers);
-    }
+    // the hooks of the end of a test run in the reverse order: the server stops first, then the folder goes
+    onTestFinished(() => removeDir(browsers));
+    const { server } = await start(["--dir", store], childEnv({ PLAYWRIGHT_BROWSERS_PATH: browsers }));
+    await server.request("tools/list");
+    await server.end();
+    expect(server.stderr()).toContain("polite-crawler: rendering is off: rendering needs a browser");
+    expectOnlyJsonRpc(server);
   }, SLOW);
 
   it("fetches a private address when POLITE_CRAWLER_ALLOW_PRIVATE is 1", async () => {
     const dir = await tempDir("stdio-private");
-    try {
-      const { server } = await start(["--dir", dir, "--no-browser"], childEnv({ POLITE_CRAWLER_ALLOW_PRIVATE: "1" }));
-      const fetched = await callTool(server, "crawl_fetch", { urls: [`${site.origin}/b`] });
-      expect(JSON.parse(fetched.content[0]!.text)).toEqual([expect.objectContaining({ outcome: "ok" })]);
-      await server.end();
-    } finally {
-      await removeDir(dir);
-    }
+    onTestFinished(() => removeDir(dir));
+    const { server } = await start(["--dir", dir, "--no-browser"], childEnv({ POLITE_CRAWLER_ALLOW_PRIVATE: "1" }));
+    const fetched = await callTool(server, "crawl_fetch", { urls: [`${site.origin}/b`] });
+    expect(JSON.parse(fetched.content[0]!.text)).toEqual([expect.objectContaining({ outcome: "ok" })]);
+    await server.end();
   }, SLOW);
 });

@@ -41,6 +41,7 @@ root.innerHTML = "<h2>Hours</h2><p>Tue-Sun 11am-9pm</p>";
 });
 </script></body></html>`,
   "/end": `<html><body>${FILLER}<p>PUBLIC-END</p></body></html>`,
+  "/js-out": `<html><body>${FILLER}<script>setTimeout(function () { location.href = "/internal/js"; }, 300);</script></body></html>`,
 };
 /** These paths redirect to the path that they give. The paths under /internal/ stand for a private address. */
 const HOPS: Record<string, string> = {
@@ -203,6 +204,14 @@ describe("the headless browser", () => {
     asked.length = 0;
     await expect(renderer!.render(`${base}/loop/0`, { ...options, maxRedirects: 1 })).rejects.toThrow(/redirects more than 1 times/);
     expect(paths()).toEqual(["/loop/0", "/loop/1"]);
+    // a script that goes on to a refused URL leaves the browser on its error page: no render, and the error names the URL
+    asked.length = 0;
+    await expect(renderer!.render(`${base}/js-out`, options)).rejects.toMatchObject({
+      reason: "refused",
+      url: `${base}/internal/js`,
+      message: `the page moved: the request for ${base}/internal/js was refused`,
+    });
+    expect(paths()).toEqual(["/js-out"]);
   }, 60_000);
 
   it("reads open shadow roots and frames of the same origin, and stops waiting on an empty page", async (context) => {

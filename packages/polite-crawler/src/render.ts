@@ -59,7 +59,8 @@ export interface Renderer {
  * This error tells that the renderer did not render the page, and that the page or the site is
  * not at fault. The reason is one of these:
  *
- * - `refused`: `allowRequest` refused the first navigation.
+ * - `refused`: `allowRequest` refused the first navigation, a step of its redirects, or a later
+ *   navigation of the page that left it on an error page. `url` names the refused URL.
  * - `download`: the URL gives a file, not a page.
  * - `scheme`: the URL is not an http or https URL.
  *
@@ -67,10 +68,13 @@ export interface Renderer {
  */
 export class RenderRefused extends Error {
   readonly reason: "refused" | "download" | "scheme";
-  constructor(reason: "refused" | "download" | "scheme", message: string) {
+  /** This URL is the request that `allowRequest` or the limit of redirects refused, when the reason is `refused`. */
+  readonly url: string | undefined;
+  constructor(reason: "refused" | "download" | "scheme", message: string, url?: string) {
     super(message);
     this.name = "RenderRefused";
     this.reason = reason;
+    this.url = url;
   }
 }
 
@@ -270,8 +274,8 @@ export const playwrightRenderer = (
     let running: Browser | undefined;
     let context: BrowserContext | undefined;
     let shownPage: Page | undefined;
-    /** This text tells why the route refused a navigation of the page, or it is undefined. */
-    let refused: string | undefined;
+    /** The last navigation of the page that the route refused: the reason, and the refused URL. */
+    let refused: { readonly message: string; readonly url: string } | undefined;
     /** The last navigation of the page that the route answered: the URL that the browser asked for, and the URL of the answer. */
     let navigated: { readonly asked: string; readonly final: string } | undefined;
     const extra = Object.fromEntries(
@@ -292,14 +296,16 @@ export const playwrightRenderer = (
     /**
      * This function sends one request of the page and follows its redirects. Each step is a new
      * decision of `allowRequest`, and a step past `maxRedirects` is refused. It gives the answer,
-     * or the reason of a refusal. These rules are the rules of a browser. Each step gets the cookies
-     * of its own URL from the context. A credential does not go to a different origin. A 303, or a
-     * 301 or 302 after a POST, changes the request to a GET.
+     * or the reason of a refusal.
+     *
+     * These rules are the rules of a browser. Each step gets the cookies of its own URL from the
+     * context. A credential does not go to a different origin. A 303, or a 301 or 302 after a POST,
+     * changes the request to a GET.
      */
     const follow = async (
       route: Route,
       sent: Record<string, string> | undefined,
-    ): Promise<{ readonly response: APIResponse; readonly url: string } | { readonly refusal: string }> => {
+    ): Promise<{ readonly response: APIResponse; readonly url: string } | { readonly refusal: string; readonly url: string }> => {
       const request = route.request();
       let url = request.url();
       let method = request.method();
@@ -312,10 +318,14 @@ export const playwrightRenderer = (
         try {
           next = new URL(location, url);
         } catch {
-          return { refusal: `${url} redirects to a URL that does not parse` };
+          return { refusal: `${url} redirects to a URL that does not parse`, url };
         }
-        if (hop >= maxRedirects) return { refusal: `${request.url()} redirects more than ${String(maxRedirects)} times` };
-        if (!(await ask(next.href))) return { refusal: `the request for ${next.href}, a redirect of ${url}, was refused` };
+        if (hop >= maxRedirects) {
+          return { refusal: `${request.url()} redirects more than ${String(maxRedirects)} times`, url: next.href };
+        }
+        if (!(await ask(next.href))) {
+          return { refusal: `the request for ${next.href}, a redirect of ${url}, was refused`, url: next.href };
+        }
         const status = response.status();
         const get = status === 303 || ((status === 301 || status === 302) && method === "POST");
         const crossOrigin = next.origin !== new URL(url).origin;
@@ -358,7 +368,7 @@ export const playwrightRenderer = (
           return;
         }
         if (!(await ask(request.url()))) {
-          if (main) refused = `the request for ${request.url()} was refused`;
+          if (main) refused = { message: `the request for ${request.url()} was refused`, url: request.url() };
           await route.abort("blockedbyclient");
           return;
         }
@@ -377,7 +387,7 @@ export const playwrightRenderer = (
         }
         const answer = await follow(route, sent);
         if ("refusal" in answer) {
-          if (main) refused = answer.refusal;
+          if (main) refused = { message: answer.refusal, url: answer.url };
           await route.abort("blockedbyclient");
           return;
         }
@@ -431,7 +441,7 @@ export const playwrightRenderer = (
           timeout: Math.max(1, left() - READ_RESERVE_MS),
         });
       } catch (error) {
-        if (refused !== undefined) throw new RenderRefused("refused", refused);
+        if (refused !== undefined) throw new RenderRefused("refused", refused.message, refused.url);
         if (/Download is starting/i.test(messageOf(error))) {
           throw new RenderRefused("download", `${url} gives a file, not a page`);
         }
@@ -462,6 +472,10 @@ export const playwrightRenderer = (
         await page.waitForLoadState("domcontentloaded", { timeout: left() }).catch(() => undefined);
         return page.evaluate(SERIALIZE);
       })) as Serialized;
+      // a later navigation that the route refused leaves the browser on its error page, which is not the page
+      if (refused !== undefined && page.url().startsWith("chrome-error:")) {
+        throw new RenderRefused("refused", `the page moved: ${refused.message}`, refused.url);
+      }
       // the route followed the redirects of the navigation, so the browser shows the first URL
       const shown = page.url().replace(/#.*$/s, "");
       return {

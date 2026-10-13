@@ -9,6 +9,7 @@ import { CaptureLog } from "./log.ts";
 import type { Clock } from "./politeness.ts";
 import type { CaptureRecord } from "./record.ts";
 import type { RenderOptions, Rendered, Renderer } from "./render.ts";
+import { RenderRefused } from "./render.ts";
 import { removeDir, tempDir } from "./test-helpers.ts";
 
 const cleanups: Array<() => Promise<void>> = [];
@@ -157,6 +158,27 @@ describe("the rules of a fetch, applied to a render", () => {
       outcome: "skipped",
       note: "the page moved to http://10.0.0.7/b: egress policy: 10.0.0.7 is a private address; set allowPrivate to fetch it",
     });
+  });
+
+  it("names the rule and the URL when the browser refused a later navigation of the page", async () => {
+    // a script of the page goes on to a path that robots.txt disallows; the browser refuses it and shows its error page
+    const renderer: Renderer = {
+      render: async (url, options) => {
+        const next = `${new URL(url).origin}/private/next`;
+        expect(await options.allowRequest?.(next)).toBe(false);
+        throw new RenderRefused("refused", `the page moved: the request for ${next} was refused`, next);
+      },
+      close: () => Promise.resolve(),
+    };
+    const { crawler, robots, captures } = await make(renderer);
+    robots("https://shop.example", "User-agent: *\nDisallow: /private\n");
+    const moved = await crawler.render({ url: "https://shop.example/a", recipe: "page" });
+    expect(moved).toMatchObject({
+      outcome: "skipped",
+      note: "the page moved to https://shop.example/private/next: robots.txt disallows it for PoliteCrawler",
+    });
+    const skipped = (await captures()).find((row) => row.kind === "skipped")!;
+    expect(skipped.payload).toMatchObject({ final_url: "https://shop.example/private/next" });
   });
 
   it("waits the Retry-After of a 429 before the next render, and backs off after a 503", async () => {

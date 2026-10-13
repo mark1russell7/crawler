@@ -729,6 +729,8 @@ type RenderDone =
       readonly kind: "refused";
       readonly reason: "refused" | "download" | "scheme";
       readonly note: string;
+      /** This URL is the request that the renderer refused. */
+      readonly url?: string | undefined;
       readonly elapsedMs: number;
     }
   | { readonly kind: "cancelled"; readonly elapsedMs: number }
@@ -1764,6 +1766,38 @@ export class Crawler {
   }
 
   /**
+   * This method tells why the browser did not go on to a URL that the page moved to: the egress
+   * policy or robots.txt. For a different site, it uses a robots.txt that the crawler holds. It
+   * gives undefined for the page itself, or for a URL that it cannot read.
+   */
+  private async movedRefusal(
+    raw: string,
+    page: URL,
+    robots: Robots,
+    tokens: readonly string[],
+  ): Promise<{ readonly note: string; readonly url: string } | undefined> {
+    let target: URL;
+    try {
+      target = new URL(raw);
+    } catch {
+      return undefined;
+    }
+    target.hash = "";
+    if (target.href === page.href) return undefined;
+    const url = redact(target);
+    const moved = `the page moved to ${url}`;
+    if (!WEB_PROTOCOLS.has(target.protocol)) return { note: `${moved}, which is not an http(s) URL`, url };
+    const egress = await checkEgress(this.egress, target);
+    if (egress !== undefined) return { note: `${moved}: ${egress}`, url };
+    const rules = originKey(target) === originKey(page) ? robots : this.knownRobots(target)?.robots;
+    if (rules !== undefined) {
+      const decision = decide(rules, tokens, `${target.pathname}${target.search}`);
+      if (!decision.allowed) return { note: `${moved}: ${robotsRefusal(rules, decision.by ?? this.options.token)}`, url };
+    }
+    return undefined;
+  }
+
+  /**
    * This method renders a page in the headless browser and captures what the page shows. The rules
    * of a fetch apply:
    *
@@ -1879,7 +1913,10 @@ export class Crawler {
                 robotsFile: false,
                 result: "neutral",
               });
-              return { value: { kind: "refused", reason: error.reason, note: error.message, elapsedMs }, delayMs };
+              return {
+                value: { kind: "refused", reason: error.reason, note: error.message, url: error.url, elapsedMs },
+                delayMs,
+              };
             }
             const delayMs = this.settle(host, policy, {
               outcome: "error",
@@ -1904,7 +1941,10 @@ export class Crawler {
     const subrequests = { allowed: tally.allowed, refused: tally.refused, hosts: [...tally.hosts] };
     if (done.kind === "refused") {
       this.emit({ type: "response", url, host, status: 0, outcome: done.reason === "download" ? "not-html" : "skipped", elapsedMs: done.elapsedMs });
-      if (done.reason !== "download") return skip(done.note, { robots_check: check, subrequests });
+      if (done.reason !== "download") {
+        const moved = done.url === undefined ? undefined : await this.movedRefusal(done.url, target, verdict.robots, tokens);
+        return skip(moved?.note ?? done.note, { robots_check: check, subrequests, ...(moved === undefined ? {} : { final_url: moved.url }) });
+      }
       const capture = await this.record(
         "capture",
         { ...base, url, status: 0, outcome: "not-html", note: done.note, elapsed_ms: done.elapsedMs, robots_check: check, subrequests },

@@ -225,6 +225,7 @@ The readers give more facts than before:
 - `politeness`: the limits of the policy, for each host or for some hosts (`hosts: { "*.example.org": { pageIntervalMs: 10_000 } }`). `DEFAULT_POLICY` has the defaults. A value that is not valid throws a `RangeError`.
 - `hostState`: the store of the pace, the counts and the stops of each host (`HostStateStore`). The default keeps them in memory (`MemoryHostStateStore`). `SqliteHostStateStore` keeps them in a file that processes share.
 - `onEvent`: a function that gets an event for each request, response, wait, stop and skip.
+- `scope`, `labels` and `scopeRank`: the labels of each record. One fetch of a robots.txt can serve requests of different scopes. Its record takes the labels of each request and the scope with the highest `scopeRank`, the most private one.
 
 `openCrawler` takes `egress`, `politeness` and `hostState` too, and also `clock`, `scope`, `onEvent` and `extractors`. Its default `hostState` is the file `hosts.sqlite` in the store. Thus the processes on one store share the pace and the stops of each host.
 

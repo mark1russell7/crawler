@@ -219,6 +219,12 @@ export interface CrawlerOptions {
   readonly dispatcher?: Dispatcher | undefined;
   /** This label goes into each capture record as it is. */
   readonly scope?: string | undefined;
+  /**
+   * This function ranks the scopes of the requests, the most private scope highest. One fetch of a
+   * robots.txt can serve requests of different scopes. Its record then takes the scope with the
+   * highest rank, and the labels of each request. With no function, the first request gives the scope.
+   */
+  readonly scopeRank?: ((scope: string) => number) | undefined;
   /** This browser renders the pages that need JavaScript. Without it, the crawler renders no page. */
   readonly renderer?: Renderer | undefined;
   /** This policy controls the addresses that the crawler fetches. By default, the crawler fetches only public addresses. */
@@ -705,8 +711,15 @@ interface RobotsVerdict {
   readonly stale?: string | undefined;
 }
 
+/** The scope and the labels of the requests that wait for one fetch of a robots.txt. The record of the fetch reads them when it is written. */
+interface Waiting {
+  scope: string | undefined;
+  labels: Record<string, string> | undefined;
+}
+
 interface RobotsEntry {
   readonly at: number;
+  readonly waiting: Waiting;
   ttlMs: number;
   verdict: Promise<RobotsVerdict>;
   value: RobotsVerdict | undefined;
@@ -1178,7 +1191,7 @@ export class Crawler {
     // the rules for an agent apply before a stored copy answers it
     let verdict: RobotsVerdict | undefined;
     if (spec.mode === "page") {
-      verdict = tokens.length > 1 ? await this.robotsFor(target, policy) : this.knownRobots(target);
+      verdict = tokens.length > 1 ? await this.robotsFor(target, policy, spec) : this.knownRobots(target);
       if (verdict !== undefined) {
         const decision = decide(verdict.robots, tokens, path);
         if (!decision.allowed) {
@@ -1200,7 +1213,7 @@ export class Crawler {
     let crawlDelaySeconds = 0;
     let check: Record<string, unknown> | undefined;
     if (spec.mode === "page") {
-      verdict ??= await this.robotsFor(target, policy);
+      verdict ??= await this.robotsFor(target, policy, spec);
       const decision = decide(verdict.robots, tokens, path);
       check = robotsCheck(verdict, tokens, decision);
       if (!decision.allowed) {
@@ -1296,20 +1309,31 @@ export class Crawler {
    * policy. An unreachable verdict stays for some minutes, with a backoff and the `Retry-After`
    * of the server. During that time the last good copy applies, when there is one (RFC 9309 §2.4).
    */
-  private robotsFor(target: URL, policy: PolitenessPolicy): Promise<RobotsVerdict> {
+  private robotsFor(
+    target: URL,
+    policy: PolitenessPolicy,
+    marks: { readonly scope?: string | undefined; readonly labels?: Readonly<Record<string, string>> | undefined } = {},
+  ): Promise<RobotsVerdict> {
     const key = originKey(target);
     const now = this.clock.now();
     const cached = this.robots.get(key);
-    if (cached !== undefined && now - cached.at < cached.ttlMs) return cached.verdict;
+    if (cached !== undefined && now - cached.at < cached.ttlMs) {
+      // a request that joins a fetch in progress adds its scope and its labels to the record
+      if (cached.value === undefined) this.join(cached.waiting, marks);
+      return cached.verdict;
+    }
+    const waiting: Waiting = { scope: undefined, labels: undefined };
+    this.join(waiting, marks);
     const entry: RobotsEntry = {
       at: now,
+      waiting,
       ttlMs: policy.robotsTtlMs,
       verdict: Promise.resolve({ robots: unreachableRobots("not read yet"), capture: undefined }),
       value: undefined,
       misses: cached?.misses ?? 0,
       good: cached?.good,
     };
-    entry.verdict = this.fetchRobots(target, policy)
+    entry.verdict = this.fetchRobots(target, policy, waiting)
       .catch((error: unknown) => ({
         robots: unreachableRobots(`robots.txt failed: ${messageOf(error)}`),
         capture: undefined,
@@ -1363,7 +1387,19 @@ export class Crawler {
     }
   }
 
-  private async fetchRobots(target: URL, policy: PolitenessPolicy): Promise<RobotsRead> {
+  /** This method adds the scope and the labels of one request to the requests that wait for a robots.txt. The most private scope wins. */
+  private join(
+    waiting: Waiting,
+    marks: { readonly scope?: string | undefined; readonly labels?: Readonly<Record<string, string>> | undefined },
+  ): void {
+    const scope = marks.scope ?? this.options.scope;
+    const rank = this.options.scopeRank;
+    if (waiting.scope === undefined) waiting.scope = scope;
+    else if (scope !== undefined && rank !== undefined && rank(scope) > rank(waiting.scope)) waiting.scope = scope;
+    if (marks.labels !== undefined) waiting.labels = { ...marks.labels, ...waiting.labels };
+  }
+
+  private async fetchRobots(target: URL, policy: PolitenessPolicy, waiting: Waiting): Promise<RobotsRead> {
     let url = new URL("/robots.txt", target.origin);
     const unreachable = (reason: string, capture: string | undefined, retryAfterMs?: number): RobotsRead => ({
       robots: unreachableRobots(reason),
@@ -1379,6 +1415,13 @@ export class Crawler {
           accept: "text/plain",
           maxBytes: ROBOTS_BYTES,
           minIntervalMs: policy.apiIntervalMs,
+          // the record reads the requests that wait at the time that it is written, not at the start
+          get scope() {
+            return waiting.scope;
+          },
+          get labels() {
+            return waiting.labels;
+          },
         },
         this.closing.signal,
       );
@@ -1419,7 +1462,15 @@ export class Crawler {
     };
     const secretParams = request_.secretParams ?? [];
     const sent = this.requestHeaders(request_);
-    const marks = { scope: request_.scope, labels: request_.labels };
+    // read when a record is written: more requests can wait for the fetch of a robots.txt by then
+    const marks = {
+      get scope() {
+        return request_.scope;
+      },
+      get labels() {
+        return request_.labels;
+      },
+    };
     const admission = await this.admit({
       transport: "http",
       url: request_.url,
@@ -2018,7 +2069,7 @@ export class Crawler {
       const refusal = await checkEgress(this.egress, finalTarget);
       if (refusal !== undefined) return skip(`${moved}: ${refusal}`, { final_url: finalUrl });
       if (originKey(finalTarget) !== originKey(target)) {
-        finalVerdict = await this.robotsFor(finalTarget, this.policyOf(finalTarget));
+        finalVerdict = await this.robotsFor(finalTarget, this.policyOf(finalTarget), request_);
       }
       const finalDecision = decide(finalVerdict.robots, tokens, finalPath);
       if (!finalDecision.allowed) {

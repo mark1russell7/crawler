@@ -3,6 +3,7 @@ import { gzipSync } from "node:zlib";
 import { MockAgent } from "undici";
 import { afterEach, describe, expect, it } from "vitest";
 import { FileBlobStore } from "./blobs.ts";
+import type { CrawlerOptions } from "./crawler.ts";
 import { Crawler } from "./crawler.ts";
 import { DocIndex } from "./docs.ts";
 import { CaptureLog } from "./log.ts";
@@ -39,7 +40,7 @@ const fakeClock = (): Clock & { slept: number[] } => {
   };
 };
 
-const setup = async () => {
+const setup = async (options: Partial<CrawlerOptions> = {}) => {
   dir = await tempDir("crawler");
   const agent = new MockAgent();
   agent.disableNetConnect();
@@ -56,6 +57,7 @@ const setup = async () => {
     clock,
     random: () => 0.5,
     dispatcher: agent,
+    ...options,
   });
   const captures = async (): Promise<CaptureRecord[]> => {
     await log.close();
@@ -377,5 +379,38 @@ describe("the polite fetcher", () => {
       ai_input: "unset",
       raw: expect.arrayContaining(["tdm-policy: https://news.example/tdm.json", "meta tdm-reservation: 1"]) as unknown,
     });
+  });
+});
+
+describe("the records of a robots.txt fetch", () => {
+  const RANK = ["public", "private", "intimate"];
+
+  it("take the most private scope of the requests that wait for the fetch, and their labels", async () => {
+    const { agent, crawler, captures } = await setup({ scope: "public", scopeRank: (scope) => RANK.indexOf(scope) });
+    const site = agent.get("https://shop.example");
+    // the robots.txt answers late, so both pages wait for the one fetch
+    site.intercept({ path: "/robots.txt", method: "GET" }).reply(200, "User-agent: *\nAllow: /\n").delay(100);
+    site.intercept({ path: "/a", method: "GET" }).reply(200, "a").persist();
+    site.intercept({ path: "/b", method: "GET" }).reply(200, "b").persist();
+    await Promise.all([
+      crawler.fetch({ url: "https://shop.example/a", mode: "page", recipe: "page", scope: "private", labels: { from: "a" } }),
+      crawler.fetch({ url: "https://shop.example/b", mode: "page", recipe: "page", scope: "intimate", labels: { gift: "b" } }),
+    ]);
+    const robots = (await captures()).filter((row) => (row.payload as { recipe?: string }).recipe === "robots.txt");
+    expect(robots).toHaveLength(1);
+    expect(robots[0]).toMatchObject({ scope: "intimate", labels: { from: "a", gift: "b" } });
+  });
+
+  it("take the scope of the one request that starts the fetch, not the scope of the crawler", async () => {
+    const { agent, crawler, captures } = await setup({ scope: "public" });
+    const site = agent.get("https://quiet.example");
+    site.intercept({ path: "/robots.txt", method: "GET" }).reply(200, "User-agent: *\nAllow: /\n");
+    site.intercept({ path: "/a", method: "GET" }).reply(200, "a");
+    await crawler.fetch({ url: "https://quiet.example/a", mode: "page", recipe: "page", scope: "intimate", labels: { gift: "17" } });
+    const rows = await captures();
+    expect(rows.map((row) => [(row.payload as { recipe?: string }).recipe, row.scope, row.labels])).toEqual([
+      ["robots.txt", "intimate", { gift: "17" }],
+      ["page", "intimate", { gift: "17" }],
+    ]);
   });
 });

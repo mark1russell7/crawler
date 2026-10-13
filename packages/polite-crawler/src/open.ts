@@ -141,6 +141,8 @@ export interface RuntimeOptions {
   readonly random?: (() => number) | undefined;
   /** This label goes into each capture record. */
   readonly scope?: string | undefined;
+  /** This function ranks the scopes, the most private highest. A shared fetch of a robots.txt records the scope with the highest rank (`CrawlerOptions.scopeRank`). */
+  readonly scopeRank?: ((scope: string) => number) | undefined;
   /** This function gets an event for each request, response, wait, stop and skip. */
   readonly onEvent?: ((event: CrawlEvent) => void) | undefined;
   /** These extractors read the captures of the recipes of an application. The recipe `page` is built in. */
@@ -233,6 +235,7 @@ export const createRuntime = (options: RuntimeOptions): StoreRuntime => {
     clock,
     random: options.random,
     scope: options.scope,
+    scopeRank: options.scopeRank,
     onEvent: options.onEvent,
   });
   const extractors = new Extractors();

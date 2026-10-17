@@ -1,18 +1,35 @@
 #!/usr/bin/env node
-import { readFileSync } from "node:fs";
-import { homedir } from "node:os";
-import { join, resolve } from "node:path";
-import { parseArgs } from "node:util";
-import { durationMs } from "./duration.ts";
-import type { DiffResult, VersionChoice } from "./diff.ts";
-import type { CrawlPage, CrawlSummary } from "./frontier.ts";
+import type { CliField, CrawlLimits, ExportPlan, Values, WatchLine } from "./cli-line.ts";
+import {
+  FS_CODES,
+  UsageError,
+  agentTypeOf,
+  describeDiscover,
+  describeEntry,
+  describeEvent,
+  describeExport,
+  describeExtract,
+  describeFound,
+  describePage,
+  describeRead,
+  describeReindex,
+  describeSummary,
+  describeVerify,
+  describeWatchSummary,
+  done,
+  extractCode,
+  fetchedPages,
+  keyFile,
+  readLine,
+} from "./cli-line.ts";
+import type { DiffResult } from "./diff.ts";
+import type { CrawlPage } from "./frontier.ts";
 import type { OpenOptions, OpenedCrawler, PoliteCrawler } from "./open.ts";
-import type { PageResult } from "./runtime.ts";
 import { VERSION } from "./version.ts";
-import type { WatchEntry, WatchEvent, WatchSummary } from "./watch.ts";
+import type { WatchEntry, WatchEvent } from "./watch.ts";
 
-// This file imports only Node.js, the version and the duration parser at start. A command loads
-// the crawler, and only `mcp` loads the MCP server, so `--version` and `--help` answer at once.
+// This file imports only Node.js, the version and `cli-line.ts` at start. A command loads the
+// crawler, and only `mcp` loads the MCP server, so `--version` and `--help` answer at once.
 
 // node:sqlite of Node.js 22 writes "SQLite is an experimental feature" to the standard error at
 // each start. The command removes only that warning, before the store loads node:sqlite.
@@ -132,330 +149,26 @@ Exit codes:
   2  the command line is wrong
 `;
 
-/** A usage error is a wrong command line. It exits with code 2. */
-class UsageError extends Error {}
-
 // ---- The command `export`: the options, the checks and the work of the WARC and WACZ export ----
 
-/** These options belong to the command `export`. */
-const EXPORT_OPTIONS = {
-  format: { type: "string" },
-  out: { type: "string" },
-  since: { type: "string" },
-  until: { type: "string" },
-  host: { type: "string" },
-  prefix: { type: "string" },
-  id: { type: "string", multiple: true },
-  "include-refusals": { type: "boolean" },
-  overwrite: { type: "boolean" },
-} as const;
-
-/** These are the values of the command line that the command `export` reads. */
-interface ExportValues {
-  readonly format?: string | undefined;
-  readonly out?: string | undefined;
-  readonly since?: string | undefined;
-  readonly until?: string | undefined;
-  readonly host?: string | undefined;
-  readonly prefix?: string | undefined;
-  readonly id?: readonly string[] | undefined;
-  readonly "include-refusals"?: boolean | undefined;
-  readonly overwrite?: boolean | undefined;
-  readonly json?: boolean | undefined;
-}
-
 /**
- * This function does the command `export`, and gives the exit code. It checks the whole command
- * line first. Then it only reads the store: it makes no store, and it sends no request.
+ * This function does the command `export`, and gives the exit code. `readLine` checked the whole
+ * command line first. The export only reads the store: it makes no store, and it sends no request.
  */
-const exportCommand = async (values: ExportValues, dir: string): Promise<number> => {
-  const out = values.out;
-  if (out === undefined || out.trim() === "") throw new UsageError("export wants --out <file>");
-  const format =
-    values.format ??
-    (/\.wacz$/i.test(out) ? "wacz" : /\.warc\.gz$/i.test(out) ? "warc" : undefined);
-  if (format !== "warc" && format !== "wacz") {
-    throw new UsageError(
-      values.format === undefined
-        ? "export wants --format warc or wacz, or a file that ends in .warc.gz or .wacz"
-        : `--format is warc or wacz, not "${values.format}"`,
-    );
-  }
-  for (const name of ["since", "until"] as const) {
-    const value = values[name];
-    if (value !== undefined && !Number.isFinite(Date.parse(value)))
-      throw new UsageError(`--${name} wants a time, such as 2026-10-01, not "${value}"`);
-  }
-  if (values.host !== undefined && (values.host.trim() === "" || /[/:@\s]/.test(values.host)))
-    throw new UsageError(`--host wants a host name, such as example.com, not "${values.host}"`);
-  const file =
-    out === "~" ? homedir() : /^~[\\/]/.test(out) ? resolve(homedir(), out.slice(2)) : resolve(out);
-  const options = {
-    out: file,
-    since: values.since,
-    until: values.until,
-    host: values.host,
-    urlPrefix: values.prefix,
-    ids: values.id,
-    includeRefusals: values["include-refusals"] === true,
-    overwrite: values.overwrite === true,
-  };
+const exportCommand = async (plan: ExportPlan, dir: string, json: boolean): Promise<number> => {
   const result =
-    format === "wacz"
-      ? await (await import("./wacz.ts")).exportWacz(dir, options)
-      : await (await import("./warc.ts")).exportWarc(dir, options);
-  const left = [
-    result.bodiless > 0 && !options.includeRefusals
-      ? `${String(result.bodiless)} captures with no body (add --include-refusals to keep them as metadata)`
-      : null,
-    result.missing > 0 ? `${String(result.missing)} captures with no stored body` : null,
-    result.damaged > 0 ? `${String(result.damaged)} damaged lines of the log` : null,
-  ].filter((line) => line !== null);
+    plan.format === "wacz"
+      ? await (await import("./wacz.ts")).exportWacz(dir, plan.options)
+      : await (await import("./warc.ts")).exportWarc(dir, plan.options);
   process.stdout.write(
-    `${
-      values.json === true
-        ? JSON.stringify(result, null, 2)
-        : [
-            `wrote ${result.out} (${String(result.bytes)} bytes)`,
-            `  ${String(result.captures)} captures: ${String(result.responses)} responses, ${String(result.revisits)} revisits, ${String(result.conversions)} rendered pages, ${String(result.metadata)} metadata records${result.format === "wacz" ? `, ${String(result.pages)} pages` : ""}`,
-            ...(left.length > 0 ? [`  left out: ${left.join(", ")}`] : []),
-          ].join("\n")
-    }\n`,
+    `${json ? JSON.stringify(result, null, 2) : describeExport(result, plan.options.includeRefusals)}\n`,
   );
   return 0;
 };
 
 // ---- The end of the command `export` ----
 
-const OPTIONS = {
-  dir: { type: "string" },
-  contact: { type: "string" },
-  "allow-private": { type: "boolean" },
-  "no-browser": { type: "boolean" },
-  json: { type: "boolean" },
-  version: { type: "boolean", short: "v" },
-  help: { type: "boolean", short: "h" },
-  render: { type: "string" },
-  "max-age": { type: "string" },
-  limit: { type: "string" },
-  kind: { type: "string" },
-  rank: { type: "string" },
-  from: { type: "string" },
-  length: { type: "string" },
-  "user-provided": { type: "boolean" },
-  "allow-user-provided": { type: "boolean" },
-  ...EXPORT_OPTIONS,
-  // ── discover and crawl ──
-  "max-urls": { type: "string" },
-  feed: { type: "string", multiple: true },
-  "max-pages": { type: "string" },
-  "max-depth": { type: "string" },
-  budget: { type: "string" },
-  include: { type: "string", multiple: true },
-  exclude: { type: "string", multiple: true },
-  sitemaps: { type: "boolean" },
-  "allow-host": { type: "string", multiple: true },
-  // ── end of discover and crawl ──
-  // ── time travel, diff and watch ──
-  at: { type: "string" },
-  to: { type: "string" },
-  every: { type: "string" },
-  confirm: { type: "string" },
-  scope: { type: "string" },
-  label: { type: "string", multiple: true },
-  // ── end of time travel, diff and watch ──
-  // ── archived fallback and signed requests ──
-  "archive-fallback": { type: "boolean" },
-  "archive-despite-robots": { type: "boolean" },
-  "sign-key": { type: "string" },
-  "signature-agent": { type: "string" },
-  // ── end of archived fallback and signed requests ──
-  // ── extract ──
-  field: { type: "string", multiple: true },
-  capture: { type: "string" },
-  // ── end of extract ──
-} as const;
-
-/** These options belong to one command, or to the commands that the text names. */
-const OWNER: Readonly<Record<string, string>> = {
-  render: "fetch crawl watch",
-  "max-age": "fetch crawl discover",
-  limit: "find",
-  kind: "find",
-  rank: "find",
-  from: "read diff",
-  length: "read",
-  "user-provided": "read extract",
-  "allow-user-provided": "mcp",
-  ...Object.fromEntries(Object.keys(EXPORT_OPTIONS).map((option) => [option, "export"])),
-  // ── discover and crawl ──
-  "max-urls": "discover",
-  feed: "discover",
-  "max-pages": "crawl watch",
-  "max-depth": "crawl",
-  budget: "crawl watch",
-  include: "crawl",
-  exclude: "crawl",
-  sitemaps: "crawl",
-  "allow-host": "crawl discover",
-  // ── end of discover and crawl ──
-  // ── time travel, diff and watch ──
-  at: "read verify extract",
-  to: "diff",
-  every: "watch",
-  confirm: "watch",
-  scope: "watch",
-  label: "watch",
-  // ── end of time travel, diff and watch ──
-  // ── archived fallback and signed requests ──
-  "archive-fallback": "fetch",
-  "archive-despite-robots": "fetch",
-  "sign-key": "fetch discover crawl watch mcp key-directory",
-  "signature-agent": "fetch discover crawl watch mcp key-directory",
-  // ── end of archived fallback and signed requests ──
-  // ── extract ──
-  field: "extract",
-  capture: "extract",
-  // ── end of extract ──
-};
-
-/** These are the commands, with the smallest and the largest count of arguments. */
-const COMMANDS: Readonly<
-  Record<string, { readonly min: number; readonly max: number; readonly wants: string }>
-> = {
-  fetch: { min: 1, max: Infinity, wants: "fetch wants at least one URL" },
-  find: { min: 1, max: Infinity, wants: "find wants a query" },
-  read: { min: 1, max: 1, wants: "read wants one document id" },
-  verify: { min: 2, max: Infinity, wants: "verify wants a document id and a quote" },
-  reindex: { min: 0, max: 0, wants: "reindex takes no argument" },
-  mcp: { min: 0, max: 0, wants: "mcp takes no argument" },
-  export: { min: 0, max: 0, wants: "export takes no argument: give the file with --out" },
-  // ── discover and crawl ──
-  discover: { min: 1, max: 1, wants: "discover wants one site URL" },
-  crawl: { min: 1, max: Infinity, wants: "crawl wants at least one URL" },
-  // ── end of discover and crawl ──
-  // ── diff and watch ──
-  diff: { min: 1, max: 1, wants: "diff wants one document id" },
-  watch: { min: 1, max: Infinity, wants: "watch wants add, remove, list or run" },
-  // ── end of diff and watch ──
-  // ── signed requests ──
-  "key-directory": {
-    min: 0,
-    max: 0,
-    wants: "key-directory takes no argument: give the key with --sign-key",
-  },
-  // ── end of signed requests ──
-  // ── extract ──
-  extract: { min: 1, max: 1, wants: "extract wants one document id and --field name=value" },
-  // ── end of extract ──
-};
-
-const parse = (args: readonly string[]) => {
-  try {
-    return parseArgs({ args: [...args], allowPositionals: true, strict: true, options: OPTIONS });
-  } catch (error) {
-    // parseArgs gives a TypeError with an ERR_PARSE_ARGS code for a wrong command line
-    const code = (error as { code?: unknown }).code;
-    if (typeof code === "string" && code.startsWith("ERR_PARSE_ARGS")) {
-      throw new UsageError((error as Error).message, { cause: error });
-    }
-    throw error;
-  }
-};
-
-const whole = (name: string, text: string | undefined, fallback: number, min: number): number => {
-  if (text === undefined) return fallback;
-  if (!/^\s*\d+\s*$/.test(text))
-    throw new UsageError(`--${name} wants a whole number, not "${text}"`);
-  const value = Number(text);
-  if (value < min) throw new UsageError(`--${name} wants ${String(min)} or more`);
-  return value;
-};
-
-/** An environment variable that switches a feature on is 1 or 0 (also true or false, yes or no). */
-const envFlag = (name: string): boolean => {
-  const raw = process.env[name];
-  const value = raw?.trim().toLowerCase() ?? "";
-  if (["", "0", "false", "no", "off"].includes(value)) return false;
-  if (["1", "true", "yes", "on"].includes(value)) return true;
-  throw new UsageError(`${name} is 1 or 0, not "${raw ?? ""}"`);
-};
-
-/** The store: a leading `~` is the home folder, and a relative path starts at the working folder. */
-const storeDir = (text: string | undefined): string => {
-  if (text === undefined) return join(homedir(), ".polite-crawler");
-  if (text.trim() === "") throw new UsageError("--dir wants a folder");
-  if (text === "~") return homedir();
-  if (/^~[\\/]/.test(text)) return resolve(homedir(), text.slice(2));
-  return resolve(text);
-};
-
-const FS_CODES = new Set(["EEXIST", "ENOENT", "ENOTDIR", "EACCES", "EPERM", "EROFS", "EISDIR"]);
-
-const ok = (page: PageResult): boolean => page.outcome === "ok" || page.outcome === "not-modified";
-
-/** A fetch is done when the page came, or when an archived copy came in its place. */
-const done = (page: PageResult): boolean => ok(page) || page.archived !== undefined;
-
-const describePage = (page: PageResult): string => {
-  const head = `${ok(page) ? "✓" : page.archived !== undefined ? "~" : "✗"} ${page.url}`;
-  const facts = [
-    `${page.outcome} ${String(page.status)}`,
-    page.doc === null ? null : `doc ${page.doc}`,
-    page.chars > 0 ? `${String(page.chars)} chars` : null,
-    page.rendered ? "rendered" : null,
-    page.structured.length > 0 ? `JSON-LD: ${page.structured.join(", ")}` : null,
-  ].filter((fact) => fact !== null);
-  // ── archived fallback: an archived copy says so on a line of its own ──
-  const archived =
-    page.archived === undefined
-      ? []
-      : [
-          `  archived copy (${page.archived.source}, captured ${page.archived.timestamp}): ${page.archived.url}`,
-        ];
-  return [
-    head,
-    `  ${facts.join(" · ")}`,
-    ...archived,
-    ...(page.note === null ? [] : [`  ${page.note}`]),
-  ].join("\n");
-};
-
 // ── signed requests ──────────────────────────────────────────────────────────
-
-/** This function reads the key file of `--sign-key`. An error names the file, and not the key. */
-const keyFile = (path: string): string => {
-  const file =
-    path === "~"
-      ? homedir()
-      : /^~[\\/]/.test(path)
-        ? resolve(homedir(), path.slice(2))
-        : resolve(path);
-  try {
-    return readFileSync(file, "utf8");
-  } catch (error) {
-    const code = (error as { code?: unknown }).code;
-    throw new UsageError(
-      `--sign-key: the file ${file} does not open (${typeof code === "string" ? code : "error"})`,
-      { cause: error },
-    );
-  }
-};
-
-/**
- * This function gives the type of the URL of `--signature-agent`. An origin names a key directory at
- * the well-known path. A URL with a path names a JSON Web Key Set (`jwks_uri`), for a host that cannot
- * serve the well-known path, for example a project site of GitHub Pages.
- */
-const agentTypeOf = (url: string): "directory" | "jwks_uri" => {
-  try {
-    const parsed = new URL(url);
-    return parsed.pathname === "/" && parsed.search === "" ? "directory" : "jwks_uri";
-  } catch {
-    // the signer gives the error of a URL that does not parse
-    return "directory";
-  }
-};
 
 /** This function prints the key directory of a key file, and tells where to host it. */
 const keyDirectoryCommand = async (key: string, agent: string | undefined): Promise<number> => {
@@ -477,62 +190,7 @@ const keyDirectoryCommand = async (key: string, agent: string | undefined): Prom
 
 // ── end of signed requests ───────────────────────────────────────────────────
 
-/** This is the result of a URL that the crawler did not fetch. */
-const failedPage = (url: string, note: string): PageResult => ({
-  url,
-  doc: null,
-  outcome: "error",
-  status: 0,
-  title: null,
-  chars: 0,
-  rendered: false,
-  structured: [],
-  links: 0,
-  captures: [],
-  capture: null,
-  capture_count: 0,
-  fetched_at: null,
-  from_cache: false,
-  held_back: false,
-  note,
-});
-
 // ── discover and crawl ──────────────────────────────────────────────────────
-
-/** The options of `discover` and `crawl`, read from the command line before the store opens. */
-interface CrawlLimits {
-  readonly maxUrls: number;
-  readonly feeds: readonly string[];
-  readonly maxPages: number;
-  readonly maxDepth: number;
-  readonly budgetMs: number;
-  readonly include: readonly string[];
-  readonly exclude: readonly string[];
-  readonly sitemaps: boolean;
-  readonly allowHosts: readonly string[] | undefined;
-}
-
-const crawlOptionsOf = (values: ReturnType<typeof parse>["values"]): CrawlLimits => {
-  let budgetMs = 600_000;
-  if (values.budget !== undefined) {
-    try {
-      budgetMs = durationMs(values.budget);
-    } catch (error) {
-      throw new UsageError(`--budget: ${(error as Error).message}`, { cause: error });
-    }
-  }
-  return {
-    maxUrls: whole("max-urls", values["max-urls"], 1000, 1),
-    feeds: values.feed ?? [],
-    maxPages: whole("max-pages", values["max-pages"], 100, 1),
-    maxDepth: whole("max-depth", values["max-depth"], 3, 0),
-    budgetMs,
-    include: values.include ?? [],
-    exclude: values.exclude ?? [],
-    sitemaps: values.sitemaps === true,
-    allowHosts: values["allow-host"],
-  };
-};
 
 /** This function lists the pages of a site. The exit code is 0 when it found a URL. */
 const runDiscover = async (
@@ -550,19 +208,9 @@ const runDiscover = async (
     ...(limits.allowHosts === undefined ? {} : { allowHosts: limits.allowHosts }),
   });
   if (json) out(JSON.stringify(found, null, 2));
-  else {
-    for (const url of found.urls)
-      out(url.lastmod === null ? url.url : `${url.url}  ${url.lastmod.slice(0, 10)}`);
-    const read = found.sources.filter((source) => source.kind !== null).length;
-    out(
-      `${String(found.urls.length)} URLs from ${String(read)} of ${String(found.sources.length)} files (${found.stopped}${found.note === null ? "" : `: ${found.note}`})`,
-    );
-  }
+  else for (const line of describeDiscover(found)) out(line);
   return found.urls.length > 0 ? 0 : 1;
 };
-
-const describeSummary = (summary: CrawlSummary): string =>
-  `${String(summary.pages)} pages: ${String(summary.fetched)} fetched (${String(summary.from_cache)} from the store), ${String(summary.refused)} refused, ${String(summary.failed)} failed. ${String(summary.skipped)} links not followed, ${String(summary.queued)} URLs waiting. Stopped (${summary.stopped}): ${summary.reason}.`;
 
 /** This function crawls from the seeds. It prints each page when it ends. The exit code is 0 when the crawl got a page. */
 const runCrawl = async (
@@ -607,152 +255,11 @@ const runCrawl = async (
 
 // ── time travel, diff and watch ─────────────────────────────────────────────
 
-/** A text that starts with a date is a time. A different text is a capture id. */
-const DATE_START = /^\d{4}-\d{2}-\d{2}/;
-
-/** This function reads a time of the command line. A text that is not a time is a usage error. */
-const timeOf = (name: string, text: string | undefined): string | undefined => {
-  if (text === undefined) return undefined;
-  if (!DATE_START.test(text) || !Number.isFinite(Date.parse(text)))
-    throw new UsageError(`--${name} wants a time, such as 2026-10-01T12:00:00Z, not "${text}"`);
-  return text;
-};
-
-/** This function reads a version of `diff`: a time, or a capture id. */
-const versionOf = (name: string, text: string | undefined): VersionChoice | undefined => {
-  if (text === undefined) return undefined;
-  if (text.trim() === "") throw new UsageError(`--${name} wants a capture id or a time`);
-  return DATE_START.test(text) ? { at: timeOf(name, text)! } : text;
-};
-
-/** These are the options of `watch`, read from the command line before the store opens. */
-interface WatchLine {
-  readonly action: "add" | "remove" | "list" | "run";
-  readonly urls: readonly string[];
-  readonly every: string | undefined;
-  readonly confirm: 1 | 2 | undefined;
-  readonly labels: Readonly<Record<string, string>> | undefined;
-}
-
-const ACTIONS: Readonly<Record<string, readonly [number, number]>> = {
-  add: [1, Infinity],
-  remove: [1, Infinity],
-  list: [0, 0],
-  run: [0, 0],
-};
-
-/** These options belong to one action of `watch`. */
-const WATCH_OWNER: Readonly<Record<string, string>> = {
-  every: "add",
-  confirm: "add",
-  scope: "add",
-  label: "add",
-  render: "add",
-  budget: "run",
-  "max-pages": "run",
-  "sign-key": "run",
-  "signature-agent": "run",
-};
-
-const watchLineOf = (
-  values: ReturnType<typeof parse>["values"],
-  rest: readonly string[],
-): WatchLine => {
-  const [action, ...urls] = rest;
-  const counts = action === undefined ? undefined : ACTIONS[action];
-  if (counts === undefined)
-    throw new UsageError(`watch wants add, remove, list or run, not "${action ?? ""}"`);
-  if (urls.length < counts[0] || urls.length > counts[1]) {
-    throw new UsageError(
-      counts[0] > 0 ? `watch ${action!} wants at least one URL` : `watch ${action!} takes no URL`,
-    );
-  }
-  for (const [option, owner] of Object.entries(WATCH_OWNER)) {
-    if (values[option as keyof typeof values] !== undefined && owner !== action)
-      throw new UsageError(`--${option} is an option of watch ${owner}`);
-  }
-  if (values.every !== undefined) {
-    let ms: number;
-    try {
-      ms = durationMs(values.every);
-    } catch (error) {
-      throw new UsageError(`--every: ${(error as Error).message}`, { cause: error });
-    }
-    if (ms < 3_600_000)
-      throw new UsageError("--every wants 1h or more, so a watch cannot hammer a site");
-  }
-  if (values.confirm !== undefined && values.confirm !== "1" && values.confirm !== "2")
-    throw new UsageError(`--confirm is 1 or 2, not "${values.confirm}"`);
-  let labels: Record<string, string> | undefined;
-  for (const label of values.label ?? []) {
-    const at = label.indexOf("=");
-    if (at < 1) throw new UsageError(`--label wants name=value, not "${label}"`);
-    labels = { ...labels, [label.slice(0, at)]: label.slice(at + 1) };
-  }
-  for (const url of urls) {
-    if (!/^https?:\/\//i.test(url) || !URL.canParse(url))
-      throw new UsageError(`watch ${action!} wants http or https URLs, not "${url}"`);
-  }
-  return {
-    action: action as WatchLine["action"],
-    urls: [...new Set(urls)],
-    every: values.every,
-    confirm: values.confirm === undefined ? undefined : values.confirm === "1" ? 1 : 2,
-    labels,
-  };
-};
-
-const everyText = (ms: number): string =>
-  ms % 86_400_000 === 0
-    ? `${String(ms / 86_400_000)}d`
-    : ms % 3_600_000 === 0
-      ? `${String(ms / 3_600_000)}h`
-      : `${String(Math.round(ms / 60_000))}m`;
-
-const describeEntry = (entry: WatchEntry): string => {
-  const facts = [
-    `every ${everyText(entry.every_ms)}`,
-    `next ${entry.next_at}`,
-    entry.checked_at === null
-      ? "not checked yet"
-      : `last ${entry.last_kind ?? "check"} at ${entry.checked_at}`,
-    `${String(entry.checks)} checks, ${String(entry.changes)} changes`,
-  ];
-  return [
-    entry.url,
-    `  ${facts.join(" · ")}`,
-    ...(entry.pending === null
-      ? []
-      : [`  suspected: ${entry.pending.kind} since ${entry.pending.since}`]),
-  ].join("\n");
-};
-
-const describeEvent = (event: WatchEvent): string => {
-  const state = event.suspected ? " (suspected)" : event.confirmed ? " (confirmed)" : "";
-  const facts = [
-    `${event.outcome} ${String(event.status)}`,
-    event.capture === null ? null : `capture ${event.capture}`,
-    event.previous === null || event.previous === event.capture ? null : `from ${event.previous}`,
-    event.diff === null
-      ? null
-      : `+${String(event.diff.lines_added)} −${String(event.diff.lines_removed)} lines, ${String(event.diff.meta_changes)} metadata changes`,
-    event.held_back ? "held back" : null,
-  ].filter((fact) => fact !== null);
-  return [
-    `${event.kind}${state} ${event.url}`,
-    `  ${facts.join(" · ")}`,
-    ...(event.note === null ? [] : [`  ${event.note}`]),
-  ].join("\n");
-};
-
-const describeWatchSummary = (summary: WatchSummary): string =>
-  `${String(summary.checked)} checked: ${String(summary.new)} new, ${String(summary.changed)} changed, ${String(summary.unchanged)} unchanged, ${String(summary.gone)} gone, ${String(summary.refused)} refused, ${String(summary.error)} errors. ${String(summary.suspected)} suspected, ${String(summary.confirmed)} confirmed, ${String(summary.due)} still due. Stopped (${summary.stopped}): ${summary.reason}.`;
-
 /** This function does the command `watch`, and gives the exit code. */
 const runWatchCommand = async (
   crawler: OpenedCrawler,
   line: WatchLine,
-  values: ReturnType<typeof parse>["values"],
+  values: Values,
   limits: CrawlLimits,
   json: boolean,
   out: (text: string) => void,
@@ -835,45 +342,6 @@ const describeDiff = async (diff: DiffResult): Promise<string> => {
 // ── end of time travel, diff and watch ──────────────────────────────────────
 // ── extract ─────────────────────────────────────────────────────────────────
 
-/** These are the kinds of a field (`FIELD_KINDS` of `extract.ts`). The command line knows them before it loads the crawler. */
-const KINDS: readonly string[] = ["text", "number", "money", "date", "url", "email", "phone"];
-
-interface CliField {
-  readonly value: string;
-  readonly kind?: string;
-}
-
-/** This function reads the fields of the command line: `name=value`, with `:kind` at the end. The name and the value cannot be empty. */
-const fieldsOf = (given: readonly string[] | undefined): Record<string, CliField> => {
-  if (given === undefined || given.length === 0)
-    throw new UsageError("extract wants at least one --field name=value[:kind]");
-  const fields: Record<string, CliField> = {};
-  for (const text of given) {
-    const equals = text.indexOf("=");
-    if (equals <= 0) throw new UsageError(`--field wants name=value[:kind], not "${text}"`);
-    const name = text.slice(0, equals);
-    let value = text.slice(equals + 1);
-    let kind: string | undefined;
-    const jsonLd = value.lastIndexOf(":json-ld:");
-    const colon = value.lastIndexOf(":");
-    if (jsonLd !== -1) {
-      kind = value.slice(jsonLd + 1);
-      value = value.slice(0, jsonLd);
-      if (kind === "json-ld:" || /\s/.test(kind))
-        throw new UsageError(
-          `--field ${name} wants a path after json-ld:, such as json-ld:Product.offers.price`,
-        );
-    } else if (colon !== -1 && KINDS.includes(value.slice(colon + 1))) {
-      kind = value.slice(colon + 1);
-      value = value.slice(0, colon);
-    }
-    if (value.trim() === "") throw new UsageError(`--field ${name} wants a value`);
-    if (fields[name] !== undefined) throw new UsageError(`--field ${name} is given two times`);
-    fields[name] = kind === undefined ? { value } : { value, kind };
-  }
-  return fields;
-};
-
 /** This function checks the fields against a stored document, and prints a line for each field. The exit code is 0 when each field is verified or normalized. */
 const runExtract = async (
   crawler: PoliteCrawler,
@@ -894,108 +362,47 @@ const runExtract = async (
       ? await extractDocument(crawler.runtime, doc, claims, options)
       : await crawler.extract(doc, claims, options);
   if (json) out(JSON.stringify(result, null, 2));
-  else {
-    for (const [name, field] of Object.entries(result.fields)) {
-      const mark = field.status === "verified" || field.status === "normalized" ? "✓" : "✗";
-      const place =
-        field.span !== null
-          ? ` at ${String(field.span.start)}–${String(field.span.end)}${field.span.in === "full_text" ? " of the whole text" : ""}`
-          : field.path !== null
-            ? ` at ${field.path}`
-            : "";
-      const how = field.normalization === null ? "" : ` (${field.normalization})`;
-      const stored = field.raw === null ? "" : `: ${JSON.stringify(field.raw)}`;
-      out(`${mark} ${name}: ${field.status}${how}${place}${stored}`);
-      for (const candidate of field.candidates) {
-        const at =
-          candidate.span !== null
-            ? `${String(candidate.span.start)}–${String(candidate.span.end)}`
-            : (candidate.path ?? "");
-        out(
-          `    ${at}: ${JSON.stringify(candidate.raw)} can be ${candidate.readings.join(" or ")}`,
-        );
-      }
-      if (field.note !== null && field.status !== "held-back") out(`    ${field.note}`);
-    }
-    const summary = result.summary;
-    out(
-      result.held_back
-        ? `${result.note ?? "held back"}\nAdd --user-provided if you gave this URL yourself. The crawler logs that check.`
-        : `${String(summary.fields)} fields: ${String(summary.verified)} verified, ${String(summary.normalized)} normalized, ${String(summary.ambiguous)} ambiguous, ${String(summary.not_found)} not found, ${String(summary.invalid)} not valid, in ${result.capture ?? "no capture"}${result.note === null ? "" : `. ${result.note}`}`,
-    );
-  }
-  const done = result.summary.verified + result.summary.normalized;
-  return done === result.summary.fields && done > 0 ? 0 : 1;
+  else for (const line of describeExtract(result)) out(line);
+  return extractCode(result);
 };
 
 // ── end of extract ──────────────────────────────────────────────────────────
 
 /** This function does the command of the command line, and gives the exit code. */
 const main = async (args: readonly string[]): Promise<number> => {
-  const { values, positionals } = parse(args);
   const out = (text: string): void => void process.stdout.write(`${text}\n`);
-  if (values.version === true) {
+  // the whole command line is valid before anything opens the store
+  const line = readLine(args, process.env);
+  if (line.kind === "version") {
     out(VERSION);
     return 0;
   }
-  const [command, ...rest] = positionals;
-  if (values.help === true || command === undefined) {
+  if (line.kind === "help") {
     process.stdout.write(HELP);
     return 0;
   }
-
-  // the whole command line is valid before anything opens the store
-  const spec = COMMANDS[command];
-  if (spec === undefined) throw new UsageError(`no command "${command}"`);
-  if (rest.length < spec.min || rest.length > spec.max) throw new UsageError(spec.wants);
-  for (const [option, owner] of Object.entries(OWNER)) {
-    const owners = owner.split(" ");
-    if (values[option as keyof typeof values] !== undefined && !owners.includes(command))
-      throw new UsageError(`--${option} is an option of ${owners.join(" or ")}`);
-  }
-  const render = values.render ?? "auto";
-  if (render !== "auto" && render !== "never" && render !== "always")
-    throw new UsageError(`--render is auto, never or always, not "${render}"`);
-  const rank = values.rank ?? "exact";
-  if (rank !== "exact" && rank !== "fast")
-    throw new UsageError(`--rank is exact or fast, not "${rank}"`);
-  const limit = whole("limit", values.limit, 10, 1);
-  // diff reads --from as a version, and read as a position
-  const from = command === "read" ? whole("from", values.from, 0, 0) : 0;
-  const length = whole("length", values.length, 4000, 1);
-  const crawlLimits = crawlOptionsOf(values);
-  const at = timeOf("at", values.at);
-  const diffFrom = command === "diff" ? versionOf("from", values.from) : undefined;
-  const diffTo = versionOf("to", values.to);
-  const watchLine = command === "watch" ? watchLineOf(values, rest) : undefined;
-  // ── extract ──
-  const extractFields = command === "extract" ? fieldsOf(values.field) : undefined;
-  // ── end of extract ──
-  const dir = storeDir(values.dir ?? (process.env["POLITE_CRAWLER_DIR"] || undefined));
-  const allowPrivate = values["allow-private"] === true || envFlag("POLITE_CRAWLER_ALLOW_PRIVATE");
-  const allowUserProvided =
-    values["allow-user-provided"] === true ||
-    (command === "mcp" && envFlag("POLITE_CRAWLER_ALLOW_USER_PROVIDED"));
-  // ── archived fallback and signed requests: the whole command line is valid before the store opens ──
-  if (values["archive-despite-robots"] === true && values["archive-fallback"] !== true)
-    throw new UsageError("--archive-despite-robots works only with --archive-fallback");
-  // of the actions of watch, only run sends requests, so only run signs
-  const signs =
-    OWNER["sign-key"]!.split(" ").includes(command) &&
-    (watchLine === undefined || watchLine.action === "run");
-  const signKey =
-    values["sign-key"] ?? (signs ? process.env["POLITE_CRAWLER_SIGN_KEY"] || undefined : undefined);
-  const signatureAgent =
-    values["signature-agent"] ??
-    (signs ? process.env["POLITE_CRAWLER_SIGNATURE_AGENT"] || undefined : undefined);
-  if (command === "key-directory") {
-    if (signKey === undefined) throw new UsageError("key-directory wants --sign-key <file>");
-    return keyDirectoryCommand(keyFile(signKey), signatureAgent);
-  }
-  if ((signKey === undefined) !== (signatureAgent === undefined))
-    throw new UsageError(
-      "--sign-key and --signature-agent go together: the key signs, and the agent tells a site where its public key is",
-    );
+  const {
+    command,
+    rest,
+    values,
+    render,
+    rank,
+    limit,
+    from,
+    length,
+    maxAge,
+    crawlLimits,
+    at,
+    diffFrom,
+    diffTo,
+    watchLine,
+    extractFields,
+    dir,
+    signKey,
+    signatureAgent,
+  } = line;
+  // ── signed requests: the key file opens after the checks of the command line ──
+  if (command === "key-directory") return keyDirectoryCommand(keyFile(signKey!), signatureAgent);
   let signer;
   if (signKey !== undefined && signatureAgent !== undefined) {
     const { createWebBotAuthSigner } = await import("./webbotauth.ts");
@@ -1010,31 +417,26 @@ const main = async (args: readonly string[]): Promise<number> => {
       throw new UsageError(`--sign-key: ${(error as Error).message}`, { cause: error });
     }
   }
-  // ── end of archived fallback and signed requests ──
+  // ── end of signed requests ──
   const options: OpenOptions = {
     dir,
-    contact: values.contact ?? (process.env["POLITE_CRAWLER_CONTACT"] || undefined),
+    contact: line.contact,
     ...(values["no-browser"] === true ? { renderer: false as const } : {}),
-    ...(allowPrivate ? { egress: { allowPrivate: true } } : {}),
+    ...(line.allowPrivate ? { egress: { allowPrivate: true } } : {}),
     ...(signer === undefined ? {} : { signer }),
   };
 
   if (command === "mcp") {
     const { startMcpServer } = await import("./mcp.ts");
-    await startMcpServer({ ...options, allowUserProvided });
+    await startMcpServer({ ...options, allowUserProvided: line.allowUserProvided });
     return 0;
   }
 
   // the export only reads the store, so it opens no crawler and no index
-  if (command === "export") return exportCommand(values, dir);
+  if (line.exportPlan !== undefined)
+    return exportCommand(line.exportPlan, dir, values.json === true);
 
-  const { durationMs, openCrawler } = await import("./open.ts");
-  let maxAge: number;
-  try {
-    maxAge = durationMs(values["max-age"] ?? "24h");
-  } catch (error) {
-    throw new UsageError(`--max-age: ${(error as Error).message}`, { cause: error });
-  }
+  const { openCrawler } = await import("./open.ts");
   // only fetch, crawl and watch run render; a missing browser turns rendering off one time, before the first page
   let renderOff: string | undefined;
   let renderer = options.renderer;
@@ -1073,20 +475,7 @@ const main = async (args: readonly string[]): Promise<number> => {
         const settled = await Promise.allSettled(
           urls.map((url) => crawler.fetch(url, { render, maxAge, fallback, archiveDespiteRobots })),
         );
-        const pages = settled.map((result, at) => {
-          const url = urls[at]!;
-          if (result.status === "rejected") {
-            const reason: unknown = result.reason;
-            return failedPage(
-              url,
-              `${url}: ${reason instanceof Error ? reason.message : String(reason)}`,
-            );
-          }
-          const page = result.value;
-          return renderOff !== undefined && page.note !== null && /no browser/i.test(page.note)
-            ? { ...page, note: `this page needs JavaScript, and rendering is off: ${renderOff}` }
-            : page;
-        });
+        const pages = fetchedPages(urls, settled, renderOff);
         print(pages, () => pages.map(describePage).join("\n"));
         return pages.every(done) ? 0 : 1;
       }
@@ -1096,42 +485,19 @@ const main = async (args: readonly string[]): Promise<number> => {
           kind: values.kind ?? null,
           rank,
         });
-        print(found, () =>
-          found.length === 0
-            ? "nothing stored matches"
-            : found
-                .map(
-                  (hit) =>
-                    `${hit.doc}  ${hit.title}${hit.archived === undefined ? "" : `  [archived copy, captured ${hit.archived.timestamp}]`}\n  ${hit.snippet.replace(/\s+/g, " ")}`,
-                )
-                .join("\n"),
-        );
+        print(found, () => describeFound(found));
         return found.length === 0 ? 1 : 0;
       }
       case "read": {
         const userProvided = values["user-provided"] === true;
         const read = await crawler.read(rest[0]!, { from, length, userProvided, at });
-        // with --at, the head names the capture and its fetch time
-        const version = at === undefined ? "" : ` ${read.capture} (${read.fetched_at})`;
-        print(read, () =>
-          read.before_first === true
-            ? (read.note ?? "")
-            : read.held_back
-              ? `${read.note ?? ""}\nAdd --user-provided if you gave this URL yourself. The crawler logs that read.`
-              : `${read.title}\n${read.url ?? ""}\n${read.archived === undefined ? "" : `${read.note ?? ""}\n`}[${String(read.from)}–${String(read.to)} of ${String(read.total)}]${version}\n\n${read.text}`,
-        );
+        print(read, () => describeRead(read, at));
         return read.held_back || read.before_first === true ? 1 : 0;
       }
       case "verify": {
         const [doc, ...quote] = rest;
         const verified = await crawler.verify(doc!, quote.join(" "), { at });
-        print(verified, () =>
-          verified.found
-            ? `found at ${String(verified.start)}–${String(verified.end)} in ${verified.capture ?? ""}${verified.stale ? " (an earlier capture)" : ""}${verified.archived === undefined ? "" : ` (an archived copy from ${verified.archived.source}, captured ${verified.archived.timestamp})`}: ${verified.excerpt ?? ""}`
-            : verified.held_back || verified.before_first === true
-              ? (verified.note ?? "held back")
-              : "not found",
-        );
+        print(verified, () => describeVerify(verified));
         return verified.found ? 0 : 1;
       }
       // ── discover and crawl ──
@@ -1181,21 +547,7 @@ const main = async (args: readonly string[]): Promise<number> => {
       default: {
         // the documents of a recipe that this command cannot read stay, from the old index
         const counts = await crawler.reindex();
-        print(counts, () =>
-          [
-            `${String(counts.captures)} captures replayed, ${String(counts.docs)} documents, ${String(counts.urls)} URLs`,
-            ...(counts.carried > 0
-              ? [
-                  `${String(counts.carried)} documents of other recipes kept: ${counts.unknown_recipes.join(", ")}`,
-                ]
-              : []),
-            ...(counts.failed + counts.missing + counts.damaged > 0
-              ? [
-                  `skipped: ${String(counts.failed)} captures whose reader failed, ${String(counts.missing)} with no stored body, ${String(counts.damaged)} damaged lines of the log`,
-                ]
-              : []),
-          ].join("\n"),
-        );
+        print(counts, () => describeReindex(counts));
         return 0;
       }
     }

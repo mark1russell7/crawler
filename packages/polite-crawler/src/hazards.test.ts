@@ -589,6 +589,119 @@ describe("the cache", () => {
     expect(other.fromCache).toBe(false);
     expect(text(other.body)).toBe("/vary text/html");
   });
+
+  it("reads Expires, Age and Last-Modified for freshness, and keeps a no-store response", async () => {
+    const hour = 60 * 60 * 1000;
+    const day = 24 * hour;
+    const site = await serve((request, response) => {
+      // the dates of the server are whole seconds, as an HTTP date is
+      const now = Math.floor(Date.now() / 1000) * 1000;
+      const headers: Record<string, string> = {
+        "content-type": "text/plain",
+        date: new Date(now).toUTCString(),
+      };
+      if (request.url === "/expires") headers["expires"] = new Date(now + 120_000).toUTCString();
+      if (request.url === "/age") {
+        headers["cache-control"] = "max-age=100";
+        headers["age"] = "90";
+      }
+      // 10 percent of the age of Last-Modified: 2.4 hours, and 24 hours at most
+      if (request.url === "/modified") headers["last-modified"] = new Date(now - day).toUTCString();
+      if (request.url === "/old")
+        headers["last-modified"] = new Date(now - 100 * day).toUTCString();
+      if (request.url === "/no-store") headers["cache-control"] = "no-store, max-age=600";
+      if (request.url === "/vary-star") headers["vary"] = "*";
+      if (request.url === "/vary-agent") headers["vary"] = "User-Agent";
+      response.writeHead(200, headers);
+      response.end(request.url ?? "");
+    });
+    const { crawler, clock } = await make();
+    const get = (path: string, maxAgeMs: number | "auto") =>
+      crawler.fetch({
+        url: `${site.origin}${path}`,
+        mode: "api",
+        recipe: "t",
+        maxAgeMs,
+        minIntervalMs: 0,
+      });
+    for (const path of ["/expires", "/age", "/modified", "/old"]) await get(path, "auto");
+    expect((await get("/expires", "auto")).fromCache).toBe(true);
+    expect((await get("/age", "auto")).fromCache).toBe(true);
+    clock.advance(11_000);
+    // max-age=100 less an Age of 90 s is 10 s of freshness
+    expect((await get("/age", "auto")).fromCache).toBe(false);
+    clock.advance(110_000);
+    expect((await get("/expires", "auto")).fromCache).toBe(false);
+    clock.advance(2 * hour);
+    expect((await get("/modified", "auto")).fromCache).toBe(true);
+    clock.advance(hour);
+    expect((await get("/modified", "auto")).fromCache).toBe(false);
+    clock.advance(19 * hour);
+    expect((await get("/old", "auto")).fromCache).toBe(true);
+    clock.advance(2 * hour);
+    expect((await get("/old", "auto")).fromCache).toBe(false);
+
+    // no-store makes the copy stale at once: auto asks again, and an explicit age uses the copy
+    await get("/no-store", "auto");
+    expect((await get("/no-store", "auto")).fromCache).toBe(false);
+    const kept = await get("/no-store", 60_000);
+    expect(kept.fromCache).toBe(true);
+    expect(text(kept.body)).toBe("/no-store");
+
+    // Vary: * matches no request, and a Vary on a header that the crawler always sends changes nothing
+    await get("/vary-star", 60_000);
+    expect((await get("/vary-star", 60_000)).fromCache).toBe(false);
+    await get("/vary-agent", 60_000);
+    expect((await get("/vary-agent", 60_000)).fromCache).toBe(true);
+  });
+});
+
+describe("the fetch of robots.txt", () => {
+  it("follows five redirects for robots.txt, and reads a sixth as unreachable", async () => {
+    const chain = (hops: number) =>
+      serve((request, response) => {
+        const path = request.url ?? "";
+        const at = path === "/robots.txt" ? 0 : Number(/^\/r(\d+)$/.exec(path)?.[1] ?? -1);
+        if (at >= 0 && at < hops) {
+          response.writeHead(301, { location: `/r${String(at + 1)}` });
+          response.end();
+          return;
+        }
+        response.end(at === hops ? "User-agent: *\nDisallow: /private\n" : "page");
+      });
+    const five = await chain(5);
+    const six = await chain(6);
+    const { crawler } = await make();
+    const get = (origin: string, path: string) =>
+      crawler.fetch({ url: `${origin}${path}`, mode: "page", recipe: "page" });
+    expect((await get(five.origin, "/public")).outcome).toBe("ok");
+    expect((await get(five.origin, "/private")).note).toBe(
+      "robots.txt disallows it for PoliteCrawler",
+    );
+    const refused = await get(six.origin, "/public");
+    expect(refused.outcome).toBe("skipped");
+    expect(refused.note).toBe(
+      "robots.txt could not be read (more than 5 redirects), so nothing on the site is fetched",
+    );
+    expect(six.paths()).not.toContain("/public");
+  });
+
+  it("keeps a robots.txt for 24 hours, then asks again", async () => {
+    const site = await serve((request, response) => {
+      response.end(request.url === "/robots.txt" ? "User-agent: *\nAllow: /\n" : "page");
+    });
+    const { crawler, clock } = await make();
+    const get = (path: string) =>
+      crawler.fetch({ url: `${site.origin}${path}`, mode: "page", recipe: "page" });
+    const robotsAsked = () => site.paths().filter((path) => path === "/robots.txt").length;
+    await get("/a");
+    clock.advance(23 * 60 * 60 * 1000);
+    await get("/b");
+    expect(robotsAsked()).toBe(1);
+    clock.advance(2 * 60 * 60 * 1000);
+    await get("/c");
+    expect(robotsAsked()).toBe(2);
+  });
 });
 
 describe("waits, errors and stops", () => {
@@ -619,6 +732,11 @@ describe("waits, errors and stops", () => {
       const after = await get("/ok");
       expect(after.outcome).toBe("skipped");
       expect(after.note).toMatch(/^host stopped until .*: asked to wait 3000000 s$/);
+      // the server asked for 34.7 days, and a stop lasts 30 days at most
+      const until = Date.parse(/^host stopped until (\S+):/.exec(after.note ?? "")?.[1] ?? "");
+      const month = 30 * 24 * 60 * 60 * 1000;
+      expect(until - clock.now()).toBeLessThanOrEqual(month);
+      expect(until - clock.now()).toBeGreaterThan(month - 60_000);
       expect(warnings).not.toContain("TimeoutOverflowWarning");
     } finally {
       process.off("warning", onWarning);

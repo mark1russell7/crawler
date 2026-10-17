@@ -6,16 +6,6 @@ Change this file and the tracker together. Each item has an id, a status, an are
 
 ## Waiting on Mark
 
-### `j7`: Stream long jarvis calls (J-7)
-
-place.check, the morning recheck and crawl.fetch send each result as it is ready, so a long call no longer fails at the 5-minute client limit.
-
-- Area: jarvis
-- Waits for: `jarvis-move`
-- What Mark does: Review and merge jarvis pull request #34. CI passes on it.
-- Started: 2026-10-17
-- [jarvis pull request #34](https://github.com/mark1russell7/jarvis/pull/34)
-
 ### `w12`: A DOI for the study, and a press contact (W-12)
 
 Optional. A DOI makes the robots.txt study citable, and a press contact gives reporters an address.
@@ -48,7 +38,7 @@ jarvis deletes its local stream code (marked TODO(npm)) and imports the released
 
 - Area: jarvis
 - Waits for: `j7`, `client070`
-- Blocked: It waits for @procedures 0.7.0 on npm, and for pull request #34.
+- Blocked: It waits for @procedures 0.7.0 on npm.
 
 ## Later
 
@@ -178,6 +168,17 @@ Score a local open-weight decision model (for example Laya) on labelled data fro
 - Area: jarvis
 
 ## Shipped
+
+### `j7`: Stream long jarvis calls (J-7)
+
+place.check, the morning recheck and crawl.fetch send each result as it is ready, so a long call no longer fails at the 5-minute client limit.
+
+- Area: jarvis
+- Waits for: `jarvis-move`
+- Started: 2026-10-17
+- Shipped: 2026-10-17
+- [jarvis pull request #34](https://github.com/mark1russell7/jarvis/pull/34)
+- [Merge commit b2a6d0d](https://github.com/mark1russell7/jarvis/commit/b2a6d0d)
 
 ### `s30`: Ranking options, full quality by default (S-30)
 

@@ -6,6 +6,16 @@ Change this file and the tracker together. Each item has an id, a status, an are
 
 ## Waiting on Mark
 
+### `rel011`: Release 0.1.1
+
+A patch release (a new feature before 1.0.0 raises the patch version) with the cache check memo and the ranking option. Merging the version change publishes it from CI.
+
+- Area: Release and CI
+- Waits for: `a13`, `s30`, `stdrelease`
+- What Mark does: At 20:16 UTC today or later, run the npm trust step with the session markt-54. It needs your security key. markt-54 merges pull request #3 when CI passes, and CI then publishes 0.1.1.
+- Started: 2026-10-17
+- [Pull request #3](https://github.com/mark1russell7/crawler/pull/3)
+
 ### `w12`: A DOI for the study, and a press contact (W-12)
 
 Optional. A DOI makes the robots.txt study citable, and a press contact gives reporters an address.
@@ -15,14 +25,6 @@ Optional. A DOI makes the robots.txt study citable, and a press contact gives re
 - [The study](https://mark1russell7.github.io/crawler/)
 
 ## Blocked
-
-### `rel011`: Release 0.1.1
-
-A patch release (a new feature before 1.0.0 raises the patch version) with the cache check memo and the ranking option. Merging the version change publishes it from CI.
-
-- Area: Release and CI
-- Waits for: `a13`, `s30`, `stdrelease`
-- Blocked: The publishing session (markt-54) opens the pull request that changes the version. Then it waits for your approval to merge.
 
 ### `client070`: Stream helpers in @procedures 0.7.0
 

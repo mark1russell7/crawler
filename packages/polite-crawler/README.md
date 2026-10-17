@@ -13,6 +13,7 @@ The site has interactive demos with the real code: <https://mark1russell7.github
 - **Read the cheap way.** The crawler reads JSON-LD, the visible text and the links with no browser. It opens a headless browser only for a page that shows almost nothing without JavaScript.
 - **Cite exact text.** Full-text search (SQLite FTS5) gives ranked passages. A quote check finds the exact span in the stored text, with the capture id to cite.
 - **An MCP server.** One command gives Claude and other MCP clients four tools: fetch, find, read and verify.
+- **Web archives.** An export writes the stored captures as WARC or WACZ. Archive tools read them, for example `warcio`, pywb and ReplayWeb.page.
 
 ## Install
 
@@ -60,6 +61,7 @@ The store is in `~/.polite-crawler`. Use `--dir` or `POLITE_CRAWLER_DIR` for a d
 - `--max-age 0` fetches a page again, also when the store has a copy.
 - `find --rank fast` makes a long question faster, and its results can be different. [Fast ranking](#fast-ranking) gives the measured difference.
 - `reindex` builds the index again. The documents of a recipe that the command cannot read (the recipes of another application) stay. The output counts them, and the captures that it skipped.
+- `export --out <file>` writes the stored captures as a WARC or a WACZ file. [Export to a web archive](#export-to-a-web-archive) tells what goes into the file.
 
 The command gives these exit codes:
 
@@ -271,6 +273,7 @@ These parts are the stable API:
 - `polite-crawler/mcp`: `createMcpServer`, `startMcpServer` and the four tools.
 - The readers: `polite-crawler/robots`, `/hours`, `/html`, `/classify`, `/politeness` and `/signals`. The site and its tools use them in the browser.
 - The command line, its exit codes, the store on disk and `polite-crawler/record.schema.json`.
+- The export: `exportWarc` and `exportWacz`, their options (`ArchiveOptions`, `ArchiveFilter`, `ArchiveSource`), their results (`WarcResult`, `WaczResult`, `ArchiveCounts`) and the records of the archive.
 
 The other exports of the root entry point are the engine. Examples are `createRuntime`, `catchUpIndex`, `Crawler`, `CaptureLog`, `DocIndex`, `FileBlobStore`, `SqliteHostStateStore`, `Extractors`, `fetchAndIndex` and `makeRecord`. An application can build on them. A minor version before 1.0.0 can change them, and its section in `CHANGELOG.md` says so.
 
@@ -326,6 +329,68 @@ The package publishes the JSON Schema of a line of the log: `polite-crawler/reco
 
 - A capture does not hold the secrets of a URL. The crawler writes `REDACTED` in place of a user name and a password. It does the same for the values of the usual secret query parameters (`DEFAULT_SECRET_PARAMS`) and of each name in `secretParams`.
 - The crawler keeps no more than `maxBytes` of a body (5 MiB by default) after decompression. A longer body keeps its first part, and the capture says `truncated`. A body that does not download or decode gives the outcome `error`.
+
+## Export to a web archive
+
+The store is private evidence, and it stays on your disk. An export is a decision of the operator: it copies the captures that you select into a standard web archive. Archive tools read it, for example `warcio`, pywb and ReplayWeb.page.
+
+```sh
+npx polite-crawler export --out crawl.wacz
+npx polite-crawler export --out site.warc.gz --host example.com --since 2026-10-01
+```
+
+```ts
+import { exportWacz, exportWarc } from "polite-crawler";
+
+await exportWarc("./crawl", { out: "crawl.warc.gz", host: "example.com" });
+
+const result = await exportWacz(crawler.runtime, { out: "crawl.wacz", since: "2026-10-01" });
+console.log(result.responses, result.revisits, result.pages);
+```
+
+- `exportWarc` writes WARC/1.1 (ISO 28500:2017). Each record is one gzip member, so the file is a `.warc.gz`.
+- `exportWacz` writes WACZ 1.1.1: a ZIP with the WARC file, a sorted CDXJ index, a page list and `datapackage.json`.
+- The source is the folder of a store, or `crawler.runtime`. The export only reads the store. It makes no store, and it sends no request.
+- These filters select the captures: `since` (this time or later), `until` (before this time), `host` (the host and its subdomains), `urlPrefix` and `ids`. The command line has `--since`, `--until`, `--host`, `--prefix` and `--id`.
+- The export reads the capture log as a stream and holds one body at a time. It sorts the index and the page list in files on the disk. Thus its memory does not grow with the store.
+- The export writes a temporary file and gives it its name at the end. A failed export leaves no part of a file. When the file exists, the export fails. Set `overwrite` (`--overwrite`) to replace it.
+- The MCP server has no export tool. An export writes files on the disk of the operator, so it is an action of the operator, not of an assistant.
+
+### What goes into the archive
+
+| Capture | Records |
+| --- | --- |
+| A response with a stored body | A `response` record with the status line, the headers and the body. Then a `metadata` record. |
+| A `304 Not Modified` | A `revisit` record with the profile `server-not-modified`, and a `metadata` record. |
+| A page that the headless browser rendered | A `conversion` record with the page after JavaScript, and a `metadata` record. |
+| A capture with no body: a refusal, a skip of robots.txt, an error or a redirect | No record. With `includeRefusals` (`--include-refusals`), a `metadata` record alone. |
+
+- The first record is a `warcinfo` record. It names the software, its version and the filters of the export.
+- The `metadata` record of a capture (`WARC-Concurrent-To`) holds the JSON of the capture. It has the id, the kind, the URL, the times, the content hash and the payload. The payload has the outcome, the note, the robots.txt check and the usage signals. A reader can calculate the content hash again and check the capture id.
+- Each record of a capture has the field `WARC-Polite-Crawler-Capture` with the capture id. The record ids come from the hash of the capture, so a second export gives the same ids.
+- The digests are SHA-256 in base 32: `sha256:` and 56 characters, the form that `warcio` uses. `WARC-Payload-Digest` is the digest of the stored body.
+- A revisit names its original (`WARC-Refers-To` and `WARC-Refers-To-Date`) when the original is in the same export. Its `WARC-Payload-Digest` is the digest of the body that the 304 confirmed.
+- A body that the crawler cut at `maxBytes` has `WARC-Truncated: length`. A compressed body that ended early has `WARC-Truncated: disconnect`.
+- The pages that ask not to be AI input go into the archive too. An archive is not AI input. Their usage signals are in the `metadata` record, so a reader of the archive can obey them.
+
+### What does not go into the archive, and why
+
+- **The raw headers.** A capture keeps only some headers of the response: `Content-Type`, `ETag`, `Last-Modified`, `Cache-Control`, `Expires`, `Age`, `Date` and `Vary`. Thus the export rebuilds the status line and the header block from them, and it adds the `Content-Length` of the stored body. Such a record has the field `WARC-Polite-Crawler-Headers: rebuilt`, and its `metadata` record says `"http_headers": "rebuilt"`.
+  - The stored body is the decoded body. Thus the block has no `Content-Encoding` and no `Transfer-Encoding`.
+  - The status line says `HTTP/1.1`, also when the server answered over HTTP/2.
+  - The export writes a `response` record and not a `resource` record. Replay tools (pywb, ReplayWeb.page) replay a `response` with its status and its headers, and a `resource` record has neither. Browser crawlers also write the headers that they have, with a decoded body.
+- **The request.** A capture does not keep the headers of the request (`User-Agent` and `From`). Thus the export writes no `request` record. The `metadata` record gives the validators that the request sent.
+- **The IP address.** A capture does not keep the address of the server. Thus no record has `WARC-IP-Address`.
+- **The labels and the scope of the application.** They can name a private lineage, so the `metadata` record leaves them out.
+- **The other records.** The overrides of a held-back page and the records of the other sources of the log stay in the store.
+
+### The index and the pages of a WACZ file
+
+- `archive/data.warc.gz` is stored with no more compression, so a replay tool reads a record at its offset.
+- `indexes/index.cdxj` has one line for each `response` and `revisit` record, sorted by SURT key and time. The `conversion` records are not in the index, so a replay tool shows only the responses of the servers.
+- `pages/pages.jsonl` has one page for each document: each URL with a `200` response, except robots.txt files. The page names its latest capture.
+- `datapackage.json` gives the SHA-256 and the size of each part. `datapackage-digest.json` gives the SHA-256 of `datapackage.json`.
+- The ZIP has Zip64 records only when a part or the file is larger than 4 GiB.
 
 ## Contributing
 

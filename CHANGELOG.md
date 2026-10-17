@@ -15,6 +15,15 @@ A prerelease version (`0.2.0-beta.1`) goes to the npm tag `next`. Each other ver
 
 ## Unreleased
 
+- **Export to WARC and WACZ.** `exportWarc` and `exportWacz` write the stored captures as a web archive, for `warcio`, pywb and ReplayWeb.page. The command line has `polite-crawler export --out <file>`.
+  - The WARC file is WARC/1.1, with one gzip member for each record. The WACZ file is WACZ 1.1.1, with a sorted CDXJ index, a page list and `datapackage.json`.
+  - A capture with a body gives a `response` record, a 304 gives a `revisit` record, and a rendered page gives a `conversion` record. Each has a `metadata` record with the JSON of the capture.
+  - A capture keeps only some headers. Thus the export rebuilds the HTTP header block from them and marks the record (`WARC-Polite-Crawler-Headers: rebuilt`). The README tells what goes into the archive, what does not, and why.
+  - The filters are `since`, `until`, `host`, `urlPrefix` and `ids`. `includeRefusals` adds a `metadata` record for each capture with no body.
+  - The export reads the log as a stream, and it sorts the index on the disk. Thus its memory does not grow with the store.
+  - The MCP server has no export tool, because an export writes files on the disk of the operator.
+  - The change only adds to the API. The capture log, the bodies and the capture ids do not change.
+
 ## 0.1.1 - 2026-10-17
 
 - **Conditional requests learn the validator that works for each host.** A server examines `If-None-Match` first, and it ignores `If-Modified-Since` with it (RFC 9110, section 13.1.3). Thus a host that gives a new `ETag` at each response sent the full page at each revisit, also with a stable `Last-Modified` date. The crawler keeps a validator memo for each host:

@@ -1,6 +1,6 @@
 ---
 title: Command line
-description: The polite-crawler command line - fetch, find, read, verify, reindex and mcp, with each option.
+description: The polite-crawler command line - fetch, find, read, verify, reindex, mcp and export, with each option.
 ---
 
 ```sh
@@ -17,6 +17,7 @@ npx polite-crawler <command> [options]
 | `verify <doc> <quote>` | It finds a quote in a stored document. |
 | `reindex` | It builds the search index again from the capture log. |
 | `mcp` | It starts the MCP server on the standard input and output. |
+| `export --out <file>` | It writes the stored captures as a WARC or WACZ archive. It only reads the store. |
 
 ## Options
 
@@ -45,6 +46,26 @@ These options apply to one command. The command line is wrong when another comma
 | `read` | `--length <n>` | `4000` | The number of characters to print. |
 | `read` | `--user-provided` | | Read a page that asked not to be AI input. Use it only for a URL that you gave yourself. The crawler records each such read. |
 | `mcp` | `--allow-user-provided` | `$POLITE_CRAWLER_ALLOW_USER_PROVIDED=1` | Let `user_provided` work when the MCP client cannot ask the user. |
+| `export` | `--out <file>` | | The archive to write. The command needs it. When the file exists, the command fails. |
+| `export` | `--format <format>` | from the name of the file | `warc` (a `.warc.gz` file) or `wacz` (a `.wacz` file). |
+| `export` | `--since <time>` | | Only the captures from this time on, for example `2026-10-01`. |
+| `export` | `--until <time>` | | Only the captures before this time. |
+| `export` | `--host <host>` | | Only the captures of this host and its subdomains. |
+| `export` | `--prefix <url>` | | Only the captures whose URL starts with this text. |
+| `export` | `--id <capture>` | | Only this capture. Give `--id` again for more captures. |
+| `export` | `--include-refusals` | | Add a `metadata` record for each capture with no body: a refusal, a skip, an error or a redirect. |
+| `export` | `--overwrite` | | Replace the file when it exists. |
+
+## Export to a web archive
+
+`export` writes WARC/1.1 or WACZ 1.1.1. Archive tools read it, for example `warcio`, pywb and ReplayWeb.page. The store stays private evidence, and an export is the choice of the operator. Thus the MCP server has no export tool.
+
+- A capture with a body gives a `response` record. A 304 gives a `revisit` record, and a rendered page gives a `conversion` record.
+- Each of these records has a `metadata` record with the JSON of the capture: the outcome, the note, the robots.txt check and the usage signals.
+- A capture keeps only some headers. Thus the export rebuilds the HTTP header block from them, and it marks the record with `WARC-Polite-Crawler-Headers: rebuilt`.
+- The export writes no `request` record and no `WARC-IP-Address`, because a capture does not keep them.
+
+The README of the package tells what goes into the archive, what does not, and why.
 
 ## Exit codes
 
@@ -68,4 +89,7 @@ npx polite-crawler fetch https://example.com/ --dir ./research
 
 # a script that stops when a quote is not in the page
 npx polite-crawler verify "url:https://example.com/" "for use in documentation examples" || exit 1
+
+# the captures of one site since 1 October, as a WACZ file for ReplayWeb.page
+npx polite-crawler export --out example.wacz --host example.com --since 2026-10-01
 ```

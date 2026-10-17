@@ -418,6 +418,13 @@ describe("the watch list in the store", () => {
     a.add("https://two.example/", {}, now);
     expect(a.claim(now, "runner-a", now + 60_000, ["two.example"])).toBeUndefined();
     expect(() => new WatchStore(":memory:", { floorMs: -1 })).toThrow(RangeError);
+    expect(a.get("https://two.example/", now)).toMatchObject({ checks: 0, pending: null });
+    expect(a.get("https://three.example/", now)).toBeUndefined();
+    // a closed store writes nothing, and a run that ends during a close does not throw
+    a.close();
+    expect(a.settle(taken!.url, "runner-b", update)).toBe(false);
+    expect(() => a.release(taken!.url, "runner-b")).not.toThrow();
+    expect(() => a.list(now)).toThrow(/closed/);
   });
 
   it("lets two runs on one store fetch each entry one time", async () => {

@@ -529,8 +529,9 @@ export class WatchStore {
     });
   }
 
-  /** This method ends the lease of `owner` and changes nothing else, so the entry stays due. */
+  /** This method ends the lease of `owner` and changes nothing else, so the entry stays due. A closed store does nothing. */
   release(key: string, owner: string): void {
+    if (this.closed) return;
     this.step(() => {
       this.stmt(
         "UPDATE watches SET lease_until = 0, lease_owner = NULL WHERE url = ? AND lease_owner = ?",
@@ -538,8 +539,12 @@ export class WatchStore {
     });
   }
 
-  /** This method writes the result of a check and ends the lease. It gives false when `owner` does not hold the lease. */
+  /**
+   * This method writes the result of a check and ends the lease. It gives false when `owner` does
+   * not hold the lease, or when the store is closed.
+   */
   settle(key: string, owner: string, update: Update): boolean {
+    if (this.closed) return false;
     return this.step(() => {
       const row = this.row(key);
       if (row === undefined || row.lease_owner !== owner) return false;

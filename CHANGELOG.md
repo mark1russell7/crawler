@@ -43,6 +43,36 @@ A prerelease version (`0.2.0-beta.1`) goes to the npm tag `next`. Each other ver
   - `PageExtract` has `feeds`: the RSS and Atom feeds that the page links. The metadata of a page document has them too.
   - `reindex` reads the captures of the recipes `sitemap` and `feed` as captures of the crawler, as it reads robots.txt. They give no document.
   - The root entry point exports `discoverSite`, `crawlSite`, `readSitemap`, `feedDate`, `DISCOVER_LIMITS`, `CRAWL_LIMITS`, `SITEMAP_LIMITS`, `DEADLINE_NOTE` and the types of discovery and of the crawl.
+- **Read a page as it was at a time.** `read` and `verify` take `at`, an ISO 8601 time or a `Date`. They use the version that was current at that time.
+  - The rules that choose the current version apply to the versions of that time. A later capture does not change the answer.
+  - The result names the `capture` and the `fetched_at` of the version, and it gives `at`. A time before the first capture gives `before_first: true` and a note with the time of the first capture.
+  - `verify` with `at` examines that version only. Give `capture` or `at`, not the two.
+  - A version that was held back at that time stays held back. When the document is held back at this time, each of its versions is held back too.
+  - `find` has no `at`. A search at a time needs an index entry for each version, or a scan of each stored text, and neither is cheap.
+- **Compare two versions.** `crawler.diff(doc, { from, to })` compares two versions of a stored document, by capture id or by `{ at }`. The default compares the newest version with the version before it of the same kind.
+  - The text comes as a line diff (Myers) with 2 lines of context, and a word diff inside each changed line.
+  - The title, the URL and the metadata (the JSON-LD too) come as changes at a path, for example `meta.jsonld[0].openingHours`.
+  - The summary counts the lines, the words and the changes of the metadata.
+  - `DIFF_LIMITS` bounds the characters, the lines, the steps, the hunk lines and the changes of the metadata. A diff over a bound says so in its note, with `exact` and `truncated`.
+  - A held-back side gives no text and no title, and only the structural metadata.
+- **Watch pages.** `crawler.watch` keeps a list of pages to check again, in the new file `watch.sqlite` of the store. It has `add`, `remove`, `list` and `run`.
+  - `watch.run({ budgetMs, maxPages })` checks the entries that are due through the normal fetch, so each polite rule applies. It gives an async iterable of events and a `summary`.
+  - Each event has the URL, the document, the capture of the check, the last confirmed capture, the kind (`new`, `changed`, `unchanged`, `gone`, `refused` or `error`) and the counts of the diff.
+  - With `confirm: 2` (the default), a change is suspected at its first check and confirmed when the next check sees the same version. `confirm: 1` confirms at once.
+  - `every` has a floor of 1 hour (`watchFloor` of `openCrawler` changes it). A check that finds a stopped host is due again at the end of the stop.
+  - A run claims each entry with a lease in `watch.sqlite`, so two processes do not check one entry two times. The list stays after a restart.
+  - The package has no daemon: a scheduler of the operator starts `watch.run`.
+- **The command line.** `polite-crawler diff <doc> [--from <version>] [--to <version>]`, `watch add <url...>`, `watch remove <url...>`, `watch list` and `watch run`. `read` and `verify` take `--at <time>`. `watch add` takes `--every`, `--confirm`, `--render`, `--scope` and `--label`, and `watch run` takes `--budget` and `--max-pages`.
+- **The MCP server.** `crawl_read` and `crawl_verify` take `at`, and their results give `at` and `before_first`. `crawl_verify` gives its `note` too. Two new tools:
+  - `crawl_diff` compares two versions. The changes come in the `<untrusted-web-content>` envelope, and the JSON gives only the counts and the captures.
+  - `crawl_watch_list` lists the watched pages, with no scope and no labels.
+  - No tool adds a watch, because a watch commits future requests to a site. The operator adds it.
+- **The API.** These additions do not break the API:
+  - `PoliteCrawler` has two new optional members, `diff` and `watch`. `openCrawler` gives an `OpenedCrawler`, a `PoliteCrawler` that has them. An object of your own that implements `PoliteCrawler` stays correct.
+  - `ReadOptions` and `VerifyOptions` have the optional `at`. `ReadResult` and `VerifyResult` have the optional `at` and `before_first`.
+  - The root entry point exports `diffDocument`, `diffTexts`, `DIFF_LIMITS`, `versionAtTime`, `isoTime`, `WatchStore`, `runWatch`, `WATCH_LIMITS`, `WATCH_SCHEMA` and `OpenedCrawler`. It also exports the types of the diff and of the watch list. The README lists them in the stable API.
+  - The engine has the optional method `ReadingIndex.versionAt`, `DocIndex.versionAt` and `Crawler.hostStop`. A `ReadingIndex` of your own without `versionAt` gives the newest version at or before the time.
+  - The capture log, the bodies and the capture ids do not change. A store with no watch has no `watch.sqlite`.
 
 ## 0.1.1 - 2026-10-17
 

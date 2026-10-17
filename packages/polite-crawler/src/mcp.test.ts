@@ -346,6 +346,9 @@ describe("the envelope of page text", () => {
     expect(found.web).toContain(`doc="url:https://bakery.example/"`);
     expect(found.web).toContain("title: Forno Esempio\nsnippet: ");
     expect(found.web).toContain("[Wood]");
+    const fast = await call("crawl_find", { q: "wood fired bread", rank: "fast" });
+    expect(fast.data).toEqual([expect.objectContaining({ doc: "url:https://bakery.example/" })]);
+    expect((await call("crawl_find", { q: "bread", rank: "best" })).isError).toBe(true);
   });
 
   it("gives no envelope when nothing matches", async () => {

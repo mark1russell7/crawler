@@ -222,6 +222,8 @@ export interface FtsQuery {
   readonly all: string;
   /** One part is enough: the parts joined with OR. */
   readonly any: string;
+  /** These are the parts of `any`, each as FTS5 syntax. */
+  readonly anyParts: readonly string[];
   /** These are the first tokens of the parts. A snippet marks them. */
   readonly terms: readonly string[];
   /** This value is the number of parts. */
@@ -300,6 +302,7 @@ export const parseQuery = (q: string): FtsQuery | undefined => {
   return {
     all: parts.map((part) => part.text).join(" AND "),
     any: any.map((part) => part.text).join(" OR "),
+    anyParts: any.map((part) => part.text),
     terms: any.map((part) => part.term),
     parts: parts.length,
   };

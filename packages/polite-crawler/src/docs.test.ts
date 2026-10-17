@@ -1,8 +1,8 @@
 import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { afterEach, describe, expect, it } from "vitest";
-import type { DocInput } from "./docs.ts";
-import { DocIndex, INDEX_SCHEMA, MAX_CAPTURES } from "./docs.ts";
+import type { DocInput, RankMode } from "./docs.ts";
+import { DocIndex, FAST_RANK_SHARE, INDEX_SCHEMA, MAX_CAPTURES } from "./docs.ts";
 import { removeDir, tempDir } from "./test-helpers.ts";
 
 const cleanups: Array<() => Promise<void> | void> = [];
@@ -277,6 +277,50 @@ describe("the search", () => {
     expect(index.rankWithin(question, ["bread", "filler"]).map((hit) => hit.doc)).toEqual([
       "bread",
     ]);
+  });
+
+  it("leaves the common words out of the documents that hold one word, with rank fast", () => {
+    const index = memory();
+    const texts = [
+      "menu of the day with soup",
+      "menu and wine list",
+      "the menu changes each week",
+      "a short menu for lunch",
+      "bread on the menu every morning",
+      "menu with bread and butter",
+      "fresh bread from the oven",
+      "bread and cheese",
+      "sourdough starter notes",
+      "rye flour in stock",
+    ];
+    texts.forEach((text, at) => index.upsert(page(`d${String(at)}`, text), "x"));
+    const docs = (q: string, rank?: RankMode): string[] =>
+      index.find(q, { limit: 10, ...(rank !== undefined ? { rank } : {}) }).map((hit) => hit.doc);
+    // "menu" is in 6 of 10 documents, more than FAST_RANK_SHARE: a common word
+    expect(FAST_RANK_SHARE).toBe(0.2);
+    expect(docs("sourdough rye menu")).toHaveLength(8);
+    expect(docs("sourdough rye menu", "exact")).toEqual(docs("sourdough rye menu"));
+    expect(docs("sourdough rye menu", "fast").sort()).toEqual(["d8", "d9"]);
+    // the documents that hold each word come first, with the same rank in the two modes
+    const fast = docs("menu bread", "fast");
+    expect(fast.slice(0, 2)).toEqual(docs("menu bread").slice(0, 2));
+    expect(fast.slice(0, 2).sort()).toEqual(["d4", "d5"]);
+    // each word is common, so the rarest word ("bread", in 4 documents) stays
+    expect(fast.slice(2).sort()).toEqual(["d6", "d7"]);
+    expect(docs("menu bread")).toHaveLength(8);
+    // a question of one word is the same in the two modes
+    expect(docs("menu", "fast")).toEqual(docs("menu"));
+    const all = texts.map((_, at) => `d${String(at)}`);
+    expect(index.rankWithin("sourdough rye menu", all)).toHaveLength(8);
+    expect(
+      index
+        .rankWithin("sourdough rye menu", all, { rank: "fast" })
+        .map((hit) => hit.doc)
+        .sort(),
+    ).toEqual(["d8", "d9"]);
+    const bad = { rank: "quick" } as unknown as { rank: RankMode };
+    expect(() => index.find("menu", { limit: 10, ...bad })).toThrow(RangeError);
+    expect(() => index.rankWithin("menu", all, bad)).toThrow(RangeError);
   });
 
   it("leaves out a document that asked not to be AI input, and ranks many ids", () => {

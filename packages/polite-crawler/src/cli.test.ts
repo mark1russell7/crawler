@@ -91,6 +91,8 @@ describe("the command line: help and usage errors", () => {
         [["find", "x", "--limit", "-1"], "--limit"],
         [["find", "x", "--frobnicate"], "Unknown option '--frobnicate'"],
         [["read", "url:x", "--limit", "5"], "--limit is an option of find"],
+        [["find", "x", "--rank", "best"], '--rank is exact or fast, not "best"'],
+        [["read", "url:x", "--rank", "fast"], "--rank is an option of find"],
         [
           ["fetch", "https://example.com/", "--render", "bogus"],
           "--render is auto, never or always",
@@ -142,7 +144,7 @@ describe("the command line: the store", () => {
   it(
     "finds, reads and verifies, with exit code 0 for an answer and 1 for none",
     async () => {
-      const [found, none, read, verified, missing, unknown] = await Promise.all([
+      const [found, none, read, verified, missing, unknown, fast] = await Promise.all([
         runCli(["find", "wood", "fired", "bread", "--dir", store]),
         runCli(["find", "zeppelin", "--dir", store]),
         runCli(["read", "url:https://bakery.example/", "--length", "100", "--dir", store]),
@@ -157,8 +159,10 @@ describe("the command line: the store", () => {
         ]),
         runCli(["verify", "url:https://bakery.example/", "Monday", "9am", "--dir", store]),
         runCli(["read", "url:https://nowhere.example/", "--dir", store]),
+        runCli(["find", "wood", "fired", "bread", "--rank", "fast", "--dir", store]),
       ]);
       expect(found.code).toBe(0);
+      expect(fast).toMatchObject({ code: 0, stdout: found.stdout });
       expect(found.stdout).toContain("url:https://bakery.example/  Forno Esempio");
       expect(none).toMatchObject({ code: 1, stdout: "nothing stored matches\n" });
       expect(read.code).toBe(0);

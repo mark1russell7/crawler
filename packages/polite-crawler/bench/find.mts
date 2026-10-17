@@ -394,21 +394,16 @@ const rankedRescore = (
   match: string,
   candidates: string,
   kind: string | undefined,
-  limit: number | undefined,
+  limit: number,
 ) =>
   stmt(
     `SELECT d.doc AS doc, d.text_sha AS text_sha, bm25(${fts}, 3.0, 1.0) AS rank
        FROM ${fts} JOIN ${docsTable} d ON d.rowid = ${fts}.rowid
       WHERE ${fts} MATCH ? AND +${fts}.rowid IN (SELECT rowid FROM ${fts}(?))
         AND d.ai_input != 'no' ${kind === undefined ? "" : "AND d.kind = ?"}
-      ORDER BY rank ${limit === undefined ? "" : "LIMIT ?"}`,
+      ORDER BY rank LIMIT ?`,
   ).all(
-    ...[
-      match,
-      candidates,
-      ...(kind === undefined ? [] : [kind]),
-      ...(limit === undefined ? [] : [limit]),
-    ],
+    ...(kind === undefined ? [match, candidates, limit] : [match, candidates, kind, limit]),
   ) as Array<Hit & { rank: number }>;
 
 /** The IDF of FTS5 for a part that `df` of the documents hold. */
@@ -498,6 +493,16 @@ const MODES: Mode[] = [
       docs: index.find(q, { limit: LIMIT, kind: kind ?? null }).map((hit) => hit.doc),
     }),
     rankWithin: (q, ids) => ({ docs: index.rankWithin(q, ids.list).map((hit) => hit.doc) }),
+  },
+  {
+    name: "fast",
+    about: 'the library with rank: "fast" (prune20 in the library: the counts at each query)',
+    find: (q, kind) => ({
+      docs: index.find(q, { limit: LIMIT, kind: kind ?? null, rank: "fast" }).map((hit) => hit.doc),
+    }),
+    rankWithin: (q, ids) => ({
+      docs: index.rankWithin(q, ids.list, { rank: "fast" }).map((hit) => hit.doc),
+    }),
   },
   {
     name: "exact-sql",

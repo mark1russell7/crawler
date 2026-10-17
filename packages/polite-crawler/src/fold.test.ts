@@ -110,6 +110,7 @@ describe("search queries", () => {
     expect(parseQuery('"wood fired" bake* bread')).toEqual({
       all: '"wood fired" AND "bake" * AND "bread"',
       any: '"wood fired" OR "bake" * OR "bread"',
+      anyParts: ['"wood fired"', '"bake" *', '"bread"'],
       terms: ["wood", "bake", "bread"],
       parts: 3,
     });

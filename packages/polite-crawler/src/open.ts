@@ -6,7 +6,7 @@ import { checkedRenderer } from "./browser.ts";
 import { FileBlobStore } from "./blobs.ts";
 import type { CrawlEvent } from "./crawler.ts";
 import { Crawler } from "./crawler.ts";
-import type { DocVersion, Found, ReadingIndex } from "./docs.ts";
+import type { DocVersion, Found, RankMode, ReadingIndex } from "./docs.ts";
 import { DocIndex } from "./docs.ts";
 import type { EgressOptions } from "./egress.ts";
 import { SqliteHostStateStore } from "./hoststate.ts";
@@ -316,6 +316,11 @@ export interface FindOptions {
   readonly limit?: number | undefined;
   /** This value keeps only the documents of one kind, for example `page` or `pdf`. */
   readonly kind?: string | null | undefined;
+  /**
+   * This value chooses the ranking. The default `exact` ranks each match with BM25. `fast` leaves
+   * the common words out of the second part of the search, so a long question is faster (`RankMode`).
+   */
+  readonly rank?: RankMode | undefined;
 }
 
 /** A polite crawler fetches each source one time, keeps it, and answers the next questions from the disk. */

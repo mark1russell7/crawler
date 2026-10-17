@@ -134,6 +134,42 @@ export interface VersionText extends DocVersion {
   readonly meta: Readonly<Record<string, unknown>>;
 }
 
+/**
+ * This value chooses the ranking of a search:
+ *
+ * - `exact` (the default): BM25 ranks each document that matches.
+ * - `fast`: the form of the query that needs one part leaves out the common parts. A common part
+ *   is in more than `FAST_RANK_SHARE` of the documents. The rarest part stays when each part is common.
+ *
+ * The documents that hold each part come first in the two modes, with the same rank. In the mode
+ * `fast`, the rest of the results leaves out a document that holds only common parts. The common
+ * parts also do not add to the score of the rest. Thus `fast` is faster for a long question, and
+ * its results can be different. The README gives the measured difference.
+ */
+export type RankMode = "exact" | "fast";
+
+/** In the mode `fast`, a part is common when more than this share of the documents hold it. */
+export const FAST_RANK_SHARE = 0.2;
+
+/** This function gives the rank mode of an option. A value that is not a rank mode throws a `RangeError`. */
+const rankModeOf = (value: unknown): RankMode => {
+  if (value === undefined || value === "exact") return "exact";
+  if (value === "fast") return "fast";
+  throw new RangeError(
+    `rank must be "exact" or "fast", not ${JSON.stringify(value) ?? "undefined"}`,
+  );
+};
+
+/** These are the options of a search of the index. */
+export interface FindIndexOptions {
+  /** This value is the maximum number of results. The index gives 1000 or fewer. */
+  readonly limit: number;
+  /** This value keeps only the documents of one kind, for example `page` or `pdf`. */
+  readonly kind?: string | null | undefined;
+  /** This value chooses the ranking. The default is `exact`. */
+  readonly rank?: RankMode | undefined;
+}
+
 export interface Found {
   readonly doc: string;
   readonly kind: string;
@@ -435,10 +471,11 @@ export interface ReadingIndex {
   docsOfCapture(capture: string): Doc[];
   /** This method tells if a capture gave a version of a document. */
   hasVersion(capture: string): boolean;
-  find(q: string, options: { readonly limit: number; readonly kind?: string | null }): Found[];
+  find(q: string, options: FindIndexOptions): Found[];
   rankWithin(
     q: string,
     docs: readonly string[],
+    options?: { readonly rank?: RankMode | undefined },
   ): Array<{ readonly doc: string; readonly score: number }>;
   latest(url: string, variant?: Variant): Latest | undefined;
   setLatest(entry: Latest): void;
@@ -985,9 +1022,10 @@ export class DocIndex implements ReadingIndex {
    * This method searches the documents with BM25, the best first. The syntax of the query is the
    * syntax of `parseQuery`. It first asks for each part. When that gives too few documents, it
    * adds the documents that match one part. A document that asked not to be AI input is not in
-   * the results, so a search cannot show its text.
+   * the results, so a search cannot show its text. The option `rank` chooses the ranking (`RankMode`).
    */
-  find(q: string, options: { readonly limit: number; readonly kind?: string | null }): Found[] {
+  find(q: string, options: FindIndexOptions): Found[] {
+    const rank = rankModeOf(options.rank);
     const query = parseQuery(q);
     if (query === undefined) return [];
     const limit = Math.max(1, Math.min(1000, Math.floor(options.limit) || 10));
@@ -1007,7 +1045,7 @@ export class DocIndex implements ReadingIndex {
       const rows = run(query.all);
       if (rows.length < limit && query.parts > 1) {
         const seen = new Set(rows.map((row) => row.doc));
-        for (const row of run(query.any)) {
+        for (const row of run(rank === "fast" ? this.rareParts(n, query.anyParts) : query.any)) {
           if (rows.length >= limit) break;
           if (!seen.has(row.doc)) rows.push(row);
         }
@@ -1031,11 +1069,14 @@ export class DocIndex implements ReadingIndex {
    * This method scores a set of documents against a query, with the best first. It leaves out a
    * document that matches no term, and a document that asked not to be AI input. It ranks the
    * results of a source again, because the order of the source is only as good as its search engine.
+   * In the mode `fast`, it also leaves out a document that holds only common parts (`RankMode`).
    */
   rankWithin(
     q: string,
     docs: readonly string[],
+    options: { readonly rank?: RankMode | undefined } = {},
   ): Array<{ readonly doc: string; readonly score: number }> {
+    const rank = rankModeOf(options.rank);
     const query = parseQuery(q);
     if (query === undefined || docs.length === 0) return [];
     return this.live((n) =>
@@ -1045,9 +1086,33 @@ export class DocIndex implements ReadingIndex {
              FROM ${n.fts} JOIN ${n.docs} d ON d.rowid = ${n.fts}.rowid
             WHERE ${n.fts} MATCH ? AND d.ai_input != 'no' AND d.doc IN (SELECT value FROM json_each(?))
             ORDER BY rank`,
-        ).all(query.any, JSON.stringify(docs)) as Array<{ doc: string; rank: number }>
+        ).all(
+          rank === "fast" ? this.rareParts(n, query.anyParts) : query.any,
+          JSON.stringify(docs),
+        ) as Array<{ doc: string; rank: number }>
       ).map((row) => ({ doc: row.doc, score: Math.round(-row.rank * 1000) / 1000 })),
     );
+  }
+
+  /**
+   * This method gives the form of a query that needs one part, without the common parts (the mode
+   * `fast` of `RankMode`). It counts the documents that hold each part. When each part is common,
+   * it keeps the rarest part.
+   */
+  private rareParts(n: Names, parts: readonly string[]): string {
+    if (parts.length < 2) return parts.join(" OR ");
+    const total = (this.stmt(`SELECT count(*) AS n FROM ${n.docs}`).get() as { n: number }).n;
+    const counted = parts.map((part) => ({
+      part,
+      count: (
+        this.stmt(`SELECT count(*) AS n FROM ${n.fts} WHERE ${n.fts} MATCH ?`).get(part) as {
+          n: number;
+        }
+      ).n,
+    }));
+    const rare = counted.filter((one) => one.count <= FAST_RANK_SHARE * total);
+    if (rare.length > 0) return rare.map((one) => one.part).join(" OR ");
+    return counted.reduce((best, one) => (one.count < best.count ? one : best)).part;
   }
 
   /** This method gives the cache entry of a URL. The key is canonical, so two spellings of one URL give one entry. */

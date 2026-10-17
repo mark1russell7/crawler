@@ -35,14 +35,16 @@ export type {
   DocInput,
   DocVersion,
   ExtractedDoc,
+  FindIndexOptions,
   Found,
   Latest,
+  RankMode,
   ReadingIndex,
   Variant,
   Verified,
   VersionText,
 } from "./docs.ts";
-export { DocIndex, locate } from "./docs.ts";
+export { DocIndex, FAST_RANK_SHARE, locate } from "./docs.ts";
 export type { EgressOptions } from "./egress.ts";
 export { EgressRefused, egressLookup } from "./egress.ts";
 export type { Day, Hours, Interval, Week } from "./hours.ts";

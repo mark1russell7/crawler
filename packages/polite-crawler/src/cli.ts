@@ -55,6 +55,8 @@ Options:
            --max-age <age>   reuse a stored copy this young: 30m, 24h (default), 7d; 0 fetches again
   find     --limit <n>       how many results (default 10)
            --kind <kind>     only this kind of document, such as page or pdf
+           --rank <mode>     exact (default): BM25 over each match; fast: leave common words
+                             out of the one-word part, faster for a long question
   read     --from <n>        where the range starts (default 0)
            --length <n>      how many characters (default 4000)
            --user-provided   you gave this URL yourself: read a page that refuses AI input (logged)
@@ -84,6 +86,7 @@ const OPTIONS = {
   "max-age": { type: "string" },
   limit: { type: "string" },
   kind: { type: "string" },
+  rank: { type: "string" },
   from: { type: "string" },
   length: { type: "string" },
   "user-provided": { type: "boolean" },
@@ -96,6 +99,7 @@ const OWNER: Readonly<Record<string, string>> = {
   "max-age": "fetch",
   limit: "find",
   kind: "find",
+  rank: "find",
   from: "read",
   length: "read",
   "user-provided": "read",
@@ -217,6 +221,9 @@ const main = async (args: readonly string[]): Promise<number> => {
   const render = values.render ?? "auto";
   if (render !== "auto" && render !== "never" && render !== "always")
     throw new UsageError(`--render is auto, never or always, not "${render}"`);
+  const rank = values.rank ?? "exact";
+  if (rank !== "exact" && rank !== "fast")
+    throw new UsageError(`--rank is exact or fast, not "${rank}"`);
   const limit = whole("limit", values.limit, 10, 1);
   const from = whole("from", values.from, 0, 0);
   const length = whole("length", values.length, 4000, 1);
@@ -298,7 +305,11 @@ const main = async (args: readonly string[]): Promise<number> => {
         return pages.every(ok) ? 0 : 1;
       }
       case "find": {
-        const found = await crawler.find(rest.join(" "), { limit, kind: values.kind ?? null });
+        const found = await crawler.find(rest.join(" "), {
+          limit,
+          kind: values.kind ?? null,
+          rank,
+        });
         print(found, () =>
           found.length === 0
             ? "nothing stored matches"

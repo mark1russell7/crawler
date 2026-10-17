@@ -348,12 +348,18 @@ export const createMcpServer = (
           .nullable()
           .default(null)
           .describe("only this kind of document, for example page or pdf"),
+        rank: z
+          .enum(["exact", "fast"])
+          .default("exact")
+          .describe(
+            "exact (the default) ranks each match with BM25; fast leaves the common words out of the documents that hold one term, and is faster for a long question",
+          ),
       },
       outputSchema: { hits: z.array(hitShape), web_content: WEB_CONTENT },
       annotations: { readOnlyHint: true, openWorldHint: false },
     },
-    async ({ q, limit, kind }) => {
-      const found = await crawler.find(q, { limit, kind });
+    async ({ q, limit, kind, rank }) => {
+      const found = await crawler.find(q, { limit, kind, rank });
       const now = Date.now();
       const web = new WebContent();
       const hits = found.map((hit) => {

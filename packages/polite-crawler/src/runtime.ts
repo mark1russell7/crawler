@@ -1,6 +1,15 @@
 import type { BlobStore } from "./blobs.ts";
 import type { Crawler, FetchRequest, Fetched, RenderRequest } from "./crawler.ts";
-import type { Doc, DocInput, ExtractedDoc, Found, Latest, ReadingIndex, Variant } from "./docs.ts";
+import type {
+  Doc,
+  DocInput,
+  ExtractedDoc,
+  Found,
+  Latest,
+  RankMode,
+  ReadingIndex,
+  Variant,
+} from "./docs.ts";
 import { locate } from "./docs.ts";
 import type { PageExtract } from "./html.ts";
 import { extractPage, typesOf } from "./html.ts";
@@ -859,15 +868,24 @@ export const verifyQuote = async (
 
 /**
  * This function searches the stored documents. The syntax of the query is the syntax of
- * `parseQuery`. A held-back document is not in the results.
+ * `parseQuery`. A held-back document is not in the results. The option `rank` chooses the
+ * ranking (`RankMode`), and the default is `exact`.
  */
 export const findDocuments = async (
   runtime: CrawlRuntime,
   q: string,
-  options: { readonly limit?: number | undefined; readonly kind?: string | null | undefined } = {},
+  options: {
+    readonly limit?: number | undefined;
+    readonly kind?: string | null | undefined;
+    readonly rank?: RankMode | undefined;
+  } = {},
 ): Promise<Found[]> => {
   await Promise.resolve();
-  return runtime.index.find(q, { limit: options.limit ?? 10, kind: options.kind ?? null });
+  return runtime.index.find(q, {
+    limit: options.limit ?? 10,
+    kind: options.kind ?? null,
+    ...(options.rank !== undefined ? { rank: options.rank } : {}),
+  });
 };
 
 // ── the rebuild ─────────────────────────────────────────────────────────────

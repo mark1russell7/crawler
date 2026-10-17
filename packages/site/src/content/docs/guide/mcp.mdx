@@ -157,7 +157,7 @@ Add an option after `mcp`, for example `npx -y polite-crawler mcp --dir ~/resear
 | Tool | Input | What it gives |
 | --- | --- | --- |
 | `crawl_fetch` | `urls` (1 to 20), `render` (`auto`, `never` or `always`), `max_age` (for example `24h`, or `0` for a new copy) | For each page: the outcome, the status, the document id, the capture ids and the age of the copy. The title and the schema.org types come in an envelope. |
-| `crawl_find` | `q`, `limit`, `kind` | Ranked passages from the stored pages, with their document ids. Each word of `q` is a term, and a page matches when it holds any term. |
+| `crawl_find` | `q`, `limit`, `kind`, `rank` | Ranked passages from the stored pages, with their document ids. Each word of `q` is a term, and a page matches when it holds any term. `rank: "fast"` makes a long question faster, and its results can be different. |
 | `crawl_read` | `doc`, `from`, `length`, `include_meta`, `include_jsonld`, `user_provided` | A range of the text of a document, with its captures and `next_from`, the start of the next range. The metadata of the page comes with the first range. |
 | `crawl_verify` | `doc`, `quote` | The exact span of the quote and its position, or `found: false`. |
 

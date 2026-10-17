@@ -40,6 +40,7 @@ These options apply to one command. The command line is wrong when another comma
 | `fetch` | `--max-age <age>` | `24h` | A stored copy younger than this age answers with no request. `0` fetches the page again. |
 | `find` | `--limit <n>` | `10` | The number of results. |
 | `find` | `--kind <kind>` | all | Only this kind of document, for example `page` or `pdf`. |
+| `find` | `--rank <mode>` | `exact` | `exact` gives BM25 to each match. `fast` leaves the common words out of the documents that hold one word, so a long question is faster. |
 | `read` | `--from <n>` | `0` | The position where the range starts. |
 | `read` | `--length <n>` | `4000` | The number of characters to print. |
 | `read` | `--user-provided` | | Read a page that asked not to be AI input. Use it only for a URL that you gave yourself. The crawler records each such read. |

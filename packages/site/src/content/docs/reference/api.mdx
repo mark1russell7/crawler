@@ -106,6 +106,29 @@ The method builds the index again from the capture log and the blobs, with no re
 
 The method closes the browser, the log files and the index. A second close does nothing, and a method after the close rejects.
 
+## Export to a web archive
+
+`exportWarc` and `exportWacz` write the stored captures as WARC/1.1 or WACZ 1.1.1. Archive tools read them, for example `warcio`, pywb and ReplayWeb.page. They only read the store.
+
+```ts title="An export of a store and of one site"
+import { exportWacz, exportWarc } from "polite-crawler";
+
+await exportWarc("./crawl", { out: "crawl.warc.gz" });
+const result = await exportWacz(crawler.runtime, { out: "site.wacz", host: "example.com" });
+```
+
+| Option | Default | What it does |
+| --- | --- | --- |
+| `out` | none | The archive to write. The export needs it. |
+| `since`, `until` | none | Only the captures received at `since` or later, and before `until`. |
+| `host` | none | Only the captures of this host and its subdomains. |
+| `urlPrefix` | none | Only the captures whose URL starts with this text. |
+| `ids` | none | Only the captures with these ids. |
+| `includeRefusals` | `false` | A `metadata` record for each capture with no body too. |
+| `overwrite` | `false` | Replace the file when it exists. |
+
+The result counts the records of each type, the captures with no body, the missing bodies and the damaged lines of the log. A capture keeps only some headers, so the export rebuilds the HTTP header block and marks the record. The README of the package tells what goes into the archive and why.
+
 ## The MCP server
 
 The MCP server is in its own entry point, `polite-crawler/mcp`. Only this entry point loads the MCP SDK and `zod`.
@@ -146,4 +169,4 @@ The entry points below `polite-crawler/mcp` have no Node.js dependency, so they 
 
 The main entry point also exports `Crawler`, `CaptureLog`, `DocIndex`, `FileBlobStore`, `Extractors`, `fetchAndIndex`, `fetchPage`, `reindex` and `makeRecord`, for an application that builds its own runtime. It exports the readers that such an application uses: `extractPage`, `decodeBody`, `readPdf`, the hours reader, `parseRobots` and `decide`.
 
-The stable API is `openCrawler` with its results, `polite-crawler/mcp`, the reader entry points, the command line and the store on disk. The parts of the runtime are the engine: before version 1.0.0, a minor version can change them, and the changelog says so.
+The stable API is `openCrawler` with its results, `polite-crawler/mcp`, the reader entry points, `exportWarc` and `exportWacz`, the command line and the store on disk. The parts of the runtime are the engine: before version 1.0.0, a minor version can change them, and the changelog says so.

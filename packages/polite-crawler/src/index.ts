@@ -8,6 +8,7 @@
  * - The read, the verification and the rule for a held-back page over a runtime: `readDocument`,
  *   `verifyQuote`, `findDocuments`, `isHeldBack`, `heldBackMeta` and `recordOverride`.
  * - The readers that an application uses with the runtime: pages, PDF files and opening hours.
+ * - The export of a store to the web archive formats: `exportWarc` and `exportWacz`.
  *
  * The other entry points give the rest:
  *
@@ -149,3 +150,13 @@ export {
 export type { AiInput, Signals } from "./signals.ts";
 export { bodyEncoding, decodeBody } from "./text.ts";
 export { VERSION } from "./version.ts";
+export type { WaczResult } from "./wacz.ts";
+export { exportWacz } from "./wacz.ts";
+export type {
+  ArchiveCounts,
+  ArchiveFilter,
+  ArchiveOptions,
+  ArchiveSource,
+  WarcResult,
+} from "./warc.ts";
+export { exportWarc } from "./warc.ts";

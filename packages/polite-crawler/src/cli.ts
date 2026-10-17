@@ -40,6 +40,7 @@ Usage:
   polite-crawler verify <doc> <quote>  check that a quote is in a stored document
   polite-crawler reindex               rebuild the search index from the capture log
   polite-crawler mcp                   serve the tools over MCP (standard input and output)
+  polite-crawler export --out <file>   write the stored captures as a WARC or WACZ archive
 
 Options:
   --dir <path>       the store (default $POLITE_CRAWLER_DIR, or ~/.polite-crawler)
@@ -63,6 +64,15 @@ Options:
   reindex                    rebuild; the documents of recipes that this command cannot read stay
   mcp      --allow-user-provided   let user_provided work when the client cannot ask you
                                    ($POLITE_CRAWLER_ALLOW_USER_PROVIDED=1)
+  export   --out <file>      the archive to write: a name that ends in .warc.gz or .wacz
+           --format <f>      warc or wacz (default: from the name of the file)
+           --since <time>    only the captures from this time on, such as 2026-10-01
+           --until <time>    only the captures before this time
+           --host <host>     only the captures of this host and its subdomains
+           --prefix <url>    only the captures whose URL starts with this text
+           --id <capture>    only this capture; give --id again for more captures
+           --include-refusals  a metadata record for each capture with no body too
+           --overwrite       replace the file when it exists
 
 Exit codes:
   0  done
@@ -73,6 +83,98 @@ Exit codes:
 
 /** A usage error is a wrong command line. It exits with code 2. */
 class UsageError extends Error {}
+
+// ---- The command `export`: the options, the checks and the work of the WARC and WACZ export ----
+
+/** These options belong to the command `export`. */
+const EXPORT_OPTIONS = {
+  format: { type: "string" },
+  out: { type: "string" },
+  since: { type: "string" },
+  until: { type: "string" },
+  host: { type: "string" },
+  prefix: { type: "string" },
+  id: { type: "string", multiple: true },
+  "include-refusals": { type: "boolean" },
+  overwrite: { type: "boolean" },
+} as const;
+
+/** These are the values of the command line that the command `export` reads. */
+interface ExportValues {
+  readonly format?: string | undefined;
+  readonly out?: string | undefined;
+  readonly since?: string | undefined;
+  readonly until?: string | undefined;
+  readonly host?: string | undefined;
+  readonly prefix?: string | undefined;
+  readonly id?: readonly string[] | undefined;
+  readonly "include-refusals"?: boolean | undefined;
+  readonly overwrite?: boolean | undefined;
+  readonly json?: boolean | undefined;
+}
+
+/**
+ * This function does the command `export`, and gives the exit code. It checks the whole command
+ * line first. Then it only reads the store: it makes no store, and it sends no request.
+ */
+const exportCommand = async (values: ExportValues, dir: string): Promise<number> => {
+  const out = values.out;
+  if (out === undefined || out.trim() === "") throw new UsageError("export wants --out <file>");
+  const format =
+    values.format ??
+    (/\.wacz$/i.test(out) ? "wacz" : /\.warc\.gz$/i.test(out) ? "warc" : undefined);
+  if (format !== "warc" && format !== "wacz") {
+    throw new UsageError(
+      values.format === undefined
+        ? "export wants --format warc or wacz, or a file that ends in .warc.gz or .wacz"
+        : `--format is warc or wacz, not "${values.format}"`,
+    );
+  }
+  for (const name of ["since", "until"] as const) {
+    const value = values[name];
+    if (value !== undefined && !Number.isFinite(Date.parse(value)))
+      throw new UsageError(`--${name} wants a time, such as 2026-10-01, not "${value}"`);
+  }
+  if (values.host !== undefined && (values.host.trim() === "" || /[/:@\s]/.test(values.host)))
+    throw new UsageError(`--host wants a host name, such as example.com, not "${values.host}"`);
+  const file =
+    out === "~" ? homedir() : /^~[\\/]/.test(out) ? resolve(homedir(), out.slice(2)) : resolve(out);
+  const options = {
+    out: file,
+    since: values.since,
+    until: values.until,
+    host: values.host,
+    urlPrefix: values.prefix,
+    ids: values.id,
+    includeRefusals: values["include-refusals"] === true,
+    overwrite: values.overwrite === true,
+  };
+  const result =
+    format === "wacz"
+      ? await (await import("./wacz.ts")).exportWacz(dir, options)
+      : await (await import("./warc.ts")).exportWarc(dir, options);
+  const left = [
+    result.bodiless > 0 && !options.includeRefusals
+      ? `${String(result.bodiless)} captures with no body (add --include-refusals to keep them as metadata)`
+      : null,
+    result.missing > 0 ? `${String(result.missing)} captures with no stored body` : null,
+    result.damaged > 0 ? `${String(result.damaged)} damaged lines of the log` : null,
+  ].filter((line) => line !== null);
+  process.stdout.write(
+    `${
+      values.json === true
+        ? JSON.stringify(result, null, 2)
+        : [
+            `wrote ${result.out} (${String(result.bytes)} bytes)`,
+            `  ${String(result.captures)} captures: ${String(result.responses)} responses, ${String(result.revisits)} revisits, ${String(result.conversions)} rendered pages, ${String(result.metadata)} metadata records${result.format === "wacz" ? `, ${String(result.pages)} pages` : ""}`,
+            ...(left.length > 0 ? [`  left out: ${left.join(", ")}`] : []),
+          ].join("\n")
+    }\n`,
+  );
+  return 0;
+};
+
+// ---- The end of the command `export` ----
 
 const OPTIONS = {
   dir: { type: "string" },
@@ -91,6 +193,7 @@ const OPTIONS = {
   length: { type: "string" },
   "user-provided": { type: "boolean" },
   "allow-user-provided": { type: "boolean" },
+  ...EXPORT_OPTIONS,
 } as const;
 
 /** These options belong to one command. */
@@ -104,6 +207,7 @@ const OWNER: Readonly<Record<string, string>> = {
   length: "read",
   "user-provided": "read",
   "allow-user-provided": "mcp",
+  ...Object.fromEntries(Object.keys(EXPORT_OPTIONS).map((option) => [option, "export"])),
 };
 
 /** These are the commands, with the smallest and the largest count of arguments. */
@@ -116,6 +220,7 @@ const COMMANDS: Readonly<
   verify: { min: 2, max: Infinity, wants: "verify wants a document id and a quote" },
   reindex: { min: 0, max: 0, wants: "reindex takes no argument" },
   mcp: { min: 0, max: 0, wants: "mcp takes no argument" },
+  export: { min: 0, max: 0, wants: "export takes no argument: give the file with --out" },
 };
 
 const parse = (args: readonly string[]) => {
@@ -244,6 +349,9 @@ const main = async (args: readonly string[]): Promise<number> => {
     await startMcpServer({ ...options, allowUserProvided });
     return 0;
   }
+
+  // the export only reads the store, so it opens no crawler and no index
+  if (command === "export") return exportCommand(values, dir);
 
   const { durationMs, openCrawler } = await import("./open.ts");
   let maxAge: number;

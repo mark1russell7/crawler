@@ -31,6 +31,7 @@ Install it with \`npm install polite-crawler\`. Use \`openCrawler({ dir })\` and
 - [How the crawler is polite](${SITE}guide/politeness/): rests, refusals, the User-Agent, content signals
 - [Library API](${SITE}reference/api/): each option, method and part
 - [Command line](${SITE}reference/cli/): each command and option
+- [Standards](${SITE}reference/standards/): how the crawler follows RFC 9309 (robots.txt), RFC 9111 (caching), RFC 9110 (redirects, Retry-After) and the AI preference signals, rule by rule, with the test for each rule
 - [polite-crawler vs Crawlee, Scrapy, Firecrawl and Crawl4AI](${SITE}guide/compare/): which crawler to use for which job, and the MCP fetch server
 
 ## For site owners

@@ -1,0 +1,29 @@
+---
+/**
+ * The cases of the robots.txt test of Google that differ on purpose, each with the two results and
+ * the reason. The data comes from the test of polite-crawler (src/lib/standards.ts).
+ */
+import type { ShownDifference } from "../lib/standards.ts";
+
+interface Props {
+  readonly differences: readonly ShownDifference[];
+}
+
+const { differences } = Astro.props;
+---
+
+<ol class="pc-differences">
+  {
+    differences.map((one) => (
+      <li>
+        <p>
+          <a href={one.href}><code>{one.test}</code>, line {one.line}</a>: {one.what}
+        </p>
+        <p>
+          Google: {one.literal ? <code>{one.google}</code> : one.google}. polite-crawler: {one.literal ? <code>{one.crawler}</code> : one.crawler}.
+        </p>
+        <p>{one.reason}</p>
+      </li>
+    ))
+  }
+</ol>

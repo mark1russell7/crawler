@@ -94,9 +94,11 @@ describe("the MCP server over standard input and output", () => {
         }>;
       };
       expect(listed.tools.map((tool) => tool.name).sort()).toEqual([
+        "crawl_discover",
         "crawl_fetch",
         "crawl_find",
         "crawl_read",
+        "crawl_site",
         "crawl_verify",
       ]);
       expect(listed.tools.every((tool) => tool.outputSchema !== undefined)).toBe(true);

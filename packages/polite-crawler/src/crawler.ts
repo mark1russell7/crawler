@@ -123,6 +123,12 @@ export interface FetchRequest {
   readonly scope?: string | undefined;
   /** These labels go into each capture record of the request, for example its lineage. They are not part of the capture id. */
   readonly labels?: Readonly<Record<string, string>> | undefined;
+  /**
+   * This time (milliseconds since the epoch, on the clock of the crawler) is the end of a budget.
+   * The request does not start at or after it. When the host is not free before it, the result is
+   * `skipped`, and its note starts with `DEADLINE_NOTE`.
+   */
+  readonly deadline?: number | undefined;
 }
 
 export interface Fetched {
@@ -280,7 +286,12 @@ export interface RenderRequest {
   readonly scope?: string | undefined;
   /** These labels go into the capture record of the render. */
   readonly labels?: Readonly<Record<string, string>> | undefined;
+  /** This time (milliseconds since the epoch) is the end of a budget. The render does not start at or after it (`FetchRequest.deadline`). */
+  readonly deadline?: number | undefined;
 }
+
+/** The note of a request starts with this text when its host was not free before its deadline, so the request did not start. */
+export const DEADLINE_NOTE = "deadline reached";
 
 /**
  * This function gives the key of the cache entry of a rendered page in the form of version 0.1.
@@ -465,6 +476,19 @@ const stopNote = (reason: string, until: number): string => {
   const end = isoOf(until);
   return end === undefined ? `host stopped: ${reason}` : `host stopped until ${end}: ${reason}`;
 };
+
+/** A request did not start before its deadline. The crawler gives a skip with `DEADLINE_NOTE` for it. */
+class DeadlineReached extends Error {
+  constructor(
+    /** This value is the earliest start of the request on its host, in milliseconds since the epoch. */
+    readonly readyAt: number,
+  ) {
+    super(DEADLINE_NOTE);
+  }
+}
+
+const deadlineNote = (error: DeadlineReached, deadline: number | undefined): string =>
+  `${DEADLINE_NOTE}: the host is free at ${isoOf(error.readyAt) ?? "a later time"}, and the request must start before ${isoOf(deadline ?? Number.NaN) ?? "its deadline"}`;
 
 const secretSet = (secretParams: readonly string[]): Set<string> =>
   new Set([...DEFAULT_SECRET_PARAMS, ...secretParams].map((name) => name.toLowerCase()));
@@ -984,6 +1008,8 @@ export class Crawler {
   private readonly renders: Slots;
   /** These tokens apply because the `User-Agent` links the bot page (`obeyDefaultToken`). */
   private readonly pageTokens: readonly string[];
+  /** The deadlines of the requests that have one, by the signal that the scheduler gets for each of them. */
+  private readonly deadlines = new WeakMap<AbortSignal, number>();
 
   constructor(private readonly options: CrawlerOptions) {
     if (!isProductToken(options.token)) {
@@ -1005,9 +1031,24 @@ export class Crawler {
     this.clock = options.clock ?? realClock;
     this.random = options.random ?? Math.random;
     this.egress = options.egress ?? {};
-    this.scheduler = new HostScheduler(this.clock, options.maxActive ?? 16, {
-      store: options.hostState,
-    });
+    // the scheduler waits on this clock: a wait that ends at the deadline of its request or later
+    // does not start, so a request with a deadline does not wait for nothing
+    const clock = this.clock;
+    const deadlines = this.deadlines;
+    this.scheduler = new HostScheduler(
+      {
+        now: () => clock.now(),
+        sleep: (ms, signal) => {
+          const deadline = signal === undefined ? undefined : deadlines.get(signal);
+          const readyAt = clock.now() + ms;
+          return deadline !== undefined && readyAt >= deadline
+            ? Promise.reject(new DeadlineReached(readyAt))
+            : clock.sleep(ms, signal);
+        },
+      },
+      options.maxActive ?? 16,
+      { store: options.hostState },
+    );
     // the bot page tells site owners to write rules for PoliteCrawler, so an application that links it obeys them
     this.pageTokens =
       options.obeyDefaultToken !== false &&
@@ -1041,6 +1082,23 @@ export class Crawler {
 
   private policyOf(url: URL): PolitenessPolicy {
     return policyFor(this.options.politeness, url.hostname);
+  }
+
+  /**
+   * This method gives the signal of a request for the scheduler. A request with a deadline gets a
+   * signal of its own, and the clock of the scheduler reads the deadline of that signal.
+   */
+  private paced(signal: AbortSignal, deadline: number | undefined): AbortSignal {
+    if (deadline === undefined) return signal;
+    const own = AbortSignal.any([signal]);
+    this.deadlines.set(own, deadline);
+    return own;
+  }
+
+  /** This method throws `DeadlineReached` when the deadline of a request came before its slot. */
+  private beforeDeadline(deadline: number | undefined): void {
+    const now = this.clock.now();
+    if (deadline !== undefined && now >= deadline) throw new DeadlineReached(now);
   }
 
   private emit(event: CrawlEvent): void {
@@ -1502,6 +1560,7 @@ export class Crawler {
       request_.job ?? null,
       request_.scope ?? null,
       request_.labels ?? null,
+      request_.deadline ?? null,
     ]);
     const running = this.inFlight.get(key);
     if (running !== undefined) return running;
@@ -1590,7 +1649,13 @@ export class Crawler {
    * come from its memory, or from a fetch of `/robots.txt` with its redirects. A robots.txt that
    * the crawler cannot read gives rules that permit nothing, and `unreachable` gives the reason.
    */
-  async readRobots(url: string): Promise<{
+  async readRobots(
+    url: string,
+    marks: {
+      readonly scope?: string | undefined;
+      readonly labels?: Readonly<Record<string, string>> | undefined;
+    } = {},
+  ): Promise<{
     readonly robots: Robots;
     readonly capture: string | undefined;
     readonly stale?: string | undefined;
@@ -1598,7 +1663,45 @@ export class Crawler {
     const target = new URL(url);
     if (!WEB_PROTOCOLS.has(target.protocol))
       return { robots: unreachableRobots("not an http(s) URL"), capture: undefined };
-    return this.robotsFor(target, this.policyOf(target));
+    return this.robotsFor(target, this.policyOf(target), marks);
+  }
+
+  /**
+   * This method tells if robots.txt lets the crawler fetch a URL as a page. The rules of the token
+   * of the crawler and of the agents of `onBehalfOf` apply, as for a fetch. It reads robots.txt as
+   * a fetch does, so a robots.txt that the crawler cannot read permits nothing. When the signal
+   * aborts, the promise rejects, and a fetch of robots.txt in progress continues.
+   */
+  async robotsAllow(
+    url: string,
+    options: {
+      readonly onBehalfOf?: readonly string[] | undefined;
+      readonly scope?: string | undefined;
+      readonly labels?: Readonly<Record<string, string>> | undefined;
+      readonly signal?: AbortSignal | undefined;
+    } = {},
+  ): Promise<{ readonly allowed: boolean; readonly note: string | undefined }> {
+    let target: URL;
+    try {
+      target = new URL(url);
+    } catch {
+      return { allowed: false, note: "not a valid URL" };
+    }
+    if (!WEB_PROTOCOLS.has(target.protocol)) return { allowed: false, note: "not an http(s) URL" };
+    if (this.closed) return { allowed: false, note: "crawler closed" };
+    const tokens = [this.options.token, ...(options.onBehalfOf ?? []), ...this.pageTokens];
+    const badToken = tokens.find((token) => !isProductToken(token));
+    if (badToken !== undefined)
+      return { allowed: false, note: `not a valid product token: "${badToken}"` };
+    const work = this.robotsFor(target, this.policyOf(target), options);
+    const verdict = await (options.signal === undefined ? work : raceAbort(work, options.signal));
+    const decision = decide(verdict.robots, tokens, `${target.pathname}${target.search}`);
+    return decision.allowed
+      ? { allowed: true, note: undefined }
+      : {
+          allowed: false,
+          note: robotsRefusal(verdict.robots, decision.by ?? this.options.token),
+        };
   }
 
   /** This method reads the stored copy of a robots.txt, when it is younger than the limit of the policy. */
@@ -1758,6 +1861,8 @@ export class Crawler {
           // an equal request that waited in the queue can find a fresh copy now
           const again = await this.fromCache(url, "plain", request_.maxAgeMs, sent, secretParams);
           if (again !== undefined) return { value: again, delayMs: 0 };
+          // no request starts at or after its deadline
+          this.beforeDeadline(request_.deadline);
           const latest = this.lookup(url);
           // validators go only with a stored body of the same variant, so a 304 always has a body
           const usable =
@@ -2120,11 +2225,13 @@ export class Crawler {
             delayMs,
           };
         },
-        signal,
+        this.paced(signal, request_.deadline),
       );
     } catch (error) {
       if (error instanceof HostStopped)
         return { fetched: await skip(stopNote(error.reason, error.until)) };
+      if (error instanceof DeadlineReached)
+        return { fetched: await skip(deadlineNote(error, request_.deadline)) };
       if (this.closed) return { fetched: closedResult(url) };
       if (request_.signal?.aborted === true)
         return { fetched: await skip("cancelled by the caller") };
@@ -2313,6 +2420,7 @@ export class Crawler {
       done = await this.scheduler.run(
         host,
         async (): Promise<Paced<RenderDone>> => {
+          this.beforeDeadline(request_.deadline);
           const started = this.clock.now();
           this.emit({ type: "request", url, host, transport: "browser" });
           try {
@@ -2395,10 +2503,11 @@ export class Crawler {
             };
           }
         },
-        signal,
+        this.paced(signal, request_.deadline),
       );
     } catch (error) {
       if (error instanceof HostStopped) return skip(stopNote(error.reason, error.until));
+      if (error instanceof DeadlineReached) return skip(deadlineNote(error, request_.deadline));
       if (this.closed) return closedResult(url);
       if (request_.signal?.aborted === true) return skip("cancelled by the caller");
       throw error;

@@ -48,3 +48,46 @@ export const cacheKeyOf = (value: string): string => {
     return value;
   }
 };
+
+/**
+ * This function gives the site of a host name: the name in lowercase, with no final dot and no
+ * `www.` at the start. Thus `www.example.com` and `example.com` are one site.
+ */
+export const siteOf = (host: string): string =>
+  host
+    .toLowerCase()
+    .replace(/\.$/, "")
+    .replace(/^www\./, "");
+
+/** These options set the hosts that a crawl or a discovery keeps. */
+export interface ScopeOptions {
+  /** With the default value true, the URLs on the sites of the start URLs are in scope. */
+  readonly sameSite?: boolean | undefined;
+  /** The URLs on these hosts are in scope too. A name that starts with `*.` names the hosts under it. */
+  readonly allowHosts?: readonly string[] | undefined;
+}
+
+/**
+ * This function gives the test of the scope of a crawl or a discovery. With `sameSite: false`
+ * and no `allowHosts`, each http(s) URL is in scope.
+ */
+export const scopeTest = (
+  starts: readonly URL[],
+  options: ScopeOptions,
+): ((url: URL) => boolean) => {
+  const sameSite = options.sameSite !== false;
+  const sites = new Set(starts.map((start) => siteOf(start.hostname)));
+  const hosts = (options.allowHosts ?? []).map((host) =>
+    host.trim().toLowerCase().replace(/\.$/, ""),
+  );
+  const any = !sameSite && options.allowHosts === undefined;
+  return (url) => {
+    if (url.protocol !== "http:" && url.protocol !== "https:") return false;
+    if (any) return true;
+    const name = url.hostname.toLowerCase().replace(/\.$/, "");
+    if (sameSite && sites.has(siteOf(name))) return true;
+    return hosts.some((host) =>
+      host.startsWith("*.") ? name.endsWith(host.slice(1)) : name === host,
+    );
+  };
+};

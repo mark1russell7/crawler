@@ -1,6 +1,6 @@
 ---
 title: Library API
-description: "The library API of polite-crawler: openCrawler and its options, fetch, find, read, verify and reindex, and the parts that you can import alone."
+description: "The library API of polite-crawler: openCrawler and its options, fetch, find, read, verify, discover, crawl and reindex, and the parts that you can import alone."
 ---
 
 ```ts title="The import"
@@ -97,6 +97,40 @@ The method finds a quote in a stored document, and gives a promise. It ignores c
 ### `versions(doc)`
 
 The method gives the versions of a document, the newest first: the capture, the blob, the fetch time and the length of each text. A version that refused AI input shows no title.
+
+### `discover(site, options?)`
+
+The method finds the pages of a site from its sitemaps and its feeds, and gives a promise. It fetches the files that list the pages, not the pages. Each file is a polite fetch with its capture.
+
+| Option | Default | What it does |
+| --- | --- | --- |
+| `maxFiles` | `20` | The most sitemap and feed files to read. |
+| `maxUrls` | `10000` | The most URLs to give. |
+| `maxBytes` | 10 MiB | The most bytes of one file, after decompression. |
+| `maxNesting` | `3` | The most levels of sitemap index to follow. |
+| `budgetMs` | `60000` | The longest time of the discovery. No request starts after it. |
+| `sameSite`, `allowHosts` | the site of `site` | The hosts whose URLs discovery keeps. |
+| `feeds`, `sitemaps` | none | More feeds and sitemaps to read. |
+| `linkedFeeds` | `true` | Read the page at `site` for the feeds that it links. |
+| `maxAge`, `onBehalfOf`, `signal`, `scope`, `labels` | as for `fetch` | These options apply to each file. |
+
+The result gives `urls` (each with `url`, `lastmod`, `changefreq`, `via` and `source`), the newest `lastmod` first. It also gives `sources` (what discovery did with each file), `dropped` (the URLs that it did not keep, for each reason), `stopped` and `note`. Discovery keeps a URL only when robots.txt permits it.
+
+### `crawl(seeds, options?)`
+
+The method fetches the seeds, then follows the links of each page on the same site. It gives a `CrawlRun`: a `for await` loop gets each page when its fetch ends, and `summary` resolves at the end.
+
+| Option | Default | What it does |
+| --- | --- | --- |
+| `maxPages` | `100` | The most pages that the crawl gives. |
+| `maxDepth` | `3` | The most links from a seed to a page. |
+| `budgetMs` | `600000` | The longest time of the crawl. No request starts after it. |
+| `sameSite`, `allowHosts` | the sites of the seeds | The hosts that the crawl follows. |
+| `include`, `exclude` | none | Patterns: `/blog/*` matches a path, and a `RegExp` tests the whole URL. |
+| `useSitemaps` | `false` | Add the pages of the sitemaps, the newest first. |
+| `render`, `maxAge`, `onBehalfOf`, `signal`, `scope`, `labels` | as for `fetch` | These options apply to each page. |
+
+Each page is a `PageResult` with `depth`, `source` (`seed`, `sitemap` or `link`) and `referrer`. The summary gives the counts of the pages and of the links that the crawl did not follow, and `stopped` and `reason`. The crawl keeps one request at a time for each host, at its pace. Its state is in memory, for one call.
 
 ### `reindex()`
 

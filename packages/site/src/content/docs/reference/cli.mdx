@@ -1,6 +1,6 @@
 ---
 title: Command line
-description: The polite-crawler command line - fetch, find, read, verify, reindex, mcp and export, with each option.
+description: The polite-crawler command line - fetch, find, read, verify, reindex, mcp, discover, crawl and export, with each option.
 ---
 
 ```sh
@@ -18,6 +18,8 @@ npx polite-crawler <command> [options]
 | `reindex` | It builds the search index again from the capture log. |
 | `mcp` | It starts the MCP server on the standard input and output. |
 | `export --out <file>` | It writes the stored captures as a WARC or WACZ archive. It only reads the store. |
+| `discover <site>` | It lists the pages of a site from its sitemaps and feeds. It fetches no page of the list. |
+| `crawl <url...>` | It fetches the pages and follows their links on the same site, within a budget. |
 
 ## Options
 
@@ -37,8 +39,8 @@ These options apply to one command. The command line is wrong when another comma
 
 | Command | Option | Default | What it does |
 | --- | --- | --- | --- |
-| `fetch` | `--render <mode>` | `auto` | `auto`, `never` or `always`. |
-| `fetch` | `--max-age <age>` | `24h` | A stored copy younger than this age answers with no request. `0` fetches the page again. |
+| `fetch`, `crawl` | `--render <mode>` | `auto` | `auto`, `never` or `always`. |
+| `fetch`, `crawl`, `discover` | `--max-age <age>` | `24h` | A stored copy younger than this age answers with no request. `0` fetches the page again. |
 | `find` | `--limit <n>` | `10` | The number of results. |
 | `find` | `--kind <kind>` | all | Only this kind of document, for example `page` or `pdf`. |
 | `find` | `--rank <mode>` | `exact` | `exact` gives BM25 to each match. `fast` leaves the common words out of the documents that hold one word, so a long question is faster. |
@@ -55,6 +57,15 @@ These options apply to one command. The command line is wrong when another comma
 | `export` | `--id <capture>` | | Only this capture. Give `--id` again for more captures. |
 | `export` | `--include-refusals` | | Add a `metadata` record for each capture with no body: a refusal, a skip, an error or a redirect. |
 | `export` | `--overwrite` | | Replace the file when it exists. |
+| `discover` | `--max-urls <n>` | `1000` | The most URLs to print. |
+| `discover` | `--feed <url>` | | Read this RSS or Atom feed too. Repeat the option for more feeds. |
+| `crawl` | `--max-pages <n>` | `100` | The most pages to fetch. |
+| `crawl` | `--max-depth <n>` | `3` | The most links from a seed to a page. `0` fetches only the seeds. |
+| `crawl` | `--budget <time>` | `10m` | The longest time of the crawl, for example `30s` or `2m`. No request starts after it. |
+| `crawl` | `--include <pattern>` | | Follow only the URLs that match. `/blog/*` matches a path. Repeat the option for more patterns. |
+| `crawl` | `--exclude <pattern>` | | Follow no URL that matches, for example `*.pdf$`. Repeat the option for more patterns. |
+| `crawl` | `--sitemaps` | | Add the pages of the sitemaps of the site, the newest first. |
+| `crawl`, `discover` | `--allow-host <host>` | | Keep the URLs on this host too. Repeat the option for more hosts. |
 
 ## Export to a web archive
 
@@ -72,7 +83,7 @@ The README of the package tells what goes into the archive, what does not, and w
 | Code | Meaning |
 | --- | --- |
 | `0` | The command did its work. |
-| `1` | The command did not do its work: a page that the crawler did not fetch, no search result, a quote that is not in the document, a document that is not stored or that is held back, or an error. |
+| `1` | The command did not do its work: a page that the crawler did not fetch, no search result, a quote that is not in the document, a document that is not stored or that is held back, or an error. `discover` gives `1` when it finds no URL, and `crawl` when it gets no page. |
 | `2` | The command line is wrong. The command opens no store. |
 
 ## Examples
@@ -92,4 +103,21 @@ npx polite-crawler verify "url:https://example.com/" "for use in documentation e
 
 # the captures of one site since 1 October, as a WACZ file for ReplayWeb.page
 npx polite-crawler export --out example.wacz --host example.com --since 2026-10-01
+
+# the pages of a site from its sitemaps and feeds, with no fetch of the pages
+npx polite-crawler discover https://example.com/ --max-urls 200
+
+# 50 pages of the blog of a site in 2 minutes or less, one request at a time
+npx polite-crawler crawl https://example.com/blog/ --max-pages 50 --include "/blog/*" --budget 2m
 ```
+
+## Discover and crawl
+
+`discover` reads the sitemaps that robots.txt names (or `/sitemap.xml`), the sitemap indexes, and the RSS and Atom feeds that the page links. It prints each URL with its `lastmod`, the newest first. It keeps only the URLs on the same site that robots.txt permits.
+
+`crawl` prints each page when its fetch ends, then a summary. The summary gives the pages fetched, refused and failed, the links that it did not follow, and the reason of the stop.
+
+- Each fetch obeys robots.txt and the pace of the site: one request at a time, and 3 seconds or more between two pages.
+- When the budget ends, no new request starts.
+- The first `Ctrl+C` stops the crawl, and the summary prints.
+- `--json` prints the pages and the summary as one JSON object at the end.

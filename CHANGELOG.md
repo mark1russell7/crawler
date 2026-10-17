@@ -23,6 +23,26 @@ A prerelease version (`0.2.0-beta.1`) goes to the npm tag `next`. Each other ver
   - The export reads the log as a stream, and it sorts the index on the disk. Thus its memory does not grow with the store.
   - The MCP server has no export tool, because an export writes files on the disk of the operator.
   - The change only adds to the API. The capture log, the bodies and the capture ids do not change.
+- **Discovery: the pages of a site from its sitemaps and feeds.** `crawler.discover(site, options)` reads the `Sitemap:` lines of robots.txt, or `/sitemap.xml` when robots.txt names none.
+  - It follows sitemap indexes, the newest first, and it reads gzip sitemaps, text sitemaps, RSS 2.0, RSS 1.0 and Atom. It reads the feeds that the page links with `<link rel="alternate">`, and the feeds in `feeds`.
+  - Each URL has its `lastmod`, its `changefreq` and its `source`. Discovery keeps only the URLs on the same site that robots.txt permits. `allowHosts` and `sameSite: false` keep more hosts.
+  - The limits are `maxFiles` (20), `maxUrls` (10,000), `maxBytes` for each file (10 MiB), `maxNesting` (3) and `budgetMs` (1 minute).
+  - Each file is a fetch of the crawler with the recipe `sitemap` or `feed`. Thus robots.txt, the pace, the stops, the egress policy and the capture log apply to it.
+  - The sitemap reader (`readSitemap`) expands no entity, stops at a depth of 32 elements and reads in linear time. A hostile file stays bounded.
+- **A small crawl with a budget.** `crawler.crawl(seeds, options)` fetches the seeds and follows the links of each page on the same site. It gives an async iterable of the pages, and a `summary`.
+  - The options are `maxPages` (100), `maxDepth` (3), `budgetMs` (10 minutes), `sameSite` or `allowHosts`, `include` and `exclude` patterns, `useSitemaps`, and the options of `fetch`.
+  - The seeds come first, then the pages of the sitemaps (the newest first), then the links, the lower depth first. The crawl fetches each page one time, also with a fragment, a tracking parameter or a canonical URL.
+  - Each page is a fetch of the crawler: one request at a time for each host, at its pace. No request starts after the budget. A cancel or a `break` stops the requests in progress.
+  - The summary gives the pages fetched, refused and failed, the links that the crawl did not follow, and the reason of the stop.
+  - The state of the crawl is in memory, for one call. A later version can make it resumable.
+- **The command line.** `polite-crawler discover <site>` and `polite-crawler crawl <url...> --max-pages N --max-depth N --budget 2m`. `crawl` also takes `--include`, `--exclude`, `--sitemaps`, `--render` and `--max-age`. The two commands take `--allow-host`.
+- **Two MCP tools.** `crawl_discover` gives 1,000 URLs at most. `crawl_site` fetches 10 pages in 1 minute by default, and 50 pages in 5 minutes at most. It sends progress for each page, stops at a cancel, and keeps the titles in the `<untrusted-web-content>` envelope.
+- **The engine.** These additions do not change the existing API:
+  - `FetchRequest`, `RenderRequest` and `PageOptions` take `deadline`. A request does not start at or after its deadline, and it does not wait for its host past it. Its skip note starts with `DEADLINE_NOTE`. `HostScheduler` does not change.
+  - `Crawler.robotsAllow(url, options)` gives the robots.txt decision for a URL. `Crawler.readRobots` takes the scope and the labels of its record.
+  - `PageExtract` has `feeds`: the RSS and Atom feeds that the page links. The metadata of a page document has them too.
+  - `reindex` reads the captures of the recipes `sitemap` and `feed` as captures of the crawler, as it reads robots.txt. They give no document.
+  - The root entry point exports `discoverSite`, `crawlSite`, `readSitemap`, `feedDate`, `DISCOVER_LIMITS`, `CRAWL_LIMITS`, `SITEMAP_LIMITS`, `DEADLINE_NOTE` and the types of discovery and of the crawl.
 
 ## 0.1.1 - 2026-10-17
 

@@ -3,12 +3,18 @@ import { join } from "node:path";
 import type { Dispatcher } from "undici";
 import type { BlobStore } from "./blobs.ts";
 import { checkedRenderer } from "./browser.ts";
+import type { Duration } from "./duration.ts";
+import { durationMs } from "./duration.ts";
 import { FileBlobStore } from "./blobs.ts";
 import type { CrawlEvent } from "./crawler.ts";
 import { Crawler } from "./crawler.ts";
+import type { DiscoverOptions, DiscoverResult } from "./discover.ts";
+import { discoverSite } from "./discover.ts";
 import type { DocVersion, Found, RankMode, ReadingIndex } from "./docs.ts";
 import { DocIndex } from "./docs.ts";
 import type { EgressOptions } from "./egress.ts";
+import type { CrawlOptions, CrawlRun } from "./frontier.ts";
+import { crawlSite } from "./frontier.ts";
 import { SqliteHostStateStore } from "./hoststate.ts";
 import { CaptureLog } from "./log.ts";
 import type { Clock, HostStateStore, PolicyOptions } from "./politeness.ts";
@@ -40,6 +46,9 @@ export type { ReadOptions, ReadResult, VerifyOptions, VerifyResult } from "./run
 
 export { BOT_PAGE, DEFAULT_TOKEN } from "./version.ts";
 
+export type { Duration } from "./duration.ts";
+export { durationMs } from "./duration.ts";
+
 /**
  * This function gives the default `User-Agent` header. The header names the crawler, its version
  * and the page about it, so a site owner can find out what made each request.
@@ -56,41 +65,6 @@ const MAILBOX = /^(?:[^\s<>@:/]+@[^\s<>@/]+|[^<>]*<[^\s<>@:/]+@[^\s<>@/]+>)$/;
  * the `User-Agent` only.
  */
 export const isMailbox = (contact: string): boolean => MAILBOX.test(contact.trim());
-
-/** A duration is a count of milliseconds, or a text, for example `"30m"`, `"24h"` or `"7d"`. */
-export type Duration = number | string;
-
-const UNITS: Readonly<Record<string, number>> = {
-  ms: 1,
-  s: 1000,
-  m: 60_000,
-  h: 3_600_000,
-  d: 86_400_000,
-  w: 604_800_000,
-};
-
-/**
- * This function changes a duration into milliseconds. The units are `ms`, `s`, `m` (minutes), `h`,
- * `d` and `w`, in any case. The unit `M` is an error, because a month is not a unit. A bare `0`
- * is zero. The function throws an error for a text that it cannot read.
- */
-export const durationMs = (duration: Duration): number => {
-  if (typeof duration === "number") {
-    if (!Number.isFinite(duration) || duration < 0)
-      throw new Error(`not a duration: ${String(duration)}`);
-    return duration;
-  }
-  if (/^\s*0+(\.0+)?\s*$/.test(duration)) return 0;
-  const match = /^\s*(\d+(?:\.\d+)?)\s*(ms|s|m|h|d|w)\s*$/i.exec(duration);
-  const unit = match?.[2];
-  const factor = unit === undefined || unit === "M" ? undefined : UNITS[unit.toLowerCase()];
-  if (match === null || factor === undefined) {
-    throw new Error(
-      `not a duration: "${duration}" (write a number and ms, s, m, h, d or w; m is minutes)`,
-    );
-  }
-  return Number(match[1]) * factor;
-};
 
 /**
  * These options make a runtime. A store needs a log, a blob store and an index. Give `dir`, and
@@ -344,6 +318,17 @@ export interface PoliteCrawler {
   /** This method gives the versions of a stored document, the newest first. A held-back version shows no title. */
   versions(doc: string, options?: { readonly limit?: number }): Promise<DocVersion[]>;
   /**
+   * This method finds the pages of a site from its sitemaps and its feeds. Each file is a polite
+   * fetch with its capture. It keeps the URLs on the site that robots.txt permits, to its limits.
+   */
+  discover(site: string, options?: DiscoverOptions): Promise<DiscoverResult>;
+  /**
+   * This method crawls a site from its seeds. It follows the links of each page to a maximum of
+   * pages, a maximum depth and a maximum time. A `for await` loop gets each page. `summary` tells
+   * why the crawl stopped.
+   */
+  crawl(seeds: string | readonly string[], options?: CrawlOptions): CrawlRun;
+  /**
    * This method builds the index again from the capture log and the stored bodies, with no request.
    * When the crawler rebuilt a stale index at open, the first reindex gives the counts of that
    * rebuild, unless a fetch came before it.
@@ -420,6 +405,24 @@ export const openCrawler = (options: OpenOptions): PoliteCrawler => {
         .map((version) =>
           held || version.ai_input === "no" ? { ...version, title: "" } : version,
         );
+    },
+    async discover(site, discoverOptions = {}) {
+      await live();
+      rebuilt = undefined;
+      return discoverSite(runtime, site, {
+        ...discoverOptions,
+        onBehalfOf: [...(options.onBehalfOf ?? []), ...(discoverOptions.onBehalfOf ?? [])],
+      });
+    },
+    crawl(seeds, crawlOptions = {}) {
+      return crawlSite(runtime, seeds, {
+        ...crawlOptions,
+        onBehalfOf: [...(options.onBehalfOf ?? []), ...(crawlOptions.onBehalfOf ?? [])],
+        ready: async () => {
+          await live();
+          rebuilt = undefined;
+        },
+      });
     },
     async reindex() {
       await live();

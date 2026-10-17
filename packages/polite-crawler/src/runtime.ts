@@ -9,6 +9,7 @@ import type {
   RankMode,
   ReadingIndex,
   Variant,
+  VersionAt,
 } from "./docs.ts";
 import { locate } from "./docs.ts";
 import type { PageExtract } from "./html.ts";
@@ -570,6 +571,13 @@ export interface ReadResult {
   /** This value is true when the page asked not to be AI input. The text is then empty. */
   readonly held_back: boolean;
   readonly note: string | null;
+  /** This time (ISO 8601) is the `at` of the read. The result has it only when the read gave `at`. */
+  readonly at?: string | undefined;
+  /**
+   * This value is true when `at` is before the first capture of the document. Then no version
+   * answers: the text, the title, `capture` and `fetched_at` are empty, and the note tells why.
+   */
+  readonly before_first?: boolean | undefined;
 }
 
 /** This result tells if a quote is in a stored document, and where. */
@@ -599,6 +607,10 @@ export interface VerifyResult {
   readonly count: number;
   readonly held_back: boolean;
   readonly note: string | null;
+  /** This time (ISO 8601) is the `at` of the verification. The result has it only when the verification gave `at`. */
+  readonly at?: string | undefined;
+  /** This value is true when `at` is before the first capture of the document. Then no version holds the quote, and the note tells why. */
+  readonly before_first?: boolean | undefined;
 }
 
 /** These options control a read. */
@@ -611,6 +623,11 @@ export interface ReadOptions {
   readonly userProvided?: boolean | undefined;
   /** This id reads the version of one capture, not the current version. */
   readonly capture?: string | undefined;
+  /**
+   * This time reads the version that was current at that time: an ISO 8601 text or a `Date`. A
+   * date with no time is the start of that day in UTC. Give `capture` or `at`, not the two.
+   */
+  readonly at?: string | Date | undefined;
 }
 
 /** These options control a verification. */
@@ -619,6 +636,8 @@ export interface VerifyOptions {
   readonly capture?: string | undefined;
   /** This value is true when a person gave this URL directly. It is the only way to verify a quote in a held-back document. */
   readonly userProvided?: boolean | undefined;
+  /** This time examines only the version that was current at that time (`ReadOptions.at`). Give `capture` or `at`, not the two. */
+  readonly at?: string | Date | undefined;
 }
 
 const knownDoc = (runtime: CrawlRuntime, id: string): Doc => {
@@ -627,6 +646,56 @@ const knownDoc = (runtime: CrawlRuntime, id: string): Doc => {
     throw new Error(`no stored document ${id}: find one with find(), or fetch its page`);
   return doc;
 };
+
+// ── time travel ─────────────────────────────────────────────────────────────
+
+/**
+ * This function gives the ISO 8601 form of a time. A text that is not a time throws a `RangeError`.
+ * A date with no time is the start of that day in UTC.
+ */
+export const isoTime = (name: string, value: string | Date): string => {
+  const ms =
+    value instanceof Date ? value.getTime() : typeof value === "string" ? Date.parse(value) : NaN;
+  if (!Number.isFinite(ms)) {
+    throw new RangeError(
+      `${name} must be a time, such as 2026-10-01T12:00:00Z, not ${JSON.stringify(String(value))}`,
+    );
+  }
+  return new Date(ms).toISOString();
+};
+
+/**
+ * This function gives the version of a document that was current at a time (ISO 8601). It uses
+ * `ReadingIndex.versionAt` when the index has it. Else it takes the newest version at or before
+ * the time.
+ */
+export const versionAtTime = (runtime: CrawlRuntime, id: string, at: string): VersionAt => {
+  const index = runtime.index;
+  if (index.versionAt !== undefined) return index.versionAt(id, at);
+  const all = index.versions(id, { limit: 1_000_000 });
+  const pick = all.find((version) => version.fetched_at <= at);
+  return {
+    version: pick === undefined ? undefined : index.versionText(id, pick.capture),
+    first: all.at(-1)?.fetched_at,
+  };
+};
+
+/** This function gives the note of a time before the first version of a document. */
+const beforeFirstNote = (id: string, at: string, first: string | undefined): string =>
+  `the document ${id} has no version at ${at} or before${first === undefined ? "" : `: its first capture is from ${first}`}`;
+
+/** This function gives the time of `at`, or undefined. It refuses `capture` and `at` together. */
+const atOf = (options: {
+  readonly capture?: string | undefined;
+  readonly at?: string | Date | undefined;
+}): string | undefined => {
+  if (options.at === undefined) return undefined;
+  if (options.capture !== undefined)
+    throw new RangeError("give capture or at, not the two: each one chooses a version");
+  return isoTime("at", options.at);
+};
+
+// ── end of time travel ──────────────────────────────────────────────────────
 
 const wholeNumber = (name: string, value: number | undefined, fallback: number): number => {
   if (value === undefined) return fallback;
@@ -691,11 +760,39 @@ export const readDocument = async (
 ): Promise<ReadResult> => {
   const from = wholeNumber("from", options.from, 0);
   const length = wholeNumber("length", options.length, 4000);
+  const at = atOf(options);
   const doc = knownDoc(runtime, id);
-  const version =
+  let version =
     options.capture === undefined ? undefined : runtime.index.versionText(id, options.capture);
   if (options.capture !== undefined && version === undefined) {
     throw new Error(`the document ${id} has no version from the capture ${options.capture}`);
+  }
+  const timed = at === undefined ? {} : { at, before_first: false };
+  if (at !== undefined) {
+    const found = versionAtTime(runtime, id, at);
+    if (found.version === undefined) {
+      // no version answers, so there is no text to hold back
+      return {
+        doc: doc.doc,
+        kind: doc.kind,
+        title: "",
+        url: doc.url,
+        meta: {},
+        from: 0,
+        to: 0,
+        total: 0,
+        text: "",
+        captures: doc.captures,
+        capture: "",
+        fetched_at: "",
+        ai_input: doc.ai_input,
+        held_back: false,
+        note: beforeFirstNote(id, at, found.first),
+        at,
+        before_first: true,
+      };
+    }
+    version = found.version;
   }
   const aiInput: AiInput =
     doc.ai_input === "no" || version?.ai_input === "no"
@@ -724,6 +821,7 @@ export const readDocument = async (
     ai_input: aiInput,
     held_back: held,
     note: held ? HELD_BACK : null,
+    ...timed,
   };
 };
 
@@ -737,31 +835,54 @@ const examineQuote = (
   quote: string,
   options: VerifyOptions,
 ): { readonly result: VerifyResult; readonly override: boolean } => {
+  const at = atOf(options);
   const doc = knownDoc(runtime, id);
-  const pinned =
+  let pinned =
     options.capture === undefined ? undefined : runtime.index.versionText(id, options.capture);
   if (options.capture !== undefined && pinned === undefined) {
     throw new Error(`the document ${id} has no version from the capture ${options.capture}`);
   }
   const userProvided = options.userProvided ?? false;
   const base = { doc: doc.doc, url: doc.url, captures: doc.captures };
+  const timed = at === undefined ? {} : { at, before_first: false };
+  const nothing = {
+    found: false,
+    start: null,
+    end: null,
+    excerpt: null,
+    capture: null,
+    blob: null,
+    fetched_at: null,
+    stale: false,
+    in_full_text: false,
+    count: 0,
+  } as const;
+  if (at !== undefined) {
+    // the version that was current at the time is the only version that the check examines
+    const found = versionAtTime(runtime, id, at);
+    if (found.version === undefined) {
+      const result: VerifyResult = {
+        ...base,
+        ...nothing,
+        complete: true,
+        held_back: false,
+        note: beforeFirstNote(id, at, found.first),
+        at,
+        before_first: true,
+      };
+      return { result, override: false };
+    }
+    pinned = found.version;
+  }
   const aiInput: AiInput = doc.ai_input === "no" || pinned?.ai_input === "no" ? "no" : doc.ai_input;
   if (isHeldBack({ ai_input: aiInput }, userProvided)) {
     const result: VerifyResult = {
       ...base,
-      found: false,
-      start: null,
-      end: null,
-      excerpt: null,
-      capture: null,
-      blob: null,
-      fetched_at: null,
-      stale: false,
-      in_full_text: false,
+      ...nothing,
       complete: false,
-      count: 0,
       held_back: true,
       note: HELD_BACK,
+      ...timed,
     };
     return { result, override: false };
   }
@@ -798,6 +919,7 @@ const examineQuote = (
       count: hit.count,
       held_back: false,
       note: stale ? "only an earlier capture of the document holds the quote" : null,
+      ...timed,
     };
     return { result, override };
   }
@@ -829,6 +951,7 @@ const examineQuote = (
     count: 0,
     held_back: false,
     note: notes.length > 0 ? notes.join("; ") : null,
+    ...timed,
   };
   return { result, override };
 };

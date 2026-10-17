@@ -12,6 +12,9 @@
  *   sitemaps and feeds (`readSitemap`).
  * - The discovery and the crawl over a runtime: `discoverSite` and `crawlSite`.
  * - The export of a store to the web archive formats: `exportWarc` and `exportWacz`.
+ * - The time travel and the diff of the versions of a document: `versionAtTime`, `diffDocument`
+ *   and `diffTexts`.
+ * - The watch list: `WatchStore` and `runWatch`.
  *
  * The other entry points give the rest:
  *
@@ -41,6 +44,21 @@ export {
   renderedKey,
 } from "./crawler.ts";
 export type {
+  DiffHunk,
+  DiffInput,
+  DiffLimits,
+  DiffLine,
+  DiffOptions,
+  DiffResult,
+  DiffSide,
+  DiffSummary,
+  MetaChange,
+  TextDiff,
+  VersionChoice,
+  WordPart,
+} from "./diff.ts";
+export { DIFF_LIMITS, diffDocument, diffTexts } from "./diff.ts";
+export type {
   DiscoverOptions,
   DiscoverResult,
   DiscoverRunOptions,
@@ -61,6 +79,7 @@ export type {
   ReadingIndex,
   Variant,
   Verified,
+  VersionAt,
   VersionText,
 } from "./docs.ts";
 export { DocIndex, FAST_RANK_SHARE, locate } from "./docs.ts";
@@ -96,6 +115,7 @@ export type {
   FetchOptions,
   FindOptions,
   OpenOptions,
+  OpenedCrawler,
   PoliteCrawler,
   ReadOptions,
   ReadResult,
@@ -167,6 +187,7 @@ export {
   findDocuments,
   heldBackMeta,
   isHeldBack,
+  isoTime,
   pageDocId,
   pageExtractor,
   readDocument,
@@ -174,6 +195,7 @@ export {
   reindex,
   renderAndIndex,
   verifyQuote,
+  versionAtTime,
 } from "./runtime.ts";
 export type { AiInput, Signals } from "./signals.ts";
 export type {
@@ -197,3 +219,18 @@ export type {
   WarcResult,
 } from "./warc.ts";
 export { exportWarc } from "./warc.ts";
+export type {
+  WatchEntry,
+  WatchEvent,
+  WatchKind,
+  WatchList,
+  WatchOptions,
+  WatchPending,
+  WatchRun,
+  WatchRunOptions,
+  WatchRunnerOptions,
+  WatchStop,
+  WatchStoreOptions,
+  WatchSummary,
+} from "./watch.ts";
+export { WATCH_LIMITS, WATCH_SCHEMA, WatchStore, runWatch } from "./watch.ts";

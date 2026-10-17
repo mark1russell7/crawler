@@ -12,9 +12,10 @@ The site has interactive demos with the real code: <https://mark1russell7.github
 - **Fetch one time.** Each response goes into a capture log and a store of bodies by hash. A repeated question reads the disk, so it costs no request.
 - **Read the cheap way.** The crawler reads JSON-LD, the visible text and the links with no browser. It opens a headless browser only for a page that shows almost nothing without JavaScript.
 - **Cite exact text.** Full-text search (SQLite FTS5) gives ranked passages. A quote check finds the exact span in the stored text, with the capture id to cite.
-- **An MCP server.** One command gives Claude and other MCP clients six tools: fetch, find, read, verify, discover and a small crawl.
+- **An MCP server.** One command gives Claude and other MCP clients eight tools: fetch, find, read, verify, discover, a small crawl, a diff and the watch list.
 - **Web archives.** An export writes the stored captures as WARC or WACZ. Archive tools read them, for example `warcio`, pywb and ReplayWeb.page.
 - **Find and crawl a site.** `discover` lists the pages of a site from its sitemaps and feeds. `crawl` follows the links of a site within a budget, at the pace of the site.
+- **Watch and compare.** `watch` checks pages again on a schedule and tells what changed. `diff` compares two versions, and `read` takes `at`: the page as it was at a time.
 
 ## Install
 
@@ -76,12 +77,27 @@ npx polite-crawler crawl https://example.com/ --max-pages 50 --max-depth 2 --bud
 - `crawl` also takes `--include` and `--exclude` (patterns, which you can repeat), `--sitemaps`, `--render` and `--max-age`.
 - `discover` and `crawl` take `--allow-host <host>` for more hosts. The first `Ctrl+C` stops a crawl, and the summary prints.
 
+To read a page as it was, to compare two versions, or to watch pages, use `read --at`, `diff` and `watch`:
+
+```sh
+npx polite-crawler read "url:https://example.com/" --at 2026-10-01T12:00:00Z
+npx polite-crawler diff "url:https://example.com/" --from 2026-10-01 --to fetch.5d41402abc4b
+npx polite-crawler watch add https://example.com/hours --every 6h
+npx polite-crawler watch run --budget 2m
+npx polite-crawler watch list
+```
+
+- `read --at` and `verify --at` use the version that was current at that time. [Read a page as it was at a time](#read-a-page-as-it-was-at-a-time) gives the rules.
+- `diff` prints the changed lines as a unified diff. A changed line marks its words with `[-removed-]` and `{+added+}`. `--from` and `--to` take a capture id or a time.
+- `watch add` takes `--every` (1 hour or more, `24h` by default), `--confirm 1` or `2`, `--render`, `--scope` and `--label <name=value>`.
+- `watch run` takes `--budget` (default `10m`) and `--max-pages` (default 100). It prints each check, then a summary. A scheduler of the operator starts it: the package has no daemon.
+
 The command gives these exit codes:
 
 | Code | Meaning |
 | --- | --- |
 | `0` | The command did its work. |
-| `1` | The command did not do its work: a page that the crawler did not fetch, no search result, a quote that is not in the document, a document that is not stored or that is held back, or an error. `discover` gives 1 when it finds no URL, and `crawl` when it gets no page. |
+| `1` | The command did not do its work: a page that the crawler did not fetch, no search result, a quote that is not in the document, a document that is not stored or that is held back, or an error. `discover` gives 1 when it finds no URL, and `crawl` when it gets no page. `read --at` and `verify --at` give 1 for a time before the first capture. `watch run` gives 1 when a check is `refused` or an `error`, or when entries stay due. `watch remove` gives 1 for a URL that is not on the list. |
 | `2` | The command line is wrong. The command opens no store. |
 
 ## Use it from Claude (MCP)
@@ -122,18 +138,22 @@ claude mcp add polite-crawler -- npx -y -p polite-crawler -p playwright-core pol
 
 When a new version of `playwright-core` comes out, install its browser again with the first command.
 
-The server gives six tools:
+The server gives eight tools:
 
 | Tool | What it does |
 | --- | --- |
 | `crawl_fetch` | It fetches pages into the store, and a page in the store answers with no request. It gives the age of each copy. |
 | `crawl_find` | It searches the stored pages and gives ranked passages. |
-| `crawl_read` | It gives a range of a stored document, with the capture ids to cite and the position of the next range. |
-| `crawl_verify` | It finds a quote in a stored document and gives the exact span. |
+| `crawl_read` | It gives a range of a stored document, with the capture ids to cite and the position of the next range. With `at`, it reads the version that was current at that time. |
+| `crawl_verify` | It finds a quote in a stored document and gives the exact span. It takes `at` too. |
 | `crawl_discover` | It lists the page URLs of a site from its sitemaps and feeds, 1,000 or fewer. It fetches no page of the list. |
 | `crawl_site` | It fetches a few pages of a site and follows their links on the site: 10 pages and 1 minute by default, and 50 pages and 5 minutes at most. It sends progress for each page. |
+| `crawl_diff` | It compares two stored versions of a document, by capture id or by time. The changed lines, the changed words and the changes of the metadata come in the envelope. |
+| `crawl_watch_list` | It lists the watched pages: each URL, the next check, the last result and a suspected change. It leaves out the scope and the labels. |
 
 The MCP server applies the robots.txt rules for `Claude-User` too, because an assistant asks for these pages.
+
+No tool adds a watch. A watch commits future requests to a site, so the operator adds it with `polite-crawler watch add`. An assistant can read the list (`crawl_watch_list`) and compare the versions of a watched page (`crawl_diff`).
 
 ### Web text is data, not instructions
 
@@ -201,6 +221,9 @@ await crawler.close();
 - `verify` gives the `capture`, the `blob` and the `fetched_at` of the text that holds the quote, with the positions in that text. `stale` is true when only an earlier capture holds the quote.
 - `read` and `verify` take `capture`: they then use the text of that capture, not the current text. A citation of a capture thus stays true after the page changes.
 - `versions(doc)` gives the versions of a document, the newest first.
+- `read` and `verify` take `at`: the version that was current at that time. [Read a page as it was at a time](#read-a-page-as-it-was-at-a-time) tells the rules.
+- `diff(doc, { from, to })` compares two versions. [Compare two versions](#compare-two-versions) tells what it gives.
+- `watch` is the watch list: `add`, `remove`, `list` and `run`. [Watch pages](#watch-pages) tells the rules.
 - `find` reads a query syntax. Text in double quotes is a phrase, and `bake*` is a prefix. The documents that hold each word come first. Case, accents and Unicode forms do not change a match, and Chinese, Japanese and Thai words match too.
 - `find` takes `rank`. The default is `exact`, and `fast` makes a long question faster. [Fast ranking](#fast-ranking) tells the difference.
 - A page that asks not to be AI input is held back in each result. `fetch` gives no title, and `read` gives no title, no text and only the structural metadata. `verify` gives `found: false`, and `find` leaves the page out. Only `userProvided` lifts the hold, and the crawler logs it.
@@ -283,8 +306,11 @@ Before version 1.0.0, a minor version can change the API, and `CHANGELOG.md` tel
 
 These parts are the stable API:
 
-- `openCrawler` and the methods of `PoliteCrawler`: `fetch`, `find`, `read`, `verify`, `versions`, `discover`, `crawl`, `reindex` and `close`.
-- The options and the results of these methods: `OpenOptions`, `FetchOptions`, `PageResult`, `Found`, `ReadResult`, `VerifyResult`, `DocVersion` and `ReindexResult`.
+- `openCrawler` and the methods of `PoliteCrawler`: `fetch`, `find`, `read`, `verify`, `versions`, `discover`, `crawl`, `reindex`, `close`, `diff` and `watch`. `openCrawler` gives an `OpenedCrawler`: a `PoliteCrawler` that has `diff` and `watch`. The two are optional in `PoliteCrawler`, so an object of your own that implements it stays correct.
+- The options and the results of these methods: `OpenOptions`, `FetchOptions`, `PageResult`, `Found`, `ReadResult`, `VerifyResult`, `DocVersion` and `ReindexResult`. `at` of `ReadOptions` and `VerifyOptions`, and `at` and `before_first` of their results, are stable too.
+- The diff: `diffDocument`, `diffTexts`, `DIFF_LIMITS`, `DiffOptions`, `DiffResult`, `DiffSide`, `DiffSummary`, `DiffHunk`, `DiffLine`, `WordPart`, `MetaChange`, `VersionChoice`, `DiffLimits`, `DiffInput` and `TextDiff`.
+- The time travel: `versionAtTime`, `isoTime` and `VersionAt`.
+- The watch list: `WatchList`, `WatchOptions`, `WatchEntry`, `WatchPending`, `WatchKind`, `WatchRun`, `WatchRunOptions`, `WatchEvent`, `WatchSummary`, `WatchStop`, `WATCH_LIMITS` and the file `watch.sqlite` (`WATCH_SCHEMA`). For a runtime of your own, it also has `WatchStore`, `WatchStoreOptions`, `runWatch` and `WatchRunnerOptions`. The lease steps of `WatchStore` (`claim`, `release` and `settle`) are the engine.
 - The options and the results of `discover` and `crawl`: `DiscoverOptions`, `DiscoverResult`, `DiscoveredUrl`, `DiscoverSource`, `DiscoverStop`, `CrawlOptions`, `CrawlRun`, `CrawlPage`, `CrawlSummary`, `CrawlStop`, `UrlPattern` and `ScopeOptions`.
 - `polite-crawler/mcp`: `createMcpServer`, `startMcpServer` and its tools.
 - The readers: `polite-crawler/robots`, `/hours`, `/html`, `/classify`, `/politeness` and `/signals`. The site and its tools use them in the browser.
@@ -294,6 +320,129 @@ These parts are the stable API:
 The other exports of the root entry point are the engine. Examples are `createRuntime`, `catchUpIndex`, `Crawler`, `CaptureLog`, `DocIndex`, `FileBlobStore`, `SqliteHostStateStore`, `Extractors`, `fetchAndIndex` and `makeRecord`. An application can build on them. A minor version before 1.0.0 can change them, and its section in `CHANGELOG.md` says so.
 
 The engine of discovery and of the crawl is `discoverSite`, `crawlSite`, `readSitemap`, `feedDate`, `DISCOVER_LIMITS`, `CRAWL_LIMITS`, `SITEMAP_LIMITS` and `DEADLINE_NOTE`. It also includes `Crawler.robotsAllow` and the `deadline` of `FetchRequest`, `RenderRequest` and `PageOptions`.
+
+The engine of the time travel and of the watch list is the optional method `ReadingIndex.versionAt`, `DocIndex.versionAt` and `Crawler.hostStop`.
+
+## Read a page as it was at a time
+
+Each capture of a document is a version, and the index keeps each version. `read` and `verify` take `at`, a time. They then use the version that was current at that time.
+
+```ts
+const then = await crawler.read("url:https://example.com/", { at: "2026-10-01T12:00:00Z" });
+console.log(then.capture, then.fetched_at, then.before_first, then.text);
+
+const check = await crawler.verify("url:https://example.com/", "open on Sundays", { at: new Date("2026-10-01") });
+```
+
+- `at` is an ISO 8601 text or a `Date`. A date with no time is the start of that day in UTC.
+- The rules that choose the current version apply to the versions of that time. Thus a render stays current while the plain body under it stays the same, and the richer recipe wins.
+- The result names the `capture` and the `fetched_at` of the version, and it gives `at`.
+- When `at` is before the first capture, no version answers. `before_first` is true, and the note gives the time of the first capture. `read` then gives no text, and `verify` gives `found: false`.
+- `verify` with `at` examines that version only, as `verify` with `capture` does. A match is not `stale`.
+- Give `capture` or `at`, not the two. The two together are an error.
+- The hold of a page that asked not to be AI input applies as before. A version that was held back at that time stays held back. When the document is held back at this time, each of its versions is held back too.
+- The command line has `read --at <time>` and `verify --at <time>`. The MCP tools `crawl_read` and `crawl_verify` have `at`.
+
+`find` has no `at`. The search index (FTS5) holds the current text of each document. A search at a time needs an index entry for each version, or a scan of each stored text. Neither is cheap, so the package does not give it.
+
+## Compare two versions
+
+`diff` compares two versions of a stored document. It sends no request.
+
+```ts
+const diff = await crawler.diff("url:https://example.com/");
+console.log(diff.from.capture, diff.to.capture, diff.summary);
+
+const since = await crawler.diff("url:https://example.com/", { from: { at: "2026-10-01" }, to: "fetch.5d41402abc4b" });
+```
+
+- `from` and `to` are a capture id, or `{ at }`: the version that was current at that time. The default `to` is the newest version. The default `from` is the version before `to` of the same recipe and kind (plain or rendered). Thus a render is not compared with the plain body under it.
+- `hunks` give the text as a line diff, in the form of a unified diff, with 2 lines of context. A `changed` line pairs a removed line with an added line. Its `words` give the words that stay, the added words and the removed words.
+- `meta` gives the changes of the title, the URL and the metadata at their paths, for example `meta.jsonld[0].openingHours`. Each change has the JSON of the old and the new value, cut to 300 characters.
+- `summary` counts the added, removed and changed lines, the added and removed words, and the changes of the metadata. `same` is true when the two versions are the same.
+- The command line has `diff <doc> [--from <version>] [--to <version>]`. A version is a capture id or a time. The MCP tool `crawl_diff` gives the changes in the envelope.
+
+The line diff uses the algorithm of Myers. Its time is linear when the change is small. `DIFF_LIMITS` gives the bounds:
+
+| Limit | Value | What it bounds |
+| --- | ---: | --- |
+| `maxChars` | 1,000,000 | The characters of each text. A longer text gives its first part. |
+| `maxLines` | 50,000 | The lines of each text. A longer text gives its first lines. |
+| `maxSteps` | 1,000,000 | The steps of the line diff. After them, the rest of the change is one removal and one addition. |
+| `maxWordSteps` | 1,000,000 | The steps of the word diffs of all the changed lines together. |
+| `maxLineWords` | 5,000 | The words of one line. A longer line gets no word diff. |
+| `maxHunkLines` | 2,000 | The lines that the hunks show. The summary counts each line. |
+| `maxMetaChanges` | 200 | The changes of the metadata that the result shows. The summary counts each change. |
+
+- When a limit applies, the note tells which limit. `exact` is false when the line diff is not minimal or a changed line has no word diff. `truncated` is true when the result leaves out a part.
+- `steps` counts the steps of the diff. The tests use it, because a count of steps does not change with the computer.
+- `limits` in the options changes the bounds of one diff.
+- When a side is held back, or the document is held back, the diff gives no text and no title. It compares only the structural metadata, and `same` is null.
+
+## Watch pages
+
+A watch list keeps the pages that the crawler checks again on a schedule. The list is in `watch.sqlite` in the store.
+
+```ts
+await crawler.watch.add("https://example.com/hours", { every: "6h", labels: { lineage: "venue-17" } });
+
+const run = crawler.watch.run({ budgetMs: 120_000, maxPages: 50 });
+for await (const event of run) console.log(event.kind, event.suspected, event.url, event.diff);
+console.log((await run.summary).due);
+
+console.log(await crawler.watch.list());
+await crawler.watch.remove("https://example.com/hours");
+```
+
+| Option of `add` | Default | What it does |
+| --- | --- | --- |
+| `every` | `24h` | The time between two checks. The floor is `1h`, so a watch cannot hammer a site. `watchFloor` of `openCrawler` changes the floor. |
+| `confirm` | `2` | The number of checks that must see a change before it is confirmed. |
+| `render` | `auto` | As for `fetch`. |
+| `labels`, `scope`, `onBehalfOf` | none | As for `fetch`. They apply to each check. |
+
+`add` of a page on the list changes its options and keeps its state. A new entry is due at once.
+
+`run` checks the entries that are due, the first due first. It gives an async iterable of events, and a `summary`. Its options are `budgetMs` (10 minutes by default), `maxPages` (100 by default) and `signal`.
+
+- Each check is a fetch of the crawler with no stored copy (`maxAge: 0`). Thus robots.txt, the pace, the stops, the egress policy and the capture log apply. A stored `ETag` or `Last-Modified` date makes the check a conditional request.
+- A run sends requests to 8 hosts at one time at most, and to each host one request at a time.
+- When the budget ends before the request of a check, the entry stays due for the next run.
+- When a check finds a stopped host (a 403, a challenge, or a `Retry-After` of more than 1 hour), the entry is due again at the end of the stop, or later.
+
+Each event has the URL, the document, the capture of the check, the last confirmed capture (`previous`), the outcome and the kind of the check:
+
+| Kind | What the check saw |
+| --- | --- |
+| `new` | The first version of the page, or a page that came back after it was gone. |
+| `changed` | A version with a different title, text or JSON-LD than the last confirmed version. |
+| `unchanged` | The last confirmed version. |
+| `gone` | A 404 or a 410. |
+| `refused` | No version: robots.txt, the egress policy, a stop of the host or the site refused the request. |
+| `error` | No version: a server error, no answer, or a page that gives no document. |
+
+### The confirm rule
+
+One read can be a glitch: a page of an error, a test of the site, or a cache that is not current. Thus a change counts only when two checks see it:
+
+1. The first check that sees a change gives it with `suspected: true`. The last confirmed version does not change.
+2. The next check confirms the change when it sees the same new version. It gives `confirmed: true`, and the new version becomes the last confirmed version.
+3. When the next check sees the last confirmed version again, it gives `unchanged`, and the note says that the change did not repeat.
+4. When it sees a third version, that version is the new suspected change.
+
+A confirmation needs a new capture: a stored copy does not confirm a change. `gone` and a page that comes back follow the same rule. With `confirm: 1`, each change is confirmed at once. A `refused` or an `error` check changes no state.
+
+The `diff` of an event of the kind `changed` gives the counts of the diff from the last confirmed version. A page that asked not to be AI input gives no diff.
+
+### The list in the store
+
+- The list is the decision of the operator, not a projection of the capture log. Thus it has its own file, `watch.sqlite`. A deletion of the index or of `hosts.sqlite` does not lose it. The file opens at the first use of `crawler.watch`.
+- Each step is one SQLite transaction (`BEGIN IMMEDIATE`) in WAL mode, and it waits for the lock of a different process (`busy_timeout`).
+- A run claims each entry with a lease before its check. The lease holds until the end of the budget and 2 minutes more. Thus two processes that run at the same time check each entry one time. A process that stops holds its leases until they end.
+- The list stays after a restart, with the state of each entry: the last confirmed capture, the suspected change and the counts.
+- The package has no daemon. A scheduler of the operator (cron, a systemd timer or a job of an application) starts `watch.run`.
+- The command line has `watch add <url...>`, `watch remove <url...>`, `watch list` and `watch run`. The MCP tool `crawl_watch_list` lists the entries.
+- No MCP tool adds a watch. A watch commits future requests to a site, so it is an action of the operator, not of an assistant.
 
 ## Find the pages of a site
 
@@ -423,6 +572,7 @@ The memo is in the host state store. `openCrawler` keeps it in `hosts.sqlite`, s
 | `blobs/` | The bodies of the responses, by SHA-256 hash. |
 | `index.sqlite` | The search index. It is a projection: `polite-crawler reindex` builds it again from the other two. |
 | `hosts.sqlite` | The pace, the counts, the stops and the validator memo of each host. The processes on one store share it. |
+| `watch.sqlite` | The watch list and the state of each watch. The processes on one store share it. The file opens at the first use of `crawler.watch`. |
 
 The package publishes the JSON Schema of a line of the log: `polite-crawler/record.schema.json`. A program that reads the log can check each record with it.
 

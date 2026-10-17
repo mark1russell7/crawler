@@ -1,6 +1,6 @@
 ---
 title: Command line
-description: The polite-crawler command line - fetch, find, read, verify, reindex, mcp, discover, crawl and export, with each option.
+description: The polite-crawler command line - fetch, find, read, verify, reindex, mcp, discover, crawl, export, diff and watch, with each option.
 ---
 
 ```sh
@@ -20,6 +20,11 @@ npx polite-crawler <command> [options]
 | `export --out <file>` | It writes the stored captures as a WARC or WACZ archive. It only reads the store. |
 | `discover <site>` | It lists the pages of a site from its sitemaps and feeds. It fetches no page of the list. |
 | `crawl <url...>` | It fetches the pages and follows their links on the same site, within a budget. |
+| `diff <doc>` | It prints what changed between two versions of a stored document. It sends no request. |
+| `watch add <url...>` | It adds the pages to the watch list, or changes the options of their watch. |
+| `watch remove <url...>` | It removes the pages from the watch list. |
+| `watch list` | It prints the watch list. |
+| `watch run` | It checks the pages that are due, within a budget, and prints what changed. |
 
 ## Options
 
@@ -39,7 +44,7 @@ These options apply to one command. The command line is wrong when another comma
 
 | Command | Option | Default | What it does |
 | --- | --- | --- | --- |
-| `fetch`, `crawl` | `--render <mode>` | `auto` | `auto`, `never` or `always`. |
+| `fetch`, `crawl`, `watch add` | `--render <mode>` | `auto` | `auto`, `never` or `always`. |
 | `fetch`, `crawl`, `discover` | `--max-age <age>` | `24h` | A stored copy younger than this age answers with no request. `0` fetches the page again. |
 | `find` | `--limit <n>` | `10` | The number of results. |
 | `find` | `--kind <kind>` | all | Only this kind of document, for example `page` or `pdf`. |
@@ -47,6 +52,7 @@ These options apply to one command. The command line is wrong when another comma
 | `read` | `--from <n>` | `0` | The position where the range starts. |
 | `read` | `--length <n>` | `4000` | The number of characters to print. |
 | `read` | `--user-provided` | | Read a page that asked not to be AI input. Use it only for a URL that you gave yourself. The crawler records each such read. |
+| `read`, `verify` | `--at <time>` | | Use the version that was current at this time, for example `2026-10-01T12:00:00Z`. A date with no time is the start of that day in UTC. |
 | `mcp` | `--allow-user-provided` | `$POLITE_CRAWLER_ALLOW_USER_PROVIDED=1` | Let `user_provided` work when the MCP client cannot ask the user. |
 | `export` | `--out <file>` | | The archive to write. The command needs it. When the file exists, the command fails. |
 | `export` | `--format <format>` | from the name of the file | `warc` (a `.warc.gz` file) or `wacz` (a `.wacz` file). |
@@ -66,6 +72,14 @@ These options apply to one command. The command line is wrong when another comma
 | `crawl` | `--exclude <pattern>` | | Follow no URL that matches, for example `*.pdf$`. Repeat the option for more patterns. |
 | `crawl` | `--sitemaps` | | Add the pages of the sitemaps of the site, the newest first. |
 | `crawl`, `discover` | `--allow-host <host>` | | Keep the URLs on this host too. Repeat the option for more hosts. |
+| `diff` | `--from <version>` | the version before `--to` | The old version: a capture id, or a time. |
+| `diff` | `--to <version>` | the newest version | The new version: a capture id, or a time. |
+| `watch add` | `--every <time>` | `24h` | The time between two checks. The floor is `1h`, so a watch cannot hammer a site. |
+| `watch add` | `--confirm <n>` | `2` | `2`: a change counts when two checks see it. `1`: a change counts at once. |
+| `watch add` | `--scope <text>` | | A label for the captures of each check. |
+| `watch add` | `--label <name=value>` | | A label for the captures of each check. Repeat the option for more labels. |
+| `watch run` | `--budget <time>` | `10m` | The longest time of the run. No request starts after it, and an entry that it did not check stays due. |
+| `watch run` | `--max-pages <n>` | `100` | The most pages to check. |
 
 ## Export to a web archive
 
@@ -83,7 +97,7 @@ The README of the package tells what goes into the archive, what does not, and w
 | Code | Meaning |
 | --- | --- |
 | `0` | The command did its work. |
-| `1` | The command did not do its work: a page that the crawler did not fetch, no search result, a quote that is not in the document, a document that is not stored or that is held back, or an error. `discover` gives `1` when it finds no URL, and `crawl` when it gets no page. |
+| `1` | The command did not do its work: a page that the crawler did not fetch, no search result, a quote that is not in the document, a document that is not stored or that is held back, or an error. `discover` gives `1` when it finds no URL, and `crawl` when it gets no page. `read --at` and `verify --at` give `1` for a time before the first capture. `watch run` gives `1` when a check is `refused` or an `error`, or when entries stay due. |
 | `2` | The command line is wrong. The command opens no store. |
 
 ## Examples
@@ -109,6 +123,16 @@ npx polite-crawler discover https://example.com/ --max-urls 200
 
 # 50 pages of the blog of a site in 2 minutes or less, one request at a time
 npx polite-crawler crawl https://example.com/blog/ --max-pages 50 --include "/blog/*" --budget 2m
+
+# the page as it was on the morning of 1 October
+npx polite-crawler read "url:https://example.com/" --at 2026-10-01T09:00:00Z
+
+# what changed since 1 October
+npx polite-crawler diff "url:https://example.com/" --from 2026-10-01
+
+# check the hours page each 6 hours: add it one time, and let cron start the run
+npx polite-crawler watch add https://example.com/hours --every 6h
+npx polite-crawler watch run --budget 5m
 ```
 
 ## Discover and crawl
@@ -121,3 +145,18 @@ npx polite-crawler crawl https://example.com/blog/ --max-pages 50 --include "/bl
 - When the budget ends, no new request starts.
 - The first `Ctrl+C` stops the crawl, and the summary prints.
 - `--json` prints the pages and the summary as one JSON object at the end.
+
+## Diff and watch
+
+`diff` prints the changed lines as a unified diff, with 2 lines of context. A changed line marks its words with `[-removed-]` and `{+added+}`. Then it prints the changes of the title, the URL and the metadata at their paths, for example `meta.jsonld[0].openingHours`.
+
+- The default compares the newest version with the version before it of the same kind (plain or rendered).
+- A large change stays bounded. The note tells when the diff is not minimal or leaves out a part.
+- A page that asked not to be AI input shows no text and no title. `diff` then gives `1`.
+
+`watch` keeps a list of pages in the file `watch.sqlite` of the store. `watch run` fetches each page that is due, with each polite rule. It prints one line for each check: `new`, `changed`, `unchanged`, `gone`, `refused` or `error`.
+
+- A change is `suspected` at its first check. The next check confirms it when it sees the same version. One read can be a glitch, so `--confirm 2` is the default.
+- A check that finds a stopped host is due again at the end of the stop.
+- Two runs at the same time check each page one time, because a run takes a lease on each page.
+- The command has no daemon. Start `watch run` with cron, a systemd timer or a different scheduler.

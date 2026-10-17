@@ -711,5 +711,16 @@ describe("the archived fallback over MCP", () => {
     expect(String(verified.structured["note"])).toContain("not a fresh fetch");
     const read = await call("crawl_read", { doc: archivedDocId(page) });
     expect(read.structured).toMatchObject({ kind: "archived", archived: { source: "wayback" } });
+    // a value from an archived copy says so, as a quote does
+    const extracted = await call("crawl_extract", {
+      doc: archivedDocId(page),
+      fields: { hours: { value: "the bakery opens at seven" } },
+    });
+    expect(extracted.structured).toMatchObject({
+      summary: { verified: 1 },
+      archived: { source: "wayback", timestamp: "2024-01-15T09:30:00Z" },
+    });
+    expect(String(extracted.structured["note"])).toContain("not a fresh fetch");
+    expect(extracted.web).toContain('archived="wayback%202024-01-15T09:30:00Z"');
   });
 });

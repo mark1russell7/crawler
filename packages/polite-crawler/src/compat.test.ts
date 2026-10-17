@@ -5,7 +5,7 @@
  *   the members that 0.1.1 had, the way an application of 0.1.1 did. A new required member of one
  *   of these types, or a change of a member, fails the typecheck.
  * - The tests then give these objects of 0.1.1 to the new code: the MCP server takes a
- *   `PoliteCrawler` with no `discover`, `crawl`, `diff` or `watch`, and a read at a time takes a
+ *   `PoliteCrawler` with no `discover`, `crawl`, `diff`, `watch` or `extract`, and a read at a time takes a
  *   `ReadingIndex` with no `versionAt`.
  *
  * Do not add the new members of a later version here. Change this file only in a version that
@@ -331,6 +331,11 @@ describe("the API of 0.1.1", () => {
     expect(diff["same"]).toBe(false);
     expect((diff["summary"] as { words_added: number }).words_added).toBeGreaterThan(0);
     expect(await call("crawl_watch_list", {})).toMatchObject({ entries: [] });
+    const extracted = await call("crawl_extract", {
+      doc,
+      fields: { title: { value: "Bread at eight" } },
+    });
+    expect(extracted["summary"]).toMatchObject({ fields: 1, verified: 1 });
   });
 
   it("reads a version at a time through a ReadingIndex of 0.1.1, which has no versionAt", async () => {

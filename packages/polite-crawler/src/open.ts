@@ -15,6 +15,8 @@ import { discoverSite } from "./discover.ts";
 import type { DocVersion, Found, RankMode, ReadingIndex } from "./docs.ts";
 import { DocIndex } from "./docs.ts";
 import type { EgressOptions } from "./egress.ts";
+import type { ExtractOptions, ExtractResult, FieldClaim } from "./extract.ts";
+import { extractDocument } from "./extract.ts";
 import type { CrawlOptions, CrawlRun } from "./frontier.ts";
 import { crawlSite } from "./frontier.ts";
 import { SqliteHostStateStore } from "./hoststate.ts";
@@ -369,9 +371,20 @@ export interface PoliteCrawler {
   diff?(doc: string, options?: DiffOptions): Promise<DiffResult>;
   /** This optional list keeps the pages that the crawler checks again on a schedule. `openCrawler` gives it. */
   readonly watch?: WatchList;
+  // ── extract ──
+  /**
+   * This optional method checks the proposed values of fields against a stored document, and it
+   * locates each value. It does not make values. It sends no request. `openCrawler` gives it.
+   */
+  extract?(
+    doc: string,
+    fields: Readonly<Record<string, FieldClaim>>,
+    options?: ExtractOptions,
+  ): Promise<ExtractResult>;
+  // ── end of extract ──
 }
 
-/** This crawler is the result of `openCrawler`: a `PoliteCrawler` with `discover`, `crawl`, `diff` and `watch`. */
+/** This crawler is the result of `openCrawler`: a `PoliteCrawler` with `discover`, `crawl`, `diff`, `watch` and `extract`. */
 export interface OpenedCrawler extends PoliteCrawler {
   /** This method finds the pages of a site from its sitemaps and its feeds. */
   discover(site: string, options?: DiscoverOptions): Promise<DiscoverResult>;
@@ -381,6 +394,15 @@ export interface OpenedCrawler extends PoliteCrawler {
   diff(doc: string, options?: DiffOptions): Promise<DiffResult>;
   /** This list keeps the pages that the crawler checks again on a schedule, in `watch.sqlite`. */
   readonly watch: WatchList;
+  /**
+   * This method checks the proposed values of fields against a stored document. Each field gets
+   * `verified`, `normalized`, `ambiguous`, `not-found`, `held-back` or `invalid`.
+   */
+  extract(
+    doc: string,
+    fields: Readonly<Record<string, FieldClaim>>,
+    options?: ExtractOptions,
+  ): Promise<ExtractResult>;
 }
 
 /**
@@ -474,6 +496,12 @@ export const openCrawler = (options: OpenOptions): OpenedCrawler => {
       await live();
       return verifyQuote(runtime, id, quote, verifyOptions);
     },
+    // ── extract ──
+    async extract(id, fields, extractOptions = {}) {
+      await live();
+      return extractDocument(runtime, id, fields, extractOptions);
+    },
+    // ── end of extract ──
     async versions(id, versionOptions = {}) {
       await live();
       // a held-back version shows no title, as a read of its capture does

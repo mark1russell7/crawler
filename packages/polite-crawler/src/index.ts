@@ -17,6 +17,7 @@
  * - The watch list: `WatchStore` and `runWatch`.
  * - The archived fallback: the types of an archived copy, `archivedDocId` and `archiveExtractor`.
  * - Signed requests (Web Bot Auth): `createWebBotAuthSigner`, `keyDirectory` and `verifySignature`.
+ * - The check of proposed field values against a stored page: `checkFields` and `extractDocument`.
  *
  * The other entry points give the rest:
  *
@@ -89,6 +90,23 @@ export type { EgressOptions } from "./egress.ts";
 export type { Archived, WebArchive } from "./fallback.ts";
 export { archiveExtractor, archivedDocId } from "./fallback.ts";
 export { EgressRefused, egressLookup } from "./egress.ts";
+// ── extract ──
+export type {
+  ExtractOptions,
+  ExtractResult,
+  ExtractSource,
+  ExtractSummary,
+  FieldCandidate,
+  FieldCheck,
+  FieldClaim,
+  FieldKind,
+  FieldResult,
+  FieldSpan,
+  FieldStatus,
+  FieldsChecked,
+} from "./extract.ts";
+export { FIELD_KINDS, checkFields, extractDocument } from "./extract.ts";
+// ── end of extract ──
 export type {
   CrawlOptions,
   CrawlPage,

@@ -96,6 +96,7 @@ describe("the MCP server over standard input and output", () => {
       expect(listed.tools.map((tool) => tool.name).sort()).toEqual([
         "crawl_diff",
         "crawl_discover",
+        "crawl_extract",
         "crawl_fetch",
         "crawl_find",
         "crawl_read",

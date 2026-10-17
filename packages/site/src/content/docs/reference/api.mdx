@@ -1,6 +1,6 @@
 ---
 title: Library API
-description: "The library API of polite-crawler: openCrawler and its options, fetch, find, read, verify, discover, crawl, diff, watch and reindex, and the parts that you can import alone."
+description: "The library API of polite-crawler: openCrawler and its options, fetch, find, read, verify, extract, discover, crawl, diff, watch and reindex, and the parts that you can import alone."
 ---
 
 ```ts title="The import"
@@ -102,6 +102,38 @@ The method finds a quote in a stored document, and gives a promise. It ignores c
 - With `at`, it examines only the version that was current at that time. A time before the first capture gives `found: false` and `before_first: true`.
 - A page that refuses AI input gives `found: false` and `held_back: true`, unless `userProvided` is true.
 - An earlier version that refused AI input stays held back after a later capture drops the signal. With no option, the method does not examine it, and the note says so.
+
+### `extract(doc, fields, options?)`
+
+The method checks the values that you propose for the fields of a stored document, and gives a promise. It does not make values. It only checks and locates the values that it gets. It sends no request.
+
+```ts title="A check of three fields"
+const result = await crawler.extract(page.doc!, {
+  price: { value: "4.50 EUR", kind: "money" },
+  since: { value: "2026-03-04", kind: "date" },
+  offer: { value: "4.50", kind: "json-ld:Product.offers.price" },
+});
+// a page that says "€4,50" gives "normalized", with the span of "€4,50" and its capture
+const { status, normalization, span, capture } = result.fields["price"]!;
+```
+
+| Option | Type | What it does |
+| --- | --- | --- |
+| `capture` | `string` | Check the version of this capture, not the current version. |
+| `at` | `string \| Date` | Check the version that was current at this time. Give `capture` or `at`, not the two. |
+| `userProvided` | `boolean` | Check a page that refuses AI input. Use it only for a URL that a person gave. The crawler logs it. |
+
+Each field has a `value` (a text or a number) and a `kind`: `text`, `number`, `money`, `date`, `url`, `email`, `phone` or `json-ld:<path>`. The result of each field gives these values:
+
+- `status`: `verified` (the exact text), `normalized` (a different form), `ambiguous` (more than one meaning), `not-found`, `held-back` or `invalid`.
+- `span` (`start`, `end` and `in`) or `path`, the stored text (`raw`), an `excerpt` and the `reading` that matched.
+- `normalization`: the names of the normalizations, joined with `+`, for example `thousands-separator+number-form`.
+- `candidates`: the places of an ambiguous field, each with its `readings`. The method does not choose one.
+- `capture` and `fetched_at` of the text that the method read.
+
+A normalized match must have one meaning. `1,234`, `03/04/2026` and `$12` for `USD 12` give `ambiguous`, and the method does not guess. A page that refuses AI input gives `held-back` for each field, with no position, unless `userProvided` is true. The [README of the package](https://github.com/mark1russell7/crawler/tree/main/packages/polite-crawler#check-field-values-against-a-page) gives each normalization.
+
+`checkFields(source, fields)` does the same check on a text and its metadata, with no store.
 
 ### `versions(doc)`
 
@@ -274,4 +306,4 @@ The entry points below `polite-crawler/mcp` have no Node.js dependency, so they 
 
 The main entry point also exports `Crawler`, `CaptureLog`, `DocIndex`, `FileBlobStore`, `Extractors`, `fetchAndIndex`, `fetchPage`, `reindex` and `makeRecord`, for an application that builds its own runtime. It exports the readers that such an application uses: `extractPage`, `decodeBody`, `readPdf`, the hours reader, `parseRobots` and `decide`.
 
-The stable API is `openCrawler` with its results, `polite-crawler/mcp`, the reader entry points, and `exportWarc` and `exportWacz`. The diff, the watch list, the command line and the store on disk are stable too. The parts of the runtime are the engine: before version 1.0.0, a minor version can change them, and the changelog says so.
+The stable API is `openCrawler` with its results (`extract` too), `polite-crawler/mcp`, the reader entry points, and `exportWarc` and `exportWacz`. The diff, the watch list, the command line and the store on disk are stable too. The parts of the runtime are the engine: before version 1.0.0, a minor version can change them, and the changelog says so.

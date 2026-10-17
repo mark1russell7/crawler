@@ -130,6 +130,7 @@ describe("the MCP tools", () => {
     expect(tools.map((tool) => tool.name).sort()).toEqual([
       "crawl_diff",
       "crawl_discover",
+      "crawl_extract",
       "crawl_fetch",
       "crawl_find",
       "crawl_read",

@@ -38,9 +38,10 @@ const { values: args } = parseArgs({
     summary: { type: "string" },
   },
 });
-const DOCS = Number(args.docs);
-const WORDS = Number(args.words);
-const RUNS = Math.max(1, Number(args.runs));
+// an empty value (a workflow input that a person cleared, or a push event) takes the default
+const DOCS = Number(args.docs) || 30_000;
+const WORDS = Number(args.words) || 900;
+const RUNS = Math.max(1, Number(args.runs) || 5);
 const LIMIT = 10;
 
 // ── a seeded random source, so each run builds the same corpus and asks the same questions ──

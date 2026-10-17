@@ -1362,15 +1362,25 @@ export class Crawler {
     | { readonly error: string }
     | undefined {
     if (this.signer === undefined) return undefined;
+    let given: Readonly<Record<string, string>>;
     try {
-      const headers = this.signer.sign(target, this.clock.now());
-      return {
-        headers,
-        facts: { signed: { key_id: this.signer.keyId, agent: this.signer.signatureAgent } },
-      };
+      given = this.signer.sign(target, this.clock.now());
     } catch (error) {
       return { error: `the signer did not sign the request: ${messageOf(error)}` };
     }
+    // a signer adds headers: it cannot replace the User-Agent, From or another header of the crawler
+    const headers: Record<string, string> = {};
+    for (const [name, value] of Object.entries(given)) {
+      const lower = name.toLowerCase();
+      if (RESERVED_HEADERS.has(lower)) continue;
+      if (typeof value !== "string" || !HEADER_TEXT.test(value))
+        return { error: `the signer gave a ${lower} header that HTTP cannot send` };
+      headers[lower] = value;
+    }
+    return {
+      headers,
+      facts: { signed: { key_id: this.signer.keyId, agent: this.signer.signatureAgent } },
+    };
   }
   // ── end of signed requests ──
 

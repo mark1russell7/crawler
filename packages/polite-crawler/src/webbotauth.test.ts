@@ -574,6 +574,28 @@ describe("signed requests in the crawler", () => {
     expect(page.note).toBe("the signer did not sign the request: the hardware key is locked");
   });
 
+  it("lets a signer of its own add headers, never replace the User-Agent or From", async () => {
+    const { crawler, seen } = await setup({
+      from: "ops@example.org",
+      signer: {
+        keyId: "k",
+        signatureAgent: "https://signature-agent.test",
+        sign: () => ({
+          "User-Agent": "SomeoneElse/1.0",
+          From: "other@example.org",
+          Signature: "own=:AAAA:",
+        }),
+      },
+    });
+    await crawler.fetch({ url: "https://b.example:8443/next", mode: "api", recipe: "x" });
+    await crawler.close();
+    expect(seen[0]!.headers).toMatchObject({
+      "user-agent": "PoliteCrawler/0.1 (test)",
+      from: "ops@example.org",
+      signature: "own=:AAAA:",
+    });
+  });
+
   it("refuses a bad key when the crawler is made", async () => {
     await expect(
       setup({

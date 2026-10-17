@@ -617,12 +617,18 @@ export const archivedCopy = async (
     "the current robots.txt of the site disallows the page for this agent, so the crawler gives no archived copy (archiveDespiteRobots permits one)";
   if (reason === "robots" && !despite) return { fromCache: false, notes: [refused] };
   // the rules now: a stop does not tell them, and the content signals of the site apply to the copy
-  const rules = await runtime.crawler.robotsAllow(target.href, {
-    onBehalfOf: options.onBehalfOf,
-    scope: options.scope,
-    labels: options.labels,
-    signal: options.signal,
-  });
+  let rules: Awaited<ReturnType<CrawlRuntime["crawler"]["robotsAllow"]>>;
+  try {
+    rules = await runtime.crawler.robotsAllow(target.href, {
+      onBehalfOf: options.onBehalfOf,
+      scope: options.scope,
+      labels: options.labels,
+      signal: options.signal,
+    });
+  } catch {
+    // a cancel during the check: the result of the live fetch stays, with no copy
+    return { fromCache: false, notes: ["the fallback stopped before it read robots.txt"] };
+  }
   if (!rules.allowed && (rules.note ?? "").startsWith(ROBOTS_DISALLOW) && !despite)
     return { fromCache: false, notes: [refused] };
   const signalLines = rules.signals ?? [];

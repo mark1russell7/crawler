@@ -8,21 +8,55 @@ Change this file and the tracker together. Each item has an id, a status, an are
 
 ### `rel011`: Release 0.1.1
 
-A patch release (a new feature before 1.0.0 raises the patch version) with the cache check memo and the ranking option. Merging the version change publishes it from CI.
+Pull request #3 is merged. CI publishes 0.1.1 when the trust step is done. New features stay on branches until then, so 0.1.1 ships only what its changelog lists.
 
 - Area: Release and CI
 - Waits for: `a13`, `s30`, `stdrelease`
-- What Mark does: At 20:16 UTC today or later, run the npm trust step with the session markt-54. It needs your security key. markt-54 merges pull request #3 when CI passes, and CI then publishes 0.1.1.
+- What Mark does: At 20:16 UTC today or later, run the npm trust step with the session markt-54. It needs your security key.
 - Started: 2026-10-17
 - [Pull request #3](https://github.com/mark1russell7/crawler/pull/3)
 
+## In progress
+
 ### `w12`: A DOI for the study, and a press contact (W-12)
 
-Optional. A DOI makes the robots.txt study citable, and a press contact gives reporters an address.
+Mark said yes. The study is packaged as a CC BY 4.0 dataset, and a workflow creates a Zenodo draft with a reserved DOI for Mark to publish. The study page shows the DOI, a citation and the press contact.
 
 - Area: Site and growth
-- What Mark does: Optional: say whether to mint a Zenodo DOI for the robots.txt study, and which address to show for press.
+- Started: 2026-10-17
 - [The study](https://mark1russell7.github.io/crawler/)
+
+### `sitemaps`: Find pages from sitemaps and feeds
+
+Discover a site's pages from its sitemap and feeds, with robots.txt checked before any fetch.
+
+- Area: Package
+- Waits for: `pub010`
+- Started: 2026-10-17
+
+### `frontier`: A small crawl frontier with a budget
+
+Follow links within a site up to a page and time budget, still one polite request at a time per host.
+
+- Area: Package
+- Waits for: `sitemaps`
+- Started: 2026-10-17
+
+### `warc`: Export the store as WARC or WACZ
+
+Give the stored captures to archive tools in the standard web archive formats.
+
+- Area: Package
+- Waits for: `pub010`
+- Started: 2026-10-17
+
+### `conformance`: A conformance page for the standards
+
+Show on the site, test by test, how the crawler follows RFC 9309 (robots.txt), RFC 9111 (caching) and the AI preference signals.
+
+- Area: Site and growth
+- Waits for: `rel011`
+- Started: 2026-10-17
 
 ## Blocked
 
@@ -43,20 +77,6 @@ jarvis deletes its local stream code (marked TODO(npm)) and imports the released
 - Blocked: It waits for @procedures 0.7.0 on npm.
 
 ## Later
-
-### `sitemaps`: Find pages from sitemaps and feeds
-
-Discover a site's pages from its sitemap and feeds, with robots.txt checked before any fetch.
-
-- Area: Package
-- Waits for: `rel011`
-
-### `frontier`: A small crawl frontier with a budget
-
-Follow links within a site up to a page and time budget, still one polite request at a time per host.
-
-- Area: Package
-- Waits for: `sitemaps`
 
 ### `fallback`: An archived copy after a refusal
 
@@ -79,25 +99,11 @@ jarvis's morning recheck of venue hours runs on the package's watch feature inst
 - Area: jarvis
 - Waits for: `watch`, `j7`
 
-### `warc`: Export the store as WARC or WACZ
-
-Give the stored captures to archive tools in the standard web archive formats.
-
-- Area: Package
-- Waits for: `rel011`
-
 ### `botauth`: Signed requests (Web Bot Auth)
 
 A hook to sign requests, so a site can verify that a request really comes from this crawler.
 
 - Area: Package
-- Waits for: `rel011`
-
-### `conformance`: A conformance page for the standards
-
-Show on the site, test by test, how the crawler follows RFC 9309 (robots.txt), RFC 9111 (caching) and the AI preference signals.
-
-- Area: Site and growth
 - Waits for: `rel011`
 
 ### `daemon`: A daemon mode, with MCP tasks for long jobs

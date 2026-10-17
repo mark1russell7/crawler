@@ -4,7 +4,7 @@ This folder holds `robots_test.cc` of [google/robotstxt](https://github.com/goog
 
 ## The test
 
-`src/robots.conformance.test.ts` reads the file. Each EXPECT of the file is one case for `parseRobots`, `decide`, `isProductToken` and `normalizePath`. The file has 201 cases:
+`src/test-google.ts` reads the file, and `src/robots.conformance.test.ts` checks each case. Each EXPECT of the file is one case for `parseRobots`, `decide`, `isProductToken` and `normalizePath`. The file has 201 cases:
 
 - 172 cases give the result of Google.
 - 12 cases differ on purpose. The test lists each one with its reason, and RFC 9309 gives most of the reasons. For example, polite-crawler reads no line without a colon, and it does not cut a long line.
@@ -13,6 +13,8 @@ This folder holds `robots_test.cc` of [google/robotstxt](https://github.com/goog
 
 The test also checks that the number of cases agrees with the number of EXPECTs in the file. Thus no case can go out of the test with no reason.
 
+The [Standards page](https://mark1russell7.github.io/crawler/reference/standards/) of the site reads the same cases with `src/test-google.ts` when the site builds. Thus the page shows the numbers and the differences of the test.
+
 ## A new version of the file
 
-To use a newer version, copy the file again from GitHub and write its commit here. Then start the test, and update the list of differences with a reason for each one.
+To use a newer version, copy the file again from GitHub. Write its commit here and in `GOOGLE_COMMIT` of `src/test-google.ts`. Then start the test, and update the list of differences with a reason for each one.

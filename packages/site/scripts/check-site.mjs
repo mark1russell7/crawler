@@ -107,6 +107,20 @@ for (const same of [
   if (!(dataset?.sameAs ?? []).some((url) => url.startsWith(same)))
     problems.push(`the Dataset of the study has no sameAs ${same}`);
 }
+// the creator of the dataset names the press contact (src/lib/cite.ts)
+const press = dataset?.creator?.contactPoint;
+if (
+  press?.["@type"] !== "ContactPoint" ||
+  press.contactType !== "press" ||
+  !press.email?.includes("@")
+)
+  problems.push("the Dataset of the study has no press contactPoint on its creator");
+// a DOI is an address at doi.org, and the page shows no DOI before study-doi.json names one
+if (
+  dataset?.identifier !== undefined &&
+  !String(dataset.identifier).startsWith("https://doi.org/10.")
+)
+  problems.push(`the Dataset of the study has the identifier ${String(dataset.identifier)}`);
 
 const browser = await chromium.launch();
 const context = await browser.newContext();

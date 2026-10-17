@@ -17,9 +17,13 @@ head:
       content: https://mark1russell7.github.io/crawler/og-robots-study.png
 ---
 
+import { Code } from "@astrojs/starlight/components";
 import study from "../../../data/robots-study.json";
+import studyDoi from "../../../data/study-doi.json";
+import { PRESS_CONTACT, bibtex, datasetCitation, doiOf, doiUrl } from "../../../lib/cite.ts";
 import { DATA_LICENSE, STUDY_AUTHOR, agentRows, companies, formatDay, oneIn, pack, summarize } from "../../../lib/study.ts";
 import StudyData from "../../../components/StudyData.astro";
+import CopyText from "../../../components/CopyText.tsx";
 import {
   AnswerChart,
   CompanyChart,
@@ -39,6 +43,7 @@ export const csvUrl = `${base}/data/robots-study.csv`;
 export const day = formatDay(study.fetched.from);
 export const blocked403 = s.blockedStatuses.find((entry) => entry.status === 403)?.sites ?? 0;
 export const pageUrl = "https://mark1russell7.github.io/crawler/notes/robots-txt-ai-agents/";
+export const doi = doiOf(study, studyDoi);
 
 <p class="pc-byline">
   By <a href={STUDY_AUTHOR.url}>{STUDY_AUTHOR.name}</a>. The crawler read the files on <time datetime={s.fetchedOn}>{day}</time>. The data is under <a href={DATA_LICENSE.url}>{DATA_LICENSE.name}</a>.
@@ -91,7 +96,7 @@ The Tranco list ranks domains, not websites. Many of the top domains serve a con
 The study puts each answer into one of four states:
 
 - **A robots.txt file** ({s.withFile} sites). The verdicts come from the rules of the file.
-- **No file** ({s.noFile} sites). These sites gave a 404 or a 410, or an empty file. They state no rules, so each agent is permitted.
+- **No file** ({s.noFile} sites). These sites gave a 404 or a 410. They state no rules, so each agent is permitted.
 - **Blocked at the edge** ({s.blocked} sites). The server answered with a refusal, a challenge or an error in place of the file. {blocked403} sites gave a 403, and {s.challenges} gave a challenge, for example a CAPTCHA page. The other sites gave a different 4xx, a 429 or a 5xx.
 - **Unreachable** ({s.unreachable} domains). The crawler got no file that it could read. {s.dns} domains have no address in the DNS. In place of the file, {s.html} sites gave an HTML page (a home page or a sign-in page), so the crawler fetches nothing there. The other domains gave a TLS error, a timeout or a closed connection. {s.redirects} sent more than 5 redirects, and {s.undecodable} sent a body that the crawler could not decode.
 
@@ -144,12 +149,27 @@ When a page refuses AI input, polite-crawler keeps the page but holds back its t
 
 The data and the text of this study are under the <a href={DATA_LICENSE.url}>{DATA_LICENSE.name}</a> license. You can use them for any purpose when you name the source. The code of polite-crawler and the script are under the MIT license.
 
-## How to cite
+## Cite this study
 
 <figure class="pc-cite not-content">
   <figcaption>Name the author, the title, the date and the address:</figcaption>
   <p>{STUDY_AUTHOR.name}. "Who lets AI agents in? The robots.txt rules of the top 1,000 domains." polite-crawler field notes, {day}. <a href={pageUrl}>{pageUrl}</a>. Data: {DATA_LICENSE.name}.</p>
 </figure>
+
+{doi !== undefined && (
+  <figure class="pc-cite not-content">
+    <figcaption>To cite the data, use its DOI on Zenodo:</figcaption>
+    <p>{datasetCitation(study)} Zenodo. <a href={doiUrl(doi)}>{doiUrl(doi)}</a></p>
+  </figure>
+)}
+
+<Code code={bibtex(study, doi)} lang="bibtex" title="BibTeX" />
+
+### Press contact
+
+For questions from the press about this study, write to this address:
+
+<CopyText client:visible text={PRESS_CONTACT.email} label="the press address" href={`mailto:${PRESS_CONTACT.email}`} linkText="Write an email" />
 
 ## Find a site
 

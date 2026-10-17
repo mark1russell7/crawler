@@ -8,6 +8,8 @@ import { defineRouteMiddleware } from "@astrojs/starlight/route-data";
 import pkg from "polite-crawler/package.json";
 import font from "../node_modules/@fontsource-variable/atkinson-hyperlegible-next/files/atkinson-hyperlegible-next-latin-wght-normal.woff2?url";
 import study from "./data/robots-study.json";
+import studyDoi from "./data/study-doi.json";
+import { STUDY_KEYWORDS, datasetCreator, doiOf, doiUrl } from "./lib/cite.ts";
 import type { Study } from "./lib/study.ts";
 import { DATA_LICENSE, STUDY_AUTHOR, headline, summarize } from "./lib/study.ts";
 
@@ -37,11 +39,15 @@ const studyDescription = (): string => {
   return `${String(Math.round(gpt.share))}% of the top 1,000 domains that answered block GPTBot in robots.txt, and ${String(Math.round(claudeUser.share))}% block Claude-User. See the rule behind each verdict.`;
 };
 
-/** The structured data of the study: the dataset and the article. */
+/**
+ * The structured data of the study: the dataset and the article. The dataset names the press contact
+ * on its creator, and its DOI when Zenodo has published the record.
+ */
 const studyData = (url: string, title: string, description: string): unknown => {
   const data = study as unknown as Study;
   const summary = summarize(data);
   const modified = data.fetched.from.slice(0, 10);
+  const doi = doiOf(data, studyDoi);
   return {
     "@context": "https://schema.org",
     "@graph": [
@@ -62,19 +68,9 @@ const studyData = (url: string, title: string, description: string): unknown => 
         name: "The robots.txt rules for AI agents of the top 1,000 domains",
         description: `For each of the top ${String(summary.listSize)} domains of the Tranco list ${data.list.id}: the state of the answer, the robots.txt verdict for ${String(data.agents.length)} user agents (${data.agents.map((agent) => agent.token).join(", ")}), the lines that decided, the content signals and the crawl delays.`,
         url,
-        keywords: [
-          "robots.txt",
-          "AI crawlers",
-          "GPTBot",
-          "ClaudeBot",
-          "Claude-User",
-          "ChatGPT-User",
-          "Google-Extended",
-          "CCBot",
-          "content signals",
-          "RFC 9309",
-        ],
-        creator: author,
+        ...(doi === undefined ? {} : { identifier: doiUrl(doi) }),
+        keywords: STUDY_KEYWORDS,
+        creator: datasetCreator(),
         datePublished: STUDY_PUBLISHED,
         dateModified: modified,
         temporalCoverage: modified,

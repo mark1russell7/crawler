@@ -50,9 +50,10 @@ export interface PageExtract {
   readonly canonical: string | null;
   /**
    * These URLs are the RSS and Atom feeds that the page links with `<link rel="alternate">`, 10 or
-   * fewer. They can be on a different site.
+   * fewer. They can be on a different site. `extractPage` always gives them. The field is optional,
+   * so a `PageExtract` of version 0.1.1 stays correct.
    */
-  readonly feeds: readonly string[];
+  readonly feeds?: readonly string[] | undefined;
   /** This URL is the target of a `<meta http-equiv="refresh">` that sends the reader on in 5 seconds or less. */
   readonly redirect: string | null;
   /**

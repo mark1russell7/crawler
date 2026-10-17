@@ -48,6 +48,12 @@ export interface RenderOptions {
   readonly maxRedirects?: number | undefined;
   /** When this signal aborts, the renderer stops the page: it closes the context, and the render rejects. */
   readonly signal?: AbortSignal | undefined;
+  /**
+   * This function gives the signature headers of one request of the page (Web Bot Auth). The route
+   * adds them to the request and to each step of its redirects. When the function gives undefined,
+   * the browser does not send the request.
+   */
+  readonly sign?: ((url: string) => Readonly<Record<string, string>> | undefined) | undefined;
 }
 
 export interface Renderer {
@@ -189,6 +195,10 @@ const withFrames = ({ html, frames }: Serialized): string => {
 const messageOf = (error: unknown): string =>
   error instanceof Error ? error.message : String(error);
 
+/** This function gives the headers with their names in lowercase, as the route sends them. */
+const lowerKeys = (headers: Readonly<Record<string, string>>): Record<string, string> =>
+  Object.fromEntries(Object.entries(headers).map(([name, value]) => [name.toLowerCase(), value]));
+
 const sleep = (ms: number): Promise<void> =>
   new Promise((resolve) => {
     setTimeout(resolve, Math.max(0, ms)).unref();
@@ -286,6 +296,7 @@ export const playwrightRenderer = (
       allowRequest,
       maxRedirects = MAX_REDIRECTS,
       signal,
+      sign,
     }: RenderOptions,
   ): Promise<Rendered> => {
     if (signal?.aborted === true)
@@ -374,6 +385,16 @@ export const playwrightRenderer = (
           ),
         );
         if (get) method = "GET";
+        // ── signed requests: each step of the redirects gets a signature for its own URL ──
+        if (sign !== undefined) {
+          const signed = sign(next.href);
+          if (signed === undefined)
+            return {
+              refusal: `the signer did not sign the request for ${next.href}`,
+              url: next.href,
+            };
+          headers = { ...headers, ...lowerKeys(signed) };
+        }
         const body = get ? undefined : (request.postDataBuffer() ?? undefined);
         response = await context!.request.fetch(next.href, {
           method,
@@ -412,8 +433,20 @@ export const playwrightRenderer = (
           await route.abort("blockedbyclient");
           return;
         }
+        // ── signed requests: a request that the signer does not sign does not go out ──
+        const signed = sign === undefined ? {} : sign(request.url());
+        if (signed === undefined) {
+          if (main)
+            refused = {
+              message: `the signer did not sign the request for ${request.url()}`,
+              url: request.url(),
+            };
+          await route.abort("blockedbyclient");
+          return;
+        }
+        const added = { ...extra, ...lowerKeys(signed) };
         const sent =
-          Object.keys(extra).length === 0
+          Object.keys(added).length === 0
             ? undefined
             : {
                 ...Object.fromEntries(
@@ -421,7 +454,7 @@ export const playwrightRenderer = (
                     ([name]) => !name.startsWith(":") && name !== "host",
                   ),
                 ),
-                ...extra,
+                ...added,
               };
         if (allowRequest === undefined) {
           await route.continue(sent === undefined ? undefined : { headers: sent });

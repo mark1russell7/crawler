@@ -1,6 +1,6 @@
 ---
 title: Command line
-description: The polite-crawler command line - fetch, find, read, verify, reindex, mcp, discover, crawl and export, with each option.
+description: The polite-crawler command line - fetch, find, read, verify, extract, reindex, mcp, discover, crawl, export, diff and watch, with each option.
 ---
 
 ```sh
@@ -15,11 +15,18 @@ npx polite-crawler <command> [options]
 | `find <query>` | It searches the stored pages. It sends no request. |
 | `read <doc>` | It prints a range of a stored document. |
 | `verify <doc> <quote>` | It finds a quote in a stored document. |
+| `extract <doc> --field name=value[:kind]` | It checks the values that you propose for the fields of a stored document. It does not make values. |
 | `reindex` | It builds the search index again from the capture log. |
 | `mcp` | It starts the MCP server on the standard input and output. |
 | `export --out <file>` | It writes the stored captures as a WARC or WACZ archive. It only reads the store. |
 | `discover <site>` | It lists the pages of a site from its sitemaps and feeds. It fetches no page of the list. |
 | `crawl <url...>` | It fetches the pages and follows their links on the same site, within a budget. |
+| `diff <doc>` | It prints what changed between two versions of a stored document. It sends no request. |
+| `watch add <url...>` | It adds the pages to the watch list, or changes the options of their watch. |
+| `watch remove <url...>` | It removes the pages from the watch list. |
+| `watch list` | It prints the watch list. |
+| `watch run` | It checks the pages that are due, within a budget, and prints what changed. |
+| `key-directory` | It prints the key directory (a JSON Web Key Set) of `--sign-key`, for you to host. |
 
 ## Options
 
@@ -31,6 +38,8 @@ These options apply to each command:
 | `--contact <text>` | `$POLITE_CRAWLER_CONTACT` | An email (in `From` and the `User-Agent`) or a URL (in the `User-Agent` only). |
 | `--allow-private` | `$POLITE_CRAWLER_ALLOW_PRIVATE=1` | Fetch loopback, private and link-local addresses too. By default, the crawler refuses them. |
 | `--no-browser` | | Do not open the headless browser. |
+| `--sign-key <file>` | `$POLITE_CRAWLER_SIGN_KEY` | Sign each request (Web Bot Auth) with this Ed25519 key: PKCS#8 PEM or a JWK. It needs `--signature-agent`. `fetch`, `discover`, `crawl`, `watch run`, `mcp` and `key-directory` take it. |
+| `--signature-agent <url>` | `$POLITE_CRAWLER_SIGNATURE_AGENT` | Where a site finds the public key: the https origin of the key directory, or the URL of a JSON Web Key Set on a path. |
 | `--json` | | Print JSON. |
 | `-v`, `--version` | | Print the version and stop. |
 | `-h`, `--help` | | Print the commands and the options, and stop. |
@@ -39,14 +48,20 @@ These options apply to one command. The command line is wrong when another comma
 
 | Command | Option | Default | What it does |
 | --- | --- | --- | --- |
-| `fetch`, `crawl` | `--render <mode>` | `auto` | `auto`, `never` or `always`. |
+| `fetch`, `crawl`, `watch add` | `--render <mode>` | `auto` | `auto`, `never` or `always`. |
 | `fetch`, `crawl`, `discover` | `--max-age <age>` | `24h` | A stored copy younger than this age answers with no request. `0` fetches the page again. |
+| `fetch` | `--archive-fallback` | | When the site refuses the page or is down, give a copy from the Wayback Machine or Common Crawl. The result marks it as archived, with its date. |
+| `fetch` | `--archive-despite-robots` | | With `--archive-fallback`: also give a copy of a page that the current robots.txt of its site disallows. |
 | `find` | `--limit <n>` | `10` | The number of results. |
 | `find` | `--kind <kind>` | all | Only this kind of document, for example `page` or `pdf`. |
 | `find` | `--rank <mode>` | `exact` | `exact` gives BM25 to each match. `fast` leaves the common words out of the documents that hold one word, so a long question is faster. |
 | `read` | `--from <n>` | `0` | The position where the range starts. |
 | `read` | `--length <n>` | `4000` | The number of characters to print. |
 | `read` | `--user-provided` | | Read a page that asked not to be AI input. Use it only for a URL that you gave yourself. The crawler records each such read. |
+| `extract` | `--field <name=value[:kind]>` | | A value to check. The kind is `text` (the default), `number`, `money`, `date`, `url`, `email`, `phone` or `json-ld:<path>`. Repeat the option for more fields. |
+| `extract` | `--capture <id>` | | Check the text of this capture, not the current text. |
+| `extract` | `--user-provided` | | Check a page that asked not to be AI input, as for `read`. |
+| `read`, `verify`, `extract` | `--at <time>` | | Use the version that was current at this time, for example `2026-10-01T12:00:00Z`. A date with no time is the start of that day in UTC. |
 | `mcp` | `--allow-user-provided` | `$POLITE_CRAWLER_ALLOW_USER_PROVIDED=1` | Let `user_provided` work when the MCP client cannot ask the user. |
 | `export` | `--out <file>` | | The archive to write. The command needs it. When the file exists, the command fails. |
 | `export` | `--format <format>` | from the name of the file | `warc` (a `.warc.gz` file) or `wacz` (a `.wacz` file). |
@@ -66,6 +81,14 @@ These options apply to one command. The command line is wrong when another comma
 | `crawl` | `--exclude <pattern>` | | Follow no URL that matches, for example `*.pdf$`. Repeat the option for more patterns. |
 | `crawl` | `--sitemaps` | | Add the pages of the sitemaps of the site, the newest first. |
 | `crawl`, `discover` | `--allow-host <host>` | | Keep the URLs on this host too. Repeat the option for more hosts. |
+| `diff` | `--from <version>` | the version before `--to` | The old version: a capture id, or a time. |
+| `diff` | `--to <version>` | the newest version | The new version: a capture id, or a time. |
+| `watch add` | `--every <time>` | `24h` | The time between two checks. The floor is `1h`, so a watch cannot hammer a site. |
+| `watch add` | `--confirm <n>` | `2` | `2`: a change counts when two checks see it. `1`: a change counts at once. |
+| `watch add` | `--scope <text>` | | A label for the captures of each check. |
+| `watch add` | `--label <name=value>` | | A label for the captures of each check. Repeat the option for more labels. |
+| `watch run` | `--budget <time>` | `10m` | The longest time of the run. No request starts after it, and an entry that it did not check stays due. |
+| `watch run` | `--max-pages <n>` | `100` | The most pages to check. |
 
 ## Export to a web archive
 
@@ -83,7 +106,7 @@ The README of the package tells what goes into the archive, what does not, and w
 | Code | Meaning |
 | --- | --- |
 | `0` | The command did its work. |
-| `1` | The command did not do its work: a page that the crawler did not fetch, no search result, a quote that is not in the document, a document that is not stored or that is held back, or an error. `discover` gives `1` when it finds no URL, and `crawl` when it gets no page. |
+| `1` | The command did not do its work: a page that the crawler did not fetch, no search result, a quote that is not in the document, a document that is not stored or that is held back, or an error. `discover` gives `1` when it finds no URL, and `crawl` when it gets no page. `read --at` and `verify --at` give `1` for a time before the first capture. `watch run` gives `1` when a check is `refused` or an `error`, or when entries stay due. With `--archive-fallback`, a page with an archived copy counts as done. `extract` gives `1` when a field is not `verified` or `normalized`. |
 | `2` | The command line is wrong. The command opens no store. |
 
 ## Examples
@@ -101,6 +124,9 @@ npx polite-crawler fetch https://example.com/ --dir ./research
 # a script that stops when a quote is not in the page
 npx polite-crawler verify "url:https://example.com/" "for use in documentation examples" || exit 1
 
+# a script that stops when a proposed price is not on the page
+npx polite-crawler extract "url:https://example.com/" --field "price=4.50 EUR:money" || exit 1
+
 # the captures of one site since 1 October, as a WACZ file for ReplayWeb.page
 npx polite-crawler export --out example.wacz --host example.com --since 2026-10-01
 
@@ -109,6 +135,16 @@ npx polite-crawler discover https://example.com/ --max-urls 200
 
 # 50 pages of the blog of a site in 2 minutes or less, one request at a time
 npx polite-crawler crawl https://example.com/blog/ --max-pages 50 --include "/blog/*" --budget 2m
+
+# the page as it was on the morning of 1 October
+npx polite-crawler read "url:https://example.com/" --at 2026-10-01T09:00:00Z
+
+# what changed since 1 October
+npx polite-crawler diff "url:https://example.com/" --from 2026-10-01
+
+# check the hours page each 6 hours: add it one time, and let cron start the run
+npx polite-crawler watch add https://example.com/hours --every 6h
+npx polite-crawler watch run --budget 5m
 ```
 
 ## Discover and crawl
@@ -121,3 +157,18 @@ npx polite-crawler crawl https://example.com/blog/ --max-pages 50 --include "/bl
 - When the budget ends, no new request starts.
 - The first `Ctrl+C` stops the crawl, and the summary prints.
 - `--json` prints the pages and the summary as one JSON object at the end.
+
+## Diff and watch
+
+`diff` prints the changed lines as a unified diff, with 2 lines of context. A changed line marks its words with `[-removed-]` and `{+added+}`. Then it prints the changes of the title, the URL and the metadata at their paths, for example `meta.jsonld[0].openingHours`.
+
+- The default compares the newest version with the version before it of the same kind (plain or rendered).
+- A large change stays bounded. The note tells when the diff is not minimal or leaves out a part.
+- A page that asked not to be AI input shows no text and no title. `diff` then gives `1`.
+
+`watch` keeps a list of pages in the file `watch.sqlite` of the store. `watch run` fetches each page that is due, with each polite rule. It prints one line for each check: `new`, `changed`, `unchanged`, `gone`, `refused` or `error`.
+
+- A change is `suspected` at its first check. The next check confirms it when it sees the same version. One read can be a glitch, so `--confirm 2` is the default.
+- A check that finds a stopped host is due again at the end of the stop.
+- Two runs at the same time check each page one time, because a run takes a lease on each page.
+- The command has no daemon. Start `watch run` with cron, a systemd timer or a different scheduler.

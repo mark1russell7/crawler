@@ -128,12 +128,15 @@ describe("the MCP tools", () => {
     const { client } = await connect(crawler);
     const { tools } = await client.listTools();
     expect(tools.map((tool) => tool.name).sort()).toEqual([
+      "crawl_diff",
       "crawl_discover",
+      "crawl_extract",
       "crawl_fetch",
       "crawl_find",
       "crawl_read",
       "crawl_site",
       "crawl_verify",
+      "crawl_watch_list",
     ]);
     for (const tool of tools) {
       const properties = (tool.inputSchema.properties ?? {}) as Record<

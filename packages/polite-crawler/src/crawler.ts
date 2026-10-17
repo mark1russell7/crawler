@@ -50,6 +50,10 @@ import type { AiInput, Signals } from "./signals.ts";
 import { NO_SIGNALS, metaSignals, readSignals } from "./signals.ts";
 import { BOT_PAGE, DEFAULT_TOKEN } from "./version.ts";
 import { cacheKeyOf } from "./urls.ts";
+// ── signed requests (Web Bot Auth) ──
+import type { RequestSigner, WebBotAuthOptions } from "./webbotauth.ts";
+import { signerOf } from "./webbotauth.ts";
+// ── end of signed requests ──
 
 /**
  * The crawler is a polite fetcher. It sends one request at a time to each host, and it obeys
@@ -129,6 +133,21 @@ export interface FetchRequest {
    * `skipped`, and its note starts with `DEADLINE_NOTE`.
    */
   readonly deadline?: number | undefined;
+  // ── archived fallback: the parts of a request to a web archive ──
+  /**
+   * This byte range is the part of the resource to fetch (a `Range` request). The crawler then sends
+   * no validators, keeps no stored copy for the URL, and reads `length` bytes at most. The capture
+   * records the range.
+   */
+  readonly range?: { readonly offset: number; readonly length: number } | undefined;
+  /** These lines of usage signals apply to the response too. A copy from a web archive gets the content signals of the robots.txt of its site. */
+  readonly signalLines?: readonly string[] | undefined;
+  /**
+   * This prefix names the response headers that hold the headers of an archived response, for
+   * example `x-archive-orig-` of the Wayback Machine. The usage signals of those headers apply too.
+   */
+  readonly originalHeaderPrefix?: string | undefined;
+  // ── end of archived fallback ──
 }
 
 export interface Fetched {
@@ -271,6 +290,14 @@ export interface CrawlerOptions {
   readonly hostState?: HostStateStore | undefined;
   /** This function gets an event for each request, response, wait, stop and skip. An error in it does not stop the crawler. */
   readonly onEvent?: ((event: CrawlEvent) => void) | undefined;
+  // ── signed requests (Web Bot Auth) ──
+  /**
+   * This signer signs each request, robots.txt and the requests of a rendered page too. Give the
+   * options of `createWebBotAuthSigner`, or a `RequestSigner`. Without it, the crawler signs nothing.
+   * A signature adds an identity: the `User-Agent` and `From` headers stay as they are.
+   */
+  readonly signer?: RequestSigner | WebBotAuthOptions | undefined;
+  // ── end of signed requests ──
 }
 
 export interface RenderRequest {
@@ -371,7 +398,33 @@ const CREDENTIAL_HEADERS: ReadonlySet<string> = new Set([
   "proxy-authorization",
 ]);
 /** The crawler sends the same value of these headers in each request, so a `Vary` on them changes nothing. */
-const CONSTANT_HEADERS: ReadonlySet<string> = new Set(["accept-encoding", "user-agent", "from"]);
+const CONSTANT_HEADERS: ReadonlySet<string> = new Set([
+  "accept-encoding",
+  "user-agent",
+  "from",
+  // ── signed requests: the identity is the same in each request ──
+  "signature",
+  "signature-input",
+  "signature-agent",
+]);
+// ── signed requests (Web Bot Auth) ──
+/** With a signer, the crawler sets these headers, and a caller cannot. */
+const SIGNATURE_HEADERS: ReadonlySet<string> = new Set([
+  "signature",
+  "signature-input",
+  "signature-agent",
+]);
+// ── end of signed requests ──
+// ── archived fallback ──
+/** These response headers hold usage signals. With `originalHeaderPrefix`, the archived forms of them count too. */
+const SIGNAL_HEADERS = [
+  "content-usage",
+  "content-signal",
+  "x-robots-tag",
+  "tdm-reservation",
+  "tdm-policy",
+] as const;
+// ── end of archived fallback ──
 /**
  * These content codings change nothing in the body. A server that stored an object with
  * `aws-chunked` can send the name with the decoded body.
@@ -1010,8 +1063,14 @@ export class Crawler {
   private readonly pageTokens: readonly string[];
   /** The deadlines of the requests that have one, by the signal that the scheduler gets for each of them. */
   private readonly deadlines = new WeakMap<AbortSignal, number>();
+  // ── signed requests (Web Bot Auth) ──
+  /** This signer signs each request. It holds the key, and the crawler writes only its key id and its agent. */
+  private readonly signer: RequestSigner | undefined;
+  // ── end of signed requests ──
 
   constructor(private readonly options: CrawlerOptions) {
+    // ── signed requests: a bad key throws here, as each bad option does ──
+    this.signer = signerOf(options.signer);
     if (!isProductToken(options.token)) {
       throw new Error(
         `the token "${options.token}" is not a product token: use only letters, "_" and "-" (RFC 9309)`,
@@ -1289,12 +1348,51 @@ export class Crawler {
     };
   }
 
+  // ── signed requests (Web Bot Auth) ──
+  /**
+   * This method gives the signature headers of one request, and the facts of the capture: the key id
+   * and the agent. With no signer, it gives nothing. A signer that throws gives the note of a skip,
+   * because the crawler sends no unsigned request when it has a signer.
+   */
+  private signFor(target: URL):
+    | {
+        readonly headers: Readonly<Record<string, string>>;
+        readonly facts: Record<string, unknown>;
+      }
+    | { readonly error: string }
+    | undefined {
+    if (this.signer === undefined) return undefined;
+    let given: Readonly<Record<string, string>>;
+    try {
+      given = this.signer.sign(target, this.clock.now());
+    } catch (error) {
+      return { error: `the signer did not sign the request: ${messageOf(error)}` };
+    }
+    // a signer adds headers: it cannot replace the User-Agent, From or another header of the crawler
+    const headers: Record<string, string> = {};
+    for (const [name, value] of Object.entries(given)) {
+      const lower = name.toLowerCase();
+      if (RESERVED_HEADERS.has(lower)) continue;
+      if (typeof value !== "string" || !HEADER_TEXT.test(value))
+        return { error: `the signer gave a ${lower} header that HTTP cannot send` };
+      headers[lower] = value;
+    }
+    return {
+      headers,
+      facts: { signed: { key_id: this.signer.keyId, agent: this.signer.signatureAgent } },
+    };
+  }
+  // ── end of signed requests ──
+
   private requestHeaders(request_: FetchRequest): Record<string, string> {
     const headers: Record<string, string> = {};
     // the caller's headers go first, so the crawler's own headers replace them
     for (const [name, value] of Object.entries(request_.headers ?? {})) {
       const lower = name.toLowerCase();
-      if (!RESERVED_HEADERS.has(lower)) headers[lower] = value;
+      if (RESERVED_HEADERS.has(lower)) continue;
+      // with a signer, the signature headers are the crawler's own
+      if (this.signer !== undefined && SIGNATURE_HEADERS.has(lower)) continue;
+      headers[lower] = value;
     }
     headers["accept"] = request_.accept ?? headers["accept"] ?? "*/*";
     headers["user-agent"] = this.options.userAgent;
@@ -1561,6 +1659,10 @@ export class Crawler {
       request_.scope ?? null,
       request_.labels ?? null,
       request_.deadline ?? null,
+      // ── archived fallback ──
+      request_.range ?? null,
+      request_.signalLines ?? null,
+      request_.originalHeaderPrefix ?? null,
     ]);
     const running = this.inFlight.get(key);
     if (running !== undefined) return running;
@@ -1680,7 +1782,12 @@ export class Crawler {
       readonly labels?: Readonly<Record<string, string>> | undefined;
       readonly signal?: AbortSignal | undefined;
     } = {},
-  ): Promise<{ readonly allowed: boolean; readonly note: string | undefined }> {
+  ): Promise<{
+    readonly allowed: boolean;
+    readonly note: string | undefined;
+    /** These are the lines of usage signals (`Content-Signal`) of robots.txt that apply to the URL, when there are any. The archived fallback applies them to a copy. */
+    readonly signals?: readonly string[] | undefined;
+  }> {
     let target: URL;
     try {
       target = new URL(url);
@@ -1695,12 +1802,18 @@ export class Crawler {
       return { allowed: false, note: `not a valid product token: "${badToken}"` };
     const work = this.robotsFor(target, this.policyOf(target), options);
     const verdict = await (options.signal === undefined ? work : raceAbort(work, options.signal));
-    const decision = decide(verdict.robots, tokens, `${target.pathname}${target.search}`);
+    const path = `${target.pathname}${target.search}`;
+    const decision = decide(verdict.robots, tokens, path);
+    // ── archived fallback: the content signals of the site apply to an archived copy ──
+    // (only when robots.txt has such lines, so the result of a plain robots.txt stays the same)
+    const lines = signalsFor(verdict.robots, tokens, path);
+    const signals = lines.length > 0 ? { signals: lines } : {};
     return decision.allowed
-      ? { allowed: true, note: undefined }
+      ? { allowed: true, note: undefined, ...signals }
       : {
           allowed: false,
           note: robotsRefusal(verdict.robots, decision.by ?? this.options.token),
+          ...signals,
         };
   }
 
@@ -1827,6 +1940,17 @@ export class Crawler {
         return request_.labels;
       },
     };
+    // ── archived fallback: a range is a part of a resource, never its stored copy ──
+    const range = request_.range;
+    const badRange =
+      range === undefined ||
+      (Number.isSafeInteger(range.offset) &&
+        range.offset >= 0 &&
+        Number.isSafeInteger(range.length) &&
+        range.length >= 1)
+        ? undefined
+        : `invalid option: range is ${JSON.stringify(range)}`;
+    // ── end of archived fallback ──
     const admission = await this.admit({
       transport: "http",
       url: request_.url,
@@ -1836,16 +1960,20 @@ export class Crawler {
       invalid:
         invalidNumber("minIntervalMs", request_.minIntervalMs, false) ??
         invalidNumber("maxBytes", request_.maxBytes, false) ??
-        invalidNumber("maxAgeMs", request_.maxAgeMs, true),
+        invalidNumber("maxAgeMs", request_.maxAgeMs, true) ??
+        badRange,
       onBehalfOf: request_.onBehalfOf,
       scope: request_.scope,
       labels: request_.labels,
-      cached: (url) => this.fromCache(url, "plain", request_.maxAgeMs, sent, secretParams),
+      cached: (url) =>
+        range !== undefined
+          ? Promise.resolve(undefined)
+          : this.fromCache(url, "plain", request_.maxAgeMs, sent, secretParams),
     });
     if ("answer" in admission) return admission.answer;
     const { target, url, host, policy, check, robotsLines, crawlDelaySeconds, skip } =
       admission.admitted;
-    const maxBytes = request_.maxBytes ?? policy.maxBytes;
+    const maxBytes = Math.min(request_.maxBytes ?? policy.maxBytes, range?.length ?? Infinity);
     const rest = (elapsedMs: number): RestInput => ({
       kind: request_.mode,
       elapsedMs,
@@ -1859,11 +1987,15 @@ export class Crawler {
         host,
         async (): Promise<Paced<Step>> => {
           // an equal request that waited in the queue can find a fresh copy now
-          const again = await this.fromCache(url, "plain", request_.maxAgeMs, sent, secretParams);
+          const again =
+            range === undefined
+              ? await this.fromCache(url, "plain", request_.maxAgeMs, sent, secretParams)
+              : undefined;
           if (again !== undefined) return { value: again, delayMs: 0 };
           // no request starts at or after its deadline
           this.beforeDeadline(request_.deadline);
-          const latest = this.lookup(url);
+          // a range sends no validators: a 304 for a part has no stored body
+          const latest = range === undefined ? this.lookup(url) : undefined;
           // validators go only with a stored body of the same variant, so a 304 always has a body
           const usable =
             latest !== undefined && latest.truncated !== true && varyMatches(latest.vary_key, sent)
@@ -1889,6 +2021,19 @@ export class Crawler {
           const validators = ["if-none-match", "if-modified-since"].filter(
             (name) => headers[name] !== undefined,
           );
+          // ── archived fallback: the part of a WARC file ──
+          const rangeText =
+            range === undefined
+              ? undefined
+              : `bytes=${String(range.offset)}-${String(range.offset + range.length - 1)}`;
+          if (rangeText !== undefined) headers["range"] = rangeText;
+          // ── signed requests: the signature is made last, for this URL at this time ──
+          const signed = this.signFor(target);
+          if (signed !== undefined && "error" in signed)
+            return { value: { fetched: await skip(signed.error) }, delayMs: 0 };
+          if (signed !== undefined) Object.assign(headers, signed.headers);
+          const signedFacts = signed?.facts ?? {};
+          // ── end of signed requests ──
           const started = this.clock.now();
           const timeout = AbortSignal.timeout(policy.requestTimeoutMs);
           const abort = AbortSignal.any([timeout, signal]);
@@ -1933,6 +2078,8 @@ export class Crawler {
                 note,
                 elapsed_ms: elapsedMs,
                 ...(check ? { robots_check: check } : {}),
+                ...(rangeText !== undefined ? { range: rangeText } : {}),
+                ...signedFacts,
               },
               url,
               marks,
@@ -2034,7 +2181,21 @@ export class Crawler {
           }
 
           const revisit = outcome === "not-modified" && usable !== undefined;
-          let signals = readSignals(robotsLines, header, pageSignals(body, header("content-type")));
+          // ── archived fallback: the signals of the site and of the archived headers apply to a copy ──
+          const prefix = request_.originalHeaderPrefix?.toLowerCase();
+          const archivedLines =
+            prefix === undefined
+              ? []
+              : SIGNAL_HEADERS.flatMap((name) => {
+                  const value = header(`${prefix}${name}`);
+                  return value === undefined ? [] : [`${prefix}${name}: ${value}`];
+                });
+          let signals = readSignals(
+            [...robotsLines, ...(request_.signalLines ?? []), ...archivedLines],
+            header,
+            pageSignals(body, header("content-type")),
+          );
+          // ── end of archived fallback ──
           if (revisit) {
             // a 304 updates the stored answer and does not replace it (RFC 9111 §4.3.4)
             const merged: AiInput =
@@ -2114,18 +2275,22 @@ export class Crawler {
               ...(varyKey !== null ? { vary_key: varyKey } : {}),
               ...(location !== undefined ? { location } : {}),
               ...(note !== undefined ? { note } : {}),
+              ...(rangeText !== undefined ? { range: rangeText } : {}),
+              ...signedFacts,
             },
             url,
             marks,
           );
           const fetchedIso = new Date(fetchedAt).toISOString();
           // a body that the server cut is not a copy to keep: the next request asks for the whole body
+          // (a range is a part of the resource, so it is not the stored copy of the URL either)
           if (
             capture !== undefined &&
             (outcome === "ok" || outcome === "not-modified") &&
             blob !== undefined &&
             !cut &&
-            !unasked
+            !unasked &&
+            range === undefined
           ) {
             this.store({
               url,
@@ -2401,6 +2566,25 @@ export class Crawler {
         : AbortSignal.any([request_.signal, this.closing.signal]);
     const tally = { allowed: 0, refused: 0, hosts: new Set<string>() };
     const allowRequest = this.allowRequestFor(target, verdict.robots, tokens, signal, tally);
+    // ── signed requests: the browser signs each request of the page, or does not send it ──
+    const sign =
+      this.signer === undefined
+        ? undefined
+        : (raw: string): Readonly<Record<string, string>> | undefined => {
+            let to: URL;
+            try {
+              to = new URL(raw);
+            } catch {
+              return undefined;
+            }
+            const signed = this.signFor(to);
+            return signed === undefined || "error" in signed ? undefined : signed.headers;
+          };
+    const signedFacts =
+      this.signer === undefined
+        ? {}
+        : { signed: { key_id: this.signer.keyId, agent: this.signer.signatureAgent } };
+    // ── end of signed requests ──
     const rest = (elapsedMs: number): RestInput => ({
       kind: "render",
       elapsedMs,
@@ -2434,6 +2618,7 @@ export class Crawler {
                 allowRequest,
                 maxRedirects: policy.maxRedirects,
                 signal,
+                ...(sign === undefined ? {} : { sign }),
               }),
               signal,
             );
@@ -2548,6 +2733,7 @@ export class Crawler {
           elapsed_ms: done.elapsedMs,
           robots_check: check,
           subrequests,
+          ...signedFacts,
         },
         url,
         marks,
@@ -2575,6 +2761,7 @@ export class Crawler {
           elapsed_ms: done.elapsedMs,
           robots_check: check,
           subrequests,
+          ...signedFacts,
         },
         url,
         marks,
@@ -2674,6 +2861,7 @@ export class Crawler {
         subrequests,
         ...(freshness !== null ? { fresh_until: freshness } : {}),
         ...(note !== undefined ? { note } : {}),
+        ...signedFacts,
       },
       url,
       marks,
@@ -2725,6 +2913,22 @@ export class Crawler {
       if (unreachable && (name === undefined || key.endsWith(`//${name}`))) this.robots.delete(key);
     }
   }
+
+  // ── watch: the stop of a host ─────────────────────────────────────────────
+
+  /**
+   * This method gives the stop of the host of a URL, or undefined when the host is not stopped. A
+   * watch uses it, so a page of a stopped host is due again at the end of the stop.
+   */
+  hostStop(url: string): ReturnType<HostStateStore["stopped"]> {
+    try {
+      return this.scheduler.store.stopped(hostKey(new URL(url)), this.clock.now());
+    } catch {
+      return undefined;
+    }
+  }
+
+  // ── end of watch ──────────────────────────────────────────────────────────
 
   /**
    * This method closes the crawler. Work in the queue ends as `skipped` with the note

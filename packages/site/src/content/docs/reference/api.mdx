@@ -1,6 +1,6 @@
 ---
 title: Library API
-description: "The library API of polite-crawler: openCrawler and its options, fetch, find, read, verify, discover, crawl and reindex, and the parts that you can import alone."
+description: "The library API of polite-crawler: openCrawler and its options, fetch, find, read, verify, extract, discover, crawl, diff, watch and reindex, and the parts that you can import alone."
 ---
 
 ```ts title="The import"
@@ -11,7 +11,7 @@ The package is ESM only, and it includes its TypeScript declarations.
 
 ## `openCrawler(options)`
 
-The function opens a crawler on a folder and gives a `PoliteCrawler`.
+The function opens a crawler on a folder and gives an `OpenedCrawler`: a `PoliteCrawler` that has `discover`, `crawl`, `diff`, `watch` and `extract`. The five are optional in `PoliteCrawler`, so an object of your own that implements the interface of 0.1.1 stays correct.
 
 | Option | Type | Default | What it does |
 | --- | --- | --- | --- |
@@ -30,6 +30,7 @@ The function opens a crawler on a folder and gives a `PoliteCrawler`.
 | `scope` | `string` | none | A label for each capture record. |
 | `onEvent` | `(event) => void` | none | A function that gets each request, response, wait, stop and skip. |
 | `extractors` | `Record<string, Extractor>` | the recipe `page` | The readers of the recipes of an application. |
+| `watchFloor` | a duration, for example `"1h"` | `"1h"` | The shortest `every` of a watch. |
 
 `createRuntime(options)` takes the same options, and your own `log`, `blobs` and `index` in place of `dir`. It gives the parts of the runtime that `openCrawler` uses. Then use `catchUpIndex(runtime)`, as `openCrawler` does at open. It rebuilds a stale index. It also gives an index that is behind the log the captures that it missed.
 
@@ -46,8 +47,12 @@ The method fetches a page, reads it and adds it to the index. It gives a `PageRe
 | `onBehalfOf` | `string[]` | `[]` |
 | `signal` | `AbortSignal` | none |
 | `scope`, `labels` | a text, and a record of texts | none |
+| `fallback` | `"archive" \| "none"` | `"none"` |
+| `archiveDespiteRobots` | `boolean` | `false` |
 
 The value `"0"` of `maxAge` asks the site again, and `"auto"` uses the freshness that the server gave.
+
+With `fallback: "archive"`, a page that the site refuses, or a site that is down, gets a copy from the Wayback Machine or Common Crawl. The result then has `archived`: the archive, the date of the copy and its URL there. Its `outcome` stays the outcome of the live fetch. By default, a page that the current robots.txt disallows gets no copy, and `archiveDespiteRobots` changes that.
 
 ```ts title="PageResult"
 interface PageResult {
@@ -67,6 +72,7 @@ interface PageResult {
   from_cache: boolean; // true when the store answered with no request
   held_back: boolean; // true when the page asked not to be AI input
   note: string | null; // for example "robots.txt disallows it for PoliteCrawler"
+  archived?: { source: "wayback" | "commoncrawl"; timestamp: string; url: string; original: string }; // an archived copy, not a fresh fetch
 }
 ```
 
@@ -81,7 +87,9 @@ The method searches the stored documents with SQLite FTS5 and BM25, and gives a 
 
 ### `read(doc, options?)`
 
-The method gives a range of the text of a document. The options are `from` (default 0), `length` (default 4000), `capture` and `userProvided`. A `from` or a `length` less than 0 is an error. The result names the `capture` and the `fetched_at` of its text. With `capture`, the method reads the text of that capture, not the current text.
+The method gives a range of the text of a document. The options are `from` (default 0), `length` (default 4000), `capture`, `at` and `userProvided`. A `from` or a `length` less than 0 is an error. The result names the `capture` and the `fetched_at` of its text. With `capture`, the method reads the text of that capture, not the current text.
+
+With `at` (an ISO 8601 time or a `Date`), the method reads the version that was current at that time. The rules that choose the current version apply to the versions of that time. The result gives `at`. When `at` is before the first capture, `before_first` is true, the text is empty, and the note gives the time of the first capture. Give `capture` or `at`, not the two.
 
 When a page refuses AI input, the title and the text are empty, and `held_back` is true, unless `userProvided` is true. A `capture` of a version that refused AI input is held back too. The crawler records each `userProvided` read. The MCP server sets it only with a signal from a person: [read the rule](../../guide/mcp/#pages-that-refuse-ai-input).
 
@@ -91,8 +99,41 @@ The method finds a quote in a stored document, and gives a promise. It ignores c
 
 - With no option, it examines the current text first, then the earlier texts. `stale` is true when only an earlier capture holds the quote.
 - With `capture`, it examines the text of that capture only. A citation of that capture thus stays true after a new fetch.
+- With `at`, it examines only the version that was current at that time. A time before the first capture gives `found: false` and `before_first: true`.
 - A page that refuses AI input gives `found: false` and `held_back: true`, unless `userProvided` is true.
 - An earlier version that refused AI input stays held back after a later capture drops the signal. With no option, the method does not examine it, and the note says so.
+
+### `extract(doc, fields, options?)`
+
+The method checks the values that you propose for the fields of a stored document, and gives a promise. It does not make values. It only checks and locates the values that it gets. It sends no request.
+
+```ts title="A check of three fields"
+const result = await crawler.extract(page.doc!, {
+  price: { value: "4.50 EUR", kind: "money" },
+  since: { value: "2026-03-04", kind: "date" },
+  offer: { value: "4.50", kind: "json-ld:Product.offers.price" },
+});
+// a page that says "€4,50" gives "normalized", with the span of "€4,50" and its capture
+const { status, normalization, span, capture } = result.fields["price"]!;
+```
+
+| Option | Type | What it does |
+| --- | --- | --- |
+| `capture` | `string` | Check the version of this capture, not the current version. |
+| `at` | `string \| Date` | Check the version that was current at this time. Give `capture` or `at`, not the two. |
+| `userProvided` | `boolean` | Check a page that refuses AI input. Use it only for a URL that a person gave. The crawler logs it. |
+
+Each field has a `value` (a text or a number) and a `kind`: `text`, `number`, `money`, `date`, `url`, `email`, `phone` or `json-ld:<path>`. The result of each field gives these values:
+
+- `status`: `verified` (the exact text), `normalized` (a different form), `ambiguous` (more than one meaning), `not-found`, `held-back` or `invalid`.
+- `span` (`start`, `end` and `in`) or `path`, the stored text (`raw`), an `excerpt` and the `reading` that matched.
+- `normalization`: the names of the normalizations, joined with `+`, for example `thousands-separator+number-form`.
+- `candidates`: the places of an ambiguous field, each with its `readings`. The method does not choose one.
+- `capture` and `fetched_at` of the text that the method read.
+
+A normalized match must have one meaning. `1,234`, `03/04/2026` and `$12` for `USD 12` give `ambiguous`, and the method does not guess. A page that refuses AI input gives `held-back` for each field, with no position, unless `userProvided` is true. The [README of the package](https://github.com/mark1russell7/crawler/tree/main/packages/polite-crawler#check-field-values-against-a-page) gives each normalization.
+
+`checkFields(source, fields)` does the same check on a text and its metadata, with no store.
 
 ### `versions(doc)`
 
@@ -132,6 +173,49 @@ The method fetches the seeds, then follows the links of each page on the same si
 
 Each page is a `PageResult` with `depth`, `source` (`seed`, `sitemap` or `link`) and `referrer`. The summary gives the counts of the pages and of the links that the crawl did not follow, and `stopped` and `reason`. The crawl keeps one request at a time for each host, at its pace. Its state is in memory, for one call.
 
+### `diff(doc, options?)`
+
+The method compares two versions of a stored document, and gives a promise. It sends no request.
+
+| Option | Default | What it does |
+| --- | --- | --- |
+| `from` | the version before `to` of the same kind | The old version: a capture id, or `{ at }` for the version that was current at a time. |
+| `to` | the newest version | The new version: a capture id, or `{ at }`. |
+| `limits` | `DIFF_LIMITS` | The bounds of the diff: characters, lines, steps, hunk lines and changes of the metadata. |
+
+The result gives `from` and `to` (the capture, the fetch time and the length of each version) and `summary` (the counts of the lines, the words and the changes of the metadata). It also gives `hunks` and `meta`:
+
+- `hunks` give the text as a line diff with 2 lines of context. A `changed` line pairs a removed line with an added line, and its `words` give the word diff.
+- `meta` gives the changes of the title, the URL and the metadata at their paths, for example `meta.jsonld[0].openingHours`.
+- The line diff uses the algorithm of Myers, with a budget of steps. A large change stays bounded. Then `exact` is false or `truncated` is true, and the note tells why.
+- When a version or the document is held back, the result has no text and no title, and `same` is null.
+
+### `watch`
+
+The watch list keeps the pages that the crawler checks again on a schedule, in the file `watch.sqlite` of the store.
+
+```ts title="A watch of a page, and one run"
+await crawler.watch.add("https://example.com/hours", { every: "6h" });
+
+const run = crawler.watch.run({ budgetMs: 120_000 });
+for await (const event of run) console.log(event.kind, event.suspected, event.confirmed, event.url);
+console.log(await run.summary);
+```
+
+| Method | What it does |
+| --- | --- |
+| `add(url, options?)` | It adds a page, or changes the options of its watch. The options are `every` (default `24h`, floor `1h`), `confirm` (`2` or `1`, default `2`), `render`, `labels`, `scope` and `onBehalfOf`. A new entry is due at once. |
+| `remove(url)` | It removes a page. It gives `false` when the list does not have the page. |
+| `list()` | It gives the entries, the first due first, with the last confirmed capture and a suspected change. |
+| `run(options?)` | It checks the due entries through the normal fetch, to `budgetMs` (10 minutes) and `maxPages` (100). It gives a `WatchRun`. |
+
+Each event has the kind of the check: `new`, `changed`, `unchanged`, `gone`, `refused` or `error`. It also has the capture of the check, the last confirmed capture (`previous`) and the counts of the diff.
+
+- With `confirm: 2`, a change is `suspected` at its first check. The next check gives `confirmed` when it sees the same version.
+- A check that finds a stopped host is due again at the end of the stop.
+- A run claims each entry with a lease, so two processes do not check one entry two times.
+- The package has no daemon. A scheduler of the operator starts `watch.run`.
+
 ### `reindex()`
 
 The method builds the index again from the capture log and the blobs, with no request. It builds a new index beside the old one, so a rebuild that fails keeps the old index. It gives the counts of the captures, the documents and the URLs, the damaged lines, the missing bodies and the readers that failed. The documents of a recipe that it cannot read stay.
@@ -139,6 +223,23 @@ The method builds the index again from the capture log and the blobs, with no re
 ### `close()`
 
 The method closes the browser, the log files and the index. A second close does nothing, and a method after the close rejects.
+
+## Signed requests
+
+The option `signer` of `openCrawler` signs each request with HTTP Message Signatures, as the Web Bot Auth draft tells (`draft-ietf-webbotauth-httpsig-protocol-00`).
+
+```ts
+const crawler = openCrawler({
+  dir: "./crawl",
+  signer: { privateKey: pem, signatureAgent: "https://bot.example.com" },
+});
+```
+
+- `createWebBotAuthSigner(options)` makes a signer from an Ed25519 key. The options are `privateKey`, `signatureAgent`, `agentType`, `keyId`, `lifetimeMs` and `label`.
+- `keyDirectory(keys)` makes the key directory to host at `/.well-known/http-message-signatures-directory`, with the type `application/http-message-signatures-directory+json`.
+- `verifySignature(request, directory)` checks the signature of a request. Use it to test your setup.
+
+The `User-Agent` does not change. The README of the package tells how to host the key directory.
 
 ## Export to a web archive
 
@@ -176,6 +277,8 @@ await startMcpServer({ dir: "./crawl" }); // standard input and output
 const server = createMcpServer(openCrawler({ dir: "./crawl" })); // any transport
 ```
 
+The server has no tool that adds a watch or writes an export. These are actions of the operator.
+
 | Option of `createMcpServer` | Default | What it does |
 | --- | --- | --- |
 | `onBehalfOf` | `["Claude-User"]` | The product tokens whose robots.txt rules apply to each fetch, with the token of the crawler. |
@@ -203,4 +306,4 @@ The entry points below `polite-crawler/mcp` have no Node.js dependency, so they 
 
 The main entry point also exports `Crawler`, `CaptureLog`, `DocIndex`, `FileBlobStore`, `Extractors`, `fetchAndIndex`, `fetchPage`, `reindex` and `makeRecord`, for an application that builds its own runtime. It exports the readers that such an application uses: `extractPage`, `decodeBody`, `readPdf`, the hours reader, `parseRobots` and `decide`.
 
-The stable API is `openCrawler` with its results, `polite-crawler/mcp`, the reader entry points, `exportWarc` and `exportWacz`, the command line and the store on disk. The parts of the runtime are the engine: before version 1.0.0, a minor version can change them, and the changelog says so.
+The stable API is `openCrawler` with its results (`extract` too), `polite-crawler/mcp`, the reader entry points, and `exportWarc` and `exportWacz`. The diff, the watch list, the command line and the store on disk are stable too. The parts of the runtime are the engine: before version 1.0.0, a minor version can change them, and the changelog says so.

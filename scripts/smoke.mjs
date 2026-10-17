@@ -430,6 +430,9 @@ export const check = async (): Promise<string> => {
     "crawl_verify",
     "crawl_discover",
     "crawl_site",
+    "crawl_diff",
+    "crawl_watch_list",
+    "crawl_extract",
   ]) {
     check(tools.includes(name), `the MCP server lists ${name}`);
   }

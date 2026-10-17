@@ -4,6 +4,7 @@ import { dirname } from "node:path";
 import type { StatementSync } from "node:sqlite";
 import { DatabaseSync } from "node:sqlite";
 import { fold, parseQuery, snippetOf } from "./fold.ts";
+import type { Archived } from "./fallback.ts";
 import type { AiInput } from "./signals.ts";
 import { cacheKeyOf } from "./urls.ts";
 
@@ -59,6 +60,11 @@ export interface ExtractedDoc {
   readonly merge?: "latest" | "richest" | undefined;
   /** When the extractor cut the text, this text is the whole text. The function `verify` looks for a quote here too. */
   readonly full_text?: string | undefined;
+  /**
+   * The value `no` holds the document back from the AI reader, also when the capture said nothing.
+   * An extractor sets it when the body states it, for example the headers in an archived response.
+   */
+  readonly ai_input?: AiInput | undefined;
 }
 
 /** This is one version of a document: the document as one capture gave it. */
@@ -134,6 +140,17 @@ export interface VersionText extends DocVersion {
   readonly meta: Readonly<Record<string, unknown>>;
 }
 
+/** This is the version of a document that was current at a time (`ReadingIndex.versionAt`). */
+export interface VersionAt {
+  /**
+   * This version was current at the time, or it is undefined when the time is before the first
+   * version. Its `ai_input` is `no` when the document was held back at that time.
+   */
+  readonly version: VersionText | undefined;
+  /** This time (ISO 8601) is the fetch time of the first version of the document, or undefined for an unknown document. */
+  readonly first: string | undefined;
+}
+
 /**
  * This value chooses the ranking of a search:
  *
@@ -182,6 +199,8 @@ export interface Found {
   readonly fetched_at: string;
   /** This id is the capture of the current text. */
   readonly capture: string;
+  /** This value tells that the document is an archived copy (the kind `archived`), with the archive and the date of the copy. */
+  readonly archived?: Archived | undefined;
 }
 
 /** The variant of a cache entry: the plain response, or the page that the browser rendered. */
@@ -379,6 +398,22 @@ interface DocRow {
   updated_at: string;
 }
 
+/** A candidate for the current version: the version that one recipe gives. */
+interface Candidate {
+  readonly row: VersionRow;
+  /** This value is what the newest capture of the recipe says about AI input. */
+  readonly ai: AiInput;
+  /** These rows are the other variant of the recipe (plain or rendered), when it has one. */
+  readonly others: readonly VersionRow[];
+}
+
+/** The choice of the current version: the winner, the candidates of each recipe and the AI input of the document. */
+interface Choice {
+  readonly winner: Candidate;
+  readonly candidates: readonly Candidate[];
+  readonly aiInput: AiInput;
+}
+
 interface LatestRow {
   url: string;
   variant: string;
@@ -467,6 +502,12 @@ export interface ReadingIndex {
   upsert(input: DocInput, now: string): Doc;
   versions(doc: string, options?: { readonly limit?: number }): DocVersion[];
   versionText(doc: string, capture?: string): VersionText | undefined;
+  /**
+   * This optional method gives the version that was current at a time (ISO 8601), with the rules
+   * that choose the current version. An index without it gets the newest version at or before the
+   * time, from `versions` and `versionText`.
+   */
+  versionAt?(doc: string, at: string): VersionAt;
   earlierTexts(doc: string, options?: { readonly limit?: number }): VersionText[];
   docsOfCapture(capture: string): Doc[];
   /** This method tells if a capture gave a version of a document. */
@@ -713,41 +754,48 @@ export class DocIndex implements ReadingIndex {
     );
   }
 
-  private newest(n: Names, doc: string, recipe: string, rendered: number): VersionRow | undefined {
+  /** This method gives the newest version of a document for one recipe and one variant, at `until` or before when it is given. */
+  private newest(
+    n: Names,
+    doc: string,
+    recipe: string,
+    rendered: number,
+    until: string | undefined,
+  ): VersionRow | undefined {
+    if (until === undefined) {
+      return this.stmt(
+        `SELECT * FROM ${n.versions} WHERE doc = ? AND recipe = ? AND rendered = ?
+          ORDER BY fetched_at DESC, capture DESC LIMIT 1`,
+      ).get(doc, recipe, rendered) as VersionRow | undefined;
+    }
     return this.stmt(
-      `SELECT * FROM ${n.versions} WHERE doc = ? AND recipe = ? AND rendered = ?
+      `SELECT * FROM ${n.versions} WHERE doc = ? AND recipe = ? AND rendered = ? AND fetched_at <= ?
         ORDER BY fetched_at DESC, capture DESC LIMIT 1`,
-    ).get(doc, recipe, rendered) as VersionRow | undefined;
+    ).get(doc, recipe, rendered, until) as VersionRow | undefined;
   }
 
-  /** This method chooses the current version of a document from its versions, and writes it with its search entry. */
-  private recompute(n: Names, doc: string, now: string): Doc | undefined {
-    const groups = this.stmt(
-      `SELECT DISTINCT recipe, rendered FROM ${n.versions} WHERE doc = ?`,
-    ).all(doc) as Array<{ recipe: string; rendered: number }>;
-    const before = this.stmt(`SELECT rowid, text_sha, title FROM ${n.docs} WHERE doc = ?`).get(
-      doc,
-    ) as { rowid: number; text_sha: string; title: string } | undefined;
-    if (groups.length === 0) {
-      if (before !== undefined) {
-        this.stmt(`DELETE FROM ${n.fts} WHERE rowid = ?`).run(before.rowid);
-        this.stmt(`DELETE FROM ${n.docs} WHERE doc = ?`).run(doc);
-      }
-      return undefined;
-    }
+  /**
+   * This method chooses the current version of a document with the rules of the class. With
+   * `until`, it uses only the versions that the crawler fetched at that time or before. Thus it
+   * gives the version that was current at that time. It gives undefined when no version agrees.
+   */
+  private choose(n: Names, doc: string, until?: string): Choice | undefined {
+    const groups = (
+      until === undefined
+        ? this.stmt(`SELECT DISTINCT recipe, rendered FROM ${n.versions} WHERE doc = ?`).all(doc)
+        : this.stmt(
+            `SELECT DISTINCT recipe, rendered FROM ${n.versions} WHERE doc = ? AND fetched_at <= ?`,
+          ).all(doc, until)
+    ) as Array<{ recipe: string; rendered: number }>;
+    if (groups.length === 0) return undefined;
     const byRecipe = new Map<string, { plain?: VersionRow; rendered?: VersionRow }>();
     for (const group of groups) {
-      const row = this.newest(n, doc, group.recipe, group.rendered);
+      const row = this.newest(n, doc, group.recipe, group.rendered, until);
       if (row === undefined) continue;
       const entry = byRecipe.get(group.recipe) ?? {};
       if (group.rendered === 1) entry.rendered = row;
       else entry.plain = row;
       byRecipe.set(group.recipe, entry);
-    }
-    interface Candidate {
-      readonly row: VersionRow;
-      readonly ai: AiInput;
-      readonly others: readonly VersionRow[];
     }
     const candidates: Candidate[] = [];
     for (const [recipe, { plain, rendered }] of byRecipe) {
@@ -787,16 +835,33 @@ export class DocIndex implements ReadingIndex {
         if (better) winner = candidate;
       }
     }
-    const row = winner.row;
     // a render can stay current after a newer plain capture: a no of its own capture still holds its text back
     const aiInput: AiInput =
-      row.ai_input === "no" || candidates.some((candidate) => candidate.ai === "no")
+      winner.row.ai_input === "no" || candidates.some((candidate) => candidate.ai === "no")
         ? "no"
         : winner.ai !== "unset"
           ? winner.ai
           : candidates.some((candidate) => candidate.ai === "yes")
             ? "yes"
             : "unset";
+    return { winner, candidates, aiInput };
+  }
+
+  /** This method chooses the current version of a document from its versions, and writes it with its search entry. */
+  private recompute(n: Names, doc: string, now: string): Doc | undefined {
+    const before = this.stmt(`SELECT rowid, text_sha, title FROM ${n.docs} WHERE doc = ?`).get(
+      doc,
+    ) as { rowid: number; text_sha: string; title: string } | undefined;
+    const choice = this.choose(n, doc);
+    if (choice === undefined) {
+      if (before !== undefined) {
+        this.stmt(`DELETE FROM ${n.fts} WHERE rowid = ?`).run(before.rowid);
+        this.stmt(`DELETE FROM ${n.docs} WHERE doc = ?`).run(doc);
+      }
+      return undefined;
+    }
+    const { winner, candidates, aiInput } = choice;
+    const row = winner.row;
     let meta = parseJson<Record<string, unknown>>(this.textOf(n, row.meta_sha), {});
     for (const candidate of candidates) {
       // a different source of the same document fills the keys that the current version lacks
@@ -956,6 +1021,29 @@ export class DocIndex implements ReadingIndex {
         id,
       ) as VersionRow | undefined;
       return row === undefined ? undefined : this.versionTextOf(n, row);
+    });
+  }
+
+  /**
+   * This method gives the version of a document that was current at a time (ISO 8601). It applies
+   * the rules of the class to the versions that the crawler fetched at that time or before. Thus
+   * a later capture does not change the answer. It also gives a held-back version: its `ai_input`
+   * is `no` when the document was held back at that time, and the caller applies `isHeldBack`.
+   */
+  versionAt(doc: string, at: string): VersionAt {
+    return this.live((n) => {
+      const first =
+        (
+          this.stmt(`SELECT min(fetched_at) AS first FROM ${n.versions} WHERE doc = ?`).get(doc) as
+            { first: string | null } | undefined
+        )?.first ?? undefined;
+      const choice = this.choose(n, doc, at);
+      if (choice === undefined) return { version: undefined, first };
+      const version = this.versionTextOf(n, choice.winner.row);
+      return {
+        version: choice.aiInput === "no" ? { ...version, ai_input: "no" } : version,
+        first,
+      };
     });
   }
 

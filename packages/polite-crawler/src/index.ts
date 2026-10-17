@@ -12,6 +12,12 @@
  *   sitemaps and feeds (`readSitemap`).
  * - The discovery and the crawl over a runtime: `discoverSite` and `crawlSite`.
  * - The export of a store to the web archive formats: `exportWarc` and `exportWacz`.
+ * - The time travel and the diff of the versions of a document: `versionAtTime`, `diffDocument`
+ *   and `diffTexts`.
+ * - The watch list: `WatchStore` and `runWatch`.
+ * - The archived fallback: the types of an archived copy, `archivedDocId` and `archiveExtractor`.
+ * - Signed requests (Web Bot Auth): `createWebBotAuthSigner`, `keyDirectory` and `verifySignature`.
+ * - The check of proposed field values against a stored page: `checkFields` and `extractDocument`.
  *
  * The other entry points give the rest:
  *
@@ -41,6 +47,21 @@ export {
   renderedKey,
 } from "./crawler.ts";
 export type {
+  DiffHunk,
+  DiffInput,
+  DiffLimits,
+  DiffLine,
+  DiffOptions,
+  DiffResult,
+  DiffSide,
+  DiffSummary,
+  MetaChange,
+  TextDiff,
+  VersionChoice,
+  WordPart,
+} from "./diff.ts";
+export { DIFF_LIMITS, diffDocument, diffTexts } from "./diff.ts";
+export type {
   DiscoverOptions,
   DiscoverResult,
   DiscoverRunOptions,
@@ -61,11 +82,31 @@ export type {
   ReadingIndex,
   Variant,
   Verified,
+  VersionAt,
   VersionText,
 } from "./docs.ts";
 export { DocIndex, FAST_RANK_SHARE, locate } from "./docs.ts";
 export type { EgressOptions } from "./egress.ts";
+export type { Archived, WebArchive } from "./fallback.ts";
+export { archiveExtractor, archivedDocId } from "./fallback.ts";
 export { EgressRefused, egressLookup } from "./egress.ts";
+// ── extract ──
+export type {
+  ExtractOptions,
+  ExtractResult,
+  ExtractSource,
+  ExtractSummary,
+  FieldCandidate,
+  FieldCheck,
+  FieldClaim,
+  FieldKind,
+  FieldResult,
+  FieldSpan,
+  FieldStatus,
+  FieldsChecked,
+} from "./extract.ts";
+export { FIELD_KINDS, checkFields, extractDocument } from "./extract.ts";
+// ── end of extract ──
 export type {
   CrawlOptions,
   CrawlPage,
@@ -96,6 +137,7 @@ export type {
   FetchOptions,
   FindOptions,
   OpenOptions,
+  OpenedCrawler,
   PoliteCrawler,
   ReadOptions,
   ReadResult,
@@ -167,6 +209,7 @@ export {
   findDocuments,
   heldBackMeta,
   isHeldBack,
+  isoTime,
   pageDocId,
   pageExtractor,
   readDocument,
@@ -174,6 +217,7 @@ export {
   reindex,
   renderAndIndex,
   verifyQuote,
+  versionAtTime,
 } from "./runtime.ts";
 export type { AiInput, Signals } from "./signals.ts";
 export type {
@@ -188,6 +232,24 @@ export { bodyEncoding, decodeBody } from "./text.ts";
 export type { ScopeOptions } from "./urls.ts";
 export { VERSION } from "./version.ts";
 export type { WaczResult } from "./wacz.ts";
+export type {
+  DirectoryKey,
+  KeyDirectory,
+  KeyInput,
+  RequestSigner,
+  SignatureAgentType,
+  SignatureCheck,
+  SignedRequest,
+  WebBotAuthOptions,
+  WebBotAuthSigner,
+} from "./webbotauth.ts";
+export {
+  KEY_DIRECTORY_PATH,
+  KEY_DIRECTORY_TYPE,
+  createWebBotAuthSigner,
+  keyDirectory,
+  verifySignature,
+} from "./webbotauth.ts";
 export { exportWacz } from "./wacz.ts";
 export type {
   ArchiveCounts,
@@ -197,3 +259,18 @@ export type {
   WarcResult,
 } from "./warc.ts";
 export { exportWarc } from "./warc.ts";
+export type {
+  WatchEntry,
+  WatchEvent,
+  WatchKind,
+  WatchList,
+  WatchOptions,
+  WatchPending,
+  WatchRun,
+  WatchRunOptions,
+  WatchRunnerOptions,
+  WatchStop,
+  WatchStoreOptions,
+  WatchSummary,
+} from "./watch.ts";
+export { WATCH_LIMITS, WATCH_SCHEMA, WatchStore, runWatch } from "./watch.ts";

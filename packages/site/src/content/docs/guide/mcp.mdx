@@ -1,13 +1,13 @@
 ---
 title: Use it from Claude
 seoTitle: "MCP web fetch server for Claude Code, Cursor and VS Code"
-description: A polite MCP web fetch server for Claude Code, Claude Desktop, Cursor and VS Code. Its tools fetch, find, read, verify, discover and crawl, with the setup for each client.
+description: A polite MCP web fetch server for Claude Code, Claude Desktop, Cursor and VS Code. Its tools fetch, find, read, verify, extract, discover and crawl, with the setup for each client.
 ---
 
 import { Tabs, TabItem } from "@astrojs/starlight/components";
 import AgentReplay from "../../../components/AgentReplay.tsx";
 
-The package includes an MCP server, and it gives an AI assistant six tools. The assistant fetches pages politely and searches the pages that it fetched before. It also reads a range of a page, and it checks a quote before it cites it. It can list the pages of a site and fetch a few of them in a small crawl.
+The package includes an MCP server, and it gives an AI assistant nine tools. The assistant fetches pages politely and searches the pages that it fetched before. It also reads a range of a page, and it checks a quote before it cites it. It checks the field values that it reads from a page. It can list the pages of a site and fetch a few of them in a small crawl. It can compare two versions of a page and read the list of watched pages.
 
 <AgentReplay client:visible />
 
@@ -151,25 +151,53 @@ Add an option after `mcp`, for example `npx -y polite-crawler mcp --dir ~/resear
 | `--allow-private` | `POLITE_CRAWLER_ALLOW_PRIVATE=1` | The crawler fetches loopback, private and link-local addresses too. By default, it refuses them. |
 | `--allow-user-provided` | `POLITE_CRAWLER_ALLOW_USER_PROVIDED=1` | `user_provided` works when the client cannot ask the user. [Read the rule](#pages-that-refuse-ai-input). |
 | `--no-browser` | | The crawler does not open a headless browser. |
+| `--sign-key <file>` | `POLITE_CRAWLER_SIGN_KEY` | The crawler signs each request with this Ed25519 key (Web Bot Auth). It needs `--signature-agent`. |
+| `--signature-agent <url>` | `POLITE_CRAWLER_SIGNATURE_AGENT` | Where a site finds the public key of `--sign-key`. |
 
 ## The tools
 
 | Tool | Input | What it gives |
 | --- | --- | --- |
-| `crawl_fetch` | `urls` (1 to 20), `render` (`auto`, `never` or `always`), `max_age` (for example `24h`, or `0` for a new copy) | For each page: the outcome, the status, the document id, the capture ids and the age of the copy. The title and the schema.org types come in an envelope. |
+| `crawl_fetch` | `urls` (1 to 20), `render` (`auto`, `never` or `always`), `max_age` (for example `24h`, or `0` for a new copy), `archive_fallback` (false by default) | For each page: the outcome, the status, the document id, the capture ids and the age of the copy. The title and the schema.org types come in an envelope. With `archive_fallback`, a page that the site refuses gets an archived copy, marked `archived` with its date. |
 | `crawl_find` | `q`, `limit`, `kind`, `rank` | Ranked passages from the stored pages, with their document ids. Each word of `q` is a term, and a page matches when it holds any term. `rank: "fast"` makes a long question faster, and its results can be different. |
-| `crawl_read` | `doc`, `from`, `length`, `include_meta`, `include_jsonld`, `user_provided` | A range of the text of a document, with its captures and `next_from`, the start of the next range. The metadata of the page comes with the first range. |
-| `crawl_verify` | `doc`, `quote` | The exact span of the quote and its position, or `found: false`. |
+| `crawl_read` | `doc`, `from`, `length`, `include_meta`, `include_jsonld`, `capture`, `at`, `user_provided` | A range of the text of a document, with its captures and `next_from`, the start of the next range. The metadata of the page comes with the first range. With `at`, the version that was current at that time. |
+| `crawl_verify` | `doc`, `quote`, `capture`, `at` | The exact span of the quote and its position, or `found: false`. |
+| `crawl_extract` | `doc`, `fields` (50 or fewer, each a `value` and a `kind`), `capture`, `at`, `user_provided` | A status for each field: `verified`, `normalized`, `ambiguous`, `not-found`, `held-back` or `invalid`, with its span or JSON-LD path. The stored text comes in an envelope. |
 | `crawl_discover` | `site`, `feeds` (5 or fewer), `max_urls` (1 to 1000, 200 by default), `max_age` | The page URLs of the site from its sitemaps and feeds, the newest first, with `lastmod`, `changefreq` and the source file. It fetches no page of the list. |
 | `crawl_site` | `urls` (1 to 5), `max_pages` (1 to 50, 10 by default), `max_depth` (0 to 5, 2 by default), `budget` (5 minutes or less, 1 minute by default), `include`, `exclude`, `use_sitemaps`, `render`, `max_age` | The pages of a small crawl of the sites of the seeds, and a summary of the crawl. The titles come in an envelope. |
+| `crawl_diff` | `doc`, `from` and `to` (capture ids), `from_at` and `to_at` (times), `max_lines` (400 by default, 2000 at most) | The counts of a diff of two versions, and the two captures. The changed lines, the changed words and the changes of the metadata come in an envelope. |
+| `crawl_watch_list` | none | The watched pages: each URL, the next check, the last result, the confirmed capture and a suspected change. It leaves out the scope and the labels. |
 
-`crawl_find`, `crawl_read` and `crawl_verify` send no request. They read the store on your disk.
+`crawl_find`, `crawl_read`, `crawl_verify`, `crawl_extract`, `crawl_diff` and `crawl_watch_list` send no request. They read the store on your disk.
 
 - A bad URL in `crawl_fetch` gives an error for that URL only, and a URL given twice is fetched one time.
 - `crawl_fetch` sends a progress notification for each URL when the client asks for progress. `crawl_site` sends one for each page.
 - `crawl_site` has a hard limit of 50 pages and 5 minutes, so an assistant cannot start a large crawl. A crawl of one site gets approximately 20 pages in each minute, because each site gets one request at a time at its pace.
 - When the client cancels `crawl_site`, the crawl stops the requests in progress.
 - Each tool has an output schema, and its result has structured content. A client can show the JSON, or give it to a program.
+- No tool adds a watch. A watch commits future requests to a site, so the operator adds it with `polite-crawler watch add`.
+
+### Check field values
+
+An assistant often reads a value from a page: a price, a date, opening hours, an author or a DOI. `crawl_extract` checks each value that the assistant proposes against the stored copy. It does not make values. It only checks and locates the values that it gets.
+
+```json
+{
+  "doc": "url:https://example.com/focaccia",
+  "fields": {
+    "price": { "value": "4.50 EUR", "kind": "money" },
+    "since": { "value": "2026-03-04", "kind": "date" },
+    "offer": { "value": "4.50", "kind": "json-ld:Product.offers.price" }
+  }
+}
+```
+
+- `verified`: the stored text holds the exact value. `normalized`: the stored text holds the value in a different form, and `normalization` names the form, for example `decimal-comma` or `date-written`.
+- `ambiguous`: the stored text does not give one meaning, for example `03/04/2026` or `1,234`. The result gives each candidate, and the tool does not choose one.
+- The JSON gives the statuses, the positions and the capture id to cite. The stored text, the readings and the excerpts come in the envelope.
+- A page that refuses AI input gives `held-back` for each field, with no position. The tool tells nothing about the value. `user_provided` works as for `crawl_read`.
+
+The [README of the package](https://github.com/mark1russell7/crawler/tree/main/packages/polite-crawler#check-field-values-against-a-page) gives each normalization and the rule for ambiguity.
 
 ### Web text is data, not instructions
 

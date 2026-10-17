@@ -15,6 +15,20 @@ A prerelease version (`0.2.0-beta.1`) goes to the npm tag `next`. Each other ver
 
 ## Unreleased
 
+- **This version only adds to the API.** Code that compiled against 0.1.1 compiles against this version, and `packages/polite-crawler/src/compat.test.ts` is the proof. The capture log, the bodies and the capture ids do not change.
+  - Each new member of an existing interface is optional. `PoliteCrawler` has the optional `discover`, `crawl`, `diff`, `watch` and `extract`. `openCrawler` gives an `OpenedCrawler`, which has the five.
+  - `PageExtract.feeds` and `ReadingIndex.versionAt` are optional too.
+  - These edges remain. The recipe names `archive-copy` and `archive-index` belong to the crawler, and `Extractors.register("archive-copy", ...)` throws.
+  - The classes `Crawler` and `DocIndex` have new methods: `robotsAllow`, `hostStop` and `versionAt`. A subclass of your own with a member of the same name can conflict with them.
+- **Verified structured extraction.** `crawler.extract(doc, fields, options)` checks the values that a caller proposes for the fields of a stored page, and it locates each value. It does not make values. Each field gets `verified`, `normalized`, `ambiguous`, `not-found`, `held-back` or `invalid`, with its span or JSON-LD path and its capture.
+  - The kinds are `text`, `number`, `money`, `date`, `url`, `email`, `phone` and `json-ld:<path>`. Each normalization has a name, and a normalized field gives it. Examples are `thousands-separator`, `decimal-comma`, `currency-symbol`, `date-written`, `url-resolved` and `phone-suffix`.
+  - A normalized match must have one meaning. `1,234`, `03/04/2026`, `$12` for `USD 12` and two places with different meanings give `ambiguous`, with each place. The check does not guess.
+  - `capture` and `at` choose the version. A held-back page gives `held-back` for each field, with no position, unless `userProvided`. The result is the same for each value, so the check is not an oracle.
+  - The time of the check is linear in the length of the text. The tests count the steps.
+  - The MCP tool `crawl_extract` gives the statuses and the positions in JSON, and the stored text in the `<untrusted-web-content>` envelope. Its description says that it checks values and does not make them.
+  - The command line has `polite-crawler extract <doc> --field name=value[:kind]`, with `--capture` or `--at`. It exits with 0 when each field is `verified` or `normalized`.
+  - A value from an archived copy says so, as a quote does. The result and `crawl_extract` give `archived`, and the note names the archive and the date.
+  - The change only adds to the API. `PoliteCrawler.extract` is optional, so a `PoliteCrawler` of your own still compiles. `openCrawler` gives an `OpenedCrawler`, which has `extract`. The root entry point exports `checkFields`, `extractDocument`, `FIELD_KINDS` and the types.
 - **Export to WARC and WACZ.** `exportWarc` and `exportWacz` write the stored captures as a web archive, for `warcio`, pywb and ReplayWeb.page. The command line has `polite-crawler export --out <file>`.
   - The WARC file is WARC/1.1, with one gzip member for each record. The WACZ file is WACZ 1.1.1, with a sorted CDXJ index, a page list and `datapackage.json`.
   - A capture with a body gives a `response` record, a 304 gives a `revisit` record, and a rendered page gives a `conversion` record. Each has a `metadata` record with the JSON of the capture.
@@ -40,9 +54,58 @@ A prerelease version (`0.2.0-beta.1`) goes to the npm tag `next`. Each other ver
 - **The engine.** These additions do not change the existing API:
   - `FetchRequest`, `RenderRequest` and `PageOptions` take `deadline`. A request does not start at or after its deadline, and it does not wait for its host past it. Its skip note starts with `DEADLINE_NOTE`. `HostScheduler` does not change.
   - `Crawler.robotsAllow(url, options)` gives the robots.txt decision for a URL. `Crawler.readRobots` takes the scope and the labels of its record.
-  - `PageExtract` has `feeds`: the RSS and Atom feeds that the page links. The metadata of a page document has them too.
+  - `PageExtract` has the optional `feeds`: the RSS and Atom feeds that the page links. `extractPage` always gives them, and the metadata of a page document has them too.
+  - `PoliteCrawler` has two new optional members, `discover` and `crawl`. `OpenedCrawler`, the result of `openCrawler`, has them. A `PoliteCrawler` of your own without them stays correct: `crawl_discover` and `crawl_site` then use `discoverSite` and `crawlSite` over its runtime.
   - `reindex` reads the captures of the recipes `sitemap` and `feed` as captures of the crawler, as it reads robots.txt. They give no document.
   - The root entry point exports `discoverSite`, `crawlSite`, `readSitemap`, `feedDate`, `DISCOVER_LIMITS`, `CRAWL_LIMITS`, `SITEMAP_LIMITS`, `DEADLINE_NOTE` and the types of discovery and of the crawl.
+- **Read a page as it was at a time.** `read` and `verify` take `at`, an ISO 8601 time or a `Date`. They use the version that was current at that time.
+  - The rules that choose the current version apply to the versions of that time. A later capture does not change the answer.
+  - The result names the `capture` and the `fetched_at` of the version, and it gives `at`. A time before the first capture gives `before_first: true` and a note with the time of the first capture.
+  - `verify` with `at` examines that version only. Give `capture` or `at`, not the two.
+  - A version that was held back at that time stays held back. When the document is held back at this time, each of its versions is held back too.
+  - `find` has no `at`. A search at a time needs an index entry for each version, or a scan of each stored text, and neither is cheap.
+- **Compare two versions.** `crawler.diff(doc, { from, to })` compares two versions of a stored document, by capture id or by `{ at }`. The default compares the newest version with the version before it of the same kind.
+  - The text comes as a line diff (Myers) with 2 lines of context, and a word diff inside each changed line.
+  - The title, the URL and the metadata (the JSON-LD too) come as changes at a path, for example `meta.jsonld[0].openingHours`.
+  - The summary counts the lines, the words and the changes of the metadata.
+  - `DIFF_LIMITS` bounds the characters, the lines, the steps, the hunk lines and the changes of the metadata. A diff over a bound says so in its note, with `exact` and `truncated`.
+  - A held-back side gives no text and no title, and only the structural metadata.
+- **Watch pages.** `crawler.watch` keeps a list of pages to check again, in the new file `watch.sqlite` of the store. It has `add`, `remove`, `list` and `run`.
+  - `watch.run({ budgetMs, maxPages })` checks the entries that are due through the normal fetch, so each polite rule applies. It gives an async iterable of events and a `summary`.
+  - Each event has the URL, the document, the capture of the check, the last confirmed capture, the kind (`new`, `changed`, `unchanged`, `gone`, `refused` or `error`) and the counts of the diff.
+  - With `confirm: 2` (the default), a change is suspected at its first check and confirmed when the next check sees the same version. `confirm: 1` confirms at once.
+  - `every` has a floor of 1 hour (`watchFloor` of `openCrawler` changes it). A check that finds a stopped host is due again at the end of the stop.
+  - A run claims each entry with a lease in `watch.sqlite`, so two processes do not check one entry two times. The list stays after a restart.
+  - The package has no daemon: a scheduler of the operator starts `watch.run`.
+- **The command line.** `polite-crawler diff <doc> [--from <version>] [--to <version>]`, `watch add <url...>`, `watch remove <url...>`, `watch list` and `watch run`. `read` and `verify` take `--at <time>`. `watch add` takes `--every`, `--confirm`, `--render`, `--scope` and `--label`, and `watch run` takes `--budget` and `--max-pages`.
+- **The MCP server.** `crawl_read` and `crawl_verify` take `at`, and their results give `at` and `before_first`. `crawl_verify` gives its `note` too. Two new tools:
+  - `crawl_diff` compares two versions. The changes come in the `<untrusted-web-content>` envelope, and the JSON gives only the counts and the captures.
+  - `crawl_watch_list` lists the watched pages, with no scope and no labels.
+  - No tool adds a watch, because a watch commits future requests to a site. The operator adds it.
+- **The API.** These additions do not break the API:
+  - `PoliteCrawler` has two new optional members, `diff` and `watch`. `openCrawler` gives an `OpenedCrawler`, a `PoliteCrawler` that has them. An object of your own that implements `PoliteCrawler` stays correct.
+  - `ReadOptions` and `VerifyOptions` have the optional `at`. `ReadResult` and `VerifyResult` have the optional `at` and `before_first`.
+  - The root entry point exports `diffDocument`, `diffTexts`, `DIFF_LIMITS`, `versionAtTime`, `isoTime`, `WatchStore`, `runWatch`, `WATCH_LIMITS`, `WATCH_SCHEMA` and `OpenedCrawler`. It also exports the types of the diff and of the watch list. The README lists them in the stable API.
+  - The engine has the optional method `ReadingIndex.versionAt`, `DocIndex.versionAt` and `Crawler.hostStop`. A `ReadingIndex` of your own without `versionAt` gives the newest version at or before the time.
+  - The capture log, the bodies and the capture ids do not change. A store with no watch has no `watch.sqlite`.
+- **An archived copy after a refusal (opt-in).** `fetch(url, { fallback: "archive" })` gives a copy from the Wayback Machine, then Common Crawl, when the site refuses the page or is down. The command line has `fetch --archive-fallback`, and `crawl_fetch` has `archive_fallback`.
+  - A 401, a 402, a 403, a challenge, a stop of the host, a 5xx error and a dead host get a copy. A 404, a 429 and a cancel do not.
+  - A copy is a document of its own (`archive:<url>`, of the kind `archived`). The result keeps the outcome of the live fetch, and `archived` gives the archive, the date of the copy and its URL there.
+  - `read`, `verify` and `find` give `archived` for a copy, and the notes of `read` and `verify` name the archive and the date. A citation thus cannot show a copy as the current page.
+  - By default, a page that the current robots.txt of its site disallows gets no copy. `archiveDespiteRobots` (`--archive-despite-robots`) gives one. The MCP server has no such parameter.
+  - Each request to an archive is a fetch of the crawler: robots.txt, the pace, the egress policy, the identity and the capture log apply. A URL with a secret does not go to an archive.
+  - The usage signals of a copy apply as for a live page. They include the content signals of the robots.txt of its site, and the archived headers.
+- **Signed requests (Web Bot Auth).** The option `signer` signs each request with HTTP Message Signatures (RFC 9421). It follows `draft-ietf-webbotauth-httpsig-protocol-00`. robots.txt, the redirects and the requests of a rendered page get a signature too.
+  - `createWebBotAuthSigner` takes an Ed25519 key (a `KeyObject`, PKCS#8 or a JWK) and the URL of the key directory. `keyDirectory` makes the JSON Web Key Set to host, and `verifySignature` checks a request.
+  - The signature covers `@authority` and the member of `Signature-Agent`, with `created`, `expires`, the JWK thumbprint as `keyid`, `alg="ed25519"`, a nonce and `tag="web-bot-auth"`. The tests check the vectors of RFC 9421 and of the draft.
+  - The command line has `--sign-key <file>` and `--signature-agent <url>` for `fetch`, `discover`, `crawl`, `watch run` and `mcp`. `polite-crawler key-directory` prints the key directory.
+  - The `User-Agent` does not change. The capture log records the key id and the agent of each signed request (`signed`), and not the key. The package uses `node:crypto` and adds no dependency.
+  - The README tells how to host the key directory, and why a project site of GitHub Pages cannot serve it at the well-known path.
+- **The engine of the fallback and of the signatures.** These additions do not change the existing API:
+  - `FetchRequest` takes `range`, `signalLines` and `originalHeaderPrefix`. A range request keeps no stored copy and sends no validators. `CrawlerOptions`, `RuntimeOptions` and `OpenOptions` take `signer`, and `RenderOptions` takes `sign`.
+  - `ExtractedDoc` takes `ai_input`: an extractor can hold back a document whose body refuses AI input. `Crawler.robotsAllow` also gives the content signals of robots.txt (`signals`).
+  - `record.schema.json` describes the new payload fields `range` and `signed`. The capture ids do not change.
+  - The recipes `archive-copy` and `archive-index` belong to the crawler. An application that registers an extractor named `archive-copy` gets an error.
 
 ## 0.1.1 - 2026-10-17
 

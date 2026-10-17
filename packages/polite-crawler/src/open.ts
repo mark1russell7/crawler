@@ -8,11 +8,15 @@ import { durationMs } from "./duration.ts";
 import { FileBlobStore } from "./blobs.ts";
 import type { CrawlEvent } from "./crawler.ts";
 import { Crawler } from "./crawler.ts";
+import type { DiffOptions, DiffResult } from "./diff.ts";
+import { diffDocument } from "./diff.ts";
 import type { DiscoverOptions, DiscoverResult } from "./discover.ts";
 import { discoverSite } from "./discover.ts";
 import type { DocVersion, Found, RankMode, ReadingIndex } from "./docs.ts";
 import { DocIndex } from "./docs.ts";
 import type { EgressOptions } from "./egress.ts";
+import type { ExtractOptions, ExtractResult, FieldClaim } from "./extract.ts";
+import { extractDocument } from "./extract.ts";
 import type { CrawlOptions, CrawlRun } from "./frontier.ts";
 import { crawlSite } from "./frontier.ts";
 import { SqliteHostStateStore } from "./hoststate.ts";
@@ -41,6 +45,9 @@ import {
   verifyQuote,
 } from "./runtime.ts";
 import { BOT_PAGE, DEFAULT_TOKEN, VERSION } from "./version.ts";
+import type { WatchList } from "./watch.ts";
+import { WATCH_LIMITS, WatchStore, runWatch } from "./watch.ts";
+import type { RequestSigner, WebBotAuthOptions } from "./webbotauth.ts";
 
 export type { ReadOptions, ReadResult, VerifyOptions, VerifyResult } from "./runtime.ts";
 
@@ -122,8 +129,13 @@ export interface RuntimeOptions {
   readonly scopeRank?: ((scope: string) => number) | undefined;
   /** This function gets an event for each request, response, wait, stop and skip. */
   readonly onEvent?: ((event: CrawlEvent) => void) | undefined;
-  /** These extractors read the captures of the recipes of an application. The recipe `page` is built in. */
+  /** These extractors read the captures of the recipes of an application. The recipes `page` and `archive-copy` are built in. */
   readonly extractors?: Readonly<Record<string, Extractor>> | undefined;
+  /**
+   * This signer signs each request with Web Bot Auth (`CrawlerOptions.signer`). Give the options of
+   * `createWebBotAuthSigner`, or a `RequestSigner`. Without it, the crawler signs nothing.
+   */
+  readonly signer?: RequestSigner | WebBotAuthOptions | undefined;
 }
 
 /** A runtime that a store made. It owns the parts that it made, and it closes them. */
@@ -134,7 +146,7 @@ export interface StoreRuntime extends CrawlRuntime {
 }
 
 /** The parts of a store that can be a symbolic link to a different place only by mistake or by attack. */
-const STORE_PARTS = ["captures", "blobs", "index.sqlite", "hosts.sqlite"];
+const STORE_PARTS = ["captures", "blobs", "index.sqlite", "hosts.sqlite", "watch.sqlite"];
 
 /**
  * This function makes the folder of a store for the owner only, where the system has modes. It
@@ -231,6 +243,7 @@ export const createRuntime = (options: RuntimeOptions): StoreRuntime => {
     scopeRank: options.scopeRank,
     obeyDefaultToken: options.obeyDefaultToken,
     onEvent: options.onEvent,
+    signer: options.signer,
   });
   const extractors = new Extractors();
   for (const [recipe, extractor] of Object.entries(options.extractors ?? {})) {
@@ -263,6 +276,8 @@ export interface OpenOptions extends Omit<RuntimeOptions, "dir" | "log" | "blobs
   readonly dir: string;
   /** These agents get their robots.txt rules applied to each fetch, for example `Claude-User`. */
   readonly onBehalfOf?: readonly string[] | undefined;
+  /** This value is the shortest `every` of a watch. The default is `1h`, so a watch cannot hammer a site. */
+  readonly watchFloor?: Duration | undefined;
 }
 
 /** These options control one fetch. */
@@ -282,6 +297,16 @@ export interface FetchOptions {
   readonly scope?: string | undefined;
   /** These labels go into the capture records of this fetch. They are not part of the capture ids. */
   readonly labels?: Readonly<Record<string, string>> | undefined;
+  /**
+   * The value `archive` gives a copy from a public web archive (the Wayback Machine, then Common
+   * Crawl) when the site refuses the page or is down. The result then has `archived`. The default is `none`.
+   */
+  readonly fallback?: "archive" | "none" | undefined;
+  /**
+   * The value true also gives an archived copy of a page that the current robots.txt of its site
+   * disallows for this agent. The default is false: only a stop, an error or a dead host gets a copy.
+   */
+  readonly archiveDespiteRobots?: boolean | undefined;
 }
 
 /** These options control a search. */
@@ -318,17 +343,6 @@ export interface PoliteCrawler {
   /** This method gives the versions of a stored document, the newest first. A held-back version shows no title. */
   versions(doc: string, options?: { readonly limit?: number }): Promise<DocVersion[]>;
   /**
-   * This method finds the pages of a site from its sitemaps and its feeds. Each file is a polite
-   * fetch with its capture. It keeps the URLs on the site that robots.txt permits, to its limits.
-   */
-  discover(site: string, options?: DiscoverOptions): Promise<DiscoverResult>;
-  /**
-   * This method crawls a site from its seeds. It follows the links of each page to a maximum of
-   * pages, a maximum depth and a maximum time. A `for await` loop gets each page. `summary` tells
-   * why the crawl stopped.
-   */
-  crawl(seeds: string | readonly string[], options?: CrawlOptions): CrawlRun;
-  /**
    * This method builds the index again from the capture log and the stored bodies, with no request.
    * When the crawler rebuilt a stale index at open, the first reindex gives the counts of that
    * rebuild, unless a fetch came before it.
@@ -336,6 +350,59 @@ export interface PoliteCrawler {
   reindex(): Promise<ReindexResult>;
   /** This method closes the browser, the log files and the index. A second close does nothing. */
   close(): Promise<void>;
+  // The members after 0.1.1 are optional, so an object of your own that implements 0.1.1 stays correct.
+  /**
+   * This optional method finds the pages of a site from its sitemaps and its feeds. Each file is a
+   * polite fetch with its capture. It keeps the URLs on the site that robots.txt permits, to its
+   * limits. `openCrawler` gives it. Over a runtime of your own, use `discoverSite`.
+   */
+  discover?(site: string, options?: DiscoverOptions): Promise<DiscoverResult>;
+  /**
+   * This optional method crawls a site from its seeds. It follows the links of each page to a
+   * maximum of pages, a maximum depth and a maximum time. A `for await` loop gets each page.
+   * `summary` tells why the crawl stopped. `openCrawler` gives it. Over a runtime of your own, use
+   * `crawlSite`.
+   */
+  crawl?(seeds: string | readonly string[], options?: CrawlOptions): CrawlRun;
+  /**
+   * This optional method compares two versions of a stored document: the lines and the words of
+   * the text, and the metadata at its paths. It sends no request. `openCrawler` gives it.
+   */
+  diff?(doc: string, options?: DiffOptions): Promise<DiffResult>;
+  /** This optional list keeps the pages that the crawler checks again on a schedule. `openCrawler` gives it. */
+  readonly watch?: WatchList;
+  // ── extract ──
+  /**
+   * This optional method checks the proposed values of fields against a stored document, and it
+   * locates each value. It does not make values. It sends no request. `openCrawler` gives it.
+   */
+  extract?(
+    doc: string,
+    fields: Readonly<Record<string, FieldClaim>>,
+    options?: ExtractOptions,
+  ): Promise<ExtractResult>;
+  // ── end of extract ──
+}
+
+/** This crawler is the result of `openCrawler`: a `PoliteCrawler` with `discover`, `crawl`, `diff`, `watch` and `extract`. */
+export interface OpenedCrawler extends PoliteCrawler {
+  /** This method finds the pages of a site from its sitemaps and its feeds. */
+  discover(site: string, options?: DiscoverOptions): Promise<DiscoverResult>;
+  /** This method crawls a site from its seeds, within its limits. A `for await` loop gets each page. */
+  crawl(seeds: string | readonly string[], options?: CrawlOptions): CrawlRun;
+  /** This method compares two versions of a stored document. It sends no request. */
+  diff(doc: string, options?: DiffOptions): Promise<DiffResult>;
+  /** This list keeps the pages that the crawler checks again on a schedule, in `watch.sqlite`. */
+  readonly watch: WatchList;
+  /**
+   * This method checks the proposed values of fields against a stored document. Each field gets
+   * `verified`, `normalized`, `ambiguous`, `not-found`, `held-back` or `invalid`.
+   */
+  extract(
+    doc: string,
+    fields: Readonly<Record<string, FieldClaim>>,
+    options?: ExtractOptions,
+  ): Promise<ExtractResult>;
 }
 
 /**
@@ -348,7 +415,9 @@ export interface PoliteCrawler {
  * Each method gives a promise, and none throws before its promise. After `close`, each method
  * rejects.
  */
-export const openCrawler = (options: OpenOptions): PoliteCrawler => {
+export const openCrawler = (options: OpenOptions): OpenedCrawler => {
+  const floorMs =
+    options.watchFloor === undefined ? WATCH_LIMITS.floorMs : durationMs(options.watchFloor);
   const runtime = createRuntime(options);
   let closed = false;
   // the rebuild at open, which the first reindex() gives when no fetch came before it
@@ -369,6 +438,35 @@ export const openCrawler = (options: OpenOptions): PoliteCrawler => {
     await ready;
     if (closed) throw new Error("the crawler is closed");
   };
+  // the watch list opens at its first use, so a store with no watch has no watch.sqlite
+  let watches: WatchStore | undefined;
+  const watchStore = async (): Promise<WatchStore> => {
+    await live();
+    watches ??= new WatchStore(join(options.dir, "watch.sqlite"), { floorMs });
+    return watches;
+  };
+  const clockNow = (): number => Date.parse(runtime.now());
+  const watch: WatchList = {
+    async add(url, watchOptions = {}) {
+      return (await watchStore()).add(url, watchOptions, clockNow());
+    },
+    async remove(url) {
+      return (await watchStore()).remove(url);
+    },
+    async list() {
+      return (await watchStore()).list(clockNow());
+    },
+    run(runOptions = {}) {
+      return runWatch(runtime, watchStore, {
+        ...runOptions,
+        onBehalfOf: options.onBehalfOf,
+        ready: () => {
+          rebuilt = undefined;
+          return Promise.resolve();
+        },
+      });
+    },
+  };
   return {
     runtime,
     async fetch(url, fetchOptions = {}) {
@@ -382,6 +480,8 @@ export const openCrawler = (options: OpenOptions): PoliteCrawler => {
         signal: fetchOptions.signal,
         scope: fetchOptions.scope,
         labels: fetchOptions.labels,
+        fallback: fetchOptions.fallback,
+        archiveDespiteRobots: fetchOptions.archiveDespiteRobots,
       });
     },
     async find(q, findOptions = {}) {
@@ -396,6 +496,12 @@ export const openCrawler = (options: OpenOptions): PoliteCrawler => {
       await live();
       return verifyQuote(runtime, id, quote, verifyOptions);
     },
+    // ── extract ──
+    async extract(id, fields, extractOptions = {}) {
+      await live();
+      return extractDocument(runtime, id, fields, extractOptions);
+    },
+    // ── end of extract ──
     async versions(id, versionOptions = {}) {
       await live();
       // a held-back version shows no title, as a read of its capture does
@@ -431,10 +537,16 @@ export const openCrawler = (options: OpenOptions): PoliteCrawler => {
       rebuilt = undefined;
       return done ?? reindex(runtime);
     },
+    async diff(id, diffOptions = {}) {
+      await live();
+      return diffDocument(runtime, id, diffOptions);
+    },
+    watch,
     async close() {
       closed = true;
       await ready;
       await runtime.close();
+      watches?.close();
     },
   };
 };

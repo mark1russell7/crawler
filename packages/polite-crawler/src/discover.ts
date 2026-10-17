@@ -394,10 +394,9 @@ export const discoverSite = async (
     if (body !== undefined && html && doc !== undefined && !isHeldBack(doc)) {
       let linked: readonly string[] = [];
       try {
-        linked = extractPage(
-          decodeBody(body, page.fetched.contentType ?? null),
-          page.fetched.url,
-        ).feeds;
+        linked =
+          extractPage(decodeBody(body, page.fetched.contentType ?? null), page.fetched.url).feeds ??
+          [];
       } catch {
         // a page that the reader cannot read names no feed
       }

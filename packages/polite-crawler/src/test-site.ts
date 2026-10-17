@@ -7,7 +7,7 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import { createServer } from "node:http";
 import type { AddressInfo } from "node:net";
 import { openCrawler } from "./open.ts";
-import type { OpenOptions, PoliteCrawler } from "./open.ts";
+import type { OpenOptions, OpenedCrawler } from "./open.ts";
 import type { Clock } from "./politeness.ts";
 import { fakeClock, removeDir, tempDir } from "./test-helpers.ts";
 
@@ -122,7 +122,7 @@ export const sitemapIndex = (entries: ReadonlyArray<readonly [string, string?]>)
     .join("")}</sitemapindex>`;
 
 export interface TestCrawler {
-  readonly crawler: PoliteCrawler;
+  readonly crawler: OpenedCrawler;
   readonly clock: ReturnType<typeof fakeClock>;
   readonly dir: string;
   readonly close: () => Promise<void>;

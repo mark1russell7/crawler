@@ -5,7 +5,7 @@ import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { afterEach, describe, expect, it } from "vitest";
 import type { CrawlRun, CrawlSummary } from "./frontier.ts";
 import { createMcpServer } from "./mcp.ts";
-import type { PoliteCrawler } from "./open.ts";
+import type { OpenedCrawler, PoliteCrawler } from "./open.ts";
 import { realClock } from "./politeness.ts";
 import { fakeClock } from "./test-helpers.ts";
 import { removeDir, runCli, tempDir } from "./test-surfaces.ts";
@@ -154,7 +154,7 @@ describe("the command line: discover and crawl", () => {
 });
 
 describe("the MCP tools crawl_discover and crawl_site", () => {
-  const connect = async (crawler: PoliteCrawler) => {
+  const connect = async (crawler: OpenedCrawler) => {
     const runs: CrawlRun[] = [];
     // the server gets a crawler that keeps each crawl, so the test can read its summary
     const watched: PoliteCrawler = {

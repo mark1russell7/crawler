@@ -9,6 +9,7 @@ import type {
   RankMode,
   ReadingIndex,
   Variant,
+  VersionAt,
 } from "./docs.ts";
 import { locate } from "./docs.ts";
 import type { PageExtract } from "./html.ts";
@@ -20,6 +21,10 @@ import { makeRecord } from "./record.ts";
 import type { AiInput } from "./signals.ts";
 import { decodeBody } from "./text.ts";
 import { canonicalUrl } from "./urls.ts";
+// ── archived fallback ──
+import type { Archived } from "./fallback.ts";
+import { archiveExtractor, archivedNote, archivedOf, archivedPage } from "./fallback.ts";
+// ── end of archived fallback ──
 
 /**
  * An extractor changes one captured body into the documents that it holds. It has no side effects,
@@ -139,7 +144,7 @@ export const pageExtractor: Extractor = (body, capture) => {
         needs_render: page.needsRender,
         render_reason: page.renderReason,
         canonical: page.canonical,
-        ...(page.feeds.length > 0 ? { feeds: page.feeds } : {}),
+        ...(page.feeds !== undefined && page.feeds.length > 0 ? { feeds: page.feeds } : {}),
         redirect: page.redirect,
         blocked: page.blocked,
         ...(page.notes.length > 0 ? { notes: page.notes } : {}),
@@ -207,7 +212,11 @@ const pdfDocs = async (body: Uint8Array, url: string): Promise<ReadonlyArray<Ext
 };
 
 export class Extractors {
-  private readonly byRecipe = new Map<string, Extractor>([["page", pageExtractor]]);
+  // the archived fallback reads its copies with the built-in recipe `archive-copy`
+  private readonly byRecipe = new Map<string, Extractor>([
+    ["page", pageExtractor],
+    ["archive-copy", archiveExtractor],
+  ]);
 
   register(recipe: string, extractor: Extractor): void {
     if (this.byRecipe.has(recipe)) throw new Error(`recipe ${recipe} already has an extractor`);
@@ -265,6 +274,8 @@ export interface CapturePayload {
   /** This URL is the target of a redirect, with its secrets as `REDACTED`. */
   readonly location?: string | null;
   readonly note?: string;
+  /** This text is the byte range of a range request (`bytes=0-99`). The capture is a part of the resource, not its stored copy. */
+  readonly range?: string;
 }
 
 /** The structural fields of the metadata of a page: they hold no text of the page. A held-back page shows only these. */
@@ -283,6 +294,9 @@ export const STRUCTURAL_META: readonly string[] = [
   "pages",
   "ocr_needed",
   "truncated",
+  // the label of an archived copy holds no text of the page
+  "archived",
+  "archived_kind",
 ];
 
 /** The note of a document that is held back. */
@@ -365,7 +379,8 @@ const indexCapture = async (
         blob: fetched.blob ?? null,
         recipe,
         rendered,
-        ai_input: fetched.signals.ai_input,
+        // an extractor can find a "no" in the body (the headers of an archived response), never a "yes"
+        ai_input: doc.ai_input === "no" ? "no" : fetched.signals.ai_input,
         ...(fetched.scope !== undefined ? { scope: fetched.scope } : {}),
         ...(fetched.labels !== undefined ? { labels: fetched.labels } : {}),
       },
@@ -425,6 +440,11 @@ export interface PageResult {
   /** This value is true when the page asked not to be AI input. Its title and text are then held back. */
   readonly held_back: boolean;
   readonly note: string | null;
+  /**
+   * This value tells that the document is an archived copy, not a fresh fetch: the archive, the date
+   * of the copy and its URL there. The outcome and the status stay those of the live fetch.
+   */
+  readonly archived?: Archived | undefined;
 }
 
 /** These options control one page. */
@@ -439,6 +459,12 @@ export interface PageOptions {
   readonly labels?: Readonly<Record<string, string>> | undefined;
   /** This time (milliseconds since the epoch) is the end of a budget. No request of the page starts at or after it (`FetchRequest.deadline`). */
   readonly deadline?: number | undefined;
+  // ── archived fallback ──
+  /** The value `archive` gives a copy from a public web archive when the site refuses the page, or is down. The default is `none`. */
+  readonly fallback?: "archive" | "none" | undefined;
+  /** The value true also gives an archived copy of a page that the current robots.txt of its site disallows. The default is false. */
+  readonly archiveDespiteRobots?: boolean | undefined;
+  // ── end of archived fallback ──
 }
 
 const HTML_TYPE = /html|xml/i;
@@ -518,6 +544,13 @@ export const fetchPage = async (
       }
     }
   }
+  // ── archived fallback: a refusal can get a copy from a web archive, clearly marked ──
+  if (options.fallback === "archive" && docs.length === 0) {
+    const fallback = await archivedPage(runtime, url, plain, options);
+    if (fallback.page !== undefined) return fallback.page;
+    notes.push(...fallback.notes);
+  }
+  // ── end of archived fallback ──
   const doc = docs[0] === undefined ? undefined : (runtime.index.get(docs[0].doc) ?? docs[0]);
   const held = doc !== undefined && isHeldBack(doc);
   const types = doc?.meta["jsonld_types"];
@@ -570,6 +603,15 @@ export interface ReadResult {
   /** This value is true when the page asked not to be AI input. The text is then empty. */
   readonly held_back: boolean;
   readonly note: string | null;
+  /** This time (ISO 8601) is the `at` of the read. The result has it only when the read gave `at`. */
+  readonly at?: string | undefined;
+  /**
+   * This value is true when `at` is before the first capture of the document. Then no version
+   * answers: the text, the title, `capture` and `fetched_at` are empty, and the note tells why.
+   */
+  readonly before_first?: boolean | undefined;
+  /** This value tells that the text is an archived copy, with the archive and the date of the copy. */
+  readonly archived?: Archived | undefined;
 }
 
 /** This result tells if a quote is in a stored document, and where. */
@@ -599,6 +641,15 @@ export interface VerifyResult {
   readonly count: number;
   readonly held_back: boolean;
   readonly note: string | null;
+  /** This time (ISO 8601) is the `at` of the verification. The result has it only when the verification gave `at`. */
+  readonly at?: string | undefined;
+  /** This value is true when `at` is before the first capture of the document. Then no version holds the quote, and the note tells why. */
+  readonly before_first?: boolean | undefined;
+  /**
+   * This value tells that the examined text is an archived copy, with the archive and the date of
+   * the copy. A citation of it names the archive and that date, not a date of a fresh fetch.
+   */
+  readonly archived?: Archived | undefined;
 }
 
 /** These options control a read. */
@@ -611,6 +662,11 @@ export interface ReadOptions {
   readonly userProvided?: boolean | undefined;
   /** This id reads the version of one capture, not the current version. */
   readonly capture?: string | undefined;
+  /**
+   * This time reads the version that was current at that time: an ISO 8601 text or a `Date`. A
+   * date with no time is the start of that day in UTC. Give `capture` or `at`, not the two.
+   */
+  readonly at?: string | Date | undefined;
 }
 
 /** These options control a verification. */
@@ -619,6 +675,8 @@ export interface VerifyOptions {
   readonly capture?: string | undefined;
   /** This value is true when a person gave this URL directly. It is the only way to verify a quote in a held-back document. */
   readonly userProvided?: boolean | undefined;
+  /** This time examines only the version that was current at that time (`ReadOptions.at`). Give `capture` or `at`, not the two. */
+  readonly at?: string | Date | undefined;
 }
 
 const knownDoc = (runtime: CrawlRuntime, id: string): Doc => {
@@ -627,6 +685,56 @@ const knownDoc = (runtime: CrawlRuntime, id: string): Doc => {
     throw new Error(`no stored document ${id}: find one with find(), or fetch its page`);
   return doc;
 };
+
+// ── time travel ─────────────────────────────────────────────────────────────
+
+/**
+ * This function gives the ISO 8601 form of a time. A text that is not a time throws a `RangeError`.
+ * A date with no time is the start of that day in UTC.
+ */
+export const isoTime = (name: string, value: string | Date): string => {
+  const ms =
+    value instanceof Date ? value.getTime() : typeof value === "string" ? Date.parse(value) : NaN;
+  if (!Number.isFinite(ms)) {
+    throw new RangeError(
+      `${name} must be a time, such as 2026-10-01T12:00:00Z, not ${JSON.stringify(String(value))}`,
+    );
+  }
+  return new Date(ms).toISOString();
+};
+
+/**
+ * This function gives the version of a document that was current at a time (ISO 8601). It uses
+ * `ReadingIndex.versionAt` when the index has it. Else it takes the newest version at or before
+ * the time.
+ */
+export const versionAtTime = (runtime: CrawlRuntime, id: string, at: string): VersionAt => {
+  const index = runtime.index;
+  if (index.versionAt !== undefined) return index.versionAt(id, at);
+  const all = index.versions(id, { limit: 1_000_000 });
+  const pick = all.find((version) => version.fetched_at <= at);
+  return {
+    version: pick === undefined ? undefined : index.versionText(id, pick.capture),
+    first: all.at(-1)?.fetched_at,
+  };
+};
+
+/** This function gives the note of a time before the first version of a document. */
+const beforeFirstNote = (id: string, at: string, first: string | undefined): string =>
+  `the document ${id} has no version at ${at} or before${first === undefined ? "" : `: its first capture is from ${first}`}`;
+
+/** This function gives the time of `at`, or undefined. It refuses `capture` and `at` together. */
+const atOf = (options: {
+  readonly capture?: string | undefined;
+  readonly at?: string | Date | undefined;
+}): string | undefined => {
+  if (options.at === undefined) return undefined;
+  if (options.capture !== undefined)
+    throw new RangeError("give capture or at, not the two: each one chooses a version");
+  return isoTime("at", options.at);
+};
+
+// ── end of time travel ──────────────────────────────────────────────────────
 
 const wholeNumber = (name: string, value: number | undefined, fallback: number): number => {
   if (value === undefined) return fallback;
@@ -691,11 +799,39 @@ export const readDocument = async (
 ): Promise<ReadResult> => {
   const from = wholeNumber("from", options.from, 0);
   const length = wholeNumber("length", options.length, 4000);
+  const at = atOf(options);
   const doc = knownDoc(runtime, id);
-  const version =
+  let version =
     options.capture === undefined ? undefined : runtime.index.versionText(id, options.capture);
   if (options.capture !== undefined && version === undefined) {
     throw new Error(`the document ${id} has no version from the capture ${options.capture}`);
+  }
+  const timed = at === undefined ? {} : { at, before_first: false };
+  if (at !== undefined) {
+    const found = versionAtTime(runtime, id, at);
+    if (found.version === undefined) {
+      // no version answers, so there is no text to hold back
+      return {
+        doc: doc.doc,
+        kind: doc.kind,
+        title: "",
+        url: doc.url,
+        meta: {},
+        from: 0,
+        to: 0,
+        total: 0,
+        text: "",
+        captures: doc.captures,
+        capture: "",
+        fetched_at: "",
+        ai_input: doc.ai_input,
+        held_back: false,
+        note: beforeFirstNote(id, at, found.first),
+        at,
+        before_first: true,
+      };
+    }
+    version = found.version;
   }
   const aiInput: AiInput =
     doc.ai_input === "no" || version?.ai_input === "no"
@@ -708,6 +844,9 @@ export const readDocument = async (
   const start = onBoundary(text, Math.min(from, text.length));
   const end = held ? start : onBoundary(text, Math.min(text.length, start + length));
   const meta = version?.meta ?? doc.meta;
+  // ── archived fallback: an archived copy says so in each read ──
+  const archived = archivedOf(meta);
+  const notes = [...(held ? [HELD_BACK] : []), ...(archived ? [archivedNote(archived)] : [])];
   return {
     doc: doc.doc,
     kind: version?.kind ?? doc.kind,
@@ -723,9 +862,34 @@ export const readDocument = async (
     fetched_at: version?.fetched_at ?? doc.fetched_at,
     ai_input: aiInput,
     held_back: held,
-    note: held ? HELD_BACK : null,
+    note: notes.length > 0 ? notes.join(" ") : null,
+    ...timed,
+    ...(archived !== undefined ? { archived } : {}),
   };
 };
+
+// ── archived fallback: the labels of an archived copy ──
+
+/** This function gives the `archived` field of a result, for the metadata of an archived copy. */
+const archivedField = (
+  meta: Readonly<Record<string, unknown>>,
+): { readonly archived?: Archived } => {
+  const archived = archivedOf(meta);
+  return archived === undefined ? {} : { archived };
+};
+
+/** This function gives the `archived` field and the note of a result: the note of an archived copy goes after the other note. */
+const withArchived = (
+  meta: Readonly<Record<string, unknown>>,
+  note: string | null,
+): { readonly note: string | null; readonly archived?: Archived } => {
+  const archived = archivedOf(meta);
+  if (archived === undefined) return { note };
+  const said = archivedNote(archived);
+  return { note: note === null ? said : `${note}; ${said}`, archived };
+};
+
+// ── end of archived fallback ──
 
 /**
  * This function examines the versions of a document for a quote, and writes nothing. It also tells
@@ -737,31 +901,55 @@ const examineQuote = (
   quote: string,
   options: VerifyOptions,
 ): { readonly result: VerifyResult; readonly override: boolean } => {
+  const at = atOf(options);
   const doc = knownDoc(runtime, id);
-  const pinned =
+  let pinned =
     options.capture === undefined ? undefined : runtime.index.versionText(id, options.capture);
   if (options.capture !== undefined && pinned === undefined) {
     throw new Error(`the document ${id} has no version from the capture ${options.capture}`);
   }
   const userProvided = options.userProvided ?? false;
   const base = { doc: doc.doc, url: doc.url, captures: doc.captures };
+  const timed = at === undefined ? {} : { at, before_first: false };
+  const nothing = {
+    found: false,
+    start: null,
+    end: null,
+    excerpt: null,
+    capture: null,
+    blob: null,
+    fetched_at: null,
+    stale: false,
+    in_full_text: false,
+    count: 0,
+  } as const;
+  if (at !== undefined) {
+    // the version that was current at the time is the only version that the check examines
+    const found = versionAtTime(runtime, id, at);
+    if (found.version === undefined) {
+      const result: VerifyResult = {
+        ...base,
+        ...nothing,
+        complete: true,
+        held_back: false,
+        note: beforeFirstNote(id, at, found.first),
+        at,
+        before_first: true,
+      };
+      return { result, override: false };
+    }
+    pinned = found.version;
+  }
   const aiInput: AiInput = doc.ai_input === "no" || pinned?.ai_input === "no" ? "no" : doc.ai_input;
   if (isHeldBack({ ai_input: aiInput }, userProvided)) {
     const result: VerifyResult = {
       ...base,
-      found: false,
-      start: null,
-      end: null,
-      excerpt: null,
-      capture: null,
-      blob: null,
-      fetched_at: null,
-      stale: false,
-      in_full_text: false,
+      ...nothing,
       complete: false,
-      count: 0,
       held_back: true,
       note: HELD_BACK,
+      ...timed,
+      ...archivedField(pinned?.meta ?? doc.meta),
     };
     return { result, override: false };
   }
@@ -797,7 +985,11 @@ const examineQuote = (
       complete: true,
       count: hit.count,
       held_back: false,
-      note: stale ? "only an earlier capture of the document holds the quote" : null,
+      ...withArchived(
+        version.meta,
+        stale ? "only an earlier capture of the document holds the quote" : null,
+      ),
+      ...timed,
     };
     return { result, override };
   }
@@ -828,7 +1020,8 @@ const examineQuote = (
     complete: !incomplete,
     count: 0,
     held_back: false,
-    note: notes.length > 0 ? notes.join("; ") : null,
+    ...withArchived(current?.meta ?? doc.meta, notes.length > 0 ? notes.join("; ") : null),
+    ...timed,
   };
   return { result, override };
 };
@@ -886,10 +1079,16 @@ export const findDocuments = async (
   } = {},
 ): Promise<Found[]> => {
   await Promise.resolve();
-  return runtime.index.find(q, {
+  const found = runtime.index.find(q, {
     limit: options.limit ?? 10,
     kind: options.kind ?? null,
     ...(options.rank !== undefined ? { rank: options.rank } : {}),
+  });
+  // ── archived fallback: a hit of an archived copy says so ──
+  return found.map((hit) => {
+    if (hit.kind !== "archived") return hit;
+    const meta = runtime.index.get(hit.doc)?.meta;
+    return meta === undefined ? hit : { ...hit, ...archivedField(meta) };
   });
 };
 
@@ -917,8 +1116,16 @@ export interface ReindexResult {
 
 const RENDERED_MARK = "#rendered";
 const MAX_ERRORS = 20;
-/** The crawler reads the captures of these recipes for itself: robots.txt, and the sitemaps and feeds of `discover`. They give no document. */
-const CRAWLER_RECIPES: ReadonlySet<string> = new Set(["robots.txt", "sitemap", "feed"]);
+/**
+ * The crawler reads the captures of these recipes for itself. They are robots.txt, the sitemaps
+ * and feeds of `discover`, and the indexes of the web archives. They give no document.
+ */
+const CRAWLER_RECIPES: ReadonlySet<string> = new Set([
+  "robots.txt",
+  "sitemap",
+  "feed",
+  "archive-index",
+]);
 
 /** This function gives the URL of a capture and its variant. A URL of version 0.1 can end in `#rendered`. */
 const captureTarget = (
@@ -988,8 +1195,9 @@ const replayLatest = (
     }
     return;
   }
-  // a body that the server cut, or a web page in place of the data of an API, was never the stored copy
-  if (payload.cut === true || payload.unasked === true) return;
+  // a body that the server cut, a web page in place of the data of an API, or a part of a resource
+  // from a range request was never the stored copy
+  if (payload.cut === true || payload.unasked === true || payload.range !== undefined) return;
   const previous = build.latest(url, variant);
   const revisit = envelope.kind === "revisit" || payload.outcome === "not-modified";
   const truncated = payload.truncated === true;
@@ -1081,7 +1289,7 @@ const replayRecord = async (
         blob: payload.blob,
         recipe: payload.recipe,
         rendered: variant === "rendered",
-        ai_input: payload.signals?.ai_input ?? "unset",
+        ai_input: doc.ai_input === "no" ? "no" : (payload.signals?.ai_input ?? "unset"),
         ...(envelope.scope !== undefined ? { scope: envelope.scope } : {}),
         ...(envelope.labels !== undefined ? { labels: envelope.labels } : {}),
       },
@@ -1166,6 +1374,11 @@ const missed = (runtime: CrawlRuntime, envelope: CaptureRecord): boolean => {
     (payload.outcome !== "ok" && payload.outcome !== "not-modified")
   )
     return false;
+  // a range request leaves no cache entry: only its documents tell if the index has it
+  if (payload.range !== undefined)
+    return (
+      runtime.extractors.get(payload.recipe) !== undefined && !runtime.index.hasVersion(envelope.id)
+    );
   if (entry === undefined || entry.fetched_at < fetchedAt) return true;
   return (
     runtime.extractors.get(payload.recipe) !== undefined && !runtime.index.hasVersion(envelope.id)

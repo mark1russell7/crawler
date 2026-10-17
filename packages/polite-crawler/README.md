@@ -12,9 +12,12 @@ The site has interactive demos with the real code: <https://mark1russell7.github
 - **Fetch one time.** Each response goes into a capture log and a store of bodies by hash. A repeated question reads the disk, so it costs no request.
 - **Read the cheap way.** The crawler reads JSON-LD, the visible text and the links with no browser. It opens a headless browser only for a page that shows almost nothing without JavaScript.
 - **Cite exact text.** Full-text search (SQLite FTS5) gives ranked passages. A quote check finds the exact span in the stored text, with the capture id to cite.
-- **An MCP server.** One command gives Claude and other MCP clients six tools: fetch, find, read, verify, discover and a small crawl.
+- **An MCP server.** One command gives Claude and other MCP clients nine tools. They fetch, find, read and verify pages, check field values, discover and crawl a site, compare versions and list the watched pages.
 - **Web archives.** An export writes the stored captures as WARC or WACZ. Archive tools read them, for example `warcio`, pywb and ReplayWeb.page.
 - **Find and crawl a site.** `discover` lists the pages of a site from its sitemaps and feeds. `crawl` follows the links of a site within a budget, at the pace of the site.
+- **Watch and compare.** `watch` checks pages again on a schedule and tells what changed. `diff` compares two versions, and `read` takes `at`: the page as it was at a time.
+- **Archived copies, on request.** When a site refuses a page or is down, `fallback: "archive"` gives a copy from the Wayback Machine or Common Crawl. The result marks the copy as archived, with its date.
+- **Signed requests.** With an Ed25519 key, the crawler signs each request (Web Bot Auth). A site can then verify that a request comes from your crawler.
 
 ## Install
 
@@ -53,6 +56,7 @@ npx polite-crawler fetch https://en.wikipedia.org/wiki/Web_crawler
 npx polite-crawler find "robots exclusion"
 npx polite-crawler read "url:https://en.wikipedia.org/wiki/Web_crawler" --length 2000
 npx polite-crawler verify "url:https://en.wikipedia.org/wiki/Web_crawler" "robots.txt protocol"
+npx polite-crawler extract "url:https://en.wikipedia.org/wiki/Web_crawler" --field "name=Web crawler"
 ```
 
 The store is in `~/.polite-crawler`. Use `--dir` or `POLITE_CRAWLER_DIR` for a different folder. A path that starts with `~` is in your home folder, and a relative path starts at the working folder. Use `--json` for output that a program reads. `npx polite-crawler --help` shows all the options.
@@ -60,9 +64,12 @@ The store is in `~/.polite-crawler`. Use `--dir` or `POLITE_CRAWLER_DIR` for a d
 - `--allow-private` (or `POLITE_CRAWLER_ALLOW_PRIVATE=1`) lets the crawler fetch loopback, private and link-local addresses. By default, the crawler refuses them.
 - `read --user-provided` reads a page that asked not to be AI input. Use it only for a URL that you gave yourself. The crawler records each such read.
 - `--max-age 0` fetches a page again, also when the store has a copy.
+- `fetch --archive-fallback` gives an archived copy when a site refuses a page or is down. [Archived copies after a refusal](#archived-copies-after-a-refusal) tells the rules.
+- `--sign-key <file>` and `--signature-agent <url>` sign each request. `key-directory --sign-key <file>` prints the key directory to host. [Signed requests](#signed-requests-web-bot-auth) tells how.
 - `find --rank fast` makes a long question faster, and its results can be different. [Fast ranking](#fast-ranking) gives the measured difference.
 - `reindex` builds the index again. The documents of a recipe that the command cannot read (the recipes of another application) stay. The output counts them, and the captures that it skipped.
 - `export --out <file>` writes the stored captures as a WARC or a WACZ file. [Export to a web archive](#export-to-a-web-archive) tells what goes into the file.
+- `extract <doc> --field name=value[:kind]` checks the values that you propose for the fields of a stored page. Repeat `--field` for each field. `--capture` checks the text of one capture, and `--at` the version that was current at a time. [Check field values against a page](#check-field-values-against-a-page) tells the statuses.
 
 To find the pages of a site, or to fetch a part of a site, use `discover` and `crawl`:
 
@@ -76,12 +83,27 @@ npx polite-crawler crawl https://example.com/ --max-pages 50 --max-depth 2 --bud
 - `crawl` also takes `--include` and `--exclude` (patterns, which you can repeat), `--sitemaps`, `--render` and `--max-age`.
 - `discover` and `crawl` take `--allow-host <host>` for more hosts. The first `Ctrl+C` stops a crawl, and the summary prints.
 
+To read a page as it was, to compare two versions, or to watch pages, use `read --at`, `diff` and `watch`:
+
+```sh
+npx polite-crawler read "url:https://example.com/" --at 2026-10-01T12:00:00Z
+npx polite-crawler diff "url:https://example.com/" --from 2026-10-01 --to fetch.5d41402abc4b
+npx polite-crawler watch add https://example.com/hours --every 6h
+npx polite-crawler watch run --budget 2m
+npx polite-crawler watch list
+```
+
+- `read --at` and `verify --at` use the version that was current at that time. [Read a page as it was at a time](#read-a-page-as-it-was-at-a-time) gives the rules.
+- `diff` prints the changed lines as a unified diff. A changed line marks its words with `[-removed-]` and `{+added+}`. `--from` and `--to` take a capture id or a time.
+- `watch add` takes `--every` (1 hour or more, `24h` by default), `--confirm 1` or `2`, `--render`, `--scope` and `--label <name=value>`.
+- `watch run` takes `--budget` (default `10m`) and `--max-pages` (default 100). It prints each check, then a summary. A scheduler of the operator starts it: the package has no daemon.
+
 The command gives these exit codes:
 
 | Code | Meaning |
 | --- | --- |
 | `0` | The command did its work. |
-| `1` | The command did not do its work: a page that the crawler did not fetch, no search result, a quote that is not in the document, a document that is not stored or that is held back, or an error. `discover` gives 1 when it finds no URL, and `crawl` when it gets no page. |
+| `1` | The command did not do its work: a page that the crawler did not fetch, no search result, a quote that is not in the document, a document that is not stored or that is held back, or an error. `discover` gives 1 when it finds no URL, and `crawl` when it gets no page. `read --at` and `verify --at` give 1 for a time before the first capture. `watch run` gives 1 when a check is `refused` or an `error`, or when entries stay due. `watch remove` gives 1 for a URL that is not on the list. With `--archive-fallback`, a page with an archived copy counts as done. `extract` gives 1 when a field is not `verified` or `normalized`. |
 | `2` | The command line is wrong. The command opens no store. |
 
 ## Use it from Claude (MCP)
@@ -122,18 +144,23 @@ claude mcp add polite-crawler -- npx -y -p polite-crawler -p playwright-core pol
 
 When a new version of `playwright-core` comes out, install its browser again with the first command.
 
-The server gives six tools:
+The server gives nine tools:
 
 | Tool | What it does |
 | --- | --- |
-| `crawl_fetch` | It fetches pages into the store, and a page in the store answers with no request. It gives the age of each copy. |
+| `crawl_fetch` | It fetches pages into the store, and a page in the store answers with no request. It gives the age of each copy. With `archive_fallback`, a page that the site refuses gets an archived copy, marked `archived`. |
 | `crawl_find` | It searches the stored pages and gives ranked passages. |
-| `crawl_read` | It gives a range of a stored document, with the capture ids to cite and the position of the next range. |
-| `crawl_verify` | It finds a quote in a stored document and gives the exact span. |
+| `crawl_read` | It gives a range of a stored document, with the capture ids to cite and the position of the next range. With `at`, it reads the version that was current at that time. |
+| `crawl_verify` | It finds a quote in a stored document and gives the exact span. It takes `at` too. |
+| `crawl_extract` | It checks the values that the assistant proposes for the fields of a stored page, and gives a status and a span for each field. It does not make values. With `at`, it checks the version that was current at that time. |
 | `crawl_discover` | It lists the page URLs of a site from its sitemaps and feeds, 1,000 or fewer. It fetches no page of the list. |
 | `crawl_site` | It fetches a few pages of a site and follows their links on the site: 10 pages and 1 minute by default, and 50 pages and 5 minutes at most. It sends progress for each page. |
+| `crawl_diff` | It compares two stored versions of a document, by capture id or by time. The changed lines, the changed words and the changes of the metadata come in the envelope. |
+| `crawl_watch_list` | It lists the watched pages: each URL, the next check, the last result and a suspected change. It leaves out the scope and the labels. |
 
 The MCP server applies the robots.txt rules for `Claude-User` too, because an assistant asks for these pages.
+
+No tool adds a watch. A watch commits future requests to a site, so the operator adds it with `polite-crawler watch add`. An assistant can read the list (`crawl_watch_list`) and compare the versions of a watched page (`crawl_diff`).
 
 ### Web text is data, not instructions
 
@@ -172,6 +199,8 @@ The crawler records each release in the capture log.
 | `--allow-private` | `POLITE_CRAWLER_ALLOW_PRIVATE=1` | Fetch loopback, private and link-local addresses too. |
 | `--allow-user-provided` | `POLITE_CRAWLER_ALLOW_USER_PROVIDED=1` | Let `user_provided` work when the client cannot ask the user. |
 | `--no-browser` | | Do not open a headless browser. |
+| `--sign-key <file>` | `POLITE_CRAWLER_SIGN_KEY` | Sign each request with this Ed25519 key (PKCS#8 PEM or JWK). [Signed requests](#signed-requests-web-bot-auth) tells how. |
+| `--signature-agent <url>` | `POLITE_CRAWLER_SIGNATURE_AGENT` | Where a site finds the public key of `--sign-key`: an https origin, or the URL of a JSON Web Key Set. |
 
 ## Use it as a library
 
@@ -200,7 +229,11 @@ await crawler.close();
 - A result of `fetch` gives `capture`, `fetched_at` and `from_cache`. A result of `read` gives the `capture` and the `fetched_at` of its text.
 - `verify` gives the `capture`, the `blob` and the `fetched_at` of the text that holds the quote, with the positions in that text. `stale` is true when only an earlier capture holds the quote.
 - `read` and `verify` take `capture`: they then use the text of that capture, not the current text. A citation of a capture thus stays true after the page changes.
+- `extract` checks the values that you propose for the fields of a page, and gives the span and the capture of each value. [Check field values against a page](#check-field-values-against-a-page) tells how.
 - `versions(doc)` gives the versions of a document, the newest first.
+- `read` and `verify` take `at`: the version that was current at that time. [Read a page as it was at a time](#read-a-page-as-it-was-at-a-time) tells the rules.
+- `diff(doc, { from, to })` compares two versions. [Compare two versions](#compare-two-versions) tells what it gives.
+- `watch` is the watch list: `add`, `remove`, `list` and `run`. [Watch pages](#watch-pages) tells the rules.
 - `find` reads a query syntax. Text in double quotes is a phrase, and `bake*` is a prefix. The documents that hold each word come first. Case, accents and Unicode forms do not change a match, and Chinese, Japanese and Thai words match too.
 - `find` takes `rank`. The default is `exact`, and `fast` makes a long question faster. [Fast ranking](#fast-ranking) tells the difference.
 - A page that asks not to be AI input is held back in each result. `fetch` gives no title, and `read` gives no title, no text and only the structural metadata. `verify` gives `found: false`, and `find` leaves the page out. Only `userProvided` lifts the hold, and the crawler logs it.
@@ -250,6 +283,7 @@ The root entry point also exports the parts of the runtime, for an application t
 - `catchUpIndex(runtime)`: the step of `openCrawler` at open. It rebuilds a stale index, and gives an index that is behind the log the captures that it missed. Use it after `createRuntime`.
 - `Crawler`, `CaptureLog`, `DocIndex`, `FileBlobStore`, `SqliteHostStateStore`, `Extractors`, `fetchAndIndex`, `fetchPage` and `reindex`.
 - `readDocument`, `verifyQuote`, `findDocuments`, `isHeldBack`, `heldBackMeta` and `recordOverride`: the read, the verification and the rule for a held-back page, over a runtime.
+- `extractDocument` and `checkFields`: the check of field values over a runtime, and over a text and its metadata with no store.
 - `extractPage`, `typesOf`, `decodeBody` and `bodyEncoding`: the page reader and the decoder of a body in its declared encoding.
 - `readPdf` and `isPdf`: the PDF reader. `PdfOptions` sets limits on the pages, the characters, the time and the inflated bytes.
 - `fromText`, `fromSchemaOrg`, `fromCompact` and `describeWeek`: the opening-hours reader.
@@ -259,6 +293,7 @@ The root entry point also exports the parts of the runtime, for an application t
 The readers give more facts than before:
 
 - `PageExtract` has `canonical` (the canonical URL on the same site), `redirect` (the target of a quick `<meta http-equiv="refresh">`), `blocked` (the name of a bot check or a firewall that sent its page in place of the content) and `notes` (what the reader left out).
+- `PageExtract` also has `feeds` (the RSS and Atom feeds that the page links). `extractPage` always gives it. The field is optional, so a `PageExtract` of 0.1.1 stays correct.
 - `Hours` has `partial` (the reader left out a rule or a line) and `season` (the season or the dates of the hours). The text reader reads English only.
 
 ### The options of `Crawler`
@@ -271,6 +306,7 @@ The readers give more facts than before:
 - `onEvent`: a function that gets an event for each request, response, wait, stop and skip.
 - `obeyDefaultToken`: a crawler with a token of your own also obeys the group of `PoliteCrawler` when its `User-Agent` links the bot page of polite-crawler. Site owners read that page. The stricter rules apply. Set false when you host a bot page of your own.
 - `maxRenders`: the pages that the browser renders at one time. The default is 2, because each render holds a browser context. A render waits for a slot before the lease of its host, so the wait is not time of the host.
+- `signer`: the signer of each request (Web Bot Auth). [Signed requests](#signed-requests-web-bot-auth) tells its options.
 - `scope`, `labels` and `scopeRank`: the labels of each record. One fetch of a robots.txt can serve requests of different scopes. Its record takes the labels of each request and the scope with the highest `scopeRank`, the most private one.
 
 `openCrawler` takes `egress`, `politeness` and `hostState` too, and also `clock`, `scope`, `onEvent` and `extractors`. Its default `hostState` is the file `hosts.sqlite` in the store. Thus the processes on one store share the pace, the stops and the validator memo of each host.
@@ -283,17 +319,229 @@ Before version 1.0.0, a minor version can change the API, and `CHANGELOG.md` tel
 
 These parts are the stable API:
 
-- `openCrawler` and the methods of `PoliteCrawler`: `fetch`, `find`, `read`, `verify`, `versions`, `discover`, `crawl`, `reindex` and `close`.
-- The options and the results of these methods: `OpenOptions`, `FetchOptions`, `PageResult`, `Found`, `ReadResult`, `VerifyResult`, `DocVersion` and `ReindexResult`.
+- `openCrawler` and the methods of `PoliteCrawler`: `fetch`, `find`, `read`, `verify`, `versions`, `discover`, `crawl`, `reindex`, `close`, `diff`, `watch` and `extract`. `openCrawler` gives an `OpenedCrawler`: a `PoliteCrawler` that has `discover`, `crawl`, `diff`, `watch` and `extract`. The five are optional in `PoliteCrawler`, so an object of your own that implements it stays correct.
+- The options and the results of these methods: `OpenOptions`, `FetchOptions`, `PageResult`, `Found`, `ReadResult`, `VerifyResult`, `DocVersion` and `ReindexResult`. `at` of `ReadOptions` and `VerifyOptions`, and `at` and `before_first` of their results, are stable too.
+- The options and the results of `extract`: `ExtractOptions`, `ExtractResult`, `ExtractSummary`, `FieldClaim`, `FieldKind`, `FieldStatus`, `FieldResult`, `FieldSpan` and `FieldCandidate`, with the names of the normalizations.
+- The diff: `diffDocument`, `diffTexts`, `DIFF_LIMITS`, `DiffOptions`, `DiffResult`, `DiffSide`, `DiffSummary`, `DiffHunk`, `DiffLine`, `WordPart`, `MetaChange`, `VersionChoice`, `DiffLimits`, `DiffInput` and `TextDiff`.
+- The time travel: `versionAtTime`, `isoTime` and `VersionAt`.
+- The watch list: `WatchList`, `WatchOptions`, `WatchEntry`, `WatchPending`, `WatchKind`, `WatchRun`, `WatchRunOptions`, `WatchEvent`, `WatchSummary`, `WatchStop`, `WATCH_LIMITS` and the file `watch.sqlite` (`WATCH_SCHEMA`). For a runtime of your own, it also has `WatchStore`, `WatchStoreOptions`, `runWatch` and `WatchRunnerOptions`. The lease steps of `WatchStore` (`claim`, `release` and `settle`) are the engine.
 - The options and the results of `discover` and `crawl`: `DiscoverOptions`, `DiscoverResult`, `DiscoveredUrl`, `DiscoverSource`, `DiscoverStop`, `CrawlOptions`, `CrawlRun`, `CrawlPage`, `CrawlSummary`, `CrawlStop`, `UrlPattern` and `ScopeOptions`.
 - `polite-crawler/mcp`: `createMcpServer`, `startMcpServer` and its tools.
 - The readers: `polite-crawler/robots`, `/hours`, `/html`, `/classify`, `/politeness` and `/signals`. The site and its tools use them in the browser.
 - The command line, its exit codes, the store on disk and `polite-crawler/record.schema.json`.
 - The export: `exportWarc` and `exportWacz`, their options (`ArchiveOptions`, `ArchiveFilter`, `ArchiveSource`), their results (`WarcResult`, `WaczResult`, `ArchiveCounts`) and the records of the archive.
+- The archived fallback: `fallback` and `archiveDespiteRobots` of `FetchOptions`, the field `archived` of the results, and the types `Archived` and `WebArchive`.
+- Signed requests: `createWebBotAuthSigner`, `keyDirectory`, `verifySignature`, `KEY_DIRECTORY_PATH`, `KEY_DIRECTORY_TYPE`, the option `signer`, and the types `WebBotAuthOptions`, `WebBotAuthSigner`, `RequestSigner`, `KeyDirectory`, `DirectoryKey`, `KeyInput`, `SignatureAgentType`, `SignedRequest` and `SignatureCheck`.
+- The headers of a signature follow the draft. When the draft changes, the headers change with it, and `CHANGELOG.md` says so.
 
 The other exports of the root entry point are the engine. Examples are `createRuntime`, `catchUpIndex`, `Crawler`, `CaptureLog`, `DocIndex`, `FileBlobStore`, `SqliteHostStateStore`, `Extractors`, `fetchAndIndex` and `makeRecord`. An application can build on them. A minor version before 1.0.0 can change them, and its section in `CHANGELOG.md` says so.
 
+The engine of the check of fields is `checkFields`, `extractDocument`, `FIELD_KINDS`, `FieldCheck`, `ExtractSource` and `FieldsChecked`.
+
 The engine of discovery and of the crawl is `discoverSite`, `crawlSite`, `readSitemap`, `feedDate`, `DISCOVER_LIMITS`, `CRAWL_LIMITS`, `SITEMAP_LIMITS` and `DEADLINE_NOTE`. It also includes `Crawler.robotsAllow` and the `deadline` of `FetchRequest`, `RenderRequest` and `PageOptions`.
+
+The engine of the time travel and of the watch list is the optional method `ReadingIndex.versionAt`, `DocIndex.versionAt` and `Crawler.hostStop`.
+
+The engine of the archived fallback and of the signatures is `archiveExtractor`, `archivedDocId`, and the `fallback` and `archiveDespiteRobots` of `PageOptions`. It also includes `range`, `signalLines` and `originalHeaderPrefix` of `FetchRequest`, `ai_input` of `ExtractedDoc`, `sign` of `RenderOptions` and `signer` of `CrawlerOptions`.
+
+## Read a page as it was at a time
+
+Each capture of a document is a version, and the index keeps each version. `read` and `verify` take `at`, a time. They then use the version that was current at that time.
+
+```ts
+const then = await crawler.read("url:https://example.com/", { at: "2026-10-01T12:00:00Z" });
+console.log(then.capture, then.fetched_at, then.before_first, then.text);
+
+const check = await crawler.verify("url:https://example.com/", "open on Sundays", { at: new Date("2026-10-01") });
+```
+
+- `at` is an ISO 8601 text or a `Date`. A date with no time is the start of that day in UTC.
+- The rules that choose the current version apply to the versions of that time. Thus a render stays current while the plain body under it stays the same, and the richer recipe wins.
+- The result names the `capture` and the `fetched_at` of the version, and it gives `at`.
+- When `at` is before the first capture, no version answers. `before_first` is true, and the note gives the time of the first capture. `read` then gives no text, and `verify` gives `found: false`.
+- `verify` with `at` examines that version only, as `verify` with `capture` does. A match is not `stale`.
+- Give `capture` or `at`, not the two. The two together are an error.
+- The hold of a page that asked not to be AI input applies as before. A version that was held back at that time stays held back. When the document is held back at this time, each of its versions is held back too.
+- The command line has `read --at <time>` and `verify --at <time>`. The MCP tools `crawl_read` and `crawl_verify` have `at`.
+
+`find` has no `at`. The search index (FTS5) holds the current text of each document. A search at a time needs an index entry for each version, or a scan of each stored text. Neither is cheap, so the package does not give it.
+
+## Compare two versions
+
+`diff` compares two versions of a stored document. It sends no request.
+
+```ts
+const diff = await crawler.diff("url:https://example.com/");
+console.log(diff.from.capture, diff.to.capture, diff.summary);
+
+const since = await crawler.diff("url:https://example.com/", { from: { at: "2026-10-01" }, to: "fetch.5d41402abc4b" });
+```
+
+- `from` and `to` are a capture id, or `{ at }`: the version that was current at that time. The default `to` is the newest version. The default `from` is the version before `to` of the same recipe and kind (plain or rendered). Thus a render is not compared with the plain body under it.
+- `hunks` give the text as a line diff, in the form of a unified diff, with 2 lines of context. A `changed` line pairs a removed line with an added line. Its `words` give the words that stay, the added words and the removed words.
+- `meta` gives the changes of the title, the URL and the metadata at their paths, for example `meta.jsonld[0].openingHours`. Each change has the JSON of the old and the new value, cut to 300 characters.
+- `summary` counts the added, removed and changed lines, the added and removed words, and the changes of the metadata. `same` is true when the two versions are the same.
+- The command line has `diff <doc> [--from <version>] [--to <version>]`. A version is a capture id or a time. The MCP tool `crawl_diff` gives the changes in the envelope.
+
+The line diff uses the algorithm of Myers. Its time is linear when the change is small. `DIFF_LIMITS` gives the bounds:
+
+| Limit | Value | What it bounds |
+| --- | ---: | --- |
+| `maxChars` | 1,000,000 | The characters of each text. A longer text gives its first part. |
+| `maxLines` | 50,000 | The lines of each text. A longer text gives its first lines. |
+| `maxSteps` | 1,000,000 | The steps of the line diff. After them, the rest of the change is one removal and one addition. |
+| `maxWordSteps` | 1,000,000 | The steps of the word diffs of all the changed lines together. |
+| `maxLineWords` | 5,000 | The words of one line. A longer line gets no word diff. |
+| `maxHunkLines` | 2,000 | The lines that the hunks show. The summary counts each line. |
+| `maxMetaChanges` | 200 | The changes of the metadata that the result shows. The summary counts each change. |
+
+- When a limit applies, the note tells which limit. `exact` is false when the line diff is not minimal or a changed line has no word diff. `truncated` is true when the result leaves out a part.
+- `steps` counts the steps of the diff. The tests use it, because a count of steps does not change with the computer.
+- `limits` in the options changes the bounds of one diff.
+- When a side is held back, or the document is held back, the diff gives no text and no title. It compares only the structural metadata, and `same` is null.
+
+## Watch pages
+
+A watch list keeps the pages that the crawler checks again on a schedule. The list is in `watch.sqlite` in the store.
+
+```ts
+await crawler.watch.add("https://example.com/hours", { every: "6h", labels: { lineage: "venue-17" } });
+
+const run = crawler.watch.run({ budgetMs: 120_000, maxPages: 50 });
+for await (const event of run) console.log(event.kind, event.suspected, event.url, event.diff);
+console.log((await run.summary).due);
+
+console.log(await crawler.watch.list());
+await crawler.watch.remove("https://example.com/hours");
+```
+
+| Option of `add` | Default | What it does |
+| --- | --- | --- |
+| `every` | `24h` | The time between two checks. The floor is `1h`, so a watch cannot hammer a site. `watchFloor` of `openCrawler` changes the floor. |
+| `confirm` | `2` | The number of checks that must see a change before it is confirmed. |
+| `render` | `auto` | As for `fetch`. |
+| `labels`, `scope`, `onBehalfOf` | none | As for `fetch`. They apply to each check. |
+
+`add` of a page on the list changes its options and keeps its state. A new entry is due at once.
+
+`run` checks the entries that are due, the first due first. It gives an async iterable of events, and a `summary`. Its options are `budgetMs` (10 minutes by default), `maxPages` (100 by default) and `signal`.
+
+- Each check is a fetch of the crawler with no stored copy (`maxAge: 0`). Thus robots.txt, the pace, the stops, the egress policy and the capture log apply. A stored `ETag` or `Last-Modified` date makes the check a conditional request.
+- A run sends requests to 8 hosts at one time at most, and to each host one request at a time.
+- When the budget ends before the request of a check, the entry stays due for the next run.
+- When a check finds a stopped host (a 403, a challenge, or a `Retry-After` of more than 1 hour), the entry is due again at the end of the stop, or later.
+
+Each event has the URL, the document, the capture of the check, the last confirmed capture (`previous`), the outcome and the kind of the check:
+
+| Kind | What the check saw |
+| --- | --- |
+| `new` | The first version of the page, or a page that came back after it was gone. |
+| `changed` | A version with a different title, text or JSON-LD than the last confirmed version. |
+| `unchanged` | The last confirmed version. |
+| `gone` | A 404 or a 410. |
+| `refused` | No version: robots.txt, the egress policy, a stop of the host or the site refused the request. |
+| `error` | No version: a server error, no answer, or a page that gives no document. |
+
+### The confirm rule
+
+One read can be a glitch: a page of an error, a test of the site, or a cache that is not current. Thus a change counts only when two checks see it:
+
+1. The first check that sees a change gives it with `suspected: true`. The last confirmed version does not change.
+2. The next check confirms the change when it sees the same new version. It gives `confirmed: true`, and the new version becomes the last confirmed version.
+3. When the next check sees the last confirmed version again, it gives `unchanged`, and the note says that the change did not repeat.
+4. When it sees a third version, that version is the new suspected change.
+
+A confirmation needs a new capture: a stored copy does not confirm a change. `gone` and a page that comes back follow the same rule. With `confirm: 1`, each change is confirmed at once. A `refused` or an `error` check changes no state.
+
+The `diff` of an event of the kind `changed` gives the counts of the diff from the last confirmed version. A page that asked not to be AI input gives no diff.
+
+### The list in the store
+
+- The list is the decision of the operator, not a projection of the capture log. Thus it has its own file, `watch.sqlite`. A deletion of the index or of `hosts.sqlite` does not lose it. The file opens at the first use of `crawler.watch`.
+- Each step is one SQLite transaction (`BEGIN IMMEDIATE`) in WAL mode, and it waits for the lock of a different process (`busy_timeout`).
+- A run claims each entry with a lease before its check. The lease holds until the end of the budget and 2 minutes more. Thus two processes that run at the same time check each entry one time. A process that stops holds its leases until they end.
+- The list stays after a restart, with the state of each entry: the last confirmed capture, the suspected change and the counts.
+- The package has no daemon. A scheduler of the operator (cron, a systemd timer or a job of an application) starts `watch.run`.
+- The command line has `watch add <url...>`, `watch remove <url...>`, `watch list` and `watch run`. The MCP tool `crawl_watch_list` lists the entries.
+- No MCP tool adds a watch. A watch commits future requests to a site, so it is an action of the operator, not of an assistant.
+
+## Check field values against a page
+
+A model or a person often reads a value from a page: a price, a date, opening hours, an author or a DOI. `extract` checks each proposed value against the stored copy, and it locates the value. It does not make values. It only checks and locates the values that you give, so each value has its proof.
+
+```ts
+const page = await crawler.fetch("https://example.com/focaccia");
+const result = await crawler.extract(page.doc!, {
+  price: { value: "4.50 EUR", kind: "money" },
+  since: { value: "2026-03-04", kind: "date" },
+  phone: { value: "+1 617 555 1234", kind: "phone" },
+  offer: { value: "4.50", kind: "json-ld:Product.offers.price" },
+  name: { value: "Focaccia" },
+});
+for (const [name, field] of Object.entries(result.fields)) {
+  console.log(name, field.status, field.span ?? field.path, field.normalization, field.capture);
+}
+```
+
+Each field gets one status:
+
+| Status | What it means |
+| --- | --- |
+| `verified` | The stored text holds the exact value. The result gives the span (`start` and `end`) or the JSON-LD path, the stored text (`raw`) and the capture. |
+| `normalized` | The stored text holds the value in a different form. `normalization` names the form, and the span is the span of the stored text. |
+| `ambiguous` | The value matches, but the stored text does not give one meaning. `candidates` gives each place, and the check does not choose one. |
+| `not-found` | The stored text does not hold the value. |
+| `held-back` | The page asked not to be AI input. The result tells nothing about the value. |
+| `invalid` | The value is not a value of its kind, so the check did not search for it. |
+
+The kinds are `text` (the default for a text), `number` (the default for a number), `money`, `date`, `url`, `email`, `phone` and `json-ld:<path>`. A kind that is not a kind throws a `RangeError`. The result also gives `summary`, the count of each status.
+
+### The normalizations
+
+Each normalization has a name. A normalized field gives the names that it used, joined with `+`, for example `thousands-separator+number-form`.
+
+| Kind | Name | What it permits |
+| --- | --- | --- |
+| `text` | `unicode`, `whitespace`, `case` | NFKC forms, soft hyphens, typographic quotes and dashes, runs of spaces, and capital letters. A match starts and ends at the edge of a word. |
+| `number` | `thousands-separator` | A comma, a point, an apostrophe, or a thin or no-break space between groups of three digits. |
+| `number` | `decimal-comma` | A comma in place of the decimal point. |
+| `number` | `number-form` | The same value with other digits: zeros at the start or the end, or a plus sign. |
+| `number` | `unicode` | The same digits in other characters: fullwidth digits, or the minus sign. |
+| `money` | `currency-symbol`, `currency-position`, `amount-only` | A symbol in place of a code (`€` and `EUR`), the currency before or after the amount, and a value with no currency. The names of a number apply to the amount. |
+| `date` | `date-iso`, `date-ymd`, `date-written`, `date-dmy`, `date-mdy`, `date-numeric`, `date-form` | The form of the stored date. `date-written` has an English month. `date-dmy` and `date-mdy` are numeric dates with one possible order. |
+| `date` | `date-partial` | The value has no year or no day, and the stored date has them. |
+| `url` | `url-resolved`, `url-form`, `url-scheme` | A relative URL resolved against the page URL, a different form of the same canonical URL, and a stored URL with no scheme (`www.example.com`). |
+| `email` | `email-case` | Capital letters. |
+| `phone` | `phone-digits`, `phone-suffix` | Only the digits count. With `phone-suffix`, one number ends with the other: a country code, or a number with less detail. |
+
+An amount of money has a currency symbol or a code of ISO 4217 next to it, with one space or none. A code counts only in capital letters, so `15 try` is not an amount.
+
+### The rule for ambiguity
+
+A normalized match must have one meaning. The check does not guess:
+
+- `1,234` and `1.234` can be 1234 or 1.234. Thus a number value that needs a normalization to match them is `ambiguous`. `1,234.5` and `12,50` have one meaning.
+- `03/04/2026` can be 3 April or 4 March. `17/10/2026` and `10/17/2026` have one meaning.
+- `$` is the symbol of more than one currency, so `$12` does not confirm `USD 12`. `US$12` confirms it.
+- `March 4` has no year, so it does not confirm `2026-03-04`.
+- When the value matches two places with different meanings, the field is `ambiguous`, with each place. An example is two phone numbers that end in `555-1234`.
+- A value with two meanings, for example `03/04/2026`, is `ambiguous`, unless the stored text holds its exact text.
+
+An exact match is always `verified`: the stored text holds the text of the value, and the caller gives it its meaning.
+
+### Where the check looks
+
+- The kinds of text read the text of the version, the text that `read` gives. The positions are positions in that text. When the reader cut the text, the check also reads the whole text, and the span then has `in: "full_text"`.
+- `url` also reads the stored links of the page, with the path `links[3]`. The store keeps the canonical form of each link.
+- `json-ld:<path>` reads the JSON-LD of the page. The first part of the path names a schema.org type, and the path starts at each object of that type, at any depth. `*` starts at each top-level record.
+- Each array on a JSON-LD path gives each of its values. The result gives the concrete path, for example `jsonld[0].offers[1].price`, and the raw value. It compares as a number, a date, a URL and a text, in that sequence.
+- With no option, the check reads the current version. `capture` reads the version of one capture, and `at` reads the version that was current at a time. Give `capture` or `at`, not the two.
+
+A page that asked not to be AI input gives `held-back` for each field, with no position and no capture. The result is the same for a value that is in the page and for a value that is not. Thus the check is not an oracle. `userProvided` lifts the hold for a URL that a person gave directly, as for `read` and `verify`. The crawler logs it.
+
+The time of the check is linear in the length of the text, for a fixed set of fields. The tests count the steps of the readers on texts of different lengths.
+
+The MCP tool `crawl_extract` gives the statuses and the positions in its JSON. The stored text, the readings and the excerpts come in the `<untrusted-web-content>` envelope. The command line has `polite-crawler extract`.
 
 ## Find the pages of a site
 
@@ -383,6 +631,131 @@ The frontier does not change a rule of the crawler, because each page is a fetch
 
 The frontier keeps its state in memory, for one call. It keeps 10,000 URLs that wait and 100,000 URLs that it saw, at most (`CRAWL_LIMITS`). A later version can make the frontier resumable.
 
+## Archived copies after a refusal
+
+When a site refuses a page, or the site is down, the crawler can give a copy from a public web archive. The crawler does not show the copy as a fresh fetch, and each result marks it.
+
+```ts
+const page = await crawler.fetch("https://example.com/hours", { fallback: "archive" });
+console.log(page.outcome, page.archived?.source, page.archived?.timestamp, page.doc);
+// blocked wayback 2024-01-15T09:30:00Z archive:https://example.com/hours
+```
+
+The fallback is off by default. The command line has `fetch --archive-fallback`, and the tool `crawl_fetch` has `archive_fallback`.
+
+### When the crawler gives a copy
+
+| The live fetch | An archived copy |
+| --- | --- |
+| robots.txt disallows the page | Only with `archiveDespiteRobots` |
+| A stop of the host, after a 401, a 402, a 403 or a challenge | Yes |
+| A 401, a 402, a 403, or a challenge (also a page that is a bot check) | Yes |
+| A 502, a 503, a 504, or a different 5xx error | Yes |
+| No response (a dead host), or a robots.txt that the crawler cannot read and has no recent copy of | Yes |
+| A 404, a 410, a 429, a cancel, or a refusal of the egress policy | No |
+
+### Where the copy comes from
+
+1. The Wayback Machine. Its availability API (`archive.org/wayback/available`) gives the newest copy, and the crawler fetches the raw copy (`web.archive.org/web/<time>id_/<url>`).
+2. Common Crawl, when the Wayback Machine has no copy. The crawler reads the list of indexes (`index.commoncrawl.org/collinfo.json`) and asks the 3 newest indexes. It fetches the WARC record of the newest copy with a range request (`data.commoncrawl.org`).
+
+- The archives are services of third parties, with their own politeness. Each request to them is a fetch of the same crawler. Their robots.txt, the pace of each host, the egress policy and the identity of the crawler apply.
+- The capture log records each request to an archive, with the recipe `archive-index` (an index) or `archive-copy` (a copy). `reindex` reads the copies again from the log.
+- A stored copy younger than `maxAge` answers with no request.
+- An archive learns the URL of the page. A URL that holds a secret (a password or a secret parameter) does not go to an archive.
+
+### How a result shows a copy
+
+- A copy is a document of its own, `archive:<url>`, of the kind `archived`. The document of the live page (`url:<url>`) does not change.
+- `fetch` keeps the `outcome` and the `status` of the live fetch, for example `blocked` and 403. It adds `archived`: `source` (`wayback` or `commoncrawl`), `timestamp` (when the archive captured the page), `url` (the copy in the archive), `original` (the URL that the archive captured), and `record` for Common Crawl.
+- `read`, `verify` and `find` give `archived` for a copy. The note of `read` and `verify` names the archive and the date. Thus a citation of a copy names the archive and its date, not the date of a fresh fetch.
+- `fetched_at` stays the time of the fetch from the archive. `archived.timestamp` is the date of the copy.
+- `find` with `kind: "page"` leaves the copies out.
+- In the MCP envelope, a copy has the attribute `archived`, for example `archived="wayback 2024-01-15T09:30:00Z"`. Its `age` starts at the date of the copy.
+- With `--archive-fallback`, `fetch` gives the exit code 0 for a page with a copy, and the line of the page starts with `~`.
+
+### robots.txt and the usage signals of a copy
+
+An archive keeps copies of pages that the site refuses today. To read such a copy or not is a decision of policy, and the default is strict:
+
+- With no `archiveDespiteRobots`, the crawler gives no copy of a page that the current robots.txt of its site disallows for this agent. The rules for the agents of `onBehalfOf` apply too.
+- For a stopped host, the crawler reads the rules again: from memory, or from the stored copy of robots.txt of the last 30 days. Thus only a stop, an error or a dead host gets a copy.
+- The reason: robots.txt tells what the owner of the site wants today. A copy of a disallowed page goes around that wish. An owner who disallows a page today does not expect an agent to read it from an archive.
+- `archiveDespiteRobots: true` (`--archive-despite-robots`) gives a copy of these pages too. The robots.txt of each archive still applies to the requests to it. The MCP server has no such parameter, because this decision belongs to the operator.
+- The usage signals of a copy apply as for a live page. A copy is held back from the AI reader when the content signals of the current robots.txt of its site say `ai-input=no`.
+- The headers of the archived response count too: `X-Archive-Orig-Content-Signal` of the Wayback Machine, and the HTTP headers in the WARC record of Common Crawl. The signals of the archive itself count as well.
+
+## Signed requests (Web Bot Auth)
+
+With an Ed25519 key, the crawler signs each request with HTTP Message Signatures (RFC 9421), as the IETF Web Bot Auth draft tells. A site can then verify that a request comes from the holder of your key. The package follows `draft-ietf-webbotauth-httpsig-protocol-00` (1 September 2026).
+
+```ts
+import { readFileSync } from "node:fs";
+import { openCrawler } from "polite-crawler";
+
+const crawler = openCrawler({
+  dir: "./crawl",
+  signer: {
+    privateKey: readFileSync("bot-key.pem", "utf8"), // PKCS#8 PEM, a JWK or a KeyObject
+    signatureAgent: "https://bot.example.com", // the origin of your key directory
+  },
+});
+```
+
+Each request gets three headers:
+
+```text
+Signature-Agent: sig1="https://bot.example.com"
+Signature-Input: sig1=("@authority" "signature-agent";key="sig1");created=1760702400;keyid="poqkLGiy...";alg="ed25519";expires=1760702700;nonce="...";tag="web-bot-auth"
+Signature: sig1=:...:
+```
+
+- The signature covers `@authority` and the member of `Signature-Agent`. `keyid` is the JWK thumbprint of the key (RFC 8037). Each signature has a new random nonce, and it expires after 5 minutes.
+- The crawler signs each request: robots.txt, each redirect, the sitemaps, the archives of the fallback and each request of a rendered page. Without a signer, it signs nothing. The browser does not sign a WebSocket connection.
+- A signature adds an identity. The `User-Agent` and `From` headers do not change. With a signer, the crawler replaces the signature headers of a caller.
+- A signer that fails sends no request: the result is a skip with a note.
+- The signature headers are not secrets. The capture log records `signed`, with the key id and the agent. It does not hold the key. The signer keeps the key in a closure, and no property of it shows the key.
+
+`createWebBotAuthSigner(options)` makes a signer. `signer` also takes these options, or a `RequestSigner` of your own (for example, a signer with a key in a hardware module).
+
+| Option | Default | What it does |
+| --- | --- | --- |
+| `privateKey` | | The Ed25519 private key: a `KeyObject`, PKCS#8 (PEM text or DER bytes) or a JWK. |
+| `signatureAgent` | | Where a site finds your public key. For the type `directory`, an https origin. |
+| `agentType` | `directory` | `directory`: the key directory is at the well-known path of the origin. `jwks_uri`: the URL is a JSON Web Key Set on any path. |
+| `keyId` | the thumbprint | A check: a value that is not the thumbprint of the key throws an error. |
+| `lifetimeMs` | 300,000 (5 minutes) | The time that a signature stays valid, 24 hours at most. |
+| `label` | `sig1` | The label of the signature and the key of the member of `Signature-Agent`. |
+
+`verifySignature(request, directory)` verifies the signature of a request with a key directory, and tells why a request does not verify. Use it to test your setup.
+
+Make a key with OpenSSL, and give it to the command line. Do not use the test keys of RFC 9421 for a real crawler.
+
+```sh
+openssl genpkey -algorithm ed25519 -out bot-key.pem
+npx polite-crawler key-directory --sign-key bot-key.pem --signature-agent https://bot.example.com > http-message-signatures-directory
+npx polite-crawler fetch https://example.com/ --sign-key bot-key.pem --signature-agent https://bot.example.com
+```
+
+The command line takes `--sign-key` and `--signature-agent` (or `POLITE_CRAWLER_SIGN_KEY` and `POLITE_CRAWLER_SIGNATURE_AGENT`) for `fetch`, `discover`, `crawl`, `watch run` and `mcp`. A `--signature-agent` with a path gives the type `jwks_uri`.
+
+### Host the key directory
+
+A site finds your public key from `Signature-Agent`. With the type `directory`, the key directory is at `/.well-known/http-message-signatures-directory` on the origin of `signatureAgent`.
+
+1. Make the JSON with `keyDirectory([publicKey])` or `polite-crawler key-directory`. It holds only the public part of each key, with its thumbprint as `kid`.
+2. Serve it at `https://<your origin>/.well-known/http-message-signatures-directory`. Send the status 200 and `Content-Type: application/http-message-signatures-directory+json`. Do not redirect it, because a verifier follows no redirect.
+3. When you change the key, keep the old key in the directory until its last signature expires.
+
+The draft recommends that the server of the directory also signs its response with each key, as a proof of possession. `keyDirectory` gives only the JSON, so a static host gives no such proof.
+
+GitHub Pages cannot serve a key directory of the type `directory` for a project site:
+
+- A project site (`<user>.github.io/<repository>`) serves files only below its path, so it cannot serve the well-known path at the root of the host.
+- GitHub Pages sets the content type from the extension of the file, so it cannot send the type of the directory.
+- On a project site, put the JSON in a file, for example `jwks.json`. Give its URL as `signatureAgent`, with `agentType: "jwks_uri"`. The draft then binds the key to that URL, not to the domain.
+- A host that sets headers (the `_headers` file of Cloudflare Pages or Netlify, for example) can serve the type `directory` at the root of a domain.
+
 ## How the crawler is polite
 
 1. **robots.txt.** The crawler reads the robots.txt of each site and obeys it, as RFC 9309 specifies. A 401 or a 403 for robots.txt means that the site has no file. When the crawler cannot read robots.txt (a dead domain, a server error or a body that does not decode), it fetches nothing from the site. Then it tries again after some minutes, with a backoff from `Retry-After` up to 1 hour. A good copy of the file from the last 30 days applies in that time.
@@ -392,6 +765,8 @@ The frontier keeps its state in memory, for one call. It keeps 10,000 URLs that 
 5. **An honest `User-Agent`.** The default is `PoliteCrawler/0.1.0 (+https://mark1russell7.github.io/crawler/bot/)`. The `contact` option adds an address. An email address also goes into the `From` header, and a URL does not, because `From` holds only a mailbox. The constructor of `Crawler` throws an error for a bad option. Examples are a token that is not a product token, a `User-Agent` or a `From` that HTTP cannot send, and a `maxActive` less than 1.
 6. **Public addresses only.** By default, the crawler fetches only `http:` and `https:` URLs on public addresses. It checks the address after DNS and at each redirect. In the headless browser, it checks each request of the page and each redirect of that request. A refusal is a skipped fetch with the note `egress policy: <address> is a loopback address; set allowPrivate to fetch it`.
 7. **Usage signals.** When a page asks not to be AI input (`ai-input=no` content signals), the crawler keeps it but holds back its text from the AI reader. The crawler also records the RSL `License` lines of robots.txt and the TDMRep reservation (the `tdm-reservation` and `tdm-policy` headers and `<meta>` tags) with each capture. These records change nothing, because a reservation of text and data mining is not a refusal of AI input.
+8. **Signed requests, as an option.** With a `signer`, each request has a Web Bot Auth signature, so a site can verify where it comes from. [Signed requests](#signed-requests-web-bot-auth) tells how.
+9. **Archived copies, as an option.** `fallback: "archive"` reads a copy from a web archive only after a refusal. By default, it gives no copy of a page that the current robots.txt disallows.
 
 To block the crawler, a site owner adds this group to robots.txt:
 
@@ -423,6 +798,7 @@ The memo is in the host state store. `openCrawler` keeps it in `hosts.sqlite`, s
 | `blobs/` | The bodies of the responses, by SHA-256 hash. |
 | `index.sqlite` | The search index. It is a projection: `polite-crawler reindex` builds it again from the other two. |
 | `hosts.sqlite` | The pace, the counts, the stops and the validator memo of each host. The processes on one store share it. |
+| `watch.sqlite` | The watch list and the state of each watch. The processes on one store share it. The file opens at the first use of `crawler.watch`. |
 
 The package publishes the JSON Schema of a line of the log: `polite-crawler/record.schema.json`. A program that reads the log can check each record with it.
 

@@ -15,6 +15,14 @@ A prerelease version (`0.2.0-beta.1`) goes to the npm tag `next`. Each other ver
 
 ## Unreleased
 
+- **Verified structured extraction.** `crawler.extract(doc, fields, options)` checks the values that a caller proposes for the fields of a stored page, and it locates each value. It does not make values. Each field gets `verified`, `normalized`, `ambiguous`, `not-found`, `held-back` or `invalid`, with its span or JSON-LD path and its capture.
+  - The kinds are `text`, `number`, `money`, `date`, `url`, `email`, `phone` and `json-ld:<path>`. Each normalization has a name, and a normalized field gives it. Examples are `thousands-separator`, `decimal-comma`, `currency-symbol`, `date-written`, `url-resolved` and `phone-suffix`.
+  - A normalized match must have one meaning. `1,234`, `03/04/2026`, `$12` for `USD 12` and two places with different meanings give `ambiguous`, with each place. The check does not guess.
+  - `capture` and `at` choose the version. A held-back page gives `held-back` for each field, with no position, unless `userProvided`. The result is the same for each value, so the check is not an oracle.
+  - The time of the check is linear in the length of the text. The tests count the steps.
+  - The MCP tool `crawl_extract` gives the statuses and the positions in JSON, and the stored text in the `<untrusted-web-content>` envelope. Its description says that it checks values and does not make them.
+  - The command line has `polite-crawler extract <doc> --field name=value[:kind]`. It exits with 0 when each field is `verified` or `normalized`.
+  - The change only adds to the API. `PoliteCrawler.extract` is optional, so a `PoliteCrawler` of your own still compiles. `openCrawler` gives an `OpenedCrawler`, which has `extract`. The root entry point exports `checkFields`, `extractDocument`, `FIELD_KINDS` and the types.
 - **Export to WARC and WACZ.** `exportWarc` and `exportWacz` write the stored captures as a web archive, for `warcio`, pywb and ReplayWeb.page. The command line has `polite-crawler export --out <file>`.
   - The WARC file is WARC/1.1, with one gzip member for each record. The WACZ file is WACZ 1.1.1, with a sorted CDXJ index, a page list and `datapackage.json`.
   - A capture with a body gives a `response` record, a 304 gives a `revisit` record, and a rendered page gives a `conversion` record. Each has a `metadata` record with the JSON of the capture.

@@ -53,6 +53,7 @@ npx polite-crawler fetch https://en.wikipedia.org/wiki/Web_crawler
 npx polite-crawler find "robots exclusion"
 npx polite-crawler read "url:https://en.wikipedia.org/wiki/Web_crawler" --length 2000
 npx polite-crawler verify "url:https://en.wikipedia.org/wiki/Web_crawler" "robots.txt protocol"
+npx polite-crawler extract "url:https://en.wikipedia.org/wiki/Web_crawler" --field "name=Web crawler"
 ```
 
 The store is in `~/.polite-crawler`. Use `--dir` or `POLITE_CRAWLER_DIR` for a different folder. A path that starts with `~` is in your home folder, and a relative path starts at the working folder. Use `--json` for output that a program reads. `npx polite-crawler --help` shows all the options.
@@ -63,6 +64,7 @@ The store is in `~/.polite-crawler`. Use `--dir` or `POLITE_CRAWLER_DIR` for a d
 - `find --rank fast` makes a long question faster, and its results can be different. [Fast ranking](#fast-ranking) gives the measured difference.
 - `reindex` builds the index again. The documents of a recipe that the command cannot read (the recipes of another application) stay. The output counts them, and the captures that it skipped.
 - `export --out <file>` writes the stored captures as a WARC or a WACZ file. [Export to a web archive](#export-to-a-web-archive) tells what goes into the file.
+- `extract <doc> --field name=value[:kind]` checks the values that you propose for the fields of a stored page. Repeat `--field` for each field. `--capture` checks the text of one capture. [Check field values against a page](#check-field-values-against-a-page) tells the statuses.
 
 To find the pages of a site, or to fetch a part of a site, use `discover` and `crawl`:
 
@@ -81,7 +83,7 @@ The command gives these exit codes:
 | Code | Meaning |
 | --- | --- |
 | `0` | The command did its work. |
-| `1` | The command did not do its work: a page that the crawler did not fetch, no search result, a quote that is not in the document, a document that is not stored or that is held back, or an error. `discover` gives 1 when it finds no URL, and `crawl` when it gets no page. |
+| `1` | The command did not do its work: a page that the crawler did not fetch, no search result, a quote that is not in the document, a document that is not stored or that is held back, or an error. `discover` gives 1 when it finds no URL, and `crawl` when it gets no page. `extract` gives 1 when a field is not `verified` or `normalized`. |
 | `2` | The command line is wrong. The command opens no store. |
 
 ## Use it from Claude (MCP)
@@ -122,7 +124,7 @@ claude mcp add polite-crawler -- npx -y -p polite-crawler -p playwright-core pol
 
 When a new version of `playwright-core` comes out, install its browser again with the first command.
 
-The server gives six tools:
+The server gives seven tools:
 
 | Tool | What it does |
 | --- | --- |
@@ -130,6 +132,7 @@ The server gives six tools:
 | `crawl_find` | It searches the stored pages and gives ranked passages. |
 | `crawl_read` | It gives a range of a stored document, with the capture ids to cite and the position of the next range. |
 | `crawl_verify` | It finds a quote in a stored document and gives the exact span. |
+| `crawl_extract` | It checks the values that the assistant proposes for the fields of a stored page, and gives a status and a span for each field. It does not make values. |
 | `crawl_discover` | It lists the page URLs of a site from its sitemaps and feeds, 1,000 or fewer. It fetches no page of the list. |
 | `crawl_site` | It fetches a few pages of a site and follows their links on the site: 10 pages and 1 minute by default, and 50 pages and 5 minutes at most. It sends progress for each page. |
 
@@ -200,6 +203,7 @@ await crawler.close();
 - A result of `fetch` gives `capture`, `fetched_at` and `from_cache`. A result of `read` gives the `capture` and the `fetched_at` of its text.
 - `verify` gives the `capture`, the `blob` and the `fetched_at` of the text that holds the quote, with the positions in that text. `stale` is true when only an earlier capture holds the quote.
 - `read` and `verify` take `capture`: they then use the text of that capture, not the current text. A citation of a capture thus stays true after the page changes.
+- `extract` checks the values that you propose for the fields of a page, and gives the span and the capture of each value. [Check field values against a page](#check-field-values-against-a-page) tells how.
 - `versions(doc)` gives the versions of a document, the newest first.
 - `find` reads a query syntax. Text in double quotes is a phrase, and `bake*` is a prefix. The documents that hold each word come first. Case, accents and Unicode forms do not change a match, and Chinese, Japanese and Thai words match too.
 - `find` takes `rank`. The default is `exact`, and `fast` makes a long question faster. [Fast ranking](#fast-ranking) tells the difference.
@@ -250,6 +254,7 @@ The root entry point also exports the parts of the runtime, for an application t
 - `catchUpIndex(runtime)`: the step of `openCrawler` at open. It rebuilds a stale index, and gives an index that is behind the log the captures that it missed. Use it after `createRuntime`.
 - `Crawler`, `CaptureLog`, `DocIndex`, `FileBlobStore`, `SqliteHostStateStore`, `Extractors`, `fetchAndIndex`, `fetchPage` and `reindex`.
 - `readDocument`, `verifyQuote`, `findDocuments`, `isHeldBack`, `heldBackMeta` and `recordOverride`: the read, the verification and the rule for a held-back page, over a runtime.
+- `extractDocument` and `checkFields`: the check of field values over a runtime, and over a text and its metadata with no store.
 - `extractPage`, `typesOf`, `decodeBody` and `bodyEncoding`: the page reader and the decoder of a body in its declared encoding.
 - `readPdf` and `isPdf`: the PDF reader. `PdfOptions` sets limits on the pages, the characters, the time and the inflated bytes.
 - `fromText`, `fromSchemaOrg`, `fromCompact` and `describeWeek`: the opening-hours reader.
@@ -283,7 +288,8 @@ Before version 1.0.0, a minor version can change the API, and `CHANGELOG.md` tel
 
 These parts are the stable API:
 
-- `openCrawler` and the methods of `PoliteCrawler`: `fetch`, `find`, `read`, `verify`, `versions`, `discover`, `crawl`, `reindex` and `close`.
+- `openCrawler` and the methods of `PoliteCrawler`: `fetch`, `find`, `read`, `verify`, `versions`, `discover`, `crawl`, `reindex` and `close`. The method `extract` of `OpenedCrawler`, the result of `openCrawler`, is stable too.
+- The options and the results of `extract`: `ExtractOptions`, `ExtractResult`, `ExtractSummary`, `FieldClaim`, `FieldKind`, `FieldStatus`, `FieldResult`, `FieldSpan` and `FieldCandidate`, with the names of the normalizations.
 - The options and the results of these methods: `OpenOptions`, `FetchOptions`, `PageResult`, `Found`, `ReadResult`, `VerifyResult`, `DocVersion` and `ReindexResult`.
 - The options and the results of `discover` and `crawl`: `DiscoverOptions`, `DiscoverResult`, `DiscoveredUrl`, `DiscoverSource`, `DiscoverStop`, `CrawlOptions`, `CrawlRun`, `CrawlPage`, `CrawlSummary`, `CrawlStop`, `UrlPattern` and `ScopeOptions`.
 - `polite-crawler/mcp`: `createMcpServer`, `startMcpServer` and its tools.
@@ -293,7 +299,87 @@ These parts are the stable API:
 
 The other exports of the root entry point are the engine. Examples are `createRuntime`, `catchUpIndex`, `Crawler`, `CaptureLog`, `DocIndex`, `FileBlobStore`, `SqliteHostStateStore`, `Extractors`, `fetchAndIndex` and `makeRecord`. An application can build on them. A minor version before 1.0.0 can change them, and its section in `CHANGELOG.md` says so.
 
+The engine of the check of fields is `checkFields`, `extractDocument`, `FIELD_KINDS`, `FieldCheck`, `ExtractSource` and `FieldsChecked`.
+
 The engine of discovery and of the crawl is `discoverSite`, `crawlSite`, `readSitemap`, `feedDate`, `DISCOVER_LIMITS`, `CRAWL_LIMITS`, `SITEMAP_LIMITS` and `DEADLINE_NOTE`. It also includes `Crawler.robotsAllow` and the `deadline` of `FetchRequest`, `RenderRequest` and `PageOptions`.
+
+## Check field values against a page
+
+A model or a person often reads a value from a page: a price, a date, opening hours, an author or a DOI. `extract` checks each proposed value against the stored copy, and it locates the value. It does not make values. It only checks and locates the values that you give, so each value has its proof.
+
+```ts
+const page = await crawler.fetch("https://example.com/focaccia");
+const result = await crawler.extract(page.doc!, {
+  price: { value: "4.50 EUR", kind: "money" },
+  since: { value: "2026-03-04", kind: "date" },
+  phone: { value: "+1 617 555 1234", kind: "phone" },
+  offer: { value: "4.50", kind: "json-ld:Product.offers.price" },
+  name: { value: "Focaccia" },
+});
+for (const [name, field] of Object.entries(result.fields)) {
+  console.log(name, field.status, field.span ?? field.path, field.normalization, field.capture);
+}
+```
+
+Each field gets one status:
+
+| Status | What it means |
+| --- | --- |
+| `verified` | The stored text holds the exact value. The result gives the span (`start` and `end`) or the JSON-LD path, the stored text (`raw`) and the capture. |
+| `normalized` | The stored text holds the value in a different form. `normalization` names the form, and the span is the span of the stored text. |
+| `ambiguous` | The value matches, but the stored text does not give one meaning. `candidates` gives each place, and the check does not choose one. |
+| `not-found` | The stored text does not hold the value. |
+| `held-back` | The page asked not to be AI input. The result tells nothing about the value. |
+| `invalid` | The value is not a value of its kind, so the check did not search for it. |
+
+The kinds are `text` (the default for a text), `number` (the default for a number), `money`, `date`, `url`, `email`, `phone` and `json-ld:<path>`. A kind that is not a kind throws a `RangeError`. The result also gives `summary`, the count of each status.
+
+### The normalizations
+
+Each normalization has a name. A normalized field gives the names that it used, joined with `+`, for example `thousands-separator+number-form`.
+
+| Kind | Name | What it permits |
+| --- | --- | --- |
+| `text` | `unicode`, `whitespace`, `case` | NFKC forms, soft hyphens, typographic quotes and dashes, runs of spaces, and capital letters. A match starts and ends at the edge of a word. |
+| `number` | `thousands-separator` | A comma, a point, an apostrophe, or a thin or no-break space between groups of three digits. |
+| `number` | `decimal-comma` | A comma in place of the decimal point. |
+| `number` | `number-form` | The same value with other digits: zeros at the start or the end, or a plus sign. |
+| `number` | `unicode` | The same digits in other characters: fullwidth digits, or the minus sign. |
+| `money` | `currency-symbol`, `currency-position`, `amount-only` | A symbol in place of a code (`€` and `EUR`), the currency before or after the amount, and a value with no currency. The names of a number apply to the amount. |
+| `date` | `date-iso`, `date-ymd`, `date-written`, `date-dmy`, `date-mdy`, `date-numeric`, `date-form` | The form of the stored date. `date-written` has an English month. `date-dmy` and `date-mdy` are numeric dates with one possible order. |
+| `date` | `date-partial` | The value has no year or no day, and the stored date has them. |
+| `url` | `url-resolved`, `url-form`, `url-scheme` | A relative URL resolved against the page URL, a different form of the same canonical URL, and a stored URL with no scheme (`www.example.com`). |
+| `email` | `email-case` | Capital letters. |
+| `phone` | `phone-digits`, `phone-suffix` | Only the digits count. With `phone-suffix`, one number ends with the other: a country code, or a number with less detail. |
+
+An amount of money has a currency symbol or a code of ISO 4217 next to it, with one space or none. A code counts only in capital letters, so `15 try` is not an amount.
+
+### The rule for ambiguity
+
+A normalized match must have one meaning. The check does not guess:
+
+- `1,234` and `1.234` can be 1234 or 1.234. Thus a number value that needs a normalization to match them is `ambiguous`. `1,234.5` and `12,50` have one meaning.
+- `03/04/2026` can be 3 April or 4 March. `17/10/2026` and `10/17/2026` have one meaning.
+- `$` is the symbol of more than one currency, so `$12` does not confirm `USD 12`. `US$12` confirms it.
+- `March 4` has no year, so it does not confirm `2026-03-04`.
+- When the value matches two places with different meanings, the field is `ambiguous`, with each place. An example is two phone numbers that end in `555-1234`.
+- A value with two meanings, for example `03/04/2026`, is `ambiguous`, unless the stored text holds its exact text.
+
+An exact match is always `verified`: the stored text holds the text of the value, and the caller gives it its meaning.
+
+### Where the check looks
+
+- The kinds of text read the text of the version, the text that `read` gives. The positions are positions in that text. When the reader cut the text, the check also reads the whole text, and the span then has `in: "full_text"`.
+- `url` also reads the stored links of the page, with the path `links[3]`. The store keeps the canonical form of each link.
+- `json-ld:<path>` reads the JSON-LD of the page. The first part of the path names a schema.org type, and the path starts at each object of that type, at any depth. `*` starts at each top-level record.
+- Each array on a JSON-LD path gives each of its values. The result gives the concrete path, for example `jsonld[0].offers[1].price`, and the raw value. It compares as a number, a date, a URL and a text, in that sequence.
+- With no option, the check reads the current version. `capture` reads the version of one capture, and `at` reads the version that was current at a time. Give `capture` or `at`, not the two.
+
+A page that asked not to be AI input gives `held-back` for each field, with no position and no capture. The result is the same for a value that is in the page and for a value that is not. Thus the check is not an oracle. `userProvided` lifts the hold for a URL that a person gave directly, as for `read` and `verify`. The crawler logs it.
+
+The time of the check is linear in the length of the text, for a fixed set of fields. The tests count the steps of the readers on texts of different lengths.
+
+The MCP tool `crawl_extract` gives the statuses and the positions in its JSON. The stored text, the readings and the excerpts come in the `<untrusted-web-content>` envelope. The command line has `polite-crawler extract`.
 
 ## Find the pages of a site
 

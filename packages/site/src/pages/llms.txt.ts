@@ -21,12 +21,12 @@ export const llmsText = (data: Study): string => {
 
 > polite-crawler is a TypeScript web crawler for research and for AI agents, on npm as \`polite-crawler\` (Node.js 22.19 or later). It fetches a source one time, keeps the response in a capture log and a content-addressed blob store, and answers later questions from a local SQLite FTS5 index with no new request. It obeys robots.txt (RFC 9309, and the rules for Claude-User when an assistant asks), keeps one request in progress for each host, obeys Retry-After, and stops at a challenge, a 401, a 402 or a 403.
 
-Install it with \`npm install polite-crawler\`. Use \`openCrawler({ dir })\` and its methods \`fetch(url, { maxAge, render })\`, \`find(q)\`, \`read(doc, { from, length })\`, \`verify(doc, quote)\` and \`reindex()\`. A command line (\`npx polite-crawler fetch|find|read|verify|reindex|mcp\`) and an MCP server (\`npx -y polite-crawler mcp\`, or \`claude mcp add polite-crawler -- npx -y polite-crawler mcp\` in Claude Code) with the tools \`crawl_fetch\`, \`crawl_find\`, \`crawl_read\` and \`crawl_verify\` use the same store. The MCP server gives page text in an \`<untrusted-web-content>\` envelope with the URL, the capture id and the fetch date, and the library exports it as \`polite-crawler/mcp\`. Pages that need JavaScript use the optional peer \`playwright-core\`.
+Install it with \`npm install polite-crawler\`. Use \`openCrawler({ dir })\` and its methods \`fetch(url, { maxAge, render })\`, \`find(q)\`, \`read(doc, { from, length })\`, \`verify(doc, quote)\`, \`discover(site)\`, \`crawl(seeds, { maxPages, maxDepth, budgetMs })\` and \`reindex()\`. A command line (\`npx polite-crawler fetch|find|read|verify|reindex|mcp|discover|crawl\`) and an MCP server (\`npx -y polite-crawler mcp\`, or \`claude mcp add polite-crawler -- npx -y polite-crawler mcp\` in Claude Code) with the tools \`crawl_fetch\`, \`crawl_find\`, \`crawl_read\`, \`crawl_verify\`, \`crawl_discover\` and \`crawl_site\` use the same store. The MCP server gives page text in an \`<untrusted-web-content>\` envelope with the URL, the capture id and the fetch date, and the library exports it as \`polite-crawler/mcp\`. Pages that need JavaScript use the optional peer \`playwright-core\`.
 
 ## Docs
 
 - [Quick start](${SITE}guide/quick-start/): install, the command line, the library
-- [MCP web fetch server](${SITE}guide/mcp/): the MCP server for Claude Code, Claude Desktop, Cursor, VS Code and other clients, and its four tools
+- [MCP web fetch server](${SITE}guide/mcp/): the MCP server for Claude Code, Claude Desktop, Cursor, VS Code and other clients, and its tools
 - [How it works](${SITE}guide/how-it-works/): the path of a request, the store, capture ids, recipes
 - [How the crawler is polite](${SITE}guide/politeness/): rests, refusals, the User-Agent, content signals
 - [Library API](${SITE}reference/api/): each option, method and part

@@ -12,7 +12,8 @@ The site has interactive demos with the real code: <https://mark1russell7.github
 - **Fetch one time.** Each response goes into a capture log and a store of bodies by hash. A repeated question reads the disk, so it costs no request.
 - **Read the cheap way.** The crawler reads JSON-LD, the visible text and the links with no browser. It opens a headless browser only for a page that shows almost nothing without JavaScript.
 - **Cite exact text.** Full-text search (SQLite FTS5) gives ranked passages. A quote check finds the exact span in the stored text, with the capture id to cite.
-- **An MCP server.** One command gives Claude and other MCP clients four tools: fetch, find, read and verify.
+- **An MCP server.** One command gives Claude and other MCP clients six tools: fetch, find, read, verify, discover and a small crawl.
+- **Find and crawl a site.** `discover` lists the pages of a site from its sitemaps and feeds. `crawl` follows the links of a site within a budget, at the pace of the site.
 
 ## Install
 
@@ -61,12 +62,24 @@ The store is in `~/.polite-crawler`. Use `--dir` or `POLITE_CRAWLER_DIR` for a d
 - `find --rank fast` makes a long question faster, and its results can be different. [Fast ranking](#fast-ranking) gives the measured difference.
 - `reindex` builds the index again. The documents of a recipe that the command cannot read (the recipes of another application) stay. The output counts them, and the captures that it skipped.
 
+To find the pages of a site, or to fetch a part of a site, use `discover` and `crawl`:
+
+```sh
+npx polite-crawler discover https://example.com/
+npx polite-crawler crawl https://example.com/ --max-pages 50 --max-depth 2 --budget 2m
+```
+
+- `discover` prints each URL of the sitemaps and feeds of the site, with its `lastmod`. `--max-urls` limits the list (the default is 1000), and `--feed <url>` reads one more feed.
+- `crawl` prints each page when its fetch ends, and then a summary. The options are `--max-pages` (default 100), `--max-depth` (default 3) and `--budget` (default `10m`).
+- `crawl` also takes `--include` and `--exclude` (patterns, which you can repeat), `--sitemaps`, `--render` and `--max-age`.
+- `discover` and `crawl` take `--allow-host <host>` for more hosts. The first `Ctrl+C` stops a crawl, and the summary prints.
+
 The command gives these exit codes:
 
 | Code | Meaning |
 | --- | --- |
 | `0` | The command did its work. |
-| `1` | The command did not do its work: a page that the crawler did not fetch, no search result, a quote that is not in the document, a document that is not stored or that is held back, or an error. |
+| `1` | The command did not do its work: a page that the crawler did not fetch, no search result, a quote that is not in the document, a document that is not stored or that is held back, or an error. `discover` gives 1 when it finds no URL, and `crawl` when it gets no page. |
 | `2` | The command line is wrong. The command opens no store. |
 
 ## Use it from Claude (MCP)
@@ -107,7 +120,7 @@ claude mcp add polite-crawler -- npx -y -p polite-crawler -p playwright-core pol
 
 When a new version of `playwright-core` comes out, install its browser again with the first command.
 
-The server gives four tools:
+The server gives six tools:
 
 | Tool | What it does |
 | --- | --- |
@@ -115,6 +128,8 @@ The server gives four tools:
 | `crawl_find` | It searches the stored pages and gives ranked passages. |
 | `crawl_read` | It gives a range of a stored document, with the capture ids to cite and the position of the next range. |
 | `crawl_verify` | It finds a quote in a stored document and gives the exact span. |
+| `crawl_discover` | It lists the page URLs of a site from its sitemaps and feeds, 1,000 or fewer. It fetches no page of the list. |
+| `crawl_site` | It fetches a few pages of a site and follows their links on the site: 10 pages and 1 minute by default, and 50 pages and 5 minutes at most. It sends progress for each page. |
 
 The MCP server applies the robots.txt rules for `Claude-User` too, because an assistant asks for these pages.
 
@@ -266,13 +281,104 @@ Before version 1.0.0, a minor version can change the API, and `CHANGELOG.md` tel
 
 These parts are the stable API:
 
-- `openCrawler` and the methods of `PoliteCrawler`: `fetch`, `find`, `read`, `verify`, `versions`, `reindex` and `close`.
+- `openCrawler` and the methods of `PoliteCrawler`: `fetch`, `find`, `read`, `verify`, `versions`, `discover`, `crawl`, `reindex` and `close`.
 - The options and the results of these methods: `OpenOptions`, `FetchOptions`, `PageResult`, `Found`, `ReadResult`, `VerifyResult`, `DocVersion` and `ReindexResult`.
-- `polite-crawler/mcp`: `createMcpServer`, `startMcpServer` and the four tools.
+- The options and the results of `discover` and `crawl`: `DiscoverOptions`, `DiscoverResult`, `DiscoveredUrl`, `DiscoverSource`, `DiscoverStop`, `CrawlOptions`, `CrawlRun`, `CrawlPage`, `CrawlSummary`, `CrawlStop`, `UrlPattern` and `ScopeOptions`.
+- `polite-crawler/mcp`: `createMcpServer`, `startMcpServer` and its tools.
 - The readers: `polite-crawler/robots`, `/hours`, `/html`, `/classify`, `/politeness` and `/signals`. The site and its tools use them in the browser.
 - The command line, its exit codes, the store on disk and `polite-crawler/record.schema.json`.
 
 The other exports of the root entry point are the engine. Examples are `createRuntime`, `catchUpIndex`, `Crawler`, `CaptureLog`, `DocIndex`, `FileBlobStore`, `SqliteHostStateStore`, `Extractors`, `fetchAndIndex` and `makeRecord`. An application can build on them. A minor version before 1.0.0 can change them, and its section in `CHANGELOG.md` says so.
+
+The engine of discovery and of the crawl is `discoverSite`, `crawlSite`, `readSitemap`, `feedDate`, `DISCOVER_LIMITS`, `CRAWL_LIMITS`, `SITEMAP_LIMITS` and `DEADLINE_NOTE`. It also includes `Crawler.robotsAllow` and the `deadline` of `FetchRequest`, `RenderRequest` and `PageOptions`.
+
+## Find the pages of a site
+
+`discover` finds the pages of a site from its sitemaps and its feeds. It fetches the files that list the pages, not the pages.
+
+```ts
+const found = await crawler.discover("https://example.com/");
+for (const url of found.urls) console.log(url.url, url.lastmod, url.via, url.source);
+console.log(found.stopped, found.dropped);
+```
+
+Discovery reads these sources, in sequence:
+
+1. The page at the URL that you give, for the RSS and Atom feeds that it links with `<link rel="alternate">`. With `linkedFeeds: false`, discovery does not fetch the page.
+2. The feeds in `feeds`, and the sitemaps in `sitemaps`.
+3. The `Sitemap:` lines of robots.txt. When robots.txt names no sitemap and `sitemaps` is empty, discovery reads `/sitemap.xml`.
+4. The sitemaps of each sitemap index, the newest `lastmod` first.
+
+Each URL of the result has its `lastmod` and `changefreq` when the file gives them. Its `source` is the file that listed it, and `via` tells if that file is a sitemap or a feed. The newest `lastmod` comes first.
+
+- Discovery keeps a URL only when it is on the same site and robots.txt permits it. The rules for the crawler and for the agents of `onBehalfOf` apply. A host and its `www.` form are one site.
+- `allowHosts` adds more hosts (`*.example.org` names the hosts under a name). `sameSite: false` keeps the URLs of each host.
+- Discovery reads XML sitemaps, sitemap indexes, gzip sitemaps (`.xml.gz`), text sitemaps, RSS 2.0, RSS 1.0 and Atom.
+- Each file is a fetch of the crawler, with the recipe `sitemap` or `feed`, and the capture log records it. A stored copy younger than `maxAge` (24 hours by default) answers with no request.
+- `sources` tells what discovery did with each file. `dropped` counts the URLs that it did not keep, and `stopped` tells why it stopped.
+
+These options limit a discovery. `DISCOVER_LIMITS` gives the defaults.
+
+| Option | Default | What it limits |
+| --- | --- | --- |
+| `maxFiles` | 20 | The sitemap and feed files that discovery reads. |
+| `maxUrls` | 10,000 | The URLs of the result. |
+| `maxBytes` | 10 MiB | The bytes of one file, after decompression. A longer file gives its first part, and its source says `truncated`. |
+| `maxNesting` | 3 | The levels of sitemap index under the first file. |
+| `budgetMs` | 60,000 (1 minute) | The time of the discovery. No request starts after it. |
+
+Discovery also reads robots.txt for 10 origins at most, and 5 feeds at most from the links of the page.
+
+The sitemap reader (`readSitemap`) is strict, because a file from the web can be hostile:
+
+- It expands no entity. It knows only the five entities of XML and the character references, and it ignores a DTD. Thus a "billion laughs" file gives no text.
+- It stops at a depth of 32 elements, and at 50,000 entries (the limit of the sitemap protocol). A value of more than 4,096 characters is not valid.
+- It reads the text one time and builds no tree, so its time is linear in the length of the file.
+- It stops at the first error of the markup, and it keeps the entries before the error.
+
+## Crawl a site
+
+`crawl` fetches the seeds, and then the links of each page on the same site, to a budget. A `for await` loop gets each page when its fetch ends.
+
+```ts
+const run = crawler.crawl("https://example.com/", { maxPages: 50, maxDepth: 2, budgetMs: 120_000 });
+for await (const page of run) console.log(page.depth, page.source, page.outcome, page.url);
+
+const summary = await run.summary;
+console.log(summary.stopped, summary.reason, summary.fetched, summary.refused, summary.skipped);
+```
+
+| Option | Default | What it does |
+| --- | --- | --- |
+| `maxPages` | 100 | The most pages that the crawl gives. |
+| `maxDepth` | 3 | The most links from a seed to a page. The value 0 fetches only the seeds. |
+| `budgetMs` | 600,000 (10 minutes) | The time of the crawl. No request starts after it. |
+| `sameSite`, `allowHosts` | the sites of the seeds | The hosts that the crawl follows, as for `discover`. |
+| `include`, `exclude` | none | The patterns of the URLs that the crawl follows. |
+| `useSitemaps` | `false` | The value `true` adds the pages of the sitemaps of each site of the seeds. |
+| `render`, `maxAge`, `onBehalfOf`, `signal`, `scope`, `labels` | as for `fetch` | These options apply to each page. |
+
+- The seeds come first, then the pages of the sitemaps (the newest `lastmod` first), then the links. A lower depth comes before a higher depth.
+- A pattern that starts with `/` matches the path and the query. A different pattern matches the whole URL. A `*` matches any text, and a `$` at the end matches the end, as in robots.txt. A `RegExp` tests the whole URL.
+- The scope and the patterns apply to the links and to the pages of the sitemaps, not to the seeds.
+- The crawl follows only http(s) links, and it fetches each page one time. A fragment, a tracking parameter or a default port does not make a different page.
+- The crawl does not fetch a URL that is the final URL or the canonical URL of a page that it fetched.
+- The links come from the stored document of each page, 100 or fewer for each page. The crawl does not follow the links of a page that asked not to be AI input.
+
+The summary counts the pages (`fetched`, `from_cache`, `refused` and `failed`) and the links that the crawl did not follow (`skipped`, with the reasons in `skips`). `queued` counts the URLs that waited at the stop. `stopped` and `reason` tell why the crawl stopped: `done`, `max-pages`, `budget`, `cancelled`, `closed` or `error`.
+
+### The crawl is polite
+
+The frontier does not change a rule of the crawler, because each page is a fetch of the crawler:
+
+- robots.txt applies to each page. A link that robots.txt refuses costs no request, and the summary counts it in `refused`.
+- One request at a time goes to each host, at the pace of the host. By default, a host rests 3 seconds or more between two pages, so a crawl of one site gets approximately 20 pages in each minute.
+- The frontier sends requests to 16 hosts at one time at most. The crawler also limits the hosts in progress (`maxActive`).
+- The stops, the backoff, the egress policy, the redaction of secrets and the capture log apply as for `fetch`. The `User-Agent` stays the honest default.
+- When the budget ends, no new request starts, and a request in progress ends normally. A request that waits for its host past the budget does not start. Its skip record says `deadline reached`.
+- When `signal` aborts, or a `break` ends the loop, the crawl stops the requests in progress and ends.
+
+The frontier keeps its state in memory, for one call. It keeps 10,000 URLs that wait and 100,000 URLs that it saw, at most (`CRAWL_LIMITS`). A later version can make the frontier resumable.
 
 ## How the crawler is polite
 

@@ -423,7 +423,14 @@ export const check = async (): Promise<string> => {
       })}\n`,
     );
   });
-  for (const name of ["crawl_fetch", "crawl_find", "crawl_read", "crawl_verify"]) {
+  for (const name of [
+    "crawl_fetch",
+    "crawl_find",
+    "crawl_read",
+    "crawl_verify",
+    "crawl_discover",
+    "crawl_site",
+  ]) {
     check(tools.includes(name), `the MCP server lists ${name}`);
   }
   const exited = await new Promise((done) => {

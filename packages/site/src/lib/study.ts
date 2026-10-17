@@ -18,7 +18,7 @@ export interface StudyAgent {
  * The answer of a domain to the request for /robots.txt.
  *
  * - `file`: a robots.txt file. The verdicts come from its rules.
- * - `none`: no file. A 404 or a 410, or an HTML page in place of the file. The site states no rules.
+ * - `none`: no file. A 404 or a 410. The site states no rules.
  * - `blocked`: blocked at the edge. The server answered with a refusal, a challenge or an error
  *   in place of the file. Examples are a 401, 403, 418, 429, 498 or 5xx, and a challenge page.
  * - `unreachable`: no answer. No address in the DNS, a TLS error, a timeout, or a redirect loop.
@@ -97,8 +97,7 @@ export const STATES: ReadonlyArray<{
   {
     state: "none",
     label: "No file",
-    meaning:
-      "A 404 or a 410, or an HTML page in place of the file. The site states no rules, so each agent is permitted.",
+    meaning: "A 404 or a 410. The site states no rules, so each agent is permitted.",
   },
   {
     state: "blocked",

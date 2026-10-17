@@ -1,0 +1,77 @@
+# Puts the dataset of the robots.txt study on Zenodo, with a DOI. Start it by hand:
+#   gh workflow run study-zenodo.yml -R mark1russell7/crawler
+#   gh workflow run study-zenodo.yml -R mark1russell7/crawler -f new_version_of=<record id>
+# The record stays a draft unless publish is true. Zenodo reserves the DOI of the draft, so the DOI is
+# known before anything is public. The log and the summary of the run give the DOI and the address
+# of the draft. Review the draft on Zenodo and publish it there.
+# The secrets are personal access tokens with the scopes deposit:write and deposit:actions:
+#   ZENODO_TOKEN          for zenodo.org
+#   ZENODO_SANDBOX_TOKEN  for sandbox.zenodo.org, the test copy of Zenodo (sandbox: true)
+name: Study on Zenodo
+
+on:
+  workflow_dispatch:
+    inputs:
+      sandbox:
+        description: "Use sandbox.zenodo.org, the test copy of Zenodo, with ZENODO_SANDBOX_TOKEN"
+        type: boolean
+        default: false
+      publish:
+        description: "Publish the record. With false, the record stays a draft for review on Zenodo"
+        type: boolean
+        default: false
+      new_version_of:
+        description: "The id of the published record, for a new version of it. Empty for a new record"
+        type: string
+        default: ""
+
+permissions:
+  contents: read
+
+# One deposit at a time. A second run waits, so two runs never make two drafts at the same time.
+concurrency:
+  group: study-zenodo
+  cancel-in-progress: false
+
+jobs:
+  deposit:
+    name: Deposit the dataset
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # The pnpm version comes from "packageManager" in package.json
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+
+      # The README, the CITATION.cff and the two data files. The step fails when the CSV is not the CSV of the JSON.
+      - name: Build the dataset
+        run: pnpm exec tsx packages/site/scripts/study-dataset.ts study-dataset
+
+      # The inputs go in the environment, not in the script, and each mode gets only its own token.
+      - name: Make the draft on Zenodo
+        env:
+          ZENODO_SANDBOX: ${{ inputs.sandbox }}
+          ZENODO_PUBLISH: ${{ inputs.publish }}
+          ZENODO_NEW_VERSION_OF: ${{ inputs.new_version_of }}
+          ZENODO_TOKEN: ${{ !inputs.sandbox && secrets.ZENODO_TOKEN || '' }}
+          ZENODO_SANDBOX_TOKEN: ${{ inputs.sandbox && secrets.ZENODO_SANDBOX_TOKEN || '' }}
+        run: pnpm exec tsx packages/site/scripts/study-zenodo.ts study-dataset deposition.json
+
+      # The answer of Zenodo and the files that the draft got
+      - name: Upload the deposition and the dataset
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: study-zenodo
+          path: |
+            deposition.json
+            study-dataset/
+          if-no-files-found: warn
+          retention-days: 90

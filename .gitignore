@@ -110,3 +110,7 @@ temp/
 
 # npm pack output
 *.tgz
+
+# The output of the dataset scripts of the study (packages/site/scripts/study-*.ts)
+/study-dataset/
+/deposition.json

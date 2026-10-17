@@ -43,6 +43,24 @@ A prerelease version (`0.2.0-beta.1`) goes to the npm tag `next`. Each other ver
   - `PageExtract` has `feeds`: the RSS and Atom feeds that the page links. The metadata of a page document has them too.
   - `reindex` reads the captures of the recipes `sitemap` and `feed` as captures of the crawler, as it reads robots.txt. They give no document.
   - The root entry point exports `discoverSite`, `crawlSite`, `readSitemap`, `feedDate`, `DISCOVER_LIMITS`, `CRAWL_LIMITS`, `SITEMAP_LIMITS`, `DEADLINE_NOTE` and the types of discovery and of the crawl.
+- **An archived copy after a refusal (opt-in).** `fetch(url, { fallback: "archive" })` gives a copy from the Wayback Machine, then Common Crawl, when the site refuses the page or is down. The command line has `fetch --archive-fallback`, and `crawl_fetch` has `archive_fallback`.
+  - A 401, a 402, a 403, a challenge, a stop of the host, a 5xx error and a dead host get a copy. A 404, a 429 and a cancel do not.
+  - A copy is a document of its own (`archive:<url>`, of the kind `archived`). The result keeps the outcome of the live fetch, and `archived` gives the archive, the date of the copy and its URL there.
+  - `read`, `verify` and `find` give `archived` for a copy, and the notes of `read` and `verify` name the archive and the date. A citation thus cannot show a copy as the current page.
+  - By default, a page that the current robots.txt of its site disallows gets no copy. `archiveDespiteRobots` (`--archive-despite-robots`) gives one. The MCP server has no such parameter.
+  - Each request to an archive is a fetch of the crawler: robots.txt, the pace, the egress policy, the identity and the capture log apply. A URL with a secret does not go to an archive.
+  - The usage signals of a copy apply as for a live page. They include the content signals of the robots.txt of its site, and the archived headers.
+- **Signed requests (Web Bot Auth).** The option `signer` signs each request with HTTP Message Signatures (RFC 9421). It follows `draft-ietf-webbotauth-httpsig-protocol-00`. robots.txt, the redirects and the requests of a rendered page get a signature too.
+  - `createWebBotAuthSigner` takes an Ed25519 key (a `KeyObject`, PKCS#8 or a JWK) and the URL of the key directory. `keyDirectory` makes the JSON Web Key Set to host, and `verifySignature` checks a request.
+  - The signature covers `@authority` and the member of `Signature-Agent`, with `created`, `expires`, the JWK thumbprint as `keyid`, `alg="ed25519"`, a nonce and `tag="web-bot-auth"`. The tests check the vectors of RFC 9421 and of the draft.
+  - The command line has `--sign-key <file>` and `--signature-agent <url>` for `fetch`, `discover`, `crawl` and `mcp`. `polite-crawler key-directory` prints the key directory.
+  - The `User-Agent` does not change. The capture log records the key id and the agent of each signed request (`signed`), and not the key. The package uses `node:crypto` and adds no dependency.
+  - The README tells how to host the key directory, and why a project site of GitHub Pages cannot serve it at the well-known path.
+- **The engine of the fallback and of the signatures.** These additions do not change the existing API:
+  - `FetchRequest` takes `range`, `signalLines` and `originalHeaderPrefix`. A range request keeps no stored copy and sends no validators. `CrawlerOptions`, `RuntimeOptions` and `OpenOptions` take `signer`, and `RenderOptions` takes `sign`.
+  - `ExtractedDoc` takes `ai_input`: an extractor can hold back a document whose body refuses AI input. `Crawler.robotsAllow` also gives the content signals of robots.txt (`signals`).
+  - `record.schema.json` describes the new payload fields `range` and `signed`. The capture ids do not change.
+  - The recipes `archive-copy` and `archive-index` belong to the crawler. An application that registers an extractor named `archive-copy` gets an error.
 
 ## 0.1.1 - 2026-10-17
 

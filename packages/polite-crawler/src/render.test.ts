@@ -55,11 +55,20 @@ const HOPS: Record<string, string> = {
   "/chain2": "/end",
 };
 
-const asked: Array<{ readonly path: string; readonly from: string | undefined }> = [];
+const asked: Array<{
+  readonly path: string;
+  readonly from: string | undefined;
+  readonly agent?: string | undefined;
+}> = [];
 const server = createServer((request, response) => {
   const path = (request.url ?? "/").split("?")[0]!;
   const from = request.headers["from"];
-  asked.push({ path, from: typeof from === "string" ? from : undefined });
+  const agent = request.headers["signature-agent"];
+  asked.push({
+    path,
+    from: typeof from === "string" ? from : undefined,
+    ...(typeof agent === "string" ? { agent } : {}),
+  });
   if (/\.(png|PNG)$/.test(path) || path.startsWith("/cdn/")) {
     response.writeHead(200, { "content-type": "image/png" }).end(Buffer.alloc(16));
     return;
@@ -234,6 +243,29 @@ describe("the headless browser", () => {
       message: `the page moved: the request for ${base}/internal/js was refused`,
     });
     expect(paths()).toEqual(["/js-out"]);
+  }, 60_000);
+
+  it("signs each request and each step of its redirects for its own URL, and sends no request that the signer refuses", async (context) => {
+    if (unavailable !== undefined)
+      context.skip(`Playwright's browser could not start: ${unavailable}`);
+    const sign = (url: string): Record<string, string> | undefined =>
+      new URL(url).pathname === "/end"
+        ? undefined
+        : { "Signature-Agent": `sig1="${new URL(url).pathname}"` };
+    asked.length = 0;
+    await renderer!.render(`${base}/fetches`, { ...OPTIONS, allowRequest: () => true, sign });
+    expect(asked.map(({ path, agent }) => [path, agent])).toEqual([
+      ["/fetches", 'sig1="/fetches"'],
+      ["/api/hours", 'sig1="/api/hours"'],
+    ]);
+    asked.length = 0;
+    await expect(
+      renderer!.render(`${base}/chain`, { ...OPTIONS, allowRequest: () => true, sign }),
+    ).rejects.toMatchObject({ reason: "refused" });
+    expect(asked.map(({ path, agent }) => [path, agent])).toEqual([
+      ["/chain", 'sig1="/chain"'],
+      ["/chain2", 'sig1="/chain2"'],
+    ]);
   }, 60_000);
 
   it("reads a page whose script navigates while the browser measures its text", async (context) => {

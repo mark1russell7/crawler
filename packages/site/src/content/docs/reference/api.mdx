@@ -46,8 +46,12 @@ The method fetches a page, reads it and adds it to the index. It gives a `PageRe
 | `onBehalfOf` | `string[]` | `[]` |
 | `signal` | `AbortSignal` | none |
 | `scope`, `labels` | a text, and a record of texts | none |
+| `fallback` | `"archive" \| "none"` | `"none"` |
+| `archiveDespiteRobots` | `boolean` | `false` |
 
 The value `"0"` of `maxAge` asks the site again, and `"auto"` uses the freshness that the server gave.
+
+With `fallback: "archive"`, a page that the site refuses, or a site that is down, gets a copy from the Wayback Machine or Common Crawl. The result then has `archived`: the archive, the date of the copy and its URL there. Its `outcome` stays the outcome of the live fetch. By default, a page that the current robots.txt disallows gets no copy, and `archiveDespiteRobots` changes that.
 
 ```ts title="PageResult"
 interface PageResult {
@@ -67,6 +71,7 @@ interface PageResult {
   from_cache: boolean; // true when the store answered with no request
   held_back: boolean; // true when the page asked not to be AI input
   note: string | null; // for example "robots.txt disallows it for PoliteCrawler"
+  archived?: { source: "wayback" | "commoncrawl"; timestamp: string; url: string; original: string }; // an archived copy, not a fresh fetch
 }
 ```
 
@@ -139,6 +144,23 @@ The method builds the index again from the capture log and the blobs, with no re
 ### `close()`
 
 The method closes the browser, the log files and the index. A second close does nothing, and a method after the close rejects.
+
+## Signed requests
+
+The option `signer` of `openCrawler` signs each request with HTTP Message Signatures, as the Web Bot Auth draft tells (`draft-ietf-webbotauth-httpsig-protocol-00`).
+
+```ts
+const crawler = openCrawler({
+  dir: "./crawl",
+  signer: { privateKey: pem, signatureAgent: "https://bot.example.com" },
+});
+```
+
+- `createWebBotAuthSigner(options)` makes a signer from an Ed25519 key. The options are `privateKey`, `signatureAgent`, `agentType`, `keyId`, `lifetimeMs` and `label`.
+- `keyDirectory(keys)` makes the key directory to host at `/.well-known/http-message-signatures-directory`, with the type `application/http-message-signatures-directory+json`.
+- `verifySignature(request, directory)` checks the signature of a request. Use it to test your setup.
+
+The `User-Agent` does not change. The README of the package tells how to host the key directory.
 
 ## Export to a web archive
 

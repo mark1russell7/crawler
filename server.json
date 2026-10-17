@@ -49,6 +49,17 @@
           "description": "Set it to 1 to let user_provided read a page that refuses AI input when the client cannot ask the user to confirm.",
           "format": "boolean",
           "isRequired": false
+        },
+        {
+          "name": "POLITE_CRAWLER_SIGN_KEY",
+          "description": "The file of an Ed25519 private key (PKCS#8 PEM or JWK). The crawler signs each request with it (Web Bot Auth). It needs POLITE_CRAWLER_SIGNATURE_AGENT.",
+          "format": "filepath",
+          "isRequired": false
+        },
+        {
+          "name": "POLITE_CRAWLER_SIGNATURE_AGENT",
+          "description": "Where a site finds the public key of POLITE_CRAWLER_SIGN_KEY: the https origin of the key directory, or the URL of a JSON Web Key Set.",
+          "isRequired": false
         }
       ]
     }

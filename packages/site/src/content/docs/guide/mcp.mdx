@@ -151,12 +151,14 @@ Add an option after `mcp`, for example `npx -y polite-crawler mcp --dir ~/resear
 | `--allow-private` | `POLITE_CRAWLER_ALLOW_PRIVATE=1` | The crawler fetches loopback, private and link-local addresses too. By default, it refuses them. |
 | `--allow-user-provided` | `POLITE_CRAWLER_ALLOW_USER_PROVIDED=1` | `user_provided` works when the client cannot ask the user. [Read the rule](#pages-that-refuse-ai-input). |
 | `--no-browser` | | The crawler does not open a headless browser. |
+| `--sign-key <file>` | `POLITE_CRAWLER_SIGN_KEY` | The crawler signs each request with this Ed25519 key (Web Bot Auth). It needs `--signature-agent`. |
+| `--signature-agent <url>` | `POLITE_CRAWLER_SIGNATURE_AGENT` | Where a site finds the public key of `--sign-key`. |
 
 ## The tools
 
 | Tool | Input | What it gives |
 | --- | --- | --- |
-| `crawl_fetch` | `urls` (1 to 20), `render` (`auto`, `never` or `always`), `max_age` (for example `24h`, or `0` for a new copy) | For each page: the outcome, the status, the document id, the capture ids and the age of the copy. The title and the schema.org types come in an envelope. |
+| `crawl_fetch` | `urls` (1 to 20), `render` (`auto`, `never` or `always`), `max_age` (for example `24h`, or `0` for a new copy), `archive_fallback` (false by default) | For each page: the outcome, the status, the document id, the capture ids and the age of the copy. The title and the schema.org types come in an envelope. With `archive_fallback`, a page that the site refuses gets an archived copy, marked `archived` with its date. |
 | `crawl_find` | `q`, `limit`, `kind`, `rank` | Ranked passages from the stored pages, with their document ids. Each word of `q` is a term, and a page matches when it holds any term. `rank: "fast"` makes a long question faster, and its results can be different. |
 | `crawl_read` | `doc`, `from`, `length`, `include_meta`, `include_jsonld`, `user_provided` | A range of the text of a document, with its captures and `next_from`, the start of the next range. The metadata of the page comes with the first range. |
 | `crawl_verify` | `doc`, `quote` | The exact span of the quote and its position, or `found: false`. |

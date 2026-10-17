@@ -41,6 +41,7 @@ import {
   verifyQuote,
 } from "./runtime.ts";
 import { BOT_PAGE, DEFAULT_TOKEN, VERSION } from "./version.ts";
+import type { RequestSigner, WebBotAuthOptions } from "./webbotauth.ts";
 
 export type { ReadOptions, ReadResult, VerifyOptions, VerifyResult } from "./runtime.ts";
 
@@ -122,8 +123,13 @@ export interface RuntimeOptions {
   readonly scopeRank?: ((scope: string) => number) | undefined;
   /** This function gets an event for each request, response, wait, stop and skip. */
   readonly onEvent?: ((event: CrawlEvent) => void) | undefined;
-  /** These extractors read the captures of the recipes of an application. The recipe `page` is built in. */
+  /** These extractors read the captures of the recipes of an application. The recipes `page` and `archive-copy` are built in. */
   readonly extractors?: Readonly<Record<string, Extractor>> | undefined;
+  /**
+   * This signer signs each request with Web Bot Auth (`CrawlerOptions.signer`). Give the options of
+   * `createWebBotAuthSigner`, or a `RequestSigner`. Without it, the crawler signs nothing.
+   */
+  readonly signer?: RequestSigner | WebBotAuthOptions | undefined;
 }
 
 /** A runtime that a store made. It owns the parts that it made, and it closes them. */
@@ -231,6 +237,7 @@ export const createRuntime = (options: RuntimeOptions): StoreRuntime => {
     scopeRank: options.scopeRank,
     obeyDefaultToken: options.obeyDefaultToken,
     onEvent: options.onEvent,
+    signer: options.signer,
   });
   const extractors = new Extractors();
   for (const [recipe, extractor] of Object.entries(options.extractors ?? {})) {
@@ -282,6 +289,16 @@ export interface FetchOptions {
   readonly scope?: string | undefined;
   /** These labels go into the capture records of this fetch. They are not part of the capture ids. */
   readonly labels?: Readonly<Record<string, string>> | undefined;
+  /**
+   * The value `archive` gives a copy from a public web archive (the Wayback Machine, then Common
+   * Crawl) when the site refuses the page or is down. The result then has `archived`. The default is `none`.
+   */
+  readonly fallback?: "archive" | "none" | undefined;
+  /**
+   * The value true also gives an archived copy of a page that the current robots.txt of its site
+   * disallows for this agent. The default is false: only a stop, an error or a dead host gets a copy.
+   */
+  readonly archiveDespiteRobots?: boolean | undefined;
 }
 
 /** These options control a search. */
@@ -382,6 +399,8 @@ export const openCrawler = (options: OpenOptions): PoliteCrawler => {
         signal: fetchOptions.signal,
         scope: fetchOptions.scope,
         labels: fetchOptions.labels,
+        fallback: fetchOptions.fallback,
+        archiveDespiteRobots: fetchOptions.archiveDespiteRobots,
       });
     },
     async find(q, findOptions = {}) {

@@ -15,6 +15,8 @@ The site has interactive demos with the real code: <https://mark1russell7.github
 - **An MCP server.** One command gives Claude and other MCP clients six tools: fetch, find, read, verify, discover and a small crawl.
 - **Web archives.** An export writes the stored captures as WARC or WACZ. Archive tools read them, for example `warcio`, pywb and ReplayWeb.page.
 - **Find and crawl a site.** `discover` lists the pages of a site from its sitemaps and feeds. `crawl` follows the links of a site within a budget, at the pace of the site.
+- **Archived copies, on request.** When a site refuses a page or is down, `fallback: "archive"` gives a copy from the Wayback Machine or Common Crawl. The result marks the copy as archived, with its date.
+- **Signed requests.** With an Ed25519 key, the crawler signs each request (Web Bot Auth). A site can then verify that a request comes from your crawler.
 
 ## Install
 
@@ -60,6 +62,8 @@ The store is in `~/.polite-crawler`. Use `--dir` or `POLITE_CRAWLER_DIR` for a d
 - `--allow-private` (or `POLITE_CRAWLER_ALLOW_PRIVATE=1`) lets the crawler fetch loopback, private and link-local addresses. By default, the crawler refuses them.
 - `read --user-provided` reads a page that asked not to be AI input. Use it only for a URL that you gave yourself. The crawler records each such read.
 - `--max-age 0` fetches a page again, also when the store has a copy.
+- `fetch --archive-fallback` gives an archived copy when a site refuses a page or is down. [Archived copies after a refusal](#archived-copies-after-a-refusal) tells the rules.
+- `--sign-key <file>` and `--signature-agent <url>` sign each request. `key-directory --sign-key <file>` prints the key directory to host. [Signed requests](#signed-requests-web-bot-auth) tells how.
 - `find --rank fast` makes a long question faster, and its results can be different. [Fast ranking](#fast-ranking) gives the measured difference.
 - `reindex` builds the index again. The documents of a recipe that the command cannot read (the recipes of another application) stay. The output counts them, and the captures that it skipped.
 - `export --out <file>` writes the stored captures as a WARC or a WACZ file. [Export to a web archive](#export-to-a-web-archive) tells what goes into the file.
@@ -81,7 +85,7 @@ The command gives these exit codes:
 | Code | Meaning |
 | --- | --- |
 | `0` | The command did its work. |
-| `1` | The command did not do its work: a page that the crawler did not fetch, no search result, a quote that is not in the document, a document that is not stored or that is held back, or an error. `discover` gives 1 when it finds no URL, and `crawl` when it gets no page. |
+| `1` | The command did not do its work: a page that the crawler did not fetch, no search result, a quote that is not in the document, a document that is not stored or that is held back, or an error. `discover` gives 1 when it finds no URL, and `crawl` when it gets no page. With `--archive-fallback`, a page with an archived copy counts as done. |
 | `2` | The command line is wrong. The command opens no store. |
 
 ## Use it from Claude (MCP)
@@ -126,7 +130,7 @@ The server gives six tools:
 
 | Tool | What it does |
 | --- | --- |
-| `crawl_fetch` | It fetches pages into the store, and a page in the store answers with no request. It gives the age of each copy. |
+| `crawl_fetch` | It fetches pages into the store, and a page in the store answers with no request. It gives the age of each copy. With `archive_fallback`, a page that the site refuses gets an archived copy, marked `archived`. |
 | `crawl_find` | It searches the stored pages and gives ranked passages. |
 | `crawl_read` | It gives a range of a stored document, with the capture ids to cite and the position of the next range. |
 | `crawl_verify` | It finds a quote in a stored document and gives the exact span. |
@@ -172,6 +176,8 @@ The crawler records each release in the capture log.
 | `--allow-private` | `POLITE_CRAWLER_ALLOW_PRIVATE=1` | Fetch loopback, private and link-local addresses too. |
 | `--allow-user-provided` | `POLITE_CRAWLER_ALLOW_USER_PROVIDED=1` | Let `user_provided` work when the client cannot ask the user. |
 | `--no-browser` | | Do not open a headless browser. |
+| `--sign-key <file>` | `POLITE_CRAWLER_SIGN_KEY` | Sign each request with this Ed25519 key (PKCS#8 PEM or JWK). [Signed requests](#signed-requests-web-bot-auth) tells how. |
+| `--signature-agent <url>` | `POLITE_CRAWLER_SIGNATURE_AGENT` | Where a site finds the public key of `--sign-key`: an https origin, or the URL of a JSON Web Key Set. |
 
 ## Use it as a library
 
@@ -271,6 +277,7 @@ The readers give more facts than before:
 - `onEvent`: a function that gets an event for each request, response, wait, stop and skip.
 - `obeyDefaultToken`: a crawler with a token of your own also obeys the group of `PoliteCrawler` when its `User-Agent` links the bot page of polite-crawler. Site owners read that page. The stricter rules apply. Set false when you host a bot page of your own.
 - `maxRenders`: the pages that the browser renders at one time. The default is 2, because each render holds a browser context. A render waits for a slot before the lease of its host, so the wait is not time of the host.
+- `signer`: the signer of each request (Web Bot Auth). [Signed requests](#signed-requests-web-bot-auth) tells its options.
 - `scope`, `labels` and `scopeRank`: the labels of each record. One fetch of a robots.txt can serve requests of different scopes. Its record takes the labels of each request and the scope with the highest `scopeRank`, the most private one.
 
 `openCrawler` takes `egress`, `politeness` and `hostState` too, and also `clock`, `scope`, `onEvent` and `extractors`. Its default `hostState` is the file `hosts.sqlite` in the store. Thus the processes on one store share the pace, the stops and the validator memo of each host.
@@ -290,10 +297,15 @@ These parts are the stable API:
 - The readers: `polite-crawler/robots`, `/hours`, `/html`, `/classify`, `/politeness` and `/signals`. The site and its tools use them in the browser.
 - The command line, its exit codes, the store on disk and `polite-crawler/record.schema.json`.
 - The export: `exportWarc` and `exportWacz`, their options (`ArchiveOptions`, `ArchiveFilter`, `ArchiveSource`), their results (`WarcResult`, `WaczResult`, `ArchiveCounts`) and the records of the archive.
+- The archived fallback: `fallback` and `archiveDespiteRobots` of `FetchOptions`, the field `archived` of the results, and the types `Archived` and `WebArchive`.
+- Signed requests: `createWebBotAuthSigner`, `keyDirectory`, `verifySignature`, `KEY_DIRECTORY_PATH`, `KEY_DIRECTORY_TYPE`, the option `signer`, and the types `WebBotAuthOptions`, `WebBotAuthSigner`, `RequestSigner`, `KeyDirectory`, `DirectoryKey`, `KeyInput`, `SignatureAgentType`, `SignedRequest` and `SignatureCheck`.
+- The headers of a signature follow the draft. When the draft changes, the headers change with it, and `CHANGELOG.md` says so.
 
 The other exports of the root entry point are the engine. Examples are `createRuntime`, `catchUpIndex`, `Crawler`, `CaptureLog`, `DocIndex`, `FileBlobStore`, `SqliteHostStateStore`, `Extractors`, `fetchAndIndex` and `makeRecord`. An application can build on them. A minor version before 1.0.0 can change them, and its section in `CHANGELOG.md` says so.
 
 The engine of discovery and of the crawl is `discoverSite`, `crawlSite`, `readSitemap`, `feedDate`, `DISCOVER_LIMITS`, `CRAWL_LIMITS`, `SITEMAP_LIMITS` and `DEADLINE_NOTE`. It also includes `Crawler.robotsAllow` and the `deadline` of `FetchRequest`, `RenderRequest` and `PageOptions`.
+
+The engine of the archived fallback and of the signatures is `archiveExtractor`, `archivedDocId`, and the `fallback` and `archiveDespiteRobots` of `PageOptions`. It also includes `range`, `signalLines` and `originalHeaderPrefix` of `FetchRequest`, `ai_input` of `ExtractedDoc`, `sign` of `RenderOptions` and `signer` of `CrawlerOptions`.
 
 ## Find the pages of a site
 
@@ -383,6 +395,131 @@ The frontier does not change a rule of the crawler, because each page is a fetch
 
 The frontier keeps its state in memory, for one call. It keeps 10,000 URLs that wait and 100,000 URLs that it saw, at most (`CRAWL_LIMITS`). A later version can make the frontier resumable.
 
+## Archived copies after a refusal
+
+When a site refuses a page, or the site is down, the crawler can give a copy from a public web archive. The crawler does not show the copy as a fresh fetch, and each result marks it.
+
+```ts
+const page = await crawler.fetch("https://example.com/hours", { fallback: "archive" });
+console.log(page.outcome, page.archived?.source, page.archived?.timestamp, page.doc);
+// blocked wayback 2024-01-15T09:30:00Z archive:https://example.com/hours
+```
+
+The fallback is off by default. The command line has `fetch --archive-fallback`, and the tool `crawl_fetch` has `archive_fallback`.
+
+### When the crawler gives a copy
+
+| The live fetch | An archived copy |
+| --- | --- |
+| robots.txt disallows the page | Only with `archiveDespiteRobots` |
+| A stop of the host, after a 401, a 402, a 403 or a challenge | Yes |
+| A 401, a 402, a 403, or a challenge (also a page that is a bot check) | Yes |
+| A 502, a 503, a 504, or a different 5xx error | Yes |
+| No response (a dead host), or a robots.txt that the crawler cannot read and has no recent copy of | Yes |
+| A 404, a 410, a 429, a cancel, or a refusal of the egress policy | No |
+
+### Where the copy comes from
+
+1. The Wayback Machine. Its availability API (`archive.org/wayback/available`) gives the newest copy, and the crawler fetches the raw copy (`web.archive.org/web/<time>id_/<url>`).
+2. Common Crawl, when the Wayback Machine has no copy. The crawler reads the list of indexes (`index.commoncrawl.org/collinfo.json`) and asks the 3 newest indexes. It fetches the WARC record of the newest copy with a range request (`data.commoncrawl.org`).
+
+- The archives are services of third parties, with their own politeness. Each request to them is a fetch of the same crawler. Their robots.txt, the pace of each host, the egress policy and the identity of the crawler apply.
+- The capture log records each request to an archive, with the recipe `archive-index` (an index) or `archive-copy` (a copy). `reindex` reads the copies again from the log.
+- A stored copy younger than `maxAge` answers with no request.
+- An archive learns the URL of the page. A URL that holds a secret (a password or a secret parameter) does not go to an archive.
+
+### How a result shows a copy
+
+- A copy is a document of its own, `archive:<url>`, of the kind `archived`. The document of the live page (`url:<url>`) does not change.
+- `fetch` keeps the `outcome` and the `status` of the live fetch, for example `blocked` and 403. It adds `archived`: `source` (`wayback` or `commoncrawl`), `timestamp` (when the archive captured the page), `url` (the copy in the archive), `original` (the URL that the archive captured), and `record` for Common Crawl.
+- `read`, `verify` and `find` give `archived` for a copy. The note of `read` and `verify` names the archive and the date. Thus a citation of a copy names the archive and its date, not the date of a fresh fetch.
+- `fetched_at` stays the time of the fetch from the archive. `archived.timestamp` is the date of the copy.
+- `find` with `kind: "page"` leaves the copies out.
+- In the MCP envelope, a copy has the attribute `archived`, for example `archived="wayback 2024-01-15T09:30:00Z"`. Its `age` starts at the date of the copy.
+- With `--archive-fallback`, `fetch` gives the exit code 0 for a page with a copy, and the line of the page starts with `~`.
+
+### robots.txt and the usage signals of a copy
+
+An archive keeps copies of pages that the site refuses today. To read such a copy or not is a decision of policy, and the default is strict:
+
+- With no `archiveDespiteRobots`, the crawler gives no copy of a page that the current robots.txt of its site disallows for this agent. The rules for the agents of `onBehalfOf` apply too.
+- For a stopped host, the crawler reads the rules again: from memory, or from the stored copy of robots.txt of the last 30 days. Thus only a stop, an error or a dead host gets a copy.
+- The reason: robots.txt tells what the owner of the site wants today. A copy of a disallowed page goes around that wish. An owner who disallows a page today does not expect an agent to read it from an archive.
+- `archiveDespiteRobots: true` (`--archive-despite-robots`) gives a copy of these pages too. The robots.txt of each archive still applies to the requests to it. The MCP server has no such parameter, because this decision belongs to the operator.
+- The usage signals of a copy apply as for a live page. A copy is held back from the AI reader when the content signals of the current robots.txt of its site say `ai-input=no`.
+- The headers of the archived response count too: `X-Archive-Orig-Content-Signal` of the Wayback Machine, and the HTTP headers in the WARC record of Common Crawl. The signals of the archive itself count as well.
+
+## Signed requests (Web Bot Auth)
+
+With an Ed25519 key, the crawler signs each request with HTTP Message Signatures (RFC 9421), as the IETF Web Bot Auth draft tells. A site can then verify that a request comes from the holder of your key. The package follows `draft-ietf-webbotauth-httpsig-protocol-00` (1 September 2026).
+
+```ts
+import { readFileSync } from "node:fs";
+import { openCrawler } from "polite-crawler";
+
+const crawler = openCrawler({
+  dir: "./crawl",
+  signer: {
+    privateKey: readFileSync("bot-key.pem", "utf8"), // PKCS#8 PEM, a JWK or a KeyObject
+    signatureAgent: "https://bot.example.com", // the origin of your key directory
+  },
+});
+```
+
+Each request gets three headers:
+
+```text
+Signature-Agent: sig1="https://bot.example.com"
+Signature-Input: sig1=("@authority" "signature-agent";key="sig1");created=1760702400;keyid="poqkLGiy...";alg="ed25519";expires=1760702700;nonce="...";tag="web-bot-auth"
+Signature: sig1=:...:
+```
+
+- The signature covers `@authority` and the member of `Signature-Agent`. `keyid` is the JWK thumbprint of the key (RFC 8037). Each signature has a new random nonce, and it expires after 5 minutes.
+- The crawler signs each request: robots.txt, each redirect, the sitemaps, the archives of the fallback and each request of a rendered page. Without a signer, it signs nothing. The browser does not sign a WebSocket connection.
+- A signature adds an identity. The `User-Agent` and `From` headers do not change. With a signer, the crawler replaces the signature headers of a caller.
+- A signer that fails sends no request: the result is a skip with a note.
+- The signature headers are not secrets. The capture log records `signed`, with the key id and the agent. It does not hold the key. The signer keeps the key in a closure, and no property of it shows the key.
+
+`createWebBotAuthSigner(options)` makes a signer. `signer` also takes these options, or a `RequestSigner` of your own (for example, a signer with a key in a hardware module).
+
+| Option | Default | What it does |
+| --- | --- | --- |
+| `privateKey` | | The Ed25519 private key: a `KeyObject`, PKCS#8 (PEM text or DER bytes) or a JWK. |
+| `signatureAgent` | | Where a site finds your public key. For the type `directory`, an https origin. |
+| `agentType` | `directory` | `directory`: the key directory is at the well-known path of the origin. `jwks_uri`: the URL is a JSON Web Key Set on any path. |
+| `keyId` | the thumbprint | A check: a value that is not the thumbprint of the key throws an error. |
+| `lifetimeMs` | 300,000 (5 minutes) | The time that a signature stays valid, 24 hours at most. |
+| `label` | `sig1` | The label of the signature and the key of the member of `Signature-Agent`. |
+
+`verifySignature(request, directory)` verifies the signature of a request with a key directory, and tells why a request does not verify. Use it to test your setup.
+
+Make a key with OpenSSL, and give it to the command line. Do not use the test keys of RFC 9421 for a real crawler.
+
+```sh
+openssl genpkey -algorithm ed25519 -out bot-key.pem
+npx polite-crawler key-directory --sign-key bot-key.pem --signature-agent https://bot.example.com > http-message-signatures-directory
+npx polite-crawler fetch https://example.com/ --sign-key bot-key.pem --signature-agent https://bot.example.com
+```
+
+The command line takes `--sign-key` and `--signature-agent` (or `POLITE_CRAWLER_SIGN_KEY` and `POLITE_CRAWLER_SIGNATURE_AGENT`) for `fetch`, `discover`, `crawl` and `mcp`. A `--signature-agent` with a path gives the type `jwks_uri`.
+
+### Host the key directory
+
+A site finds your public key from `Signature-Agent`. With the type `directory`, the key directory is at `/.well-known/http-message-signatures-directory` on the origin of `signatureAgent`.
+
+1. Make the JSON with `keyDirectory([publicKey])` or `polite-crawler key-directory`. It holds only the public part of each key, with its thumbprint as `kid`.
+2. Serve it at `https://<your origin>/.well-known/http-message-signatures-directory`. Send the status 200 and `Content-Type: application/http-message-signatures-directory+json`. Do not redirect it, because a verifier follows no redirect.
+3. When you change the key, keep the old key in the directory until its last signature expires.
+
+The draft recommends that the server of the directory also signs its response with each key, as a proof of possession. `keyDirectory` gives only the JSON, so a static host gives no such proof.
+
+GitHub Pages cannot serve a key directory of the type `directory` for a project site:
+
+- A project site (`<user>.github.io/<repository>`) serves files only below its path, so it cannot serve the well-known path at the root of the host.
+- GitHub Pages sets the content type from the extension of the file, so it cannot send the type of the directory.
+- On a project site, put the JSON in a file, for example `jwks.json`. Give its URL as `signatureAgent`, with `agentType: "jwks_uri"`. The draft then binds the key to that URL, not to the domain.
+- A host that sets headers (the `_headers` file of Cloudflare Pages or Netlify, for example) can serve the type `directory` at the root of a domain.
+
 ## How the crawler is polite
 
 1. **robots.txt.** The crawler reads the robots.txt of each site and obeys it, as RFC 9309 specifies. A 401 or a 403 for robots.txt means that the site has no file. When the crawler cannot read robots.txt (a dead domain, a server error or a body that does not decode), it fetches nothing from the site. Then it tries again after some minutes, with a backoff from `Retry-After` up to 1 hour. A good copy of the file from the last 30 days applies in that time.
@@ -392,6 +529,8 @@ The frontier keeps its state in memory, for one call. It keeps 10,000 URLs that 
 5. **An honest `User-Agent`.** The default is `PoliteCrawler/0.1.0 (+https://mark1russell7.github.io/crawler/bot/)`. The `contact` option adds an address. An email address also goes into the `From` header, and a URL does not, because `From` holds only a mailbox. The constructor of `Crawler` throws an error for a bad option. Examples are a token that is not a product token, a `User-Agent` or a `From` that HTTP cannot send, and a `maxActive` less than 1.
 6. **Public addresses only.** By default, the crawler fetches only `http:` and `https:` URLs on public addresses. It checks the address after DNS and at each redirect. In the headless browser, it checks each request of the page and each redirect of that request. A refusal is a skipped fetch with the note `egress policy: <address> is a loopback address; set allowPrivate to fetch it`.
 7. **Usage signals.** When a page asks not to be AI input (`ai-input=no` content signals), the crawler keeps it but holds back its text from the AI reader. The crawler also records the RSL `License` lines of robots.txt and the TDMRep reservation (the `tdm-reservation` and `tdm-policy` headers and `<meta>` tags) with each capture. These records change nothing, because a reservation of text and data mining is not a refusal of AI input.
+8. **Signed requests, as an option.** With a `signer`, each request has a Web Bot Auth signature, so a site can verify where it comes from. [Signed requests](#signed-requests-web-bot-auth) tells how.
+9. **Archived copies, as an option.** `fallback: "archive"` reads a copy from a web archive only after a refusal. By default, it gives no copy of a page that the current robots.txt disallows.
 
 To block the crawler, a site owner adds this group to robots.txt:
 

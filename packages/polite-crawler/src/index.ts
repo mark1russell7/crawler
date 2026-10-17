@@ -12,6 +12,8 @@
  *   sitemaps and feeds (`readSitemap`).
  * - The discovery and the crawl over a runtime: `discoverSite` and `crawlSite`.
  * - The export of a store to the web archive formats: `exportWarc` and `exportWacz`.
+ * - The archived fallback: the types of an archived copy, `archivedDocId` and `archiveExtractor`.
+ * - Signed requests (Web Bot Auth): `createWebBotAuthSigner`, `keyDirectory` and `verifySignature`.
  *
  * The other entry points give the rest:
  *
@@ -65,6 +67,8 @@ export type {
 } from "./docs.ts";
 export { DocIndex, FAST_RANK_SHARE, locate } from "./docs.ts";
 export type { EgressOptions } from "./egress.ts";
+export type { Archived, WebArchive } from "./fallback.ts";
+export { archiveExtractor, archivedDocId } from "./fallback.ts";
 export { EgressRefused, egressLookup } from "./egress.ts";
 export type {
   CrawlOptions,
@@ -188,6 +192,24 @@ export { bodyEncoding, decodeBody } from "./text.ts";
 export type { ScopeOptions } from "./urls.ts";
 export { VERSION } from "./version.ts";
 export type { WaczResult } from "./wacz.ts";
+export type {
+  DirectoryKey,
+  KeyDirectory,
+  KeyInput,
+  RequestSigner,
+  SignatureAgentType,
+  SignatureCheck,
+  SignedRequest,
+  WebBotAuthOptions,
+  WebBotAuthSigner,
+} from "./webbotauth.ts";
+export {
+  KEY_DIRECTORY_PATH,
+  KEY_DIRECTORY_TYPE,
+  createWebBotAuthSigner,
+  keyDirectory,
+  verifySignature,
+} from "./webbotauth.ts";
 export { exportWacz } from "./wacz.ts";
 export type {
   ArchiveCounts,

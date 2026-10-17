@@ -20,6 +20,7 @@ npx polite-crawler <command> [options]
 | `export --out <file>` | It writes the stored captures as a WARC or WACZ archive. It only reads the store. |
 | `discover <site>` | It lists the pages of a site from its sitemaps and feeds. It fetches no page of the list. |
 | `crawl <url...>` | It fetches the pages and follows their links on the same site, within a budget. |
+| `key-directory` | It prints the key directory (a JSON Web Key Set) of `--sign-key`, for you to host. |
 
 ## Options
 
@@ -31,6 +32,8 @@ These options apply to each command:
 | `--contact <text>` | `$POLITE_CRAWLER_CONTACT` | An email (in `From` and the `User-Agent`) or a URL (in the `User-Agent` only). |
 | `--allow-private` | `$POLITE_CRAWLER_ALLOW_PRIVATE=1` | Fetch loopback, private and link-local addresses too. By default, the crawler refuses them. |
 | `--no-browser` | | Do not open the headless browser. |
+| `--sign-key <file>` | `$POLITE_CRAWLER_SIGN_KEY` | Sign each request (Web Bot Auth) with this Ed25519 key: PKCS#8 PEM or a JWK. It needs `--signature-agent`. |
+| `--signature-agent <url>` | `$POLITE_CRAWLER_SIGNATURE_AGENT` | Where a site finds the public key: the https origin of the key directory, or the URL of a JSON Web Key Set on a path. |
 | `--json` | | Print JSON. |
 | `-v`, `--version` | | Print the version and stop. |
 | `-h`, `--help` | | Print the commands and the options, and stop. |
@@ -41,6 +44,8 @@ These options apply to one command. The command line is wrong when another comma
 | --- | --- | --- | --- |
 | `fetch`, `crawl` | `--render <mode>` | `auto` | `auto`, `never` or `always`. |
 | `fetch`, `crawl`, `discover` | `--max-age <age>` | `24h` | A stored copy younger than this age answers with no request. `0` fetches the page again. |
+| `fetch` | `--archive-fallback` | | When the site refuses the page or is down, give a copy from the Wayback Machine or Common Crawl. The result marks it as archived, with its date. |
+| `fetch` | `--archive-despite-robots` | | With `--archive-fallback`: also give a copy of a page that the current robots.txt of its site disallows. |
 | `find` | `--limit <n>` | `10` | The number of results. |
 | `find` | `--kind <kind>` | all | Only this kind of document, for example `page` or `pdf`. |
 | `find` | `--rank <mode>` | `exact` | `exact` gives BM25 to each match. `fast` leaves the common words out of the documents that hold one word, so a long question is faster. |
@@ -83,7 +88,7 @@ The README of the package tells what goes into the archive, what does not, and w
 | Code | Meaning |
 | --- | --- |
 | `0` | The command did its work. |
-| `1` | The command did not do its work: a page that the crawler did not fetch, no search result, a quote that is not in the document, a document that is not stored or that is held back, or an error. `discover` gives `1` when it finds no URL, and `crawl` when it gets no page. |
+| `1` | The command did not do its work: a page that the crawler did not fetch, no search result, a quote that is not in the document, a document that is not stored or that is held back, or an error. `discover` gives `1` when it finds no URL, and `crawl` when it gets no page. With `--archive-fallback`, a page with an archived copy counts as done. |
 | `2` | The command line is wrong. The command opens no store. |
 
 ## Examples

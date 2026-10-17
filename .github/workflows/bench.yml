@@ -17,6 +17,9 @@ on:
       modes:
         description: A comma list of modes (empty for each mode). exact always runs.
         default: ""
+      corpus:
+        description: zipf (a Zipf spread with topics) or dense (the corpus of the review)
+        default: zipf
 
 permissions:
   contents: read
@@ -47,12 +50,13 @@ jobs:
           DOCS: ${{ inputs.docs }}
           RUNS: ${{ inputs.runs }}
           MODES: ${{ inputs.modes }}
+          CORPUS: ${{ inputs.corpus }}
         run: >-
           pnpm exec tsx packages/polite-crawler/bench/find.mts
-          --docs "$DOCS" --runs "$RUNS" --modes "$MODES"
+          --docs "$DOCS" --runs "$RUNS" --modes "$MODES" --corpus "$CORPUS"
           --out bench-find.json --summary "$GITHUB_STEP_SUMMARY"
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: bench-find-node${{ matrix.node }}
+          name: bench-find-${{ inputs.corpus || 'zipf' }}-node${{ matrix.node }}
           path: bench-find.json
           retention-days: 90

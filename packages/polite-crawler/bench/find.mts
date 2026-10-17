@@ -8,12 +8,15 @@
  *   pnpm exec tsx packages/polite-crawler/bench/find.mts --docs 30000 --out bench-find.json
  *
  * Options: --docs (30000), --words (900 a document), --runs (5 timed runs a question), --modes
- * (a comma list, default each mode), --out (the JSON results), --summary (a file that gets a
- * Markdown table, for example $GITHUB_STEP_SUMMARY).
+ * (a comma list, default each mode), --corpus (zipf or dense), --out (the JSON results), --summary
+ * (a file that gets a Markdown table, for example $GITHUB_STEP_SUMMARY).
  *
- * The corpus: a Zipf spread (s = 1) over 60,000 words with the English stop words at the top, and
- * 400 topics that give each document bursts of its own words. A document has 900 words, a title of
- * 6 words, the kind `pdf` for one document in 10 and `ai_input: "no"` for one in 100.
+ * The corpus `zipf` (the default): a Zipf spread (s = 1) over 60,000 words with the English stop
+ * words at the top, and 400 topics that give each document bursts of its own words. The corpus
+ * `dense` is the corpus of the review (t20-find-scale.ts): 8,000 words, the rank of each word is
+ * 8,000 × u³ for a uniform u, and no topics. Thus almost each word is in almost each document. A
+ * document has 900 words, a title of 6 words, the kind `pdf` for one document in 10 and
+ * `ai_input: "no"` for one in 100.
  *
  * The quality of a mode is its top 10 against the top 10 of `exact` for the same question:
  * overlap@10 is the share of the exact top 10 that the mode also gives, and Kendall tau is the
@@ -34,6 +37,7 @@ const { values: args } = parseArgs({
     words: { type: "string", default: "900" },
     runs: { type: "string", default: "5" },
     modes: { type: "string", default: "" },
+    corpus: { type: "string", default: "zipf" },
     out: { type: "string", default: "bench-find.json" },
     summary: { type: "string" },
   },
@@ -43,6 +47,7 @@ const DOCS = Number(args.docs) || 30_000;
 const WORDS = Number(args.words) || 900;
 const RUNS = Math.max(1, Number(args.runs) || 5);
 const LIMIT = 10;
+const CORPUS = args.corpus === "dense" ? "dense" : "zipf";
 
 // ── a seeded random source, so each run builds the same corpus and asks the same questions ──
 const random = (seed: number): (() => number) => {
@@ -87,7 +92,7 @@ const STOP = [
   "where",
   "who",
 ];
-const VOCAB_SIZE = 60_000;
+const VOCAB_SIZE = CORPUS === "dense" ? 8000 : 60_000;
 const vocabRandom = random(11);
 const vocab: string[] = [...STOP];
 {
@@ -121,6 +126,7 @@ const cdf = new Float64Array(VOCAB_SIZE);
 }
 const zipf = (next: () => number): string => {
   const u = next();
+  if (CORPUS === "dense") return vocab[Math.floor(u ** 3 * VOCAB_SIZE)]!;
   let low = 0;
   let high = VOCAB_SIZE - 1;
   while (low < high) {
@@ -130,6 +136,14 @@ const zipf = (next: () => number): string => {
   }
   return vocab[low]!;
 };
+/** This function moves a rank of the zipf corpus to the same place in the vocabulary of the corpus. The stop words keep their ranks. */
+const scaled = (rank: number): number =>
+  rank < STOP.length
+    ? rank
+    : STOP.length +
+      Math.floor(((rank - STOP.length) * (VOCAB_SIZE - STOP.length)) / (60_000 - STOP.length));
+/** The share of the words of a document that come from its topics. */
+const TOPIC_SHARE = CORPUS === "dense" ? 0 : 0.1;
 const TOPICS = 400;
 const TOPIC_WORDS = 25;
 const topics: string[][] = [];
@@ -137,7 +151,8 @@ const topics: string[][] = [];
   const topicRandom = random(23);
   for (let topic = 0; topic < TOPICS; topic += 1) {
     const words = new Set<string>();
-    while (words.size < TOPIC_WORDS) words.add(vocab[300 + Math.floor(topicRandom() * 29_700)]!);
+    while (words.size < TOPIC_WORDS)
+      words.add(vocab[scaled(300 + Math.floor(topicRandom() * 29_700))]!);
     topics.push([...words]);
   }
 }
@@ -154,7 +169,7 @@ const built = performance.now();
     const second = topics[Math.floor(docRandom() * TOPICS)]!;
     const words: string[] = [];
     for (let at = 0; at < WORDS; at += 1) {
-      if (docRandom() < 0.1) {
+      if (docRandom() < TOPIC_SHARE) {
         const topic = docRandom() < 0.7 ? first : second;
         words.push(topic[Math.floor(docRandom() * TOPIC_WORDS)]!);
       } else words.push(zipf(docRandom));
@@ -187,8 +202,11 @@ const buildMs = Math.round(performance.now() - built);
 // ── the questions ──
 const questionRandom = random(53);
 const pick = <T,>(list: readonly T[]): T => list[Math.floor(questionRandom() * list.length)]!;
-const band = (from: number, to: number): string =>
-  vocab[from + Math.floor(questionRandom() * (to - from))]!;
+const band = (from: number, to: number): string => {
+  const low = scaled(from);
+  const high = Math.max(low + 1, scaled(to));
+  return vocab[low + Math.floor(questionRandom() * (high - low))]!;
+};
 const shuffle = <T,>(list: T[]): T[] => {
   for (let at = list.length - 1; at > 0; at -= 1) {
     const other = Math.floor(questionRandom() * (at + 1));
@@ -341,24 +359,95 @@ const withSnippets = (rows: Array<{ doc: string; text_sha: string }>, q: string)
 };
 
 /** The rule of `DocIndex.find`: each part first, then one part, for the hits that are missing. */
-const findWith = (
+type Parts = { all: string[]; any: string[] };
+type Hit = { doc: string; text_sha: string };
+
+/** The rule of `DocIndex.find`, with the one-part phase of a mode. */
+const findWithRows = (
   ranker: Ranker,
   q: string,
   kind: string | undefined,
-  any: (parts: { all: string[]; any: string[] }) => string,
+  orRows: (parts: Parts, kind: string | undefined) => Hit[],
 ): Ranked => {
   const parts = partsOf(q);
   if (parts === undefined) return { docs: [] };
-  const rows = ranker(parts.all.join(" AND "), kind, LIMIT);
+  const rows: Hit[] = ranker(parts.all.join(" AND "), kind, LIMIT);
   if (rows.length < LIMIT && parts.all.length > 1) {
     const seen = new Set(rows.map((row) => row.doc));
-    for (const row of ranker(any(parts), kind, LIMIT)) {
+    for (const row of orRows(parts, kind)) {
       if (rows.length >= LIMIT) break;
       if (!seen.has(row.doc)) rows.push(row);
     }
   }
   return withSnippets(rows, q);
 };
+
+const findWith = (
+  ranker: Ranker,
+  q: string,
+  kind: string | undefined,
+  any: (parts: Parts) => string,
+): Ranked => findWithRows(ranker, q, kind, (parts, which) => ranker(any(parts), which, LIMIT));
+
+/** The exact ranking of the full query, for the documents that hold one of the candidate parts. */
+const rankedRescore = (
+  match: string,
+  candidates: string,
+  kind: string | undefined,
+  limit: number | undefined,
+) =>
+  stmt(
+    `SELECT d.doc AS doc, d.text_sha AS text_sha, bm25(${fts}, 3.0, 1.0) AS rank
+       FROM ${fts} JOIN ${docsTable} d ON d.rowid = ${fts}.rowid
+      WHERE ${fts} MATCH ? AND +${fts}.rowid IN (SELECT rowid FROM ${fts}(?))
+        AND d.ai_input != 'no' ${kind === undefined ? "" : "AND d.kind = ?"}
+      ORDER BY rank ${limit === undefined ? "" : "LIMIT ?"}`,
+  ).all(
+    ...[
+      match,
+      candidates,
+      ...(kind === undefined ? [] : [kind]),
+      ...(limit === undefined ? [] : [limit]),
+    ],
+  ) as Array<Hit & { rank: number }>;
+
+/** The IDF of FTS5 for a part that `df` of the documents hold. */
+const idfOf = (df: number): number => {
+  const idf = Math.log((docCount - df + 0.5) / (df + 0.5));
+  return idf <= 0 ? 1e-6 : idf;
+};
+const K1 = 1.2;
+/** This value tells if the last query of a `safe` mode proved its top 10. */
+let certified: boolean | undefined;
+
+/**
+ * The one-part phase of `safe`: rank the documents that hold a part that at most `share` of the
+ * documents hold, with the full query (MaxScore). A document outside that set holds only the
+ * common parts, so its score is at most the sum of their bounds, idf x (k1 + 1). When the 10th
+ * score of the set is higher than that sum, the top 10 is the exact top 10. Else the phase ranks
+ * each match, as exact does.
+ */
+const safeRows =
+  (share: number) =>
+  (parts: Parts, kind: string | undefined): Hit[] => {
+    const full = parts.any.join(" OR ");
+    const counted = parts.any.map((part) => ({ part, df: dfOf(part, false) }));
+    const kept = counted.filter((one) => one.df <= share * docCount);
+    const dropped = counted.filter((one) => one.df > share * docCount);
+    if (kept.length === 0 || dropped.length === 0) {
+      certified = dropped.length === 0;
+      return rankedFull(full, kind, LIMIT);
+    }
+    const rows = rankedRescore(full, kept.map((one) => one.part).join(" OR "), kind, LIMIT);
+    // a margin of 1 % covers a count of FTS5 rows that differs a little from the count of documents
+    const bound = 1.01 * dropped.reduce((sum, one) => sum + (K1 + 1) * idfOf(one.df), 0);
+    if (rows.length === LIMIT && -rows[LIMIT - 1]!.rank > bound) {
+      certified = true;
+      return rows;
+    }
+    certified = false;
+    return rankedFull(full, kind, LIMIT);
+  };
 
 const rankWithinWith = (
   q: string,
@@ -445,6 +534,37 @@ const MODES: Mode[] = [
     rankWithin: (q, ids) => rankWithinWith(q, ids, (any) => prune(any, 0.2, true).join(" OR ")),
   },
   {
+    name: "rescore20",
+    about:
+      "the one-part phase ranks with the full query, but only the documents that hold a part that at most 20 % of the documents hold",
+    find: (q, kind) =>
+      findWithRows(rankedFull, q, kind, (parts, which) => {
+        const kept = prune(parts.any, 0.2, false);
+        return kept.length === parts.any.length
+          ? rankedFull(parts.any.join(" OR "), which, LIMIT)
+          : rankedRescore(parts.any.join(" OR "), kept.join(" OR "), which, LIMIT);
+      }),
+    rankWithin: (q, ids) => {
+      const parts = partsOf(q);
+      if (parts === undefined) return { docs: [] };
+      const kept = prune(parts.any, 0.2, false);
+      const rows = stmt(
+        `SELECT d.doc AS doc, bm25(${fts}, 3.0, 1.0) AS rank
+           FROM ${fts} JOIN ${docsTable} d ON d.rowid = ${fts}.rowid
+          WHERE ${fts} MATCH ? AND +${fts}.rowid IN (SELECT rowid FROM ${fts}(?))
+            AND d.ai_input != 'no' AND d.doc IN (SELECT value FROM json_each(?))
+          ORDER BY rank`,
+      ).all(parts.any.join(" OR "), kept.join(" OR "), ids.json) as Array<{ doc: string }>;
+      return { docs: rows.map((row) => row.doc) };
+    },
+  },
+  ...[0.2, 0.1].map((share): Mode => ({
+    name: `safe${String(Math.round(share * 100))}`,
+    about: `exact top 10 (MaxScore): rescore${String(Math.round(share * 100))}, and exact ranking when the bound of the common parts does not prove the top 10; rankWithin is exact`,
+    find: (q, kind) => findWithRows(rankedFull, q, kind, safeRows(share)),
+    rankWithin: (q, ids) => rankWithinWith(q, ids, (any) => any.join(" OR ")),
+  })),
+  {
     name: "rarest3",
     about: "the one-part query keeps only the 3 rarest parts",
     find: (q, kind) =>
@@ -505,6 +625,8 @@ const tauAt10 = (exact: readonly string[], other: readonly string[]): number => 
 
 interface Cell {
   readonly mode: string;
+  /** For a safe mode: true when the bound proved the top 10 of the one-part phase, false when the mode ranked each match. */
+  readonly certified?: boolean | undefined;
   readonly ms: number;
   readonly hits: number;
   readonly overlap10: number;
@@ -529,10 +651,12 @@ for (const question of questions) {
   const cells: Cell[] = [];
   let exact: Ranked | undefined;
   for (const mode of modes) {
+    certified = undefined;
     const { ms, result } = time(() => mode.find(question.q, question.kind));
     exact ??= result;
     cells.push({
       mode: mode.name,
+      ...(certified !== undefined ? { certified } : {}),
       ms: round(ms),
       hits: result.docs.length,
       overlap10: round(overlapAt10(exact.docs, result.docs)),
@@ -601,6 +725,8 @@ interface Summary {
   readonly minOverlap10: number;
   readonly meanTau10: number;
   readonly meanRecall?: number | undefined;
+  /** For a safe mode: the share of the questions with a one-part phase whose top 10 the bound proved. */
+  readonly certifiedShare?: number | undefined;
 }
 const summary: Summary[] = [];
 const groups = new Map<string, Row[]>();
@@ -616,6 +742,9 @@ for (const [key, group] of groups) {
     const times = cells.map((cell) => cell.ms);
     const mean = (values: number[]): number => values.reduce((a, b) => a + b, 0) / values.length;
     const recalls = cells.flatMap((cell) => (cell.recall === undefined ? [] : [cell.recall]));
+    const proofs = cells.flatMap((cell) =>
+      cell.certified === undefined ? [] : [cell.certified ? 1 : 0],
+    );
     summary.push({
       task,
       set,
@@ -628,6 +757,7 @@ for (const [key, group] of groups) {
       minOverlap10: round(Math.min(...cells.map((cell) => cell.overlap10))),
       meanTau10: round(mean(cells.map((cell) => cell.tau10))),
       ...(recalls.length > 0 ? { meanRecall: round(mean(recalls)) } : {}),
+      ...(proofs.length > 0 ? { certifiedShare: round(mean(proofs)) } : {}),
     });
   }
 }
@@ -640,6 +770,7 @@ const environment = {
   cpu: cpus()[0]?.model ?? "unknown",
   cores: cpus().length,
   sqlite,
+  corpus: CORPUS,
   docs: DOCS,
   words: WORDS,
   runs: RUNS,
@@ -652,15 +783,15 @@ writeFileSync(
 );
 
 const table = [
-  `### find and rankWithin: ${String(DOCS)} documents of ${String(WORDS)} words`,
+  `### find and rankWithin: ${String(DOCS)} documents of ${String(WORDS)} words (corpus ${CORPUS})`,
   "",
   `Node.js ${process.version}, SQLite ${sqlite}, ${environment.cpu}. The index took ${String(buildMs)} ms to build. Each time is the median of ${String(RUNS)} runs of one question; a set has 12 questions.`,
   "",
-  "| task | set | mode | median ms | p90 ms | max ms | speedup | overlap@10 (mean, min) | tau@10 | recall |",
-  "| --- | --- | --- | ---: | ---: | ---: | ---: | --- | ---: | ---: |",
+  "| task | set | mode | median ms | p90 ms | max ms | speedup | overlap@10 (mean, min) | tau@10 | recall | proved |",
+  "| --- | --- | --- | ---: | ---: | ---: | ---: | --- | ---: | ---: | ---: |",
   ...summary.map(
     (one) =>
-      `| ${one.task} | ${one.set} | ${one.mode} | ${String(one.medianMs)} | ${String(one.p90Ms)} | ${String(one.maxMs)} | ${String(one.speedup)}x | ${String(one.meanOverlap10)}, ${String(one.minOverlap10)} | ${String(one.meanTau10)} | ${one.meanRecall === undefined ? "" : String(one.meanRecall)} |`,
+      `| ${one.task} | ${one.set} | ${one.mode} | ${String(one.medianMs)} | ${String(one.p90Ms)} | ${String(one.maxMs)} | ${String(one.speedup)}x | ${String(one.meanOverlap10)}, ${String(one.minOverlap10)} | ${String(one.meanTau10)} | ${one.meanRecall === undefined ? "" : String(one.meanRecall)} | ${one.certifiedShare === undefined ? "" : String(one.certifiedShare)} |`,
   ),
   "",
   ...modes.map((mode) => `- \`${mode.name}\`: ${mode.about}`),

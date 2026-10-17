@@ -63,22 +63,6 @@ export class HostStopped extends Error {
   }
 }
 
-/**
- * The scheduler does not start a request at or after its deadline. A crawl with a budget gives
- * the end of the budget as the deadline, so no request starts after the budget.
- */
-export class DeadlineReached extends Error {
-  constructor(
-    readonly host: string,
-    /** This value is the earliest start of the request on the host, in milliseconds since the epoch. */
-    readonly readyAt: number,
-    /** This value is the deadline of the request, in milliseconds since the epoch. */
-    readonly deadline: number,
-  ) {
-    super(`${host} is not ready before the deadline`);
-  }
-}
-
 export interface Paced<T> {
   readonly value: T;
   /** This value is the time that the host rests before its next request. */
@@ -526,16 +510,9 @@ export class HostScheduler {
 
   /**
    * This method starts one request on a host, in sequence, after the rest of the host. When the
-   * signal aborts during the wait, the promise rejects with the reason of the signal. With a
-   * deadline (milliseconds since the epoch), the method does not wait past it: it rejects with
-   * `DeadlineReached` when the host is not free before the deadline.
+   * signal aborts during the wait, the promise rejects with the reason of the signal.
    */
-  run<T>(
-    host: string,
-    task: () => Promise<Paced<T>>,
-    signal?: AbortSignal,
-    deadline?: number,
-  ): Promise<T> {
+  run<T>(host: string, task: () => Promise<Paced<T>>, signal?: AbortSignal): Promise<T> {
     const previous = this.chains.get(host) ?? Promise.resolve();
     const result = previous.then(async () => {
       // after a wait, the time is at least the end of the wait, also on a clock that a test holds still
@@ -545,13 +522,8 @@ export class HostScheduler {
         const now = Math.max(this.clock.now(), waited);
         const stop = this.store.stopped(host, now);
         if (stop !== undefined) throw new HostStopped(host, stop.reason, stop.until);
-        if (deadline !== undefined && now >= deadline)
-          throw new DeadlineReached(host, now, deadline);
         const wait = this.store.reserve(host, now, this.leaseMs);
         if (!(wait > 0)) break;
-        // a wait that ends at the deadline or later starts no request: the slot stays free
-        if (deadline !== undefined && now + wait >= deadline)
-          throw new DeadlineReached(host, now + wait, deadline);
         await this.sleep(wait, signal);
         waited = now + wait;
       }

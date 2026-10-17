@@ -22,7 +22,6 @@ import type {
 } from "./politeness.ts";
 import {
   DEFAULT_POLICY,
-  DeadlineReached,
   HostScheduler,
   MAX_STOP_MS,
   HostStopped,
@@ -478,8 +477,18 @@ const stopNote = (reason: string, until: number): string => {
   return end === undefined ? `host stopped: ${reason}` : `host stopped until ${end}: ${reason}`;
 };
 
-const deadlineNote = (error: DeadlineReached): string =>
-  `${DEADLINE_NOTE}: the host is free at ${isoOf(error.readyAt) ?? "a later time"}, and the request must start before ${isoOf(error.deadline) ?? "its deadline"}`;
+/** A request did not start before its deadline. The crawler gives a skip with `DEADLINE_NOTE` for it. */
+class DeadlineReached extends Error {
+  constructor(
+    /** This value is the earliest start of the request on its host, in milliseconds since the epoch. */
+    readonly readyAt: number,
+  ) {
+    super(DEADLINE_NOTE);
+  }
+}
+
+const deadlineNote = (error: DeadlineReached, deadline: number | undefined): string =>
+  `${DEADLINE_NOTE}: the host is free at ${isoOf(error.readyAt) ?? "a later time"}, and the request must start before ${isoOf(deadline ?? Number.NaN) ?? "its deadline"}`;
 
 const secretSet = (secretParams: readonly string[]): Set<string> =>
   new Set([...DEFAULT_SECRET_PARAMS, ...secretParams].map((name) => name.toLowerCase()));
@@ -999,6 +1008,8 @@ export class Crawler {
   private readonly renders: Slots;
   /** These tokens apply because the `User-Agent` links the bot page (`obeyDefaultToken`). */
   private readonly pageTokens: readonly string[];
+  /** The deadlines of the requests that have one, by the signal that the scheduler gets for each of them. */
+  private readonly deadlines = new WeakMap<AbortSignal, number>();
 
   constructor(private readonly options: CrawlerOptions) {
     if (!isProductToken(options.token)) {
@@ -1020,9 +1031,24 @@ export class Crawler {
     this.clock = options.clock ?? realClock;
     this.random = options.random ?? Math.random;
     this.egress = options.egress ?? {};
-    this.scheduler = new HostScheduler(this.clock, options.maxActive ?? 16, {
-      store: options.hostState,
-    });
+    // the scheduler waits on this clock: a wait that ends at the deadline of its request or later
+    // does not start, so a request with a deadline does not wait for nothing
+    const clock = this.clock;
+    const deadlines = this.deadlines;
+    this.scheduler = new HostScheduler(
+      {
+        now: () => clock.now(),
+        sleep: (ms, signal) => {
+          const deadline = signal === undefined ? undefined : deadlines.get(signal);
+          const readyAt = clock.now() + ms;
+          return deadline !== undefined && readyAt >= deadline
+            ? Promise.reject(new DeadlineReached(readyAt))
+            : clock.sleep(ms, signal);
+        },
+      },
+      options.maxActive ?? 16,
+      { store: options.hostState },
+    );
     // the bot page tells site owners to write rules for PoliteCrawler, so an application that links it obeys them
     this.pageTokens =
       options.obeyDefaultToken !== false &&
@@ -1056,6 +1082,23 @@ export class Crawler {
 
   private policyOf(url: URL): PolitenessPolicy {
     return policyFor(this.options.politeness, url.hostname);
+  }
+
+  /**
+   * This method gives the signal of a request for the scheduler. A request with a deadline gets a
+   * signal of its own, and the clock of the scheduler reads the deadline of that signal.
+   */
+  private paced(signal: AbortSignal, deadline: number | undefined): AbortSignal {
+    if (deadline === undefined) return signal;
+    const own = AbortSignal.any([signal]);
+    this.deadlines.set(own, deadline);
+    return own;
+  }
+
+  /** This method throws `DeadlineReached` when the deadline of a request came before its slot. */
+  private beforeDeadline(deadline: number | undefined): void {
+    const now = this.clock.now();
+    if (deadline !== undefined && now >= deadline) throw new DeadlineReached(now);
   }
 
   private emit(event: CrawlEvent): void {
@@ -1818,6 +1861,8 @@ export class Crawler {
           // an equal request that waited in the queue can find a fresh copy now
           const again = await this.fromCache(url, "plain", request_.maxAgeMs, sent, secretParams);
           if (again !== undefined) return { value: again, delayMs: 0 };
+          // no request starts at or after its deadline
+          this.beforeDeadline(request_.deadline);
           const latest = this.lookup(url);
           // validators go only with a stored body of the same variant, so a 304 always has a body
           const usable =
@@ -2180,13 +2225,13 @@ export class Crawler {
             delayMs,
           };
         },
-        signal,
-        request_.deadline,
+        this.paced(signal, request_.deadline),
       );
     } catch (error) {
       if (error instanceof HostStopped)
         return { fetched: await skip(stopNote(error.reason, error.until)) };
-      if (error instanceof DeadlineReached) return { fetched: await skip(deadlineNote(error)) };
+      if (error instanceof DeadlineReached)
+        return { fetched: await skip(deadlineNote(error, request_.deadline)) };
       if (this.closed) return { fetched: closedResult(url) };
       if (request_.signal?.aborted === true)
         return { fetched: await skip("cancelled by the caller") };
@@ -2375,6 +2420,7 @@ export class Crawler {
       done = await this.scheduler.run(
         host,
         async (): Promise<Paced<RenderDone>> => {
+          this.beforeDeadline(request_.deadline);
           const started = this.clock.now();
           this.emit({ type: "request", url, host, transport: "browser" });
           try {
@@ -2457,12 +2503,11 @@ export class Crawler {
             };
           }
         },
-        signal,
-        request_.deadline,
+        this.paced(signal, request_.deadline),
       );
     } catch (error) {
       if (error instanceof HostStopped) return skip(stopNote(error.reason, error.until));
-      if (error instanceof DeadlineReached) return skip(deadlineNote(error));
+      if (error instanceof DeadlineReached) return skip(deadlineNote(error, request_.deadline));
       if (this.closed) return closedResult(url);
       if (request_.signal?.aborted === true) return skip("cancelled by the caller");
       throw error;

@@ -30,7 +30,7 @@ A prerelease version (`0.2.0-beta.1`) goes to the npm tag `next`. Each other ver
 - **The command line.** `polite-crawler discover <site>` and `polite-crawler crawl <url...> --max-pages N --max-depth N --budget 2m`. `crawl` also takes `--include`, `--exclude`, `--sitemaps`, `--render` and `--max-age`. The two commands take `--allow-host`.
 - **Two MCP tools.** `crawl_discover` gives 1,000 URLs at most. `crawl_site` fetches 10 pages in 1 minute by default, and 50 pages in 5 minutes at most. It sends progress for each page, stops at a cancel, and keeps the titles in the `<untrusted-web-content>` envelope.
 - **The engine.** These additions do not change the existing API:
-  - `FetchRequest`, `RenderRequest` and `PageOptions` take `deadline`, and `HostScheduler.run` takes a deadline. A request does not start at or after its deadline. Its skip note starts with `DEADLINE_NOTE`, and `politeness` exports `DeadlineReached`.
+  - `FetchRequest`, `RenderRequest` and `PageOptions` take `deadline`. A request does not start at or after its deadline, and it does not wait for its host past it. Its skip note starts with `DEADLINE_NOTE`. `HostScheduler` does not change.
   - `Crawler.robotsAllow(url, options)` gives the robots.txt decision for a URL. `Crawler.readRobots` takes the scope and the labels of its record.
   - `PageExtract` has `feeds`: the RSS and Atom feeds that the page links. The metadata of a page document has them too.
   - `reindex` reads the captures of the recipes `sitemap` and `feed` as captures of the crawler, as it reads robots.txt. They give no document.

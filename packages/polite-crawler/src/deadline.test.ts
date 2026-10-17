@@ -1,5 +1,4 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { DeadlineReached, HostScheduler } from "./politeness.ts";
 import { fakeClock } from "./test-helpers.ts";
 import { htmlPage, testCrawler, testSite } from "./test-site.ts";
 
@@ -11,22 +10,46 @@ afterEach(async () => {
 describe("the deadline of a request", () => {
   it("starts a request before the deadline, and none at or after it", async () => {
     const clock = fakeClock();
-    const scheduler = new HostScheduler(clock, 4);
-    const start = clock.now();
-    const task = async () => ({ value: clock.now() - start, delayMs: 3000 });
-    expect(await scheduler.run("a", task, undefined, start + 5000)).toBe(0);
-    expect(await scheduler.run("a", task, undefined, start + 5000)).toBe(3000);
-    // the next slot is at 6 s: the wait ends after the deadline, so the scheduler does not wait
-    await expect(scheduler.run("a", task, undefined, start + 5000)).rejects.toBeInstanceOf(
-      DeadlineReached,
+    const site = await testSite(
+      (path) => (path === "/robots.txt" ? undefined : { type: "text/html", body: htmlPage(path) }),
+      clock,
     );
-    expect(clock.now() - start).toBe(3000);
-    const late = await scheduler
-      .run("b", task, undefined, start + 3000)
-      .catch((error: unknown) => error);
-    expect(late).toMatchObject({ host: "b", readyAt: start + 3000, deadline: start + 3000 });
-    // with no deadline, the scheduler waits for the slot as before
-    expect(await scheduler.run("a", task)).toBe(6000);
+    const { crawler, close } = await testCrawler({ clock });
+    cleanups.push(async () => {
+      await close();
+      await site.close();
+    });
+    const start = clock.now();
+    const fetch = (path: string, deadline?: number) =>
+      crawler.runtime.crawler.fetch({
+        url: `${site.origin}${path}`,
+        mode: "page",
+        recipe: "page",
+        ...(deadline === undefined ? {} : { deadline }),
+      });
+    // robots.txt at 0 s, then the pages at 1 s and 4 s: each starts before the deadline at 5 s
+    expect((await fetch("/a", start + 5000)).outcome).toBe("ok");
+    expect((await fetch("/b", start + 5000)).outcome).toBe("ok");
+    // the host is free at 7 s: the request does not wait, and it does not start
+    const late = await fetch("/c", start + 5000);
+    expect(late.outcome).toBe("skipped");
+    expect(late.note).toBe(
+      `deadline reached: the host is free at ${new Date(start + 7000).toISOString()}, and the request must start before ${new Date(start + 5000).toISOString()}`,
+    );
+    expect(clock.now() - start).toBe(4000);
+    // a host that is free after its deadline: the request does not start either
+    clock.advance(60_000);
+    const after = await fetch("/d", start + 10_000);
+    expect(after.outcome).toBe("skipped");
+    expect(after.note).toMatch(/^deadline reached: the host is free at /);
+    // with no deadline, the request waits for its slot as before
+    expect((await fetch("/e")).outcome).toBe("ok");
+    expect(site.hits.map((hit) => [hit.path, hit.at - start])).toEqual([
+      ["/robots.txt", 0],
+      ["/a", 1000],
+      ["/b", 4000],
+      ["/e", 65_000],
+    ]);
   });
 
   it("gives the robots.txt decision for a URL, and refuses what it cannot decide", async () => {

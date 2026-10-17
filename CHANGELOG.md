@@ -6,14 +6,16 @@ This file records the changes to [`polite-crawler`](packages/polite-crawler) in 
 
 `polite-crawler` uses semantic versioning. Before version 1.0.0, these rules apply:
 
-- A minor version (`0.2.0`) can change the API. Its section here tells you what to change.
-- A patch version (`0.1.1`) only corrects errors. It does not change the API.
+- A minor version (`0.2.0`) can break the API. Its section here tells you what to change.
+- A patch version (`0.1.1`) corrects errors or adds features. It does not break the API.
 - The store on disk stays the same across the 0.x versions: the capture log in `captures/`, the bodies in `blobs/` and the capture ids. Old citations name these ids. If a version must change the store, its section tells you how to move an old store.
 - The search index (`index.sqlite`) is a projection. A version can change it, and `polite-crawler reindex` builds it again.
 
 A prerelease version (`0.2.0-beta.1`) goes to the npm tag `next`. Each other version goes to `latest`.
 
 ## Unreleased
+
+## 0.1.1 - 2026-10-17
 
 - **Conditional requests learn the validator that works for each host.** A server examines `If-None-Match` first, and it ignores `If-Modified-Since` with it (RFC 9110, section 13.1.3). Thus a host that gives a new `ETag` at each response sent the full page at each revisit, also with a stable `Last-Modified` date. The crawler keeps a validator memo for each host:
   - After 3 full responses in sequence with the stored body, it sends only `If-Modified-Since` to that host, and the host can answer 304.

@@ -13,6 +13,8 @@ import { discoverSite } from "./discover.ts";
 import type { DocVersion, Found, RankMode, ReadingIndex } from "./docs.ts";
 import { DocIndex } from "./docs.ts";
 import type { EgressOptions } from "./egress.ts";
+import type { ExtractOptions, ExtractResult, FieldClaim } from "./extract.ts";
+import { extractDocument } from "./extract.ts";
 import type { CrawlOptions, CrawlRun } from "./frontier.ts";
 import { crawlSite } from "./frontier.ts";
 import { SqliteHostStateStore } from "./hoststate.ts";
@@ -336,7 +338,33 @@ export interface PoliteCrawler {
   reindex(): Promise<ReindexResult>;
   /** This method closes the browser, the log files and the index. A second close does nothing. */
   close(): Promise<void>;
+  // ── extract ──
+  /**
+   * This optional method checks the proposed values of fields against a stored document, and it
+   * locates each value. It does not make values. It sends no request. `openCrawler` gives it.
+   */
+  extract?(
+    doc: string,
+    fields: Readonly<Record<string, FieldClaim>>,
+    options?: ExtractOptions,
+  ): Promise<ExtractResult>;
+  // ── end of extract ──
 }
+
+// ── extract ──
+/** This crawler is the result of `openCrawler`: a `PoliteCrawler` with `extract`. */
+export interface OpenedCrawler extends PoliteCrawler {
+  /**
+   * This method checks the proposed values of fields against a stored document. Each field gets
+   * `verified`, `normalized`, `ambiguous`, `not-found`, `held-back` or `invalid`.
+   */
+  extract(
+    doc: string,
+    fields: Readonly<Record<string, FieldClaim>>,
+    options?: ExtractOptions,
+  ): Promise<ExtractResult>;
+}
+// ── end of extract ──
 
 /**
  * This function opens a crawler on a folder. The folder keeps the capture log (`captures/`), the
@@ -348,7 +376,7 @@ export interface PoliteCrawler {
  * Each method gives a promise, and none throws before its promise. After `close`, each method
  * rejects.
  */
-export const openCrawler = (options: OpenOptions): PoliteCrawler => {
+export const openCrawler = (options: OpenOptions): OpenedCrawler => {
   const runtime = createRuntime(options);
   let closed = false;
   // the rebuild at open, which the first reindex() gives when no fetch came before it
@@ -396,6 +424,12 @@ export const openCrawler = (options: OpenOptions): PoliteCrawler => {
       await live();
       return verifyQuote(runtime, id, quote, verifyOptions);
     },
+    // ── extract ──
+    async extract(id, fields, extractOptions = {}) {
+      await live();
+      return extractDocument(runtime, id, fields, extractOptions);
+    },
+    // ── end of extract ──
     async versions(id, versionOptions = {}) {
       await live();
       // a held-back version shows no title, as a read of its capture does

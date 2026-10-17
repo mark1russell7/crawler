@@ -12,6 +12,7 @@
  *   sitemaps and feeds (`readSitemap`).
  * - The discovery and the crawl over a runtime: `discoverSite` and `crawlSite`.
  * - The export of a store to the web archive formats: `exportWarc` and `exportWacz`.
+ * - The check of proposed field values against a stored page: `checkFields` and `extractDocument`.
  *
  * The other entry points give the rest:
  *
@@ -66,6 +67,23 @@ export type {
 export { DocIndex, FAST_RANK_SHARE, locate } from "./docs.ts";
 export type { EgressOptions } from "./egress.ts";
 export { EgressRefused, egressLookup } from "./egress.ts";
+// ── extract ──
+export type {
+  ExtractOptions,
+  ExtractResult,
+  ExtractSource,
+  ExtractSummary,
+  FieldCandidate,
+  FieldCheck,
+  FieldClaim,
+  FieldKind,
+  FieldResult,
+  FieldSpan,
+  FieldStatus,
+  FieldsChecked,
+} from "./extract.ts";
+export { FIELD_KINDS, checkFields, extractDocument } from "./extract.ts";
+// ── end of extract ──
 export type {
   CrawlOptions,
   CrawlPage,
@@ -96,6 +114,7 @@ export type {
   FetchOptions,
   FindOptions,
   OpenOptions,
+  OpenedCrawler,
   PoliteCrawler,
   ReadOptions,
   ReadResult,

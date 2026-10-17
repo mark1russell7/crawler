@@ -45,6 +45,8 @@ Usage:
   polite-crawler export --out <file>   write the stored captures as a WARC or WACZ archive
   polite-crawler discover <site>       list the pages of a site from its sitemaps and feeds
   polite-crawler crawl <url...>        fetch a site and follow its links, within a budget
+  polite-crawler extract <doc> --field name=value[:kind]...
+                                       check proposed field values against a stored page
 
 Options:
   --dir <path>       the store (default $POLITE_CRAWLER_DIR, or ~/.polite-crawler)
@@ -88,11 +90,16 @@ Options:
            --sitemaps        add the pages of the sitemaps of the site
            --render, --max-age   as for fetch
   discover, crawl  --allow-host <host>   keep the URLs on this host too (repeat it)
+  extract  --field <name=value[:kind]>  a value to check, never made up by the crawler (repeat it);
+                             kind: text (default), number, money, date, url, email, phone,
+                             or json-ld:<path> such as json-ld:Product.offers.price
+           --capture <id>    check the text of this capture, not the current text
+           --user-provided   as for read
 
 Exit codes:
   0  done
   1  not done: a page not fetched, no match, a quote not found, a document unknown or
-     held back, or an error
+     held back, a field value that extract did not find or that is not clear, or an error
   2  the command line is wrong
 `;
 
@@ -220,6 +227,10 @@ const OPTIONS = {
   sitemaps: { type: "boolean" },
   "allow-host": { type: "string", multiple: true },
   // ── end of discover and crawl ──
+  // ── extract ──
+  field: { type: "string", multiple: true },
+  capture: { type: "string" },
+  // ── end of extract ──
 } as const;
 
 /** These options belong to one command, or to the commands that the text names. */
@@ -231,7 +242,7 @@ const OWNER: Readonly<Record<string, string>> = {
   rank: "find",
   from: "read",
   length: "read",
-  "user-provided": "read",
+  "user-provided": "read extract",
   "allow-user-provided": "mcp",
   ...Object.fromEntries(Object.keys(EXPORT_OPTIONS).map((option) => [option, "export"])),
   // ── discover and crawl ──
@@ -245,6 +256,10 @@ const OWNER: Readonly<Record<string, string>> = {
   sitemaps: "crawl",
   "allow-host": "crawl discover",
   // ── end of discover and crawl ──
+  // ── extract ──
+  field: "extract",
+  capture: "extract",
+  // ── end of extract ──
 };
 
 /** These are the commands, with the smallest and the largest count of arguments. */
@@ -262,6 +277,9 @@ const COMMANDS: Readonly<
   discover: { min: 1, max: 1, wants: "discover wants one site URL" },
   crawl: { min: 1, max: Infinity, wants: "crawl wants at least one URL" },
   // ── end of discover and crawl ──
+  // ── extract ──
+  extract: { min: 1, max: 1, wants: "extract wants one document id and --field name=value" },
+  // ── end of extract ──
 };
 
 const parse = (args: readonly string[]) => {
@@ -450,6 +468,99 @@ const runCrawl = async (
 
 // ── end of discover and crawl ───────────────────────────────────────────────
 
+// ── extract ─────────────────────────────────────────────────────────────────
+
+/** These are the kinds of a field (`FIELD_KINDS` of `extract.ts`). The command line knows them before it loads the crawler. */
+const KINDS: readonly string[] = ["text", "number", "money", "date", "url", "email", "phone"];
+
+interface CliField {
+  readonly value: string;
+  readonly kind?: string;
+}
+
+/** This function reads the fields of the command line: `name=value`, with `:kind` at the end. The name and the value cannot be empty. */
+const fieldsOf = (given: readonly string[] | undefined): Record<string, CliField> => {
+  if (given === undefined || given.length === 0)
+    throw new UsageError("extract wants at least one --field name=value[:kind]");
+  const fields: Record<string, CliField> = {};
+  for (const text of given) {
+    const equals = text.indexOf("=");
+    if (equals <= 0) throw new UsageError(`--field wants name=value[:kind], not "${text}"`);
+    const name = text.slice(0, equals);
+    let value = text.slice(equals + 1);
+    let kind: string | undefined;
+    const jsonLd = value.lastIndexOf(":json-ld:");
+    const colon = value.lastIndexOf(":");
+    if (jsonLd !== -1) {
+      kind = value.slice(jsonLd + 1);
+      value = value.slice(0, jsonLd);
+      if (kind === "json-ld:" || /\s/.test(kind))
+        throw new UsageError(
+          `--field ${name} wants a path after json-ld:, such as json-ld:Product.offers.price`,
+        );
+    } else if (colon !== -1 && KINDS.includes(value.slice(colon + 1))) {
+      kind = value.slice(colon + 1);
+      value = value.slice(0, colon);
+    }
+    if (value.trim() === "") throw new UsageError(`--field ${name} wants a value`);
+    if (fields[name] !== undefined) throw new UsageError(`--field ${name} is given two times`);
+    fields[name] = kind === undefined ? { value } : { value, kind };
+  }
+  return fields;
+};
+
+/** This function checks the fields against a stored document, and prints a line for each field. The exit code is 0 when each field is verified or normalized. */
+const runExtract = async (
+  crawler: PoliteCrawler,
+  doc: string,
+  fields: Record<string, CliField>,
+  options: { readonly capture: string | undefined; readonly userProvided: boolean },
+  json: boolean,
+  out: (text: string) => void,
+): Promise<number> => {
+  const { extractDocument } = await import("./extract.ts");
+  const claims = fields as Parameters<typeof extractDocument>[2];
+  const result =
+    crawler.extract === undefined
+      ? await extractDocument(crawler.runtime, doc, claims, options)
+      : await crawler.extract(doc, claims, options);
+  if (json) out(JSON.stringify(result, null, 2));
+  else {
+    for (const [name, field] of Object.entries(result.fields)) {
+      const mark = field.status === "verified" || field.status === "normalized" ? "✓" : "✗";
+      const place =
+        field.span !== null
+          ? ` at ${String(field.span.start)}–${String(field.span.end)}${field.span.in === "full_text" ? " of the whole text" : ""}`
+          : field.path !== null
+            ? ` at ${field.path}`
+            : "";
+      const how = field.normalization === null ? "" : ` (${field.normalization})`;
+      const stored = field.raw === null ? "" : `: ${JSON.stringify(field.raw)}`;
+      out(`${mark} ${name}: ${field.status}${how}${place}${stored}`);
+      for (const candidate of field.candidates) {
+        const at =
+          candidate.span !== null
+            ? `${String(candidate.span.start)}–${String(candidate.span.end)}`
+            : (candidate.path ?? "");
+        out(
+          `    ${at}: ${JSON.stringify(candidate.raw)} can be ${candidate.readings.join(" or ")}`,
+        );
+      }
+      if (field.note !== null && field.status !== "held-back") out(`    ${field.note}`);
+    }
+    const summary = result.summary;
+    out(
+      result.held_back
+        ? `${result.note ?? "held back"}\nAdd --user-provided if you gave this URL yourself. The crawler logs that check.`
+        : `${String(summary.fields)} fields: ${String(summary.verified)} verified, ${String(summary.normalized)} normalized, ${String(summary.ambiguous)} ambiguous, ${String(summary.not_found)} not found, ${String(summary.invalid)} not valid, in ${result.capture ?? "no capture"}${result.note === null ? "" : `. ${result.note}`}`,
+    );
+  }
+  const done = result.summary.verified + result.summary.normalized;
+  return done === result.summary.fields && done > 0 ? 0 : 1;
+};
+
+// ── end of extract ──────────────────────────────────────────────────────────
+
 /** This function does the command of the command line, and gives the exit code. */
 const main = async (args: readonly string[]): Promise<number> => {
   const { values, positionals } = parse(args);
@@ -483,6 +594,9 @@ const main = async (args: readonly string[]): Promise<number> => {
   const from = whole("from", values.from, 0, 0);
   const length = whole("length", values.length, 4000, 1);
   const crawlLimits = crawlOptionsOf(values);
+  // ── extract ──
+  const extractFields = command === "extract" ? fieldsOf(values.field) : undefined;
+  // ── end of extract ──
   const dir = storeDir(values.dir ?? (process.env["POLITE_CRAWLER_DIR"] || undefined));
   const allowPrivate = values["allow-private"] === true || envFlag("POLITE_CRAWLER_ALLOW_PRIVATE");
   const allowUserProvided =
@@ -613,6 +727,17 @@ const main = async (args: readonly string[]): Promise<number> => {
           out,
         );
       // ── end of discover and crawl ──
+      // ── extract ──
+      case "extract":
+        return await runExtract(
+          crawler,
+          rest[0]!,
+          extractFields!,
+          { capture: values.capture, userProvided: values["user-provided"] === true },
+          values.json === true,
+          out,
+        );
+      // ── end of extract ──
       default: {
         // the documents of a recipe that this command cannot read stay, from the old index
         const counts = await crawler.reindex();

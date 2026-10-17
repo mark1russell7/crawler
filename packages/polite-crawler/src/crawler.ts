@@ -2726,6 +2726,22 @@ export class Crawler {
     }
   }
 
+  // ── watch: the stop of a host ─────────────────────────────────────────────
+
+  /**
+   * This method gives the stop of the host of a URL, or undefined when the host is not stopped. A
+   * watch uses it, so a page of a stopped host is due again at the end of the stop.
+   */
+  hostStop(url: string): ReturnType<HostStateStore["stopped"]> {
+    try {
+      return this.scheduler.store.stopped(hostKey(new URL(url)), this.clock.now());
+    } catch {
+      return undefined;
+    }
+  }
+
+  // ── end of watch ──────────────────────────────────────────────────────────
+
   /**
    * This method closes the crawler. Work in the queue ends as `skipped` with the note
    * `crawler closed`, and the crawler writes no capture after the close. Then it closes the

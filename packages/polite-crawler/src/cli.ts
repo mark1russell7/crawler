@@ -3,10 +3,12 @@ import { homedir } from "node:os";
 import { join, resolve } from "node:path";
 import { parseArgs } from "node:util";
 import { durationMs } from "./duration.ts";
+import type { DiffResult, VersionChoice } from "./diff.ts";
 import type { CrawlPage, CrawlSummary } from "./frontier.ts";
-import type { OpenOptions, PoliteCrawler } from "./open.ts";
+import type { OpenOptions, OpenedCrawler } from "./open.ts";
 import type { PageResult } from "./runtime.ts";
 import { VERSION } from "./version.ts";
+import type { WatchEntry, WatchEvent, WatchSummary } from "./watch.ts";
 
 // This file imports only Node.js, the version and the duration parser at start. A command loads
 // the crawler, and only `mcp` loads the MCP server, so `--version` and `--help` answer at once.
@@ -45,6 +47,11 @@ Usage:
   polite-crawler export --out <file>   write the stored captures as a WARC or WACZ archive
   polite-crawler discover <site>       list the pages of a site from its sitemaps and feeds
   polite-crawler crawl <url...>        fetch a site and follow its links, within a budget
+  polite-crawler diff <doc>            show what changed between two versions of a document
+  polite-crawler watch add <url...>    check these pages again on a schedule
+  polite-crawler watch remove <url...> stop the watch of these pages
+  polite-crawler watch list            print the watch list
+  polite-crawler watch run             check the pages that are due, within a budget
 
 Options:
   --dir <path>       the store (default $POLITE_CRAWLER_DIR, or ~/.polite-crawler)
@@ -65,6 +72,7 @@ Options:
   read     --from <n>        where the range starts (default 0)
            --length <n>      how many characters (default 4000)
            --user-provided   you gave this URL yourself: read a page that refuses AI input (logged)
+  read, verify  --at <time>  use the version that was current then, such as 2026-10-01T12:00Z
   reindex                    rebuild; the documents of recipes that this command cannot read stay
   mcp      --allow-user-provided   let user_provided work when the client cannot ask you
                                    ($POLITE_CRAWLER_ALLOW_USER_PROVIDED=1)
@@ -88,11 +96,19 @@ Options:
            --sitemaps        add the pages of the sitemaps of the site
            --render, --max-age   as for fetch
   discover, crawl  --allow-host <host>   keep the URLs on this host too (repeat it)
+  diff     --from <version>  the old version: a capture id or a time (default: the one before --to)
+           --to <version>    the new version: a capture id or a time (default: the newest)
+  watch add  --every <time>  the time between two checks: 1h or more (default 24h)
+             --confirm <n>   2 (default): a change counts when two checks see it; 1: at once
+             --scope <text>, --label <name=value>   marks for the captures (repeat --label)
+             --render <mode> as for fetch
+  watch run  --budget <time>  the longest time (default 10m); no request starts after it
+             --max-pages <n>  how many pages to check (default 100)
 
 Exit codes:
   0  done
   1  not done: a page not fetched, no match, a quote not found, a document unknown or
-     held back, or an error
+     held back, a watch check that failed or that is still due, or an error
   2  the command line is wrong
 `;
 
@@ -220,16 +236,24 @@ const OPTIONS = {
   sitemaps: { type: "boolean" },
   "allow-host": { type: "string", multiple: true },
   // ── end of discover and crawl ──
+  // ── time travel, diff and watch ──
+  at: { type: "string" },
+  to: { type: "string" },
+  every: { type: "string" },
+  confirm: { type: "string" },
+  scope: { type: "string" },
+  label: { type: "string", multiple: true },
+  // ── end of time travel, diff and watch ──
 } as const;
 
 /** These options belong to one command, or to the commands that the text names. */
 const OWNER: Readonly<Record<string, string>> = {
-  render: "fetch crawl",
+  render: "fetch crawl watch",
   "max-age": "fetch crawl discover",
   limit: "find",
   kind: "find",
   rank: "find",
-  from: "read",
+  from: "read diff",
   length: "read",
   "user-provided": "read",
   "allow-user-provided": "mcp",
@@ -237,14 +261,22 @@ const OWNER: Readonly<Record<string, string>> = {
   // ── discover and crawl ──
   "max-urls": "discover",
   feed: "discover",
-  "max-pages": "crawl",
+  "max-pages": "crawl watch",
   "max-depth": "crawl",
-  budget: "crawl",
+  budget: "crawl watch",
   include: "crawl",
   exclude: "crawl",
   sitemaps: "crawl",
   "allow-host": "crawl discover",
   // ── end of discover and crawl ──
+  // ── time travel, diff and watch ──
+  at: "read verify",
+  to: "diff",
+  every: "watch",
+  confirm: "watch",
+  scope: "watch",
+  label: "watch",
+  // ── end of time travel, diff and watch ──
 };
 
 /** These are the commands, with the smallest and the largest count of arguments. */
@@ -262,6 +294,10 @@ const COMMANDS: Readonly<
   discover: { min: 1, max: 1, wants: "discover wants one site URL" },
   crawl: { min: 1, max: Infinity, wants: "crawl wants at least one URL" },
   // ── end of discover and crawl ──
+  // ── diff and watch ──
+  diff: { min: 1, max: 1, wants: "diff wants one document id" },
+  watch: { min: 1, max: Infinity, wants: "watch wants add, remove, list or run" },
+  // ── end of diff and watch ──
 };
 
 const parse = (args: readonly string[]) => {
@@ -381,7 +417,7 @@ const crawlOptionsOf = (values: ReturnType<typeof parse>["values"]): CrawlLimits
 
 /** This function lists the pages of a site. The exit code is 0 when it found a URL. */
 const runDiscover = async (
-  crawler: PoliteCrawler,
+  crawler: OpenedCrawler,
   site: string,
   limits: CrawlLimits,
   maxAge: number,
@@ -411,7 +447,7 @@ const describeSummary = (summary: CrawlSummary): string =>
 
 /** This function crawls from the seeds. It prints each page when it ends. The exit code is 0 when the crawl got a page. */
 const runCrawl = async (
-  crawler: PoliteCrawler,
+  crawler: OpenedCrawler,
   seeds: readonly string[],
   limits: CrawlLimits,
   page: { readonly render: "auto" | "never" | "always"; readonly maxAge: number },
@@ -450,6 +486,233 @@ const runCrawl = async (
 
 // ── end of discover and crawl ───────────────────────────────────────────────
 
+// ── time travel, diff and watch ─────────────────────────────────────────────
+
+/** A text that starts with a date is a time. A different text is a capture id. */
+const DATE_START = /^\d{4}-\d{2}-\d{2}/;
+
+/** This function reads a time of the command line. A text that is not a time is a usage error. */
+const timeOf = (name: string, text: string | undefined): string | undefined => {
+  if (text === undefined) return undefined;
+  if (!DATE_START.test(text) || !Number.isFinite(Date.parse(text)))
+    throw new UsageError(`--${name} wants a time, such as 2026-10-01T12:00:00Z, not "${text}"`);
+  return text;
+};
+
+/** This function reads a version of `diff`: a time, or a capture id. */
+const versionOf = (name: string, text: string | undefined): VersionChoice | undefined => {
+  if (text === undefined) return undefined;
+  if (text.trim() === "") throw new UsageError(`--${name} wants a capture id or a time`);
+  return DATE_START.test(text) ? { at: timeOf(name, text)! } : text;
+};
+
+/** These are the options of `watch`, read from the command line before the store opens. */
+interface WatchLine {
+  readonly action: "add" | "remove" | "list" | "run";
+  readonly urls: readonly string[];
+  readonly every: string | undefined;
+  readonly confirm: 1 | 2 | undefined;
+  readonly labels: Readonly<Record<string, string>> | undefined;
+}
+
+const ACTIONS: Readonly<Record<string, readonly [number, number]>> = {
+  add: [1, Infinity],
+  remove: [1, Infinity],
+  list: [0, 0],
+  run: [0, 0],
+};
+
+/** These options belong to one action of `watch`. */
+const WATCH_OWNER: Readonly<Record<string, string>> = {
+  every: "add",
+  confirm: "add",
+  scope: "add",
+  label: "add",
+  render: "add",
+  budget: "run",
+  "max-pages": "run",
+};
+
+const watchLineOf = (
+  values: ReturnType<typeof parse>["values"],
+  rest: readonly string[],
+): WatchLine => {
+  const [action, ...urls] = rest;
+  const counts = action === undefined ? undefined : ACTIONS[action];
+  if (counts === undefined)
+    throw new UsageError(`watch wants add, remove, list or run, not "${action ?? ""}"`);
+  if (urls.length < counts[0] || urls.length > counts[1]) {
+    throw new UsageError(
+      counts[0] > 0 ? `watch ${action!} wants at least one URL` : `watch ${action!} takes no URL`,
+    );
+  }
+  for (const [option, owner] of Object.entries(WATCH_OWNER)) {
+    if (values[option as keyof typeof values] !== undefined && owner !== action)
+      throw new UsageError(`--${option} is an option of watch ${owner}`);
+  }
+  if (values.every !== undefined) {
+    let ms: number;
+    try {
+      ms = durationMs(values.every);
+    } catch (error) {
+      throw new UsageError(`--every: ${(error as Error).message}`, { cause: error });
+    }
+    if (ms < 3_600_000)
+      throw new UsageError("--every wants 1h or more, so a watch cannot hammer a site");
+  }
+  if (values.confirm !== undefined && values.confirm !== "1" && values.confirm !== "2")
+    throw new UsageError(`--confirm is 1 or 2, not "${values.confirm}"`);
+  let labels: Record<string, string> | undefined;
+  for (const label of values.label ?? []) {
+    const at = label.indexOf("=");
+    if (at < 1) throw new UsageError(`--label wants name=value, not "${label}"`);
+    labels = { ...labels, [label.slice(0, at)]: label.slice(at + 1) };
+  }
+  for (const url of urls) {
+    if (!/^https?:\/\//i.test(url) || !URL.canParse(url))
+      throw new UsageError(`watch ${action!} wants http or https URLs, not "${url}"`);
+  }
+  return {
+    action: action as WatchLine["action"],
+    urls: [...new Set(urls)],
+    every: values.every,
+    confirm: values.confirm === undefined ? undefined : values.confirm === "1" ? 1 : 2,
+    labels,
+  };
+};
+
+const everyText = (ms: number): string =>
+  ms % 86_400_000 === 0
+    ? `${String(ms / 86_400_000)}d`
+    : ms % 3_600_000 === 0
+      ? `${String(ms / 3_600_000)}h`
+      : `${String(Math.round(ms / 60_000))}m`;
+
+const describeEntry = (entry: WatchEntry): string => {
+  const facts = [
+    `every ${everyText(entry.every_ms)}`,
+    `next ${entry.next_at}`,
+    entry.checked_at === null
+      ? "not checked yet"
+      : `last ${entry.last_kind ?? "check"} at ${entry.checked_at}`,
+    `${String(entry.checks)} checks, ${String(entry.changes)} changes`,
+  ];
+  return [
+    entry.url,
+    `  ${facts.join(" · ")}`,
+    ...(entry.pending === null
+      ? []
+      : [`  suspected: ${entry.pending.kind} since ${entry.pending.since}`]),
+  ].join("\n");
+};
+
+const describeEvent = (event: WatchEvent): string => {
+  const state = event.suspected ? " (suspected)" : event.confirmed ? " (confirmed)" : "";
+  const facts = [
+    `${event.outcome} ${String(event.status)}`,
+    event.capture === null ? null : `capture ${event.capture}`,
+    event.previous === null || event.previous === event.capture ? null : `from ${event.previous}`,
+    event.diff === null
+      ? null
+      : `+${String(event.diff.lines_added)} −${String(event.diff.lines_removed)} lines, ${String(event.diff.meta_changes)} metadata changes`,
+    event.held_back ? "held back" : null,
+  ].filter((fact) => fact !== null);
+  return [
+    `${event.kind}${state} ${event.url}`,
+    `  ${facts.join(" · ")}`,
+    ...(event.note === null ? [] : [`  ${event.note}`]),
+  ].join("\n");
+};
+
+const describeWatchSummary = (summary: WatchSummary): string =>
+  `${String(summary.checked)} checked: ${String(summary.new)} new, ${String(summary.changed)} changed, ${String(summary.unchanged)} unchanged, ${String(summary.gone)} gone, ${String(summary.refused)} refused, ${String(summary.error)} errors. ${String(summary.suspected)} suspected, ${String(summary.confirmed)} confirmed, ${String(summary.due)} still due. Stopped (${summary.stopped}): ${summary.reason}.`;
+
+/** This function does the command `watch`, and gives the exit code. */
+const runWatchCommand = async (
+  crawler: OpenedCrawler,
+  line: WatchLine,
+  values: ReturnType<typeof parse>["values"],
+  limits: CrawlLimits,
+  json: boolean,
+  out: (text: string) => void,
+): Promise<number> => {
+  const print = (value: unknown, text: () => string): void =>
+    out(json ? JSON.stringify(value, null, 2) : text());
+  switch (line.action) {
+    case "add": {
+      const added: WatchEntry[] = [];
+      for (const url of line.urls) {
+        added.push(
+          await crawler.watch.add(url, {
+            ...(line.every === undefined ? {} : { every: line.every }),
+            ...(line.confirm === undefined ? {} : { confirm: line.confirm }),
+            ...(values.scope === undefined ? {} : { scope: values.scope }),
+            ...(line.labels === undefined ? {} : { labels: line.labels }),
+            ...(values.render === undefined
+              ? {}
+              : { render: values.render as "auto" | "never" | "always" }),
+          }),
+        );
+      }
+      print(added, () => added.map(describeEntry).join("\n"));
+      return 0;
+    }
+    case "remove": {
+      const removed: Array<{ readonly url: string; readonly removed: boolean }> = [];
+      for (const url of line.urls) removed.push({ url, removed: await crawler.watch.remove(url) });
+      print(removed, () =>
+        removed
+          .map((one) => `${one.removed ? "removed" : "not on the list"} ${one.url}`)
+          .join("\n"),
+      );
+      return removed.every((one) => one.removed) ? 0 : 1;
+    }
+    case "list": {
+      const entries = await crawler.watch.list();
+      print(entries, () =>
+        entries.length === 0 ? "the watch list is empty" : entries.map(describeEntry).join("\n"),
+      );
+      return 0;
+    }
+    default: {
+      // the first Ctrl+C stops the run cleanly: the checks in progress end, and the summary prints
+      const controller = new AbortController();
+      const stop = (): void => controller.abort(new Error("interrupted"));
+      process.once("SIGINT", stop);
+      try {
+        const run = crawler.watch.run({
+          budgetMs: values.budget === undefined ? undefined : limits.budgetMs,
+          maxPages: values["max-pages"] === undefined ? undefined : limits.maxPages,
+          signal: controller.signal,
+        });
+        const events: WatchEvent[] = [];
+        for await (const event of run) {
+          events.push(event);
+          if (!json) out(describeEvent(event));
+        }
+        const summary = await run.summary;
+        out(json ? JSON.stringify({ events, summary }, null, 2) : describeWatchSummary(summary));
+        return summary.refused + summary.error === 0 && summary.due === 0 ? 0 : 1;
+      } finally {
+        process.removeListener("SIGINT", stop);
+      }
+    }
+  }
+};
+
+/** This function gives the text of a diff for a person: the two captures, then the text of `formatDiff`. */
+const describeDiff = async (diff: DiffResult): Promise<string> => {
+  const { formatDiff } = await import("./diff.ts");
+  return [
+    `${diff.doc}  ${diff.from.capture} (${diff.from.fetched_at}) -> ${diff.to.capture} (${diff.to.fetched_at})`,
+    formatDiff(diff),
+    ...(diff.same === true ? ["the two versions are the same"] : []),
+    ...(diff.note === null ? [] : [diff.note]),
+  ].join("\n");
+};
+
+// ── end of time travel, diff and watch ──────────────────────────────────────
+
 /** This function does the command of the command line, and gives the exit code. */
 const main = async (args: readonly string[]): Promise<number> => {
   const { values, positionals } = parse(args);
@@ -480,9 +743,14 @@ const main = async (args: readonly string[]): Promise<number> => {
   if (rank !== "exact" && rank !== "fast")
     throw new UsageError(`--rank is exact or fast, not "${rank}"`);
   const limit = whole("limit", values.limit, 10, 1);
-  const from = whole("from", values.from, 0, 0);
+  // diff reads --from as a version, and read as a position
+  const from = command === "read" ? whole("from", values.from, 0, 0) : 0;
   const length = whole("length", values.length, 4000, 1);
   const crawlLimits = crawlOptionsOf(values);
+  const at = timeOf("at", values.at);
+  const diffFrom = command === "diff" ? versionOf("from", values.from) : undefined;
+  const diffTo = versionOf("to", values.to);
+  const watchLine = command === "watch" ? watchLineOf(values, rest) : undefined;
   const dir = storeDir(values.dir ?? (process.env["POLITE_CRAWLER_DIR"] || undefined));
   const allowPrivate = values["allow-private"] === true || envFlag("POLITE_CRAWLER_ALLOW_PRIVATE");
   const allowUserProvided =
@@ -511,17 +779,18 @@ const main = async (args: readonly string[]): Promise<number> => {
   } catch (error) {
     throw new UsageError(`--max-age: ${(error as Error).message}`, { cause: error });
   }
-  // only fetch and crawl render; a missing browser turns rendering off one time, before the first page
+  // only fetch, crawl and watch run render; a missing browser turns rendering off one time, before the first page
   let renderOff: string | undefined;
   let renderer = options.renderer;
-  if ((command !== "fetch" && command !== "crawl") || render === "never") renderer = false;
+  const renders = command === "fetch" || command === "crawl" || watchLine?.action === "run";
+  if (!renders || render === "never") renderer = false;
   else if (renderer === undefined) {
     const { browserMissing } = await import("./browser.ts");
     renderOff = await browserMissing();
     if (renderOff !== undefined) renderer = false;
   }
 
-  let crawler: PoliteCrawler;
+  let crawler: OpenedCrawler;
   try {
     crawler = openCrawler({ ...options, renderer });
   } catch (error) {
@@ -580,21 +849,25 @@ const main = async (args: readonly string[]): Promise<number> => {
       }
       case "read": {
         const userProvided = values["user-provided"] === true;
-        const read = await crawler.read(rest[0]!, { from, length, userProvided });
+        const read = await crawler.read(rest[0]!, { from, length, userProvided, at });
+        // with --at, the head names the capture and its fetch time
+        const version = at === undefined ? "" : ` ${read.capture} (${read.fetched_at})`;
         print(read, () =>
-          read.held_back
-            ? `${read.note ?? ""}\nAdd --user-provided if you gave this URL yourself. The crawler logs that read.`
-            : `${read.title}\n${read.url ?? ""}\n[${String(read.from)}–${String(read.to)} of ${String(read.total)}]\n\n${read.text}`,
+          read.before_first === true
+            ? (read.note ?? "")
+            : read.held_back
+              ? `${read.note ?? ""}\nAdd --user-provided if you gave this URL yourself. The crawler logs that read.`
+              : `${read.title}\n${read.url ?? ""}\n[${String(read.from)}–${String(read.to)} of ${String(read.total)}]${version}\n\n${read.text}`,
         );
-        return read.held_back ? 1 : 0;
+        return read.held_back || read.before_first === true ? 1 : 0;
       }
       case "verify": {
         const [doc, ...quote] = rest;
-        const verified = await crawler.verify(doc!, quote.join(" "));
+        const verified = await crawler.verify(doc!, quote.join(" "), { at });
         print(verified, () =>
           verified.found
             ? `found at ${String(verified.start)}–${String(verified.end)} in ${verified.capture ?? ""}${verified.stale ? " (an earlier capture)" : ""}: ${verified.excerpt ?? ""}`
-            : verified.held_back
+            : verified.held_back || verified.before_first === true
               ? (verified.note ?? "held back")
               : "not found",
         );
@@ -613,6 +886,26 @@ const main = async (args: readonly string[]): Promise<number> => {
           out,
         );
       // ── end of discover and crawl ──
+      // ── diff and watch ──
+      case "diff": {
+        const diff = await crawler.diff(rest[0]!, {
+          ...(diffFrom === undefined ? {} : { from: diffFrom }),
+          ...(diffTo === undefined ? {} : { to: diffTo }),
+        });
+        const text = values.json === true ? "" : await describeDiff(diff);
+        print(diff, () => text);
+        return diff.held_back ? 1 : 0;
+      }
+      case "watch":
+        return await runWatchCommand(
+          crawler,
+          watchLine!,
+          values,
+          crawlLimits,
+          values.json === true,
+          out,
+        );
+      // ── end of diff and watch ──
       default: {
         // the documents of a recipe that this command cannot read stay, from the old index
         const counts = await crawler.reindex();

@@ -8,6 +8,8 @@ import { durationMs } from "./duration.ts";
 import { FileBlobStore } from "./blobs.ts";
 import type { CrawlEvent } from "./crawler.ts";
 import { Crawler } from "./crawler.ts";
+import type { DiffOptions, DiffResult } from "./diff.ts";
+import { diffDocument } from "./diff.ts";
 import type { DiscoverOptions, DiscoverResult } from "./discover.ts";
 import { discoverSite } from "./discover.ts";
 import type { DocVersion, Found, RankMode, ReadingIndex } from "./docs.ts";
@@ -41,6 +43,8 @@ import {
   verifyQuote,
 } from "./runtime.ts";
 import { BOT_PAGE, DEFAULT_TOKEN, VERSION } from "./version.ts";
+import type { WatchList } from "./watch.ts";
+import { WATCH_LIMITS, WatchStore, runWatch } from "./watch.ts";
 
 export type { ReadOptions, ReadResult, VerifyOptions, VerifyResult } from "./runtime.ts";
 
@@ -134,7 +138,7 @@ export interface StoreRuntime extends CrawlRuntime {
 }
 
 /** The parts of a store that can be a symbolic link to a different place only by mistake or by attack. */
-const STORE_PARTS = ["captures", "blobs", "index.sqlite", "hosts.sqlite"];
+const STORE_PARTS = ["captures", "blobs", "index.sqlite", "hosts.sqlite", "watch.sqlite"];
 
 /**
  * This function makes the folder of a store for the owner only, where the system has modes. It
@@ -263,6 +267,8 @@ export interface OpenOptions extends Omit<RuntimeOptions, "dir" | "log" | "blobs
   readonly dir: string;
   /** These agents get their robots.txt rules applied to each fetch, for example `Claude-User`. */
   readonly onBehalfOf?: readonly string[] | undefined;
+  /** This value is the shortest `every` of a watch. The default is `1h`, so a watch cannot hammer a site. */
+  readonly watchFloor?: Duration | undefined;
 }
 
 /** These options control one fetch. */
@@ -336,6 +342,21 @@ export interface PoliteCrawler {
   reindex(): Promise<ReindexResult>;
   /** This method closes the browser, the log files and the index. A second close does nothing. */
   close(): Promise<void>;
+  /**
+   * This optional method compares two versions of a stored document: the lines and the words of
+   * the text, and the metadata at its paths. It sends no request. `openCrawler` gives it.
+   */
+  diff?(doc: string, options?: DiffOptions): Promise<DiffResult>;
+  /** This optional list keeps the pages that the crawler checks again on a schedule. `openCrawler` gives it. */
+  readonly watch?: WatchList;
+}
+
+/** This crawler is the result of `openCrawler`: a `PoliteCrawler` with `diff` and `watch`. */
+export interface OpenedCrawler extends PoliteCrawler {
+  /** This method compares two versions of a stored document. It sends no request. */
+  diff(doc: string, options?: DiffOptions): Promise<DiffResult>;
+  /** This list keeps the pages that the crawler checks again on a schedule, in `watch.sqlite`. */
+  readonly watch: WatchList;
 }
 
 /**
@@ -348,7 +369,9 @@ export interface PoliteCrawler {
  * Each method gives a promise, and none throws before its promise. After `close`, each method
  * rejects.
  */
-export const openCrawler = (options: OpenOptions): PoliteCrawler => {
+export const openCrawler = (options: OpenOptions): OpenedCrawler => {
+  const floorMs =
+    options.watchFloor === undefined ? WATCH_LIMITS.floorMs : durationMs(options.watchFloor);
   const runtime = createRuntime(options);
   let closed = false;
   // the rebuild at open, which the first reindex() gives when no fetch came before it
@@ -368,6 +391,35 @@ export const openCrawler = (options: OpenOptions): PoliteCrawler => {
     if (closed) throw new Error("the crawler is closed");
     await ready;
     if (closed) throw new Error("the crawler is closed");
+  };
+  // the watch list opens at its first use, so a store with no watch has no watch.sqlite
+  let watches: WatchStore | undefined;
+  const watchStore = async (): Promise<WatchStore> => {
+    await live();
+    watches ??= new WatchStore(join(options.dir, "watch.sqlite"), { floorMs });
+    return watches;
+  };
+  const clockNow = (): number => Date.parse(runtime.now());
+  const watch: WatchList = {
+    async add(url, watchOptions = {}) {
+      return (await watchStore()).add(url, watchOptions, clockNow());
+    },
+    async remove(url) {
+      return (await watchStore()).remove(url);
+    },
+    async list() {
+      return (await watchStore()).list(clockNow());
+    },
+    run(runOptions = {}) {
+      return runWatch(runtime, watchStore, {
+        ...runOptions,
+        onBehalfOf: options.onBehalfOf,
+        ready: () => {
+          rebuilt = undefined;
+          return Promise.resolve();
+        },
+      });
+    },
   };
   return {
     runtime,
@@ -431,10 +483,16 @@ export const openCrawler = (options: OpenOptions): PoliteCrawler => {
       rebuilt = undefined;
       return done ?? reindex(runtime);
     },
+    async diff(id, diffOptions = {}) {
+      await live();
+      return diffDocument(runtime, id, diffOptions);
+    },
+    watch,
     async close() {
       closed = true;
       await ready;
       await runtime.close();
+      watches?.close();
     },
   };
 };

@@ -128,9 +128,11 @@ describe("the MCP tools", () => {
     const { client } = await connect(crawler);
     const { tools } = await client.listTools();
     expect(tools.map((tool) => tool.name).sort()).toEqual([
+      "crawl_discover",
       "crawl_fetch",
       "crawl_find",
       "crawl_read",
+      "crawl_site",
       "crawl_verify",
     ]);
     for (const tool of tools) {

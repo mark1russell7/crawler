@@ -2,12 +2,14 @@
 import { homedir } from "node:os";
 import { join, resolve } from "node:path";
 import { parseArgs } from "node:util";
+import { durationMs } from "./duration.ts";
+import type { CrawlPage, CrawlSummary } from "./frontier.ts";
 import type { OpenOptions, PoliteCrawler } from "./open.ts";
 import type { PageResult } from "./runtime.ts";
 import { VERSION } from "./version.ts";
 
-// This file imports only Node.js and the version at start. A command loads the crawler, and only
-// `mcp` loads the MCP server, so `--version` and `--help` answer at once.
+// This file imports only Node.js, the version and the duration parser at start. A command loads
+// the crawler, and only `mcp` loads the MCP server, so `--version` and `--help` answer at once.
 
 // node:sqlite of Node.js 22 writes "SQLite is an experimental feature" to the standard error at
 // each start. The command removes only that warning, before the store loads node:sqlite.
@@ -40,6 +42,8 @@ Usage:
   polite-crawler verify <doc> <quote>  check that a quote is in a stored document
   polite-crawler reindex               rebuild the search index from the capture log
   polite-crawler mcp                   serve the tools over MCP (standard input and output)
+  polite-crawler discover <site>       list the pages of a site from its sitemaps and feeds
+  polite-crawler crawl <url...>        fetch a site and follow its links, within a budget
 
 Options:
   --dir <path>       the store (default $POLITE_CRAWLER_DIR, or ~/.polite-crawler)
@@ -63,6 +67,17 @@ Options:
   reindex                    rebuild; the documents of recipes that this command cannot read stay
   mcp      --allow-user-provided   let user_provided work when the client cannot ask you
                                    ($POLITE_CRAWLER_ALLOW_USER_PROVIDED=1)
+  discover --max-urls <n>    how many URLs (default 1000)
+           --feed <url>      read this RSS or Atom feed too (repeat it)
+           --max-age <age>   as for fetch
+  crawl    --max-pages <n>   how many pages (default 100)
+           --max-depth <n>   how many links from a seed (default 3; 0 fetches the seeds only)
+           --budget <time>   the longest time: 30s, 2m, 10m (default); no request starts after it
+           --include <pattern>  follow only the URLs that match, for example /blog/* (repeat it)
+           --exclude <pattern>  follow no URL that matches, for example *.pdf$ (repeat it)
+           --sitemaps        add the pages of the sitemaps of the site
+           --render, --max-age   as for fetch
+  discover, crawl  --allow-host <host>   keep the URLs on this host too (repeat it)
 
 Exit codes:
   0  done
@@ -91,12 +106,23 @@ const OPTIONS = {
   length: { type: "string" },
   "user-provided": { type: "boolean" },
   "allow-user-provided": { type: "boolean" },
+  // ── discover and crawl ──
+  "max-urls": { type: "string" },
+  feed: { type: "string", multiple: true },
+  "max-pages": { type: "string" },
+  "max-depth": { type: "string" },
+  budget: { type: "string" },
+  include: { type: "string", multiple: true },
+  exclude: { type: "string", multiple: true },
+  sitemaps: { type: "boolean" },
+  "allow-host": { type: "string", multiple: true },
+  // ── end of discover and crawl ──
 } as const;
 
-/** These options belong to one command. */
+/** These options belong to one command, or to the commands that the text names. */
 const OWNER: Readonly<Record<string, string>> = {
-  render: "fetch",
-  "max-age": "fetch",
+  render: "fetch crawl",
+  "max-age": "fetch crawl discover",
   limit: "find",
   kind: "find",
   rank: "find",
@@ -104,6 +130,17 @@ const OWNER: Readonly<Record<string, string>> = {
   length: "read",
   "user-provided": "read",
   "allow-user-provided": "mcp",
+  // ── discover and crawl ──
+  "max-urls": "discover",
+  feed: "discover",
+  "max-pages": "crawl",
+  "max-depth": "crawl",
+  budget: "crawl",
+  include: "crawl",
+  exclude: "crawl",
+  sitemaps: "crawl",
+  "allow-host": "crawl discover",
+  // ── end of discover and crawl ──
 };
 
 /** These are the commands, with the smallest and the largest count of arguments. */
@@ -116,6 +153,10 @@ const COMMANDS: Readonly<
   verify: { min: 2, max: Infinity, wants: "verify wants a document id and a quote" },
   reindex: { min: 0, max: 0, wants: "reindex takes no argument" },
   mcp: { min: 0, max: 0, wants: "mcp takes no argument" },
+  // ── discover and crawl ──
+  discover: { min: 1, max: 1, wants: "discover wants one site URL" },
+  crawl: { min: 1, max: Infinity, wants: "crawl wants at least one URL" },
+  // ── end of discover and crawl ──
 };
 
 const parse = (args: readonly string[]) => {
@@ -196,6 +237,114 @@ const failedPage = (url: string, note: string): PageResult => ({
   note,
 });
 
+// ── discover and crawl ──────────────────────────────────────────────────────
+
+/** The options of `discover` and `crawl`, read from the command line before the store opens. */
+interface CrawlLimits {
+  readonly maxUrls: number;
+  readonly feeds: readonly string[];
+  readonly maxPages: number;
+  readonly maxDepth: number;
+  readonly budgetMs: number;
+  readonly include: readonly string[];
+  readonly exclude: readonly string[];
+  readonly sitemaps: boolean;
+  readonly allowHosts: readonly string[] | undefined;
+}
+
+const crawlOptionsOf = (values: ReturnType<typeof parse>["values"]): CrawlLimits => {
+  let budgetMs = 600_000;
+  if (values.budget !== undefined) {
+    try {
+      budgetMs = durationMs(values.budget);
+    } catch (error) {
+      throw new UsageError(`--budget: ${(error as Error).message}`, { cause: error });
+    }
+  }
+  return {
+    maxUrls: whole("max-urls", values["max-urls"], 1000, 1),
+    feeds: values.feed ?? [],
+    maxPages: whole("max-pages", values["max-pages"], 100, 1),
+    maxDepth: whole("max-depth", values["max-depth"], 3, 0),
+    budgetMs,
+    include: values.include ?? [],
+    exclude: values.exclude ?? [],
+    sitemaps: values.sitemaps === true,
+    allowHosts: values["allow-host"],
+  };
+};
+
+/** This function lists the pages of a site. The exit code is 0 when it found a URL. */
+const runDiscover = async (
+  crawler: PoliteCrawler,
+  site: string,
+  limits: CrawlLimits,
+  maxAge: number,
+  json: boolean,
+  out: (text: string) => void,
+): Promise<number> => {
+  const found = await crawler.discover(site, {
+    maxUrls: limits.maxUrls,
+    feeds: limits.feeds,
+    maxAge,
+    ...(limits.allowHosts === undefined ? {} : { allowHosts: limits.allowHosts }),
+  });
+  if (json) out(JSON.stringify(found, null, 2));
+  else {
+    for (const url of found.urls)
+      out(url.lastmod === null ? url.url : `${url.url}  ${url.lastmod.slice(0, 10)}`);
+    const read = found.sources.filter((source) => source.kind !== null).length;
+    out(
+      `${String(found.urls.length)} URLs from ${String(read)} of ${String(found.sources.length)} files (${found.stopped}${found.note === null ? "" : `: ${found.note}`})`,
+    );
+  }
+  return found.urls.length > 0 ? 0 : 1;
+};
+
+const describeSummary = (summary: CrawlSummary): string =>
+  `${String(summary.pages)} pages: ${String(summary.fetched)} fetched (${String(summary.from_cache)} from the store), ${String(summary.refused)} refused, ${String(summary.failed)} failed. ${String(summary.skipped)} links not followed, ${String(summary.queued)} URLs waiting. Stopped (${summary.stopped}): ${summary.reason}.`;
+
+/** This function crawls from the seeds. It prints each page when it ends. The exit code is 0 when the crawl got a page. */
+const runCrawl = async (
+  crawler: PoliteCrawler,
+  seeds: readonly string[],
+  limits: CrawlLimits,
+  page: { readonly render: "auto" | "never" | "always"; readonly maxAge: number },
+  json: boolean,
+  out: (text: string) => void,
+): Promise<number> => {
+  // the first Ctrl+C stops the crawl cleanly: the fetches in progress end, and the summary prints
+  const controller = new AbortController();
+  const stop = (): void => controller.abort(new Error("interrupted"));
+  process.once("SIGINT", stop);
+  try {
+    const run = crawler.crawl([...new Set(seeds)], {
+      maxPages: limits.maxPages,
+      maxDepth: limits.maxDepth,
+      budgetMs: limits.budgetMs,
+      include: limits.include,
+      exclude: limits.exclude,
+      useSitemaps: limits.sitemaps,
+      render: page.render,
+      maxAge: page.maxAge,
+      signal: controller.signal,
+      ...(limits.allowHosts === undefined ? {} : { allowHosts: limits.allowHosts }),
+    });
+    const pages: CrawlPage[] = [];
+    for await (const result of run) {
+      pages.push(result);
+      if (!json) out(`${describePage(result)}\n  depth ${String(result.depth)}, ${result.source}`);
+    }
+    const summary = await run.summary;
+    out(json ? JSON.stringify({ pages, summary }, null, 2) : describeSummary(summary));
+    return summary.fetched > 0 ? 0 : 1;
+  } finally {
+    process.removeListener("SIGINT", stop);
+  }
+};
+
+// ── end of discover and crawl ───────────────────────────────────────────────
+
 /** This function does the command of the command line, and gives the exit code. */
 const main = async (args: readonly string[]): Promise<number> => {
   const { values, positionals } = parse(args);
@@ -215,8 +364,9 @@ const main = async (args: readonly string[]): Promise<number> => {
   if (spec === undefined) throw new UsageError(`no command "${command}"`);
   if (rest.length < spec.min || rest.length > spec.max) throw new UsageError(spec.wants);
   for (const [option, owner] of Object.entries(OWNER)) {
-    if (values[option as keyof typeof values] !== undefined && owner !== command)
-      throw new UsageError(`--${option} is an option of ${owner}`);
+    const owners = owner.split(" ");
+    if (values[option as keyof typeof values] !== undefined && !owners.includes(command))
+      throw new UsageError(`--${option} is an option of ${owners.join(" or ")}`);
   }
   const render = values.render ?? "auto";
   if (render !== "auto" && render !== "never" && render !== "always")
@@ -227,6 +377,7 @@ const main = async (args: readonly string[]): Promise<number> => {
   const limit = whole("limit", values.limit, 10, 1);
   const from = whole("from", values.from, 0, 0);
   const length = whole("length", values.length, 4000, 1);
+  const crawlLimits = crawlOptionsOf(values);
   const dir = storeDir(values.dir ?? (process.env["POLITE_CRAWLER_DIR"] || undefined));
   const allowPrivate = values["allow-private"] === true || envFlag("POLITE_CRAWLER_ALLOW_PRIVATE");
   const allowUserProvided =
@@ -252,10 +403,10 @@ const main = async (args: readonly string[]): Promise<number> => {
   } catch (error) {
     throw new UsageError(`--max-age: ${(error as Error).message}`, { cause: error });
   }
-  // only fetch renders; a missing browser turns rendering off one time, before the first page
+  // only fetch and crawl render; a missing browser turns rendering off one time, before the first page
   let renderOff: string | undefined;
   let renderer = options.renderer;
-  if (command !== "fetch" || render === "never") renderer = false;
+  if ((command !== "fetch" && command !== "crawl") || render === "never") renderer = false;
   else if (renderer === undefined) {
     const { browserMissing } = await import("./browser.ts");
     renderOff = await browserMissing();
@@ -341,6 +492,19 @@ const main = async (args: readonly string[]): Promise<number> => {
         );
         return verified.found ? 0 : 1;
       }
+      // ── discover and crawl ──
+      case "discover":
+        return await runDiscover(crawler, rest[0]!, crawlLimits, maxAge, values.json === true, out);
+      case "crawl":
+        return await runCrawl(
+          crawler,
+          rest,
+          crawlLimits,
+          { render, maxAge },
+          values.json === true,
+          out,
+        );
+      // ── end of discover and crawl ──
       default: {
         // the documents of a recipe that this command cannot read stay, from the old index
         const counts = await crawler.reindex();

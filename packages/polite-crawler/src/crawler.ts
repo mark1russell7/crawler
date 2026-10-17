@@ -22,6 +22,7 @@ import type {
 } from "./politeness.ts";
 import {
   DEFAULT_POLICY,
+  DeadlineReached,
   HostScheduler,
   MAX_STOP_MS,
   HostStopped,
@@ -123,6 +124,12 @@ export interface FetchRequest {
   readonly scope?: string | undefined;
   /** These labels go into each capture record of the request, for example its lineage. They are not part of the capture id. */
   readonly labels?: Readonly<Record<string, string>> | undefined;
+  /**
+   * This time (milliseconds since the epoch, on the clock of the crawler) is the end of a budget.
+   * The request does not start at or after it. When the host is not free before it, the result is
+   * `skipped`, and its note starts with `DEADLINE_NOTE`.
+   */
+  readonly deadline?: number | undefined;
 }
 
 export interface Fetched {
@@ -280,7 +287,12 @@ export interface RenderRequest {
   readonly scope?: string | undefined;
   /** These labels go into the capture record of the render. */
   readonly labels?: Readonly<Record<string, string>> | undefined;
+  /** This time (milliseconds since the epoch) is the end of a budget. The render does not start at or after it (`FetchRequest.deadline`). */
+  readonly deadline?: number | undefined;
 }
+
+/** The note of a request starts with this text when its host was not free before its deadline, so the request did not start. */
+export const DEADLINE_NOTE = "deadline reached";
 
 /**
  * This function gives the key of the cache entry of a rendered page in the form of version 0.1.
@@ -465,6 +477,9 @@ const stopNote = (reason: string, until: number): string => {
   const end = isoOf(until);
   return end === undefined ? `host stopped: ${reason}` : `host stopped until ${end}: ${reason}`;
 };
+
+const deadlineNote = (error: DeadlineReached): string =>
+  `${DEADLINE_NOTE}: the host is free at ${isoOf(error.readyAt) ?? "a later time"}, and the request must start before ${isoOf(error.deadline) ?? "its deadline"}`;
 
 const secretSet = (secretParams: readonly string[]): Set<string> =>
   new Set([...DEFAULT_SECRET_PARAMS, ...secretParams].map((name) => name.toLowerCase()));
@@ -1502,6 +1517,7 @@ export class Crawler {
       request_.job ?? null,
       request_.scope ?? null,
       request_.labels ?? null,
+      request_.deadline ?? null,
     ]);
     const running = this.inFlight.get(key);
     if (running !== undefined) return running;
@@ -1590,7 +1606,13 @@ export class Crawler {
    * come from its memory, or from a fetch of `/robots.txt` with its redirects. A robots.txt that
    * the crawler cannot read gives rules that permit nothing, and `unreachable` gives the reason.
    */
-  async readRobots(url: string): Promise<{
+  async readRobots(
+    url: string,
+    marks: {
+      readonly scope?: string | undefined;
+      readonly labels?: Readonly<Record<string, string>> | undefined;
+    } = {},
+  ): Promise<{
     readonly robots: Robots;
     readonly capture: string | undefined;
     readonly stale?: string | undefined;
@@ -1598,7 +1620,45 @@ export class Crawler {
     const target = new URL(url);
     if (!WEB_PROTOCOLS.has(target.protocol))
       return { robots: unreachableRobots("not an http(s) URL"), capture: undefined };
-    return this.robotsFor(target, this.policyOf(target));
+    return this.robotsFor(target, this.policyOf(target), marks);
+  }
+
+  /**
+   * This method tells if robots.txt lets the crawler fetch a URL as a page. The rules of the token
+   * of the crawler and of the agents of `onBehalfOf` apply, as for a fetch. It reads robots.txt as
+   * a fetch does, so a robots.txt that the crawler cannot read permits nothing. When the signal
+   * aborts, the promise rejects, and a fetch of robots.txt in progress continues.
+   */
+  async robotsAllow(
+    url: string,
+    options: {
+      readonly onBehalfOf?: readonly string[] | undefined;
+      readonly scope?: string | undefined;
+      readonly labels?: Readonly<Record<string, string>> | undefined;
+      readonly signal?: AbortSignal | undefined;
+    } = {},
+  ): Promise<{ readonly allowed: boolean; readonly note: string | undefined }> {
+    let target: URL;
+    try {
+      target = new URL(url);
+    } catch {
+      return { allowed: false, note: "not a valid URL" };
+    }
+    if (!WEB_PROTOCOLS.has(target.protocol)) return { allowed: false, note: "not an http(s) URL" };
+    if (this.closed) return { allowed: false, note: "crawler closed" };
+    const tokens = [this.options.token, ...(options.onBehalfOf ?? []), ...this.pageTokens];
+    const badToken = tokens.find((token) => !isProductToken(token));
+    if (badToken !== undefined)
+      return { allowed: false, note: `not a valid product token: "${badToken}"` };
+    const work = this.robotsFor(target, this.policyOf(target), options);
+    const verdict = await (options.signal === undefined ? work : raceAbort(work, options.signal));
+    const decision = decide(verdict.robots, tokens, `${target.pathname}${target.search}`);
+    return decision.allowed
+      ? { allowed: true, note: undefined }
+      : {
+          allowed: false,
+          note: robotsRefusal(verdict.robots, decision.by ?? this.options.token),
+        };
   }
 
   /** This method reads the stored copy of a robots.txt, when it is younger than the limit of the policy. */
@@ -2121,10 +2181,12 @@ export class Crawler {
           };
         },
         signal,
+        request_.deadline,
       );
     } catch (error) {
       if (error instanceof HostStopped)
         return { fetched: await skip(stopNote(error.reason, error.until)) };
+      if (error instanceof DeadlineReached) return { fetched: await skip(deadlineNote(error)) };
       if (this.closed) return { fetched: closedResult(url) };
       if (request_.signal?.aborted === true)
         return { fetched: await skip("cancelled by the caller") };
@@ -2396,9 +2458,11 @@ export class Crawler {
           }
         },
         signal,
+        request_.deadline,
       );
     } catch (error) {
       if (error instanceof HostStopped) return skip(stopNote(error.reason, error.until));
+      if (error instanceof DeadlineReached) return skip(deadlineNote(error));
       if (this.closed) return closedResult(url);
       if (request_.signal?.aborted === true) return skip("cancelled by the caller");
       throw error;

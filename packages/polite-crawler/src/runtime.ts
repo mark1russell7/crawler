@@ -139,6 +139,7 @@ export const pageExtractor: Extractor = (body, capture) => {
         needs_render: page.needsRender,
         render_reason: page.renderReason,
         canonical: page.canonical,
+        ...(page.feeds.length > 0 ? { feeds: page.feeds } : {}),
         redirect: page.redirect,
         blocked: page.blocked,
         ...(page.notes.length > 0 ? { notes: page.notes } : {}),
@@ -436,6 +437,8 @@ export interface PageOptions {
   readonly signal?: AbortSignal | undefined;
   readonly scope?: string | undefined;
   readonly labels?: Readonly<Record<string, string>> | undefined;
+  /** This time (milliseconds since the epoch) is the end of a budget. No request of the page starts at or after it (`FetchRequest.deadline`). */
+  readonly deadline?: number | undefined;
 }
 
 const HTML_TYPE = /html|xml/i;
@@ -462,6 +465,7 @@ export const fetchPage = async (
     signal: options.signal,
     scope: options.scope,
     labels: options.labels,
+    deadline: options.deadline,
   });
   let plain = await fetchAndIndex(runtime, plainRequest(url));
   const notes: string[] = [];
@@ -503,6 +507,7 @@ export const fetchPage = async (
         signal: options.signal,
         scope: options.scope,
         labels: options.labels,
+        deadline: options.deadline,
       });
       if (shown.docs.length > 0) {
         docs = shown.docs;
@@ -912,6 +917,8 @@ export interface ReindexResult {
 
 const RENDERED_MARK = "#rendered";
 const MAX_ERRORS = 20;
+/** The crawler reads the captures of these recipes for itself: robots.txt, and the sitemaps and feeds of `discover`. They give no document. */
+const CRAWLER_RECIPES: ReadonlySet<string> = new Set(["robots.txt", "sitemap", "feed"]);
 
 /** This function gives the URL of a capture and its variant. A URL of version 0.1 can end in `#rendered`. */
 const captureTarget = (
@@ -1036,8 +1043,8 @@ const replayRecord = async (
   replayLatest(target, envelope, payload);
   const extractor = runtime.extractors.get(payload.recipe);
   if (extractor === undefined) {
-    // the crawler reads robots.txt for itself; it gives no document
-    if (payload.recipe !== "robots.txt") tally.unknown.add(payload.recipe);
+    // the crawler reads robots.txt, the sitemaps and the feeds for itself; they give no document
+    if (!CRAWLER_RECIPES.has(payload.recipe)) tally.unknown.add(payload.recipe);
     return;
   }
   const body = await runtime.blobs.get(payload.blob);

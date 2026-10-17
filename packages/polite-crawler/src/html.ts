@@ -48,6 +48,11 @@ export interface PageExtract {
   readonly renderReason: string | null;
   /** This URL is the `<link rel="canonical">` of the page when it is on the same site, or null. */
   readonly canonical: string | null;
+  /**
+   * These URLs are the RSS and Atom feeds that the page links with `<link rel="alternate">`, 10 or
+   * fewer. They can be on a different site.
+   */
+  readonly feeds: readonly string[];
   /** This URL is the target of a `<meta http-equiv="refresh">` that sends the reader on in 5 seconds or less. */
   readonly redirect: string | null;
   /**
@@ -204,6 +209,10 @@ const MAX_TEXT_CHARS = 50_000;
 /** On a long page, this part of the text is kept for the lines after the article: a footer keeps its hours. */
 const REST_RESERVE_CHARS = 12_000;
 const MAX_LINKS = 300;
+/** The reader keeps this number of feed links of a page at most. */
+const MAX_FEEDS = 10;
+/** These media types name an RSS or an Atom feed in a `<link rel="alternate">`. */
+const FEED_TYPES: ReadonlySet<string> = new Set(["application/rss+xml", "application/atom+xml"]);
 /** Readability takes seconds on a page with more elements or links than this, and more time again on deep markup. */
 const READABILITY_MAX_ELEMENTS = 10_000;
 const READABILITY_MAX_LINKS = 1500;
@@ -975,6 +984,18 @@ export const extractPage = (html: string, pageUrl: string): PageExtract => {
     return canonicalUrl(url.href);
   })();
 
+  const feeds: string[] = [];
+  for (const link of doc.querySelectorAll("link[rel][href]")) {
+    if (feeds.length >= MAX_FEEDS) break;
+    if (!(link.getAttribute("rel") ?? "").toLowerCase().split(/\s+/).includes("alternate"))
+      continue;
+    const type = (link.getAttribute("type") ?? "").split(";")[0]!.trim().toLowerCase();
+    if (!FEED_TYPES.has(type)) continue;
+    const url = resolve(link.getAttribute("href") ?? "");
+    const href = url === undefined ? undefined : canonicalUrl(url.href);
+    if (href !== undefined && !feeds.includes(href)) feeds.push(href);
+  }
+
   const clean = (value: string | null | undefined): string =>
     (value ?? "").replace(/\s+/g, " ").trim();
   const titles = [...doc.querySelectorAll("title")];
@@ -1117,6 +1138,7 @@ export const extractPage = (html: string, pageUrl: string): PageExtract => {
     needsRender: reason !== null,
     renderReason: reason,
     canonical,
+    feeds,
     redirect,
     blocked,
     notes,

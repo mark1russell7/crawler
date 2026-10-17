@@ -7,3 +7,5 @@ packages/*/build/
 packages/*/dist/
 packages/*/coverage/
 packages/polite-crawler/test/corpus/
+# The release scripts of mark1russell7/template: keep them the same as the template.
+scripts/release/

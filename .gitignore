@@ -12,6 +12,7 @@ _db/
 /*.md
 !/CLAUDE.md
 !/README.md
+!/RELEASING.md
 !/CHANGELOG.md
 !/CONTRIBUTING.md
 !/SECURITY.md

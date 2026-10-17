@@ -58,6 +58,7 @@ The store is in `~/.polite-crawler`. Use `--dir` or `POLITE_CRAWLER_DIR` for a d
 - `--allow-private` (or `POLITE_CRAWLER_ALLOW_PRIVATE=1`) lets the crawler fetch loopback, private and link-local addresses. By default, the crawler refuses them.
 - `read --user-provided` reads a page that asked not to be AI input. Use it only for a URL that you gave yourself. The crawler records each such read.
 - `--max-age 0` fetches a page again, also when the store has a copy.
+- `find --rank fast` makes a long question faster, and its results can be different. [Fast ranking](#fast-ranking) gives the measured difference.
 - `reindex` builds the index again. The documents of a recipe that the command cannot read (the recipes of another application) stay. The output counts them, and the captures that it skipped.
 
 The command gives these exit codes:
@@ -184,8 +185,34 @@ await crawler.close();
 - `read` and `verify` take `capture`: they then use the text of that capture, not the current text. A citation of a capture thus stays true after the page changes.
 - `versions(doc)` gives the versions of a document, the newest first.
 - `find` reads a query syntax. Text in double quotes is a phrase, and `bake*` is a prefix. The documents that hold each word come first. Case, accents and Unicode forms do not change a match, and Chinese, Japanese and Thai words match too.
+- `find` takes `rank`. The default is `exact`, and `fast` makes a long question faster. [Fast ranking](#fast-ranking) tells the difference.
 - A page that asks not to be AI input is held back in each result. `fetch` gives no title, and `read` gives no title, no text and only the structural metadata. `verify` gives `found: false`, and `find` leaves the page out. Only `userProvided` lifts the hold, and the crawler logs it.
 - The hold applies to each version too. When a later capture does not ask it, the current text is not held back, but the earlier versions that asked it stay held back. `verify` with no `capture` does not examine them, `read` and `verify` of their capture hold them back, and `versions` shows no title for them.
+
+### Fast ranking
+
+The default ranking (`rank: "exact"`) gives a BM25 score to each document that matches. A long question is the slowest search, because its common words match almost each document. `rank: "fast"` changes only the second part of a search, the documents that hold one word of the question:
+
+- It leaves out each word that more than 20 percent of the documents hold (`FAST_RANK_SHARE`). When each word is that common, the rarest word stays.
+- A document that holds only common words is not in that part of the results. The common words do not add to the score of that part.
+- The documents that hold each word come first in the two modes, with the same rank.
+
+The command line has `find --rank fast`, and the tool `crawl_find` has the parameter `rank`. `DocIndex.rankWithin` takes `{ rank: "fast" }` too. It then leaves out each document that holds only common words.
+
+The benchmark `bench/find.mts` measured the two modes in CI ([the results](https://github.com/mark1russell7/crawler/actions/runs/39057146797)). The index had 30,000 documents of 900 words, with a Zipf spread of the words. Each time is the median of 12 questions on Node.js 24:
+
+| Search | `exact` | `fast` | Speed | Same top 10 | Same order |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| `find`, 1 word | 3.5 ms | 3.4 ms | 1.0 times | 100 % | 1.00 |
+| `find`, 4 words | 4.4 ms | 4.7 ms | 0.9 times | 98 % | 1.00 |
+| `find`, 16 words | 37 ms | 15 ms | 2.5 times | 85 % | 0.62 |
+| `rankWithin` of 40,000 ids, 16 words | 87 ms | 39 ms | 2.2 times | 85 % | 0.62 |
+
+- "Same top 10" is the share of the exact top 10 that `fast` also gives (overlap at 10). "Same order" is the Kendall tau of the documents that the two lists share. A value of 1 is the same order.
+- In the corpus of the review, almost each word is in almost each document. There, `fast` was 2.2 times faster for 16 words, but its top 10 had only 43 percent of the exact top 10.
+- For 16 words, `rankWithin` with `fast` gave 22 percent of the documents that `exact` gave.
+
+Use `fast` only when the speed of a long question is more important than its exact rank. To measure again, start the workflow `bench.yml`.
 
 The MCP server is in its own entry point:
 

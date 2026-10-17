@@ -15,6 +15,19 @@ A prerelease version (`0.2.0-beta.1`) goes to the npm tag `next`. Each other ver
 
 ## Unreleased
 
+- **Conditional requests learn the validator that works for each host.** A server examines `If-None-Match` first, and it ignores `If-Modified-Since` with it (RFC 9110, section 13.1.3). Thus a host that gives a new `ETag` at each response sent the full page at each revisit, also with a stable `Last-Modified` date. The crawler keeps a validator memo for each host:
+  - After 3 full responses in sequence with the stored body, it sends only `If-Modified-Since` to that host, and the host can answer 304.
+  - After 20 such requests or 7 days, it sends the `ETag` again one time. A 304 starts the `ETag` again.
+  - When the date alone also fails, it sends the two validators again, and the memo records that neither works.
+  - The memo is in `hosts.sqlite`, so the processes on one store share it, and it stays after a restart. An existing `hosts.sqlite` gets the new table when it opens. The capture log and the bodies do not change.
+  - A capture of a conditional request records the validators that it sent (`validators`). `record.schema.json` describes the field.
+  - `HostStateStore` has two new optional methods, `validators` and `noteValidators`. A store of your own without them works as before, with no memo. The root entry point exports `nextValidatorMemo`, `VALIDATOR_MEMO` and the types of the memo.
+- **An optional fast ranking for long questions.** The default ranking does not change. `find` takes `rank: "fast"`, the command line takes `find --rank fast`, and `crawl_find` takes `rank`. `DocIndex.find` and `DocIndex.rankWithin` take it too.
+  - In the mode `fast`, the second part of a search gives the documents that hold one word. It leaves out the words that more than 20 percent of the documents hold.
+  - In a benchmark of 30,000 documents, a question of 16 words was 2.5 times faster, and 85 percent of its top 10 was the same. A question of 1 or 4 words was not faster. The README gives the numbers.
+  - `parseQuery` gives `anyParts`, the parts of the form that needs one part.
+- **A benchmark of the search.** `bench/find.mts` and the workflow `bench.yml` measure `find` and `rankWithin` in each ranking mode on a synthetic index. They give the speed and the change of the top 10.
+
 ## 0.1.0
 
 The first version. It needs Node.js 22.19 or later, and it is ESM only.

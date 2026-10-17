@@ -69,6 +69,24 @@ Content-Signal: ai-input=no
 
 To refuse the crawlers that collect training data and let the AI assistants in, [use this robots.txt](../block-ai-training-crawlers/).
 
+## Archived copies
+
+An operator can ask the crawler for an archived copy of a page that your site refused. A page of a site that is down can get a copy too. The crawler then reads a copy from the Wayback Machine or Common Crawl, not from your site.
+
+- **It is off by default.** The operator turns it on for each fetch.
+- **It respects your current robots.txt.** By default, the crawler gives no archived copy of a page that your current robots.txt disallows for it. Only a stop, an error or a dead host gets a copy. An operator can change this on their own computer. An AI assistant cannot.
+- **It respects your usage signals.** When your robots.txt or the archived response says `ai-input=no`, the crawler holds back the text of the copy from an AI reader.
+- **It is marked.** A copy names its archive and its date. The crawler does not show it as a fresh fetch of your site.
+- **It sends no request to your site.** A stop for your site stays a stop.
+
+## Signed requests
+
+An operator can give the crawler an Ed25519 key. The crawler then signs each request with HTTP Message Signatures, as the IETF Web Bot Auth draft tells. Each request then has the headers `Signature-Agent`, `Signature-Input` and `Signature`.
+
+- `Signature-Agent` names the key directory of the operator. Your server or your CDN can get the public key there and verify the request.
+- A signature identifies one operator, not each copy of polite-crawler. Each operator has their own key.
+- The `User-Agent` header stays the same, with a signature or without one.
+
 ## The robots.txt study
 
 On {day}, PoliteCrawler read the robots.txt file of each of the top 1,000 domains of the Tranco list. It sent one request for `/robots.txt` to each domain, with its redirects, and fetched no other page. It did not try again. [Read the study](../notes/robots-txt-ai-agents/).

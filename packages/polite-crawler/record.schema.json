@@ -74,7 +74,7 @@
           "type": "string"
         },
         "recipe": {
-          "description": "The recipe of the request: page, robots.txt, or a recipe of an application.",
+          "description": "The recipe of the request: page, robots.txt, sitemap, feed, archive-copy (a copy from a web archive), archive-index (an index of a web archive), or a recipe of an application.",
           "type": "string"
         },
         "mode": { "enum": ["api", "page"] },
@@ -144,6 +144,20 @@
           "type": "string"
         },
         "final_url": { "description": "The URL that a render ended on.", "type": "string" },
+        "range": {
+          "description": "The byte range of a range request. The body is a part of the resource, not its stored copy.",
+          "type": "string",
+          "pattern": "^bytes=[0-9]+-[0-9]+$"
+        },
+        "signed": {
+          "description": "The request had a Web Bot Auth signature: the key id (a JWK thumbprint) and the URL of the key directory. The record holds no key.",
+          "type": "object",
+          "required": ["key_id", "agent"],
+          "properties": {
+            "key_id": { "type": "string" },
+            "agent": { "type": "string" }
+          }
+        },
         "subrequests": {
           "description": "The requests of a rendered page that the crawler allowed and refused.",
           "type": "object",

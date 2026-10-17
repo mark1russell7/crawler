@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join, resolve } from "node:path";
 import { parseArgs } from "node:util";
@@ -52,6 +53,7 @@ Usage:
   polite-crawler watch remove <url...> stop the watch of these pages
   polite-crawler watch list            print the watch list
   polite-crawler watch run             check the pages that are due, within a budget
+  polite-crawler key-directory         print the key directory (JWKS) of --sign-key, to host
 
 Options:
   --dir <path>       the store (default $POLITE_CRAWLER_DIR, or ~/.polite-crawler)
@@ -59,12 +61,20 @@ Options:
                      ($POLITE_CRAWLER_CONTACT)
   --allow-private    fetch loopback and private addresses too ($POLITE_CRAWLER_ALLOW_PRIVATE=1)
   --no-browser       never open the headless browser
+  --sign-key <file>  sign each request (Web Bot Auth) with this Ed25519 key: PKCS#8 PEM or JWK
+                     ($POLITE_CRAWLER_SIGN_KEY)
+  --signature-agent <url>  the https origin of your key directory, or the URL of a
+                     JSON Web Key Set on a path, for --sign-key ($POLITE_CRAWLER_SIGNATURE_AGENT)
   --json             print JSON
   -v, --version      print the version
   -h, --help         print this help
 
   fetch    --render <mode>   auto (default), never or always
            --max-age <age>   reuse a stored copy this young: 30m, 24h (default), 7d; 0 fetches again
+           --archive-fallback  when the site refuses or is down, give a copy from the Wayback
+                             Machine or Common Crawl, marked archived (not a fresh fetch)
+           --archive-despite-robots  with --archive-fallback: also when the robots.txt of the
+                             site disallows the page now
   find     --limit <n>       how many results (default 10)
            --kind <kind>     only this kind of document, such as page or pdf
            --rank <mode>     exact (default): BM25 over each match; fast: leave common words
@@ -109,6 +119,7 @@ Exit codes:
   0  done
   1  not done: a page not fetched, no match, a quote not found, a document unknown or
      held back, a watch check that failed or that is still due, or an error
+     (fetch: a page with an archived copy counts as done)
   2  the command line is wrong
 `;
 
@@ -244,6 +255,12 @@ const OPTIONS = {
   scope: { type: "string" },
   label: { type: "string", multiple: true },
   // ── end of time travel, diff and watch ──
+  // ── archived fallback and signed requests ──
+  "archive-fallback": { type: "boolean" },
+  "archive-despite-robots": { type: "boolean" },
+  "sign-key": { type: "string" },
+  "signature-agent": { type: "string" },
+  // ── end of archived fallback and signed requests ──
 } as const;
 
 /** These options belong to one command, or to the commands that the text names. */
@@ -277,6 +294,12 @@ const OWNER: Readonly<Record<string, string>> = {
   scope: "watch",
   label: "watch",
   // ── end of time travel, diff and watch ──
+  // ── archived fallback and signed requests ──
+  "archive-fallback": "fetch",
+  "archive-despite-robots": "fetch",
+  "sign-key": "fetch discover crawl watch mcp key-directory",
+  "signature-agent": "fetch discover crawl watch mcp key-directory",
+  // ── end of archived fallback and signed requests ──
 };
 
 /** These are the commands, with the smallest and the largest count of arguments. */
@@ -298,6 +321,13 @@ const COMMANDS: Readonly<
   diff: { min: 1, max: 1, wants: "diff wants one document id" },
   watch: { min: 1, max: Infinity, wants: "watch wants add, remove, list or run" },
   // ── end of diff and watch ──
+  // ── signed requests ──
+  "key-directory": {
+    min: 0,
+    max: 0,
+    wants: "key-directory takes no argument: give the key with --sign-key",
+  },
+  // ── end of signed requests ──
 };
 
 const parse = (args: readonly string[]) => {
@@ -344,8 +374,11 @@ const FS_CODES = new Set(["EEXIST", "ENOENT", "ENOTDIR", "EACCES", "EPERM", "ERO
 
 const ok = (page: PageResult): boolean => page.outcome === "ok" || page.outcome === "not-modified";
 
+/** A fetch is done when the page came, or when an archived copy came in its place. */
+const done = (page: PageResult): boolean => ok(page) || page.archived !== undefined;
+
 const describePage = (page: PageResult): string => {
-  const head = `${ok(page) ? "✓" : "✗"} ${page.url}`;
+  const head = `${ok(page) ? "✓" : page.archived !== undefined ? "~" : "✗"} ${page.url}`;
   const facts = [
     `${page.outcome} ${String(page.status)}`,
     page.doc === null ? null : `doc ${page.doc}`,
@@ -353,10 +386,76 @@ const describePage = (page: PageResult): string => {
     page.rendered ? "rendered" : null,
     page.structured.length > 0 ? `JSON-LD: ${page.structured.join(", ")}` : null,
   ].filter((fact) => fact !== null);
-  return [head, `  ${facts.join(" · ")}`, ...(page.note === null ? [] : [`  ${page.note}`])].join(
-    "\n",
-  );
+  // ── archived fallback: an archived copy says so on a line of its own ──
+  const archived =
+    page.archived === undefined
+      ? []
+      : [
+          `  archived copy (${page.archived.source}, captured ${page.archived.timestamp}): ${page.archived.url}`,
+        ];
+  return [
+    head,
+    `  ${facts.join(" · ")}`,
+    ...archived,
+    ...(page.note === null ? [] : [`  ${page.note}`]),
+  ].join("\n");
 };
+
+// ── signed requests ──────────────────────────────────────────────────────────
+
+/** This function reads the key file of `--sign-key`. An error names the file, and not the key. */
+const keyFile = (path: string): string => {
+  const file =
+    path === "~"
+      ? homedir()
+      : /^~[\\/]/.test(path)
+        ? resolve(homedir(), path.slice(2))
+        : resolve(path);
+  try {
+    return readFileSync(file, "utf8");
+  } catch (error) {
+    const code = (error as { code?: unknown }).code;
+    throw new UsageError(
+      `--sign-key: the file ${file} does not open (${typeof code === "string" ? code : "error"})`,
+      { cause: error },
+    );
+  }
+};
+
+/**
+ * This function gives the type of the URL of `--signature-agent`. An origin names a key directory at
+ * the well-known path. A URL with a path names a JSON Web Key Set (`jwks_uri`), for a host that cannot
+ * serve the well-known path, for example a project site of GitHub Pages.
+ */
+const agentTypeOf = (url: string): "directory" | "jwks_uri" => {
+  try {
+    const parsed = new URL(url);
+    return parsed.pathname === "/" && parsed.search === "" ? "directory" : "jwks_uri";
+  } catch {
+    // the signer gives the error of a URL that does not parse
+    return "directory";
+  }
+};
+
+/** This function prints the key directory of a key file, and tells where to host it. */
+const keyDirectoryCommand = async (key: string, agent: string | undefined): Promise<number> => {
+  const { KEY_DIRECTORY_PATH, KEY_DIRECTORY_TYPE, keyDirectory } = await import("./webbotauth.ts");
+  let directory;
+  try {
+    directory = keyDirectory([key]);
+  } catch (error) {
+    throw new UsageError(`--sign-key: ${(error as Error).message}`, { cause: error });
+  }
+  process.stdout.write(`${JSON.stringify(directory, null, 2)}\n`);
+  const where =
+    agent !== undefined && agentTypeOf(agent) === "jwks_uri"
+      ? `${agent} (a JSON Web Key Set, the type jwks_uri)`
+      : `${agent === undefined ? "https://<your origin>" : agent.replace(/\/$/, "")}${KEY_DIRECTORY_PATH} with Content-Type: ${KEY_DIRECTORY_TYPE}`;
+  process.stderr.write(`polite-crawler: serve this JSON at ${where}\n`);
+  return 0;
+};
+
+// ── end of signed requests ───────────────────────────────────────────────────
 
 /** This is the result of a URL that the crawler did not fetch. */
 const failedPage = (url: string, note: string): PageResult => ({
@@ -531,6 +630,8 @@ const WATCH_OWNER: Readonly<Record<string, string>> = {
   render: "add",
   budget: "run",
   "max-pages": "run",
+  "sign-key": "run",
+  "signature-agent": "run",
 };
 
 const watchLineOf = (
@@ -756,11 +857,47 @@ const main = async (args: readonly string[]): Promise<number> => {
   const allowUserProvided =
     values["allow-user-provided"] === true ||
     (command === "mcp" && envFlag("POLITE_CRAWLER_ALLOW_USER_PROVIDED"));
+  // ── archived fallback and signed requests: the whole command line is valid before the store opens ──
+  if (values["archive-despite-robots"] === true && values["archive-fallback"] !== true)
+    throw new UsageError("--archive-despite-robots works only with --archive-fallback");
+  // of the actions of watch, only run sends requests, so only run signs
+  const signs =
+    OWNER["sign-key"]!.split(" ").includes(command) &&
+    (watchLine === undefined || watchLine.action === "run");
+  const signKey =
+    values["sign-key"] ?? (signs ? process.env["POLITE_CRAWLER_SIGN_KEY"] || undefined : undefined);
+  const signatureAgent =
+    values["signature-agent"] ??
+    (signs ? process.env["POLITE_CRAWLER_SIGNATURE_AGENT"] || undefined : undefined);
+  if (command === "key-directory") {
+    if (signKey === undefined) throw new UsageError("key-directory wants --sign-key <file>");
+    return keyDirectoryCommand(keyFile(signKey), signatureAgent);
+  }
+  if ((signKey === undefined) !== (signatureAgent === undefined))
+    throw new UsageError(
+      "--sign-key and --signature-agent go together: the key signs, and the agent tells a site where its public key is",
+    );
+  let signer;
+  if (signKey !== undefined && signatureAgent !== undefined) {
+    const { createWebBotAuthSigner } = await import("./webbotauth.ts");
+    const privateKey = keyFile(signKey);
+    try {
+      signer = createWebBotAuthSigner({
+        privateKey,
+        signatureAgent,
+        agentType: agentTypeOf(signatureAgent),
+      });
+    } catch (error) {
+      throw new UsageError(`--sign-key: ${(error as Error).message}`, { cause: error });
+    }
+  }
+  // ── end of archived fallback and signed requests ──
   const options: OpenOptions = {
     dir,
     contact: values.contact ?? (process.env["POLITE_CRAWLER_CONTACT"] || undefined),
     ...(values["no-browser"] === true ? { renderer: false as const } : {}),
     ...(allowPrivate ? { egress: { allowPrivate: true } } : {}),
+    ...(signer === undefined ? {} : { signer }),
   };
 
   if (command === "mcp") {
@@ -812,8 +949,10 @@ const main = async (args: readonly string[]): Promise<number> => {
       case "fetch": {
         // the same URL twice is one fetch; one bad URL is an error of that URL only
         const urls = [...new Set(rest)];
+        const fallback = values["archive-fallback"] === true ? ("archive" as const) : undefined;
+        const archiveDespiteRobots = values["archive-despite-robots"] === true;
         const settled = await Promise.allSettled(
-          urls.map((url) => crawler.fetch(url, { render, maxAge })),
+          urls.map((url) => crawler.fetch(url, { render, maxAge, fallback, archiveDespiteRobots })),
         );
         const pages = settled.map((result, at) => {
           const url = urls[at]!;
@@ -830,7 +969,7 @@ const main = async (args: readonly string[]): Promise<number> => {
             : page;
         });
         print(pages, () => pages.map(describePage).join("\n"));
-        return pages.every(ok) ? 0 : 1;
+        return pages.every(done) ? 0 : 1;
       }
       case "find": {
         const found = await crawler.find(rest.join(" "), {
@@ -842,7 +981,10 @@ const main = async (args: readonly string[]): Promise<number> => {
           found.length === 0
             ? "nothing stored matches"
             : found
-                .map((hit) => `${hit.doc}  ${hit.title}\n  ${hit.snippet.replace(/\s+/g, " ")}`)
+                .map(
+                  (hit) =>
+                    `${hit.doc}  ${hit.title}${hit.archived === undefined ? "" : `  [archived copy, captured ${hit.archived.timestamp}]`}\n  ${hit.snippet.replace(/\s+/g, " ")}`,
+                )
                 .join("\n"),
         );
         return found.length === 0 ? 1 : 0;
@@ -857,7 +999,7 @@ const main = async (args: readonly string[]): Promise<number> => {
             ? (read.note ?? "")
             : read.held_back
               ? `${read.note ?? ""}\nAdd --user-provided if you gave this URL yourself. The crawler logs that read.`
-              : `${read.title}\n${read.url ?? ""}\n[${String(read.from)}–${String(read.to)} of ${String(read.total)}]${version}\n\n${read.text}`,
+              : `${read.title}\n${read.url ?? ""}\n${read.archived === undefined ? "" : `${read.note ?? ""}\n`}[${String(read.from)}–${String(read.to)} of ${String(read.total)}]${version}\n\n${read.text}`,
         );
         return read.held_back || read.before_first === true ? 1 : 0;
       }
@@ -866,7 +1008,7 @@ const main = async (args: readonly string[]): Promise<number> => {
         const verified = await crawler.verify(doc!, quote.join(" "), { at });
         print(verified, () =>
           verified.found
-            ? `found at ${String(verified.start)}–${String(verified.end)} in ${verified.capture ?? ""}${verified.stale ? " (an earlier capture)" : ""}: ${verified.excerpt ?? ""}`
+            ? `found at ${String(verified.start)}–${String(verified.end)} in ${verified.capture ?? ""}${verified.stale ? " (an earlier capture)" : ""}${verified.archived === undefined ? "" : ` (an archived copy from ${verified.archived.source}, captured ${verified.archived.timestamp})`}: ${verified.excerpt ?? ""}`
             : verified.held_back || verified.before_first === true
               ? (verified.note ?? "held back")
               : "not found",

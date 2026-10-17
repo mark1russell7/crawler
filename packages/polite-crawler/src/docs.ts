@@ -4,6 +4,7 @@ import { dirname } from "node:path";
 import type { StatementSync } from "node:sqlite";
 import { DatabaseSync } from "node:sqlite";
 import { fold, parseQuery, snippetOf } from "./fold.ts";
+import type { Archived } from "./fallback.ts";
 import type { AiInput } from "./signals.ts";
 import { cacheKeyOf } from "./urls.ts";
 
@@ -59,6 +60,11 @@ export interface ExtractedDoc {
   readonly merge?: "latest" | "richest" | undefined;
   /** When the extractor cut the text, this text is the whole text. The function `verify` looks for a quote here too. */
   readonly full_text?: string | undefined;
+  /**
+   * The value `no` holds the document back from the AI reader, also when the capture said nothing.
+   * An extractor sets it when the body states it, for example the headers in an archived response.
+   */
+  readonly ai_input?: AiInput | undefined;
 }
 
 /** This is one version of a document: the document as one capture gave it. */
@@ -193,6 +199,8 @@ export interface Found {
   readonly fetched_at: string;
   /** This id is the capture of the current text. */
   readonly capture: string;
+  /** This value tells that the document is an archived copy (the kind `archived`), with the archive and the date of the copy. */
+  readonly archived?: Archived | undefined;
 }
 
 /** The variant of a cache entry: the plain response, or the page that the browser rendered. */

@@ -6,57 +6,118 @@ Change this file and the tracker together. Each item has an id, a status, an are
 
 ## Waiting on Mark
 
-### `rel011`: Release 0.1.1
+### `w12`: A DOI for the study, and a press contact (W-12)
 
-Pull request #3 is merged. CI publishes 0.1.1 when the trust step is done. New features stay on branches until then, so 0.1.1 ships only what its changelog lists.
+Built, and CI passes on all 6 jobs. The study becomes a CC BY 4.0 dataset, a workflow makes a Zenodo draft with a reserved DOI, and the study page cites it with a press contact. It merges after 0.1.1 is on npm.
+
+- Area: Site and growth
+- What Mark does: 1) Sign in at zenodo.org with GitHub. 2) Account > Applications: create a personal access token with the scopes deposit:write and deposit:actions. 3) Run: gh secret set ZENODO_TOKEN -R mark1russell7/crawler, and paste the token. 4) After the merge, Claude runs the workflow, and you click Publish on the Zenodo draft.
+- Started: 2026-10-17
+- [Branch feat/doi](https://github.com/mark1russell7/crawler/tree/feat/doi)
+- [Zenodo](https://zenodo.org)
+
+### `tag-rule`: Let CI create release tags
+
+The release tags ruleset lets only admins create v* tags, so the release workflow could not make the v0.1.1 tag. markt-54 made it by hand and asked you.
 
 - Area: Release and CI
-- Waits for: `a13`, `s30`, `stdrelease`
-- What Mark does: At 20:16 UTC today or later, run the npm trust step with the session markt-54. It needs your security key.
-- Started: 2026-10-17
-- [Pull request #3](https://github.com/mark1russell7/crawler/pull/3)
+- Waits for: `rel011`
+- What Mark does: Say whether GitHub Actions may create v* tags in the crawler repository (markt-54 asked). Until then, markt-54 makes each release's tag by hand.
+- [Rulesets](https://github.com/mark1russell7/crawler/settings/rules)
+
+### `hybrid`: Hybrid search: full text plus a local vector index
+
+Meaning-based search beside full-text search, as an opt-in rank "hybrid". Exact full-text ranking stays the default. It needs a local embedding model, and that is your choice of toolchain. Options: (A) transformers.js as an optional peer with a small model (bge-small, about 30 MB, downloaded on first use), vectors in SQLite. (B) Ollama, which you would run yourself: no new dependency in the package. (C) A cloud embedding API, which costs money per call and sends text out. Recommendation: A, behind a pluggable embedder like the renderer, so B also works.
+
+- Area: Package
+- Waits for: `s30`
+- What Mark does: Choose the embedding toolchain for hybrid search: A (recommended), B or C.
+
+### `eval`: Published eval: tokens per verified claim
+
+Measure how many tokens a verified claim costs with polite-crawler against WebFetch. Options: (A) a reproducible count in CI of the text an agent must read to check each claim, with no model calls. (B) Real agent runs through Claude Code on a fixed question set, which use your subscription. (C) Both: A for every release, B once for the published number. Recommendation: C.
+
+- Area: Site and growth
+- Waits for: `rel011`
+- What Mark does: Choose the eval method: C (recommended), A or B.
 
 ## In progress
 
-### `w12`: A DOI for the study, and a press contact (W-12)
-
-Mark said yes. The study is packaged as a CC BY 4.0 dataset, and a workflow creates a Zenodo draft with a reserved DOI for Mark to publish. The study page shows the DOI, a citation and the press contact.
-
-- Area: Site and growth
-- Started: 2026-10-17
-- [The study](https://mark1russell7.github.io/crawler/)
-
 ### `sitemaps`: Find pages from sitemaps and feeds
 
-Discover a site's pages from its sitemap and feeds, with robots.txt checked before any fetch.
+On main since 2026-10-17, in the next release. crawler.discover finds a site's pages from its sitemaps and feeds, robots.txt first, with a strict sitemap reader that stays bounded on hostile files.
 
 - Area: Package
 - Waits for: `pub010`
 - Started: 2026-10-17
+- [Main at 3c3a800](https://github.com/mark1russell7/crawler/commit/3c3a800)
 
 ### `frontier`: A small crawl frontier with a budget
 
-Follow links within a site up to a page and time budget, still one polite request at a time per host.
+On main since 2026-10-17, in the next release. crawler.crawl follows a site's links within page, depth and time budgets, one request per host at a time, with a summary of why it stopped.
 
 - Area: Package
 - Waits for: `sitemaps`
 - Started: 2026-10-17
+- [Main at 3c3a800](https://github.com/mark1russell7/crawler/commit/3c3a800)
 
-### `warc`: Export the store as WARC or WACZ
+### `fallback`: An archived copy after a refusal
 
-Give the stored captures to archive tools in the standard web archive formats.
+Built, and CI passes on all 6 jobs. Opt-in: after a refusal, a copy from the Wayback Machine or Common Crawl, kept as its own document and labelled archived with its date in read, verify and MCP results. By default it never gives a copy of a page that the site's current robots.txt disallows. It merges after 0.1.1 is on npm.
 
 - Area: Package
 - Waits for: `pub010`
 - Started: 2026-10-17
+- [Branch feat/fetchpath](https://github.com/mark1russell7/crawler/tree/feat/fetchpath)
+- [CI run](https://github.com/mark1russell7/crawler/actions/runs/39070835447)
 
-### `conformance`: A conformance page for the standards
+### `watch`: Watch pages for changes, with diffs
 
-Show on the site, test by test, how the crawler follows RFC 9309 (robots.txt), RFC 9111 (caching) and the AI preference signals.
+Built, and CI passes on all 6 jobs. A watch list kept in its own watch.sqlite, a check at most each hour by default, and a change confirmed only when the next check sees it too. Line and word diffs, and structured-data diffs. It merges after 0.1.1 is on npm.
 
-- Area: Site and growth
-- Waits for: `rel011`
+- Area: Package
+- Waits for: `sitemaps`
 - Started: 2026-10-17
+- [Branch feat/watch](https://github.com/mark1russell7/crawler/tree/feat/watch)
+- [CI run](https://github.com/mark1russell7/crawler/actions/runs/39070737621)
+
+### `warc`: Export the store as WARC or WACZ
+
+On main since 2026-10-17, in the next release. WARC/1.1 and WACZ 1.1.1 export, checked by warcio and wacz validate in CI, with no new dependency.
+
+- Area: Package
+- Waits for: `pub010`
+- Started: 2026-10-17
+- [Main at 3c3a800](https://github.com/mark1russell7/crawler/commit/3c3a800)
+
+### `botauth`: Signed requests (Web Bot Auth)
+
+Built, and CI passes on all 6 jobs. Requests can carry an Ed25519 HTTP message signature (RFC 9421, Web Bot Auth draft 00 of September 2026), matched against the RFC and draft test vectors. A signature only adds headers, never replacing the honest User-Agent. A key-directory command prints the keys to host. It merges after 0.1.1 is on npm.
+
+- Area: Package
+- Waits for: `pub010`
+- Started: 2026-10-17
+- [Branch feat/fetchpath](https://github.com/mark1russell7/crawler/tree/feat/fetchpath)
+- [CI run](https://github.com/mark1russell7/crawler/actions/runs/39070835447)
+
+### `extraction`: Verified structured extraction
+
+Built, and CI passes on all 6 jobs. A caller proposes field values, and extract checks each against the stored capture: verified, normalized (with the named rule), ambiguous (both readings, never a guess), not found or invalid. It never invents a value. A held-back page reveals nothing. It merges after 0.1.1 is on npm.
+
+- Area: Package
+- Waits for: `pub010`
+- Started: 2026-10-17
+- [Branch feat/extract](https://github.com/mark1russell7/crawler/tree/feat/extract)
+- [CI run](https://github.com/mark1russell7/crawler/actions/runs/39073476914)
+
+### `timetravel`: Read a page as it was on a date
+
+Built, and CI passes. read and verify take `at` and use the version that was current then. A time before the first capture says so. Held-back rules apply at every time. Search at a past time is left out, because the index keeps one current text per page.
+
+- Area: Package
+- Waits for: `pub010`
+- Started: 2026-10-17
+- [Branch feat/watch](https://github.com/mark1russell7/crawler/tree/feat/watch)
 
 ## Blocked
 
@@ -68,29 +129,15 @@ The NDJSON writer, the keep-alive and the 'as they finish' helper move into the 
 - Blocked: The client repository is frozen for its 0.6.0 release. These changes land after it, as 0.7.0.
 - Owner: The client-repo sessions
 
-### `j7swap`: jarvis uses the @procedures 0.7.0 helpers
+### `rel012`: Release 0.1.2
 
-jarvis deletes its local stream code (marked TODO(npm)) and imports the released helpers.
+A patch release that only adds to the API: discovery and the site crawl, WARC export, watch and diff, reading at a time, the archived fallback, signed requests and verified extraction. A type test proves that code written for 0.1.1 still compiles.
 
-- Area: jarvis
-- Waits for: `j7`, `client070`
-- Blocked: It waits for @procedures 0.7.0 on npm.
+- Area: Release and CI
+- Waits for: `sitemaps`, `frontier`, `warc`, `watch`, `timetravel`, `fallback`, `botauth`, `extraction`
+- Blocked: It waits for the wave-2 branches to pass CI together. Then a pull request changes the version, and markt-54 merges it.
 
 ## Later
-
-### `fallback`: An archived copy after a refusal
-
-When a site refuses, offer a Common Crawl or Wayback copy, clearly labelled as archived, never as a fresh fetch.
-
-- Area: Package
-- Waits for: `rel011`
-
-### `watch`: Watch pages for changes, with diffs
-
-Re-read pages on a schedule, keep each version, and report what changed.
-
-- Area: Package
-- Waits for: `rel011`
 
 ### `recheck-watch`: The jarvis hours recheck becomes a watch
 
@@ -99,33 +146,12 @@ jarvis's morning recheck of venue hours runs on the package's watch feature inst
 - Area: jarvis
 - Waits for: `watch`, `j7`
 
-### `botauth`: Signed requests (Web Bot Auth)
-
-A hook to sign requests, so a site can verify that a request really comes from this crawler.
-
-- Area: Package
-- Waits for: `rel011`
-
 ### `daemon`: A daemon mode, with MCP tasks for long jobs
 
 Run as a background service, so long crawls and watches run as MCP tasks that a client can check on.
 
 - Area: Package
 - Waits for: `watch`
-
-### `extraction`: Verified structured extraction
-
-Extract fields from a page only when each field can be found in the stored capture, so every value has its proof.
-
-- Area: Package
-- Waits for: `rel011`
-
-### `hybrid`: Hybrid search: full text plus a local vector index
-
-Add meaning-based search next to full-text search, run locally, to raise ranking quality further.
-
-- Area: Package
-- Waits for: `s30`
 
 ### `recipes-up`: Venue-hours and product recipes move into the package
 
@@ -141,26 +167,12 @@ A documented way for anyone to write a recipe: what to fetch, how to read it, an
 - Area: Package
 - Waits for: `recipes-up`
 
-### `timetravel`: Read a page as it was on a date
-
-read(doc, {at}) returns the version that was current at a given time.
-
-- Area: Package
-- Waits for: `rel011`
-
 ### `study-monthly`: The robots.txt study, every month
 
 Re-run the study monthly and publish it with an RSS feed and a CSV.
 
 - Area: Site and growth
 - Waits for: `w12`
-
-### `eval`: Published eval: tokens per verified claim
-
-Measure and publish how many tokens a verified claim costs with polite-crawler against WebFetch.
-
-- Area: Site and growth
-- Waits for: `rel011`
 
 ### `showhn`: Directories and Show HN
 
@@ -177,6 +189,27 @@ Score a local open-weight decision model (for example Laya) on labelled data fro
 
 ## Shipped
 
+### `conformance`: A conformance page for the standards
+
+The site's Standards page shows, rule by rule, how the crawler follows RFC 9309, RFC 9111, RFC 9110 and the AI preference signals. Each rule links to its test, and a test keeps the page and the tests in step. 172 of Google's 201 robots.txt cases agree, and 12 differ on purpose, each with its reason.
+
+- Area: Site and growth
+- Waits for: `rel011`
+- Started: 2026-10-17
+- Shipped: 2026-10-17
+- [Standards page](https://mark1russell7.github.io/crawler/reference/standards/)
+
+### `j7swap`: jarvis uses the @procedures 0.7.0 helpers
+
+jarvis deleted its local stream code and uses writeNdjsonStream, the stream marker and asSettled from @procedures 0.7.0. The client's wait for a first row is now the procedure's budget plus 60 seconds.
+
+- Area: jarvis
+- Waits for: `j7`, `client070`
+- Started: 2026-10-17
+- Shipped: 2026-10-17
+- [jarvis pull request #39](https://github.com/mark1russell7/jarvis/pull/39)
+- [Merge commit bf82aa8](https://github.com/mark1russell7/jarvis/commit/bf82aa8)
+
 ### `j7`: Stream long jarvis calls (J-7)
 
 place.check, the morning recheck and crawl.fetch send each result as it is ready, so a long call no longer fails at the 5-minute client limit.
@@ -187,6 +220,17 @@ place.check, the morning recheck and crawl.fetch send each result as it is ready
 - Shipped: 2026-10-17
 - [jarvis pull request #34](https://github.com/mark1russell7/jarvis/pull/34)
 - [Merge commit b2a6d0d](https://github.com/mark1russell7/jarvis/commit/b2a6d0d)
+
+### `rel011`: Release 0.1.1
+
+polite-crawler 0.1.1 is on npm, published by CI with provenance, with the cache check memo and the ranking option. The trust now matches the standard release workflow, and the package disallows tokens.
+
+- Area: Release and CI
+- Waits for: `a13`, `s30`, `stdrelease`
+- Started: 2026-10-17
+- Shipped: 2026-10-17
+- [npm package](https://www.npmjs.com/package/polite-crawler)
+- [GitHub release v0.1.1](https://github.com/mark1russell7/crawler/releases/tag/v0.1.1)
 
 ### `s30`: Ranking options, full quality by default (S-30)
 

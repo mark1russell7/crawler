@@ -341,17 +341,6 @@ export interface PoliteCrawler {
   /** This method gives the versions of a stored document, the newest first. A held-back version shows no title. */
   versions(doc: string, options?: { readonly limit?: number }): Promise<DocVersion[]>;
   /**
-   * This method finds the pages of a site from its sitemaps and its feeds. Each file is a polite
-   * fetch with its capture. It keeps the URLs on the site that robots.txt permits, to its limits.
-   */
-  discover(site: string, options?: DiscoverOptions): Promise<DiscoverResult>;
-  /**
-   * This method crawls a site from its seeds. It follows the links of each page to a maximum of
-   * pages, a maximum depth and a maximum time. A `for await` loop gets each page. `summary` tells
-   * why the crawl stopped.
-   */
-  crawl(seeds: string | readonly string[], options?: CrawlOptions): CrawlRun;
-  /**
    * This method builds the index again from the capture log and the stored bodies, with no request.
    * When the crawler rebuilt a stale index at open, the first reindex gives the counts of that
    * rebuild, unless a fetch came before it.
@@ -359,6 +348,20 @@ export interface PoliteCrawler {
   reindex(): Promise<ReindexResult>;
   /** This method closes the browser, the log files and the index. A second close does nothing. */
   close(): Promise<void>;
+  // The members after 0.1.1 are optional, so an object of your own that implements 0.1.1 stays correct.
+  /**
+   * This optional method finds the pages of a site from its sitemaps and its feeds. Each file is a
+   * polite fetch with its capture. It keeps the URLs on the site that robots.txt permits, to its
+   * limits. `openCrawler` gives it. Over a runtime of your own, use `discoverSite`.
+   */
+  discover?(site: string, options?: DiscoverOptions): Promise<DiscoverResult>;
+  /**
+   * This optional method crawls a site from its seeds. It follows the links of each page to a
+   * maximum of pages, a maximum depth and a maximum time. A `for await` loop gets each page.
+   * `summary` tells why the crawl stopped. `openCrawler` gives it. Over a runtime of your own, use
+   * `crawlSite`.
+   */
+  crawl?(seeds: string | readonly string[], options?: CrawlOptions): CrawlRun;
   /**
    * This optional method compares two versions of a stored document: the lines and the words of
    * the text, and the metadata at its paths. It sends no request. `openCrawler` gives it.
@@ -368,8 +371,12 @@ export interface PoliteCrawler {
   readonly watch?: WatchList;
 }
 
-/** This crawler is the result of `openCrawler`: a `PoliteCrawler` with `diff` and `watch`. */
+/** This crawler is the result of `openCrawler`: a `PoliteCrawler` with `discover`, `crawl`, `diff` and `watch`. */
 export interface OpenedCrawler extends PoliteCrawler {
+  /** This method finds the pages of a site from its sitemaps and its feeds. */
+  discover(site: string, options?: DiscoverOptions): Promise<DiscoverResult>;
+  /** This method crawls a site from its seeds, within its limits. A `for await` loop gets each page. */
+  crawl(seeds: string | readonly string[], options?: CrawlOptions): CrawlRun;
   /** This method compares two versions of a stored document. It sends no request. */
   diff(doc: string, options?: DiffOptions): Promise<DiffResult>;
   /** This list keeps the pages that the crawler checks again on a schedule, in `watch.sqlite`. */

@@ -288,6 +288,7 @@ The root entry point also exports the parts of the runtime, for an application t
 The readers give more facts than before:
 
 - `PageExtract` has `canonical` (the canonical URL on the same site), `redirect` (the target of a quick `<meta http-equiv="refresh">`), `blocked` (the name of a bot check or a firewall that sent its page in place of the content) and `notes` (what the reader left out).
+- `PageExtract` also has `feeds` (the RSS and Atom feeds that the page links). `extractPage` always gives it. The field is optional, so a `PageExtract` of 0.1.1 stays correct.
 - `Hours` has `partial` (the reader left out a rule or a line) and `season` (the season or the dates of the hours). The text reader reads English only.
 
 ### The options of `Crawler`
@@ -313,7 +314,7 @@ Before version 1.0.0, a minor version can change the API, and `CHANGELOG.md` tel
 
 These parts are the stable API:
 
-- `openCrawler` and the methods of `PoliteCrawler`: `fetch`, `find`, `read`, `verify`, `versions`, `discover`, `crawl`, `reindex`, `close`, `diff` and `watch`. `openCrawler` gives an `OpenedCrawler`: a `PoliteCrawler` that has `diff` and `watch`. The two are optional in `PoliteCrawler`, so an object of your own that implements it stays correct.
+- `openCrawler` and the methods of `PoliteCrawler`: `fetch`, `find`, `read`, `verify`, `versions`, `discover`, `crawl`, `reindex`, `close`, `diff` and `watch`. `openCrawler` gives an `OpenedCrawler`: a `PoliteCrawler` that has `discover`, `crawl`, `diff` and `watch`. The four are optional in `PoliteCrawler`, so an object of your own that implements it stays correct.
 - The options and the results of these methods: `OpenOptions`, `FetchOptions`, `PageResult`, `Found`, `ReadResult`, `VerifyResult`, `DocVersion` and `ReindexResult`. `at` of `ReadOptions` and `VerifyOptions`, and `at` and `before_first` of their results, are stable too.
 - The diff: `diffDocument`, `diffTexts`, `DIFF_LIMITS`, `DiffOptions`, `DiffResult`, `DiffSide`, `DiffSummary`, `DiffHunk`, `DiffLine`, `WordPart`, `MetaChange`, `VersionChoice`, `DiffLimits`, `DiffInput` and `TextDiff`.
 - The time travel: `versionAtTime`, `isoTime` and `VersionAt`.

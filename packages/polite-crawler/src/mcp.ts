@@ -11,8 +11,10 @@ import { z } from "zod";
 import { browserMissing } from "./browser.ts";
 import type { DiffResult } from "./diff.ts";
 import { diffDocument, formatDiff } from "./diff.ts";
+import { discoverSite } from "./discover.ts";
 import type { Archived } from "./fallback.ts";
 import type { CrawlPage } from "./frontier.ts";
+import { crawlSite } from "./frontier.ts";
 import type { OpenOptions, PoliteCrawler } from "./open.ts";
 import { durationMs, openCrawler } from "./open.ts";
 import type { PageResult } from "./runtime.ts";
@@ -839,14 +841,19 @@ export const createMcpServer = (
       for (const feed of feeds) {
         if (!httpUrl.safeParse(feed).success) throw new Error(`not an http or https URL: ${feed}`);
       }
-      const found = await crawler.discover(site, {
+      const discoverOptions = {
         feeds,
         maxUrls: max_urls,
         maxFiles: DISCOVER_MAX_FILES,
         maxAge: durationMs(max_age),
         onBehalfOf,
         signal: extra.signal,
-      });
+      };
+      // a PoliteCrawler of your own can leave out discover: the runtime then does the work
+      const found =
+        crawler.discover === undefined
+          ? await discoverSite(crawler.runtime, site, discoverOptions)
+          : await crawler.discover(site, discoverOptions);
       const now = Date.now();
       const data = {
         site: found.site,
@@ -952,7 +959,7 @@ export const createMcpServer = (
       const budgetMs = durationMs(budget);
       if (budgetMs > durationMs(SITE_MAX_BUDGET))
         throw new Error(`the budget is ${SITE_MAX_BUDGET} at most, not ${budget}`);
-      const run = crawler.crawl(urls, {
+      const crawlOptions = {
         maxPages: max_pages,
         maxDepth: max_depth,
         budgetMs,
@@ -963,7 +970,12 @@ export const createMcpServer = (
         maxAge: durationMs(max_age),
         onBehalfOf,
         signal: extra.signal,
-      });
+      };
+      // a PoliteCrawler of your own can leave out crawl: the runtime then does the work
+      const run =
+        crawler.crawl === undefined
+          ? crawlSite(crawler.runtime, urls, crawlOptions)
+          : crawler.crawl(urls, crawlOptions);
       const progressToken = extra._meta?.progressToken;
       const found: CrawlPage[] = [];
       for await (const page of run) {

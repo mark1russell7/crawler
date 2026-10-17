@@ -144,7 +144,7 @@ export const pageExtractor: Extractor = (body, capture) => {
         needs_render: page.needsRender,
         render_reason: page.renderReason,
         canonical: page.canonical,
-        ...(page.feeds.length > 0 ? { feeds: page.feeds } : {}),
+        ...(page.feeds !== undefined && page.feeds.length > 0 ? { feeds: page.feeds } : {}),
         redirect: page.redirect,
         blocked: page.blocked,
         ...(page.notes.length > 0 ? { notes: page.notes } : {}),

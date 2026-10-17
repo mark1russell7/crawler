@@ -15,6 +15,11 @@ A prerelease version (`0.2.0-beta.1`) goes to the npm tag `next`. Each other ver
 
 ## Unreleased
 
+- **This version only adds to the API.** Code that compiled against 0.1.1 compiles against this version, and `packages/polite-crawler/src/compat.test.ts` is the proof. The capture log, the bodies and the capture ids do not change.
+  - Each new member of an existing interface is optional. `PoliteCrawler` has the optional `discover`, `crawl`, `diff` and `watch`. `openCrawler` gives an `OpenedCrawler`, which has the four.
+  - `PageExtract.feeds` and `ReadingIndex.versionAt` are optional too.
+  - These edges remain. The recipe names `archive-copy` and `archive-index` belong to the crawler, and `Extractors.register("archive-copy", ...)` throws.
+  - The classes `Crawler` and `DocIndex` have new methods: `robotsAllow`, `hostStop` and `versionAt`. A subclass of your own with a member of the same name can conflict with them.
 - **Export to WARC and WACZ.** `exportWarc` and `exportWacz` write the stored captures as a web archive, for `warcio`, pywb and ReplayWeb.page. The command line has `polite-crawler export --out <file>`.
   - The WARC file is WARC/1.1, with one gzip member for each record. The WACZ file is WACZ 1.1.1, with a sorted CDXJ index, a page list and `datapackage.json`.
   - A capture with a body gives a `response` record, a 304 gives a `revisit` record, and a rendered page gives a `conversion` record. Each has a `metadata` record with the JSON of the capture.
@@ -40,7 +45,8 @@ A prerelease version (`0.2.0-beta.1`) goes to the npm tag `next`. Each other ver
 - **The engine.** These additions do not change the existing API:
   - `FetchRequest`, `RenderRequest` and `PageOptions` take `deadline`. A request does not start at or after its deadline, and it does not wait for its host past it. Its skip note starts with `DEADLINE_NOTE`. `HostScheduler` does not change.
   - `Crawler.robotsAllow(url, options)` gives the robots.txt decision for a URL. `Crawler.readRobots` takes the scope and the labels of its record.
-  - `PageExtract` has `feeds`: the RSS and Atom feeds that the page links. The metadata of a page document has them too.
+  - `PageExtract` has the optional `feeds`: the RSS and Atom feeds that the page links. `extractPage` always gives them, and the metadata of a page document has them too.
+  - `PoliteCrawler` has two new optional members, `discover` and `crawl`. `OpenedCrawler`, the result of `openCrawler`, has them. A `PoliteCrawler` of your own without them stays correct: `crawl_discover` and `crawl_site` then use `discoverSite` and `crawlSite` over its runtime.
   - `reindex` reads the captures of the recipes `sitemap` and `feed` as captures of the crawler, as it reads robots.txt. They give no document.
   - The root entry point exports `discoverSite`, `crawlSite`, `readSitemap`, `feedDate`, `DISCOVER_LIMITS`, `CRAWL_LIMITS`, `SITEMAP_LIMITS`, `DEADLINE_NOTE` and the types of discovery and of the crawl.
 - **Read a page as it was at a time.** `read` and `verify` take `at`, an ISO 8601 time or a `Date`. They use the version that was current at that time.

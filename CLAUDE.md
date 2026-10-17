@@ -44,27 +44,24 @@ To make a release:
 
 1. Change the version in the four places.
 2. In `CHANGELOG.md`, change `## Unreleased` to `## <version> - <date>`. Add a new empty `## Unreleased` above it.
-3. Commit on main and push. Wait until CI passes.
-4. Get the approval of the owner. The owner pushes the tag: `git tag v<version>`, then `git push origin v<version>`.
+3. Open a pull request with the two changes. Wait until CI passes.
+4. Get the approval of the owner. Then merge the pull request to main.
 
-Do not push a version tag without the approval of the owner. `.github/workflows/release.yml` then does these steps:
+Do not merge a version change to main without the approval of the owner. The merge starts `.github/workflows/release.yml`, which does these steps:
 
-- It makes sure that the tag is on main, that the tag agrees with the version, and that `CHANGELOG.md` has the section.
-- It does the gates of CI again, then builds, packs and smoke-tests the tarball.
-- A job with no code of the repository publishes that tarball to npm, with provenance. A tag for a version that npm has already skips this step.
-- It publishes `server.json` to the MCP registry, and makes the GitHub release with the section of `CHANGELOG.md`.
+- It does the gates of CI again, then builds, packs and smoke-tests the tarball. It makes sure that `CHANGELOG.md` has the section of the version.
+- A job with no code of the repository publishes that tarball to npm, with provenance. It skips a version that npm has already.
+- It publishes `server.json` to the MCP registry. It makes the tag `v<version>` and the GitHub release with the section of `CHANGELOG.md`.
 
 The rules for versions:
 
 - Before 1.0.0, a minor version can change the API, and a patch version only corrects errors.
 - The store on disk (the capture log, the blobs and the capture ids) stays the same across 0.x. A version that changes it gives the steps to move an old store.
 - A prerelease version (`0.2.0-beta.1`) goes to the npm tag `next`. Each other version goes to `latest`.
-- If CI fails after the tag, do not move or delete the tag. Correct the error, change to the next patch version, and push a new tag.
+- If the release fails, correct the error. Start the workflow again with `gh workflow run release.yml --ref main`, or change to the next patch version.
 
-The first version goes to npm by hand, because npm accepts a trusted publisher only for a package that exists. The owner does these steps:
+## npm
 
-1. `pnpm --filter polite-crawler build`, then `pnpm --filter polite-crawler pack --pack-destination out`.
-2. `node scripts/smoke.mjs --tarball out/polite-crawler-<version>.tgz`.
-3. `npm publish out/polite-crawler-<version>.tgz`, with the two-factor code.
-4. On npmjs.com, add the trusted publisher: the repository `mark1russell7/crawler`, the workflow `release.yml` and the environment `npm`.
-5. Push the tag `v<version>`. The workflow skips npm and does the other steps.
+- Do not publish to npm, and do not change npm settings. The owner and one named Claude session do all npm work.
+- Do not edit `.github/workflows/release.yml` or `scripts/release/`.
+- `RELEASING.md` tells how a release and the npm trust work.

@@ -23,7 +23,13 @@
       }
     ]
   },
-  "ignorePatterns": ["**/build/**", "**/dist/**", "**/.astro/**", "**/coverage/**"],
+  "ignorePatterns": [
+    "scripts/release/**",
+    "**/build/**",
+    "**/dist/**",
+    "**/.astro/**",
+    "**/coverage/**"
+  ],
   "overrides": [
     {
       "files": ["**/*.property.test.ts"],

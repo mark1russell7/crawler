@@ -3,6 +3,7 @@
   "include": [
     "README.md",
     "CLAUDE.md",
+    "RELEASING.md",
     "CHANGELOG.md",
     "CONTRIBUTING.md",
     "SECURITY.md",
@@ -33,6 +34,10 @@
     "pnpm",
     "Simplified Technical English",
     "TSDoc",
-    "TypeScript"
+    "TypeScript",
+    "npm",
+    "OIDC",
+    "SemVer",
+    "Mark"
   ]
 }

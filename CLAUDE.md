@@ -19,11 +19,16 @@ Write all prose of this repository in the style of ASD-STE100 Simplified Technic
 
 ## Checks
 
-- `pnpm check` does the checks of CI in sequence: `typecheck`, `lint` (oxlint), `test`, `lint:ste`, `build` and `smoke`.
+- `pnpm check` does the checks of CI in sequence: `format:check`, `typecheck`, `lint` (oxlint), `test`, `lint:ste`, `build` and `smoke`.
 - `pnpm smoke` (`scripts/smoke.mjs`) installs the packed tarball into an empty project and uses it the way a user does.
 - CI does the tests on Ubuntu with Node.js 22.19, 24 and 26, and on Windows and macOS with Node.js 24.
-- `pnpm format` (Prettier) is not a CI check yet, because most of the code is not formatted yet.
+- CI fails when the code is not in the format of Prettier. Start `pnpm format` before a commit.
 - Pin each GitHub action to a full commit SHA, with the version in a comment. Dependabot updates them.
+
+## Roadmap
+
+- `docs/ROADMAP.md` is the roadmap. The tracker page https://claude.ai/artifact/Tby9J8r39c3fz4ggXoi1QZ shows the same items.
+- Change the file and the tracker together. The tracker keeps its items in its database, collection `items`.
 
 ## The package
 
@@ -55,7 +60,7 @@ Do not merge a version change to main without the approval of the owner. The mer
 
 The rules for versions:
 
-- Before 1.0.0, a minor version can change the API, and a patch version only corrects errors.
+- Before 1.0.0, a change that breaks the API increases the minor version. A new feature or a correction increases the patch version.
 - The store on disk (the capture log, the blobs and the capture ids) stays the same across 0.x. A version that changes it gives the steps to move an old store.
 - A prerelease version (`0.2.0-beta.1`) goes to the npm tag `next`. Each other version goes to `latest`.
 - If the release fails, correct the error. Start the workflow again with `gh workflow run release.yml --ref main`, or change to the next patch version.

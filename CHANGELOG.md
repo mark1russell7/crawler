@@ -15,6 +15,8 @@ A prerelease version (`0.2.0-beta.1`) goes to the npm tag `next`. Each other ver
 
 ## Unreleased
 
+## 0.1.2 - 2026-10-17
+
 - **This version only adds to the API.** Code that compiled against 0.1.1 compiles against this version, and `packages/polite-crawler/src/compat.test.ts` is the proof. The capture log, the bodies and the capture ids do not change.
   - Each new member of an existing interface is optional. `PoliteCrawler` has the optional `discover`, `crawl`, `diff`, `watch` and `extract`. `openCrawler` gives an `OpenedCrawler`, which has the five.
   - `PageExtract.feeds` and `ReadingIndex.versionAt` are optional too.

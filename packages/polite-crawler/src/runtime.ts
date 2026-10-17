@@ -218,8 +218,13 @@ export class Extractors {
     ["archive-copy", archiveExtractor],
   ]);
 
+  // 0.1.1 let an application register `archive-copy`. Thus an application can replace that built-in once.
+  private readonly replaceable = new Set(["archive-copy"]);
+
   register(recipe: string, extractor: Extractor): void {
-    if (this.byRecipe.has(recipe)) throw new Error(`recipe ${recipe} already has an extractor`);
+    if (this.byRecipe.has(recipe) && !this.replaceable.delete(recipe)) {
+      throw new Error(`recipe ${recipe} already has an extractor`);
+    }
     this.byRecipe.set(recipe, extractor);
   }
 

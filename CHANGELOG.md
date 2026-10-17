@@ -18,7 +18,7 @@ A prerelease version (`0.2.0-beta.1`) goes to the npm tag `next`. Each other ver
 - **This version only adds to the API.** Code that compiled against 0.1.1 compiles against this version, and `packages/polite-crawler/src/compat.test.ts` is the proof. The capture log, the bodies and the capture ids do not change.
   - Each new member of an existing interface is optional. `PoliteCrawler` has the optional `discover`, `crawl`, `diff`, `watch` and `extract`. `openCrawler` gives an `OpenedCrawler`, which has the five.
   - `PageExtract.feeds` and `ReadingIndex.versionAt` are optional too.
-  - These edges remain. The recipe names `archive-copy` and `archive-index` belong to the crawler, and `Extractors.register("archive-copy", ...)` throws.
+  - The archived fallback uses the recipes `archive-copy` and `archive-index`. An application that registered its own `archive-copy` extractor in 0.1.1 can still register it. That extractor replaces the built-in one, and the fallback then reads its copies with it.
   - The classes `Crawler` and `DocIndex` have new methods: `robotsAllow`, `hostStop` and `versionAt`. A subclass of your own with a member of the same name can conflict with them.
 - **Verified structured extraction.** `crawler.extract(doc, fields, options)` checks the values that a caller proposes for the fields of a stored page, and it locates each value. It does not make values. Each field gets `verified`, `normalized`, `ambiguous`, `not-found`, `held-back` or `invalid`, with its span or JSON-LD path and its capture.
   - The kinds are `text`, `number`, `money`, `date`, `url`, `email`, `phone` and `json-ld:<path>`. Each normalization has a name, and a normalized field gives it. Examples are `thousands-separator`, `decimal-comma`, `currency-symbol`, `date-written`, `url-resolved` and `phone-suffix`.
@@ -105,7 +105,7 @@ A prerelease version (`0.2.0-beta.1`) goes to the npm tag `next`. Each other ver
   - `FetchRequest` takes `range`, `signalLines` and `originalHeaderPrefix`. A range request keeps no stored copy and sends no validators. `CrawlerOptions`, `RuntimeOptions` and `OpenOptions` take `signer`, and `RenderOptions` takes `sign`.
   - `ExtractedDoc` takes `ai_input`: an extractor can hold back a document whose body refuses AI input. `Crawler.robotsAllow` also gives the content signals of robots.txt (`signals`).
   - `record.schema.json` describes the new payload fields `range` and `signed`. The capture ids do not change.
-  - The recipes `archive-copy` and `archive-index` belong to the crawler. An application that registers an extractor named `archive-copy` gets an error.
+  - The archived fallback uses the recipes `archive-copy` and `archive-index`. An application can replace the built-in `archive-copy` extractor one time.
 
 ## 0.1.1 - 2026-10-17
 

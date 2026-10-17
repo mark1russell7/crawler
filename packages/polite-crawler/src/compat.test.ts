@@ -39,6 +39,7 @@ import type {
 } from "./index.ts";
 import {
   DocIndex,
+  Extractors,
   MemoryHostStateStore,
   RenderRefused,
   createRuntime,
@@ -373,5 +374,14 @@ describe("the API of 0.1.1", () => {
     const now = await readDocument(runtime, doc, {});
     expect(now).toMatchObject({ capture: "c2", text: "The bakery opens at eight." });
     expect("validators" in (openOptions(dir).hostState ?? {})).toBe(false);
+  });
+
+  it("lets an application register its own archive-copy extractor one time, as 0.1.1 did", () => {
+    const extractors = new Extractors();
+    const own: Extractor = () => [];
+    extractors.register("archive-copy", own);
+    expect(extractors.get("archive-copy")).toBe(own);
+    expect(() => extractors.register("archive-copy", own)).toThrow("already has an extractor");
+    expect(() => extractors.register("page", own)).toThrow("already has an extractor");
   });
 });

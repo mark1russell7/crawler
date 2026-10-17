@@ -85,6 +85,36 @@ jobs:
           if-no-files-found: ignore
           retention-days: 14
 
+      # The archive tools read the exports of src/archive.test.ts: warcio reads the WARC files,
+      # py-wacz the WACZ file, and zipfile each ZIP (also one with Zip64 records). Pinned versions.
+      - name: Validate the WARC and WACZ exports
+        if: matrix.os == 'ubuntu-latest' && matrix.node == '24'
+        shell: bash
+        env:
+          POLITE_CRAWLER_ARCHIVE_OUT: ${{ runner.temp }}/archives
+        run: |
+          python3 -m venv "$RUNNER_TEMP/archive-tools"
+          . "$RUNNER_TEMP/archive-tools/bin/activate"
+          pip install --disable-pip-version-check --quiet warcio==1.8.1 wacz==0.6.0 cdxj-indexer==1.4.6 frictionless==5.15.6 boilerpy3==1.0.7 shortuuid==1.0.13 jsonlines==4.0.0
+          pnpm --filter polite-crawler exec vitest run src/archive.test.ts
+          cd "$POLITE_CRAWLER_ARCHIVE_OUT"
+          for file in *.warc.gz; do
+            warcio check -v "$file"
+            warcio index -f warc-type,warc-target-uri,http:status,offset,length "$file" > "$file.index"
+            echo "$file: $(wc -l < "$file.index") records"
+            cat "$file.index"
+          done
+          for file in *.wacz; do wacz validate -f "$file"; done
+          python3 -I - *.wacz *.zip <<'EOF'
+          import sys, zipfile
+          for name in sys.argv[1:]:
+              with zipfile.ZipFile(name) as archive:
+                  bad = archive.testzip()
+                  assert bad is None, f"{name}: the CRC of {bad} is wrong"
+                  for info in archive.infolist():
+                      print(name, info.filename, info.compress_type, info.file_size, info.CRC)
+          EOF
+
       # The npm build, packed and installed into an empty project the way a user gets it
       - run: pnpm --filter polite-crawler build
       - run: node scripts/smoke.mjs

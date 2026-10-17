@@ -3,7 +3,16 @@ import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import type { StatementSync } from "node:sqlite";
 import { DatabaseSync } from "node:sqlite";
-import type { HostCounts, HostResult, HostStateStore, HostStop } from "./politeness.ts";
+import type {
+  HostCounts,
+  HostResult,
+  HostStateStore,
+  HostStop,
+  ValidatorMemo,
+  ValidatorReport,
+  ValidatorVerdict,
+} from "./politeness.ts";
+import { nextValidatorMemo } from "./politeness.ts";
 
 /** A stop with no end goes into the table as this value, which is past each date that JavaScript can hold. */
 const NO_END = 9e15;
@@ -11,6 +20,34 @@ const NO_END = 9e15;
 const SHARED_WAIT_MS = 1000;
 /** The store removes the rows of idle hosts after this many reservations. */
 const SWEEP_EVERY = 1000;
+/**
+ * This value is the version of the schema of the file (`PRAGMA user_version`). Version 0 (0.1.0)
+ * has the table `hosts`. Version 1 adds the table `validators`, and it reads a file of version 0.
+ */
+export const HOST_STATE_SCHEMA = 1;
+
+interface MemoRow {
+  skip_etag: number;
+  etag: string;
+  last_modified: string;
+  etag_misses: number;
+  date_misses: number;
+  since_probe: number;
+  changed_at: number;
+}
+
+const verdictOf = (value: string): ValidatorVerdict =>
+  value === "works" || value === "fails" ? value : "unknown";
+
+const memoOf = (row: MemoRow): ValidatorMemo => ({
+  skipEtag: row.skip_etag === 1,
+  etag: verdictOf(row.etag),
+  lastModified: verdictOf(row.last_modified),
+  etagMisses: row.etag_misses,
+  dateMisses: row.date_misses,
+  sinceProbe: row.since_probe,
+  changedAt: row.changed_at,
+});
 
 interface Row {
   next_at: number;
@@ -40,8 +77,11 @@ export interface SqliteHostStateOptions {
  * the lease gets a wait of one second or less, and asks again. A process that stops during a
  * request holds its lease until the lease ends (5 minutes by default).
  *
+ * The table `validators` keeps the validator memo of each host (`ValidatorMemo`), so the processes
+ * share it and it stays after a restart. A file of version 0.1.0 gets the table when it opens.
+ *
  * The state is not a projection of the capture log. A deletion of the file loses only the pace,
- * the counts and the stops, and the crawler starts them again.
+ * the counts, the stops and the memos, and the crawler starts them again.
  */
 export class SqliteHostStateStore implements HostStateStore {
   private readonly db: DatabaseSync;
@@ -63,16 +103,42 @@ export class SqliteHostStateStore implements HostStateStore {
     this.db.exec(`PRAGMA busy_timeout = ${String(wait)};`);
     if (path !== ":memory:") this.db.exec("PRAGMA journal_mode = WAL;");
     this.db.exec("PRAGMA synchronous = NORMAL;");
-    this.db.exec(`CREATE TABLE IF NOT EXISTS hosts (
-      host TEXT PRIMARY KEY,
-      next_at REAL NOT NULL DEFAULT 0,
-      leased_until REAL NOT NULL DEFAULT 0,
-      owner TEXT,
-      failures INTEGER NOT NULL DEFAULT 0,
-      waits INTEGER NOT NULL DEFAULT 0,
-      stop_until REAL,
-      stop_reason TEXT
-    )`);
+    this.migrate();
+  }
+
+  /**
+   * This method makes the tables, or adds the tables of a later version to an older file. It is one
+   * transaction, so two processes that open one old file at the same time do not collide.
+   */
+  private migrate(): void {
+    this.step(() => {
+      this.db.exec(`CREATE TABLE IF NOT EXISTS hosts (
+        host TEXT PRIMARY KEY,
+        next_at REAL NOT NULL DEFAULT 0,
+        leased_until REAL NOT NULL DEFAULT 0,
+        owner TEXT,
+        failures INTEGER NOT NULL DEFAULT 0,
+        waits INTEGER NOT NULL DEFAULT 0,
+        stop_until REAL,
+        stop_reason TEXT
+      )`);
+      this.db.exec(`CREATE TABLE IF NOT EXISTS validators (
+        host TEXT PRIMARY KEY,
+        skip_etag INTEGER NOT NULL DEFAULT 0,
+        etag TEXT NOT NULL DEFAULT 'unknown',
+        last_modified TEXT NOT NULL DEFAULT 'unknown',
+        etag_misses INTEGER NOT NULL DEFAULT 0,
+        date_misses INTEGER NOT NULL DEFAULT 0,
+        since_probe INTEGER NOT NULL DEFAULT 0,
+        changed_at REAL NOT NULL DEFAULT 0
+      )`);
+      const { user_version: version } = this.db.prepare("PRAGMA user_version").get() as {
+        user_version: number;
+      };
+      // a file of a later version keeps its number
+      if (version < HOST_STATE_SCHEMA)
+        this.db.exec(`PRAGMA user_version = ${String(HOST_STATE_SCHEMA)}`);
+    });
   }
 
   private stmt(sql: string): StatementSync {
@@ -206,6 +272,39 @@ export class SqliteHostStateStore implements HostStateStore {
           "UPDATE hosts SET failures = 0, waits = 0, stop_until = NULL, stop_reason = NULL WHERE host = ?",
         ).run(host);
       }
+    });
+  }
+
+  validators(host: string): ValidatorMemo | undefined {
+    if (this.closed) throw new Error("the host state store is closed");
+    const row = this.stmt(
+      `SELECT skip_etag, etag, last_modified, etag_misses, date_misses, since_probe, changed_at
+         FROM validators WHERE host = ?`,
+    ).get(host) as MemoRow | undefined;
+    return row === undefined ? undefined : memoOf(row);
+  }
+
+  noteValidators(host: string, report: ValidatorReport, now: number): ValidatorMemo {
+    return this.step(() => {
+      const memo = nextValidatorMemo(this.validators(host), report, now);
+      this.stmt(
+        `INSERT INTO validators (host, skip_etag, etag, last_modified, etag_misses, date_misses, since_probe, changed_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+         ON CONFLICT(host) DO UPDATE SET skip_etag = excluded.skip_etag, etag = excluded.etag,
+           last_modified = excluded.last_modified, etag_misses = excluded.etag_misses,
+           date_misses = excluded.date_misses, since_probe = excluded.since_probe,
+           changed_at = excluded.changed_at`,
+      ).run(
+        host,
+        memo.skipEtag ? 1 : 0,
+        memo.etag,
+        memo.lastModified,
+        memo.etagMisses,
+        memo.dateMisses,
+        memo.sinceProbe,
+        memo.changedAt,
+      );
+      return memo;
     });
   }
 

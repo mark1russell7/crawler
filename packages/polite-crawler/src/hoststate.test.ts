@@ -2,11 +2,12 @@ import type { Server } from "node:http";
 import { createServer } from "node:http";
 import type { AddressInfo } from "node:net";
 import { join } from "node:path";
+import { DatabaseSync } from "node:sqlite";
 import { afterEach, describe, expect, it } from "vitest";
 import { FileBlobStore } from "./blobs.ts";
 import { Crawler } from "./crawler.ts";
 import { DocIndex } from "./docs.ts";
-import { SqliteHostStateStore } from "./hoststate.ts";
+import { HOST_STATE_SCHEMA, SqliteHostStateStore } from "./hoststate.ts";
 import { CaptureLog } from "./log.ts";
 import { DEFAULT_POLICY, restAfter } from "./politeness.ts";
 import { removeDir, tempDir } from "./test-helpers.ts";
@@ -73,6 +74,69 @@ describe("the SQLite host state store", () => {
     expect(two.stopped("a", 4000)).toEqual({ until: 50_000, reason: "challenge" });
     expect(two.record("a", "failure")).toEqual({ failures: 1, waits: 0 });
     expect(one.record("a", "failure")).toEqual({ failures: 2, waits: 0 });
+  });
+
+  it("shares the validator memo between two stores on one file, and keeps it after a restart", async () => {
+    const path = join(await storeIn(), "hosts.sqlite");
+    const one = open(path);
+    const two = open(path);
+    const same = { etag: true, lastModified: true, answer: "same" } as const;
+    expect(one.validators("a")).toBeUndefined();
+    one.noteValidators("a", same, 1000);
+    // the second process adds to the memo that the first process wrote
+    expect(two.noteValidators("a", same, 2000)).toMatchObject({ etagMisses: 2 });
+    one.noteValidators("a", same, 3000);
+    expect(two.validators("a")).toEqual({
+      skipEtag: true,
+      etag: "fails",
+      lastModified: "unknown",
+      etagMisses: 3,
+      dateMisses: 0,
+      sinceProbe: 0,
+      changedAt: 3000,
+    });
+    one.close();
+    two.close();
+    const three = open(path);
+    expect(three.validators("a")).toMatchObject({ skipEtag: true, changedAt: 3000 });
+    // a reset of the stops and the counts keeps the memo, and so does a sweep of idle hosts
+    three.reset();
+    for (let index = 0; index < 1000; index += 1) three.reserve(`host${String(index)}`, index, 1);
+    expect(three.validators("a")).toMatchObject({ skipEtag: true });
+  });
+
+  it("opens a file of version 0.1.0: its hosts stay, and the memo table comes in", async () => {
+    const path = join(await storeIn(), "hosts.sqlite");
+    // the schema of version 0.1.0, with no user_version and no validators table
+    const old = new DatabaseSync(path);
+    old.exec(`CREATE TABLE hosts (
+      host TEXT PRIMARY KEY,
+      next_at REAL NOT NULL DEFAULT 0,
+      leased_until REAL NOT NULL DEFAULT 0,
+      owner TEXT,
+      failures INTEGER NOT NULL DEFAULT 0,
+      waits INTEGER NOT NULL DEFAULT 0,
+      stop_until REAL,
+      stop_reason TEXT
+    )`);
+    old
+      .prepare("INSERT INTO hosts (host, failures, stop_until, stop_reason) VALUES (?, ?, ?, ?)")
+      .run("old.example", 2, 9000, "challenge");
+    old.close();
+    const store = open(path);
+    expect(store.stopped("old.example", 1000)).toEqual({ until: 9000, reason: "challenge" });
+    expect(store.record("old.example", "failure")).toEqual({ failures: 3, waits: 0 });
+    store.noteValidators("old.example", { etag: true, lastModified: false, answer: "same" }, 0);
+    expect(store.validators("old.example")).toMatchObject({ etagMisses: 1 });
+    store.close();
+    const check = new DatabaseSync(path);
+    expect(check.prepare("PRAGMA user_version").get()).toEqual({
+      user_version: HOST_STATE_SCHEMA,
+    });
+    check.close();
+    // a second open of the file changes nothing
+    const again = open(path);
+    expect(again.validators("old.example")).toMatchObject({ etagMisses: 1 });
   });
 
   it("forgets idle hosts", async () => {

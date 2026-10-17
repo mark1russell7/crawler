@@ -46,6 +46,14 @@ For each web page, the crawler reads the robots.txt of the site first and obeys 
 
 When the store has a copy of a page, the request includes its `ETag` and its `Last-Modified` date. A site that answers `304 Not Modified` sends no body, and the crawler reads the stored copy again.
 
+A server examines `If-None-Match` first, and it ignores `If-Modified-Since` when the request has the two (RFC 9110, section 13.1.3). Some sites give a different `ETag` at each response, for example one for each edge server. Such a site sends the full page at each visit, also when its `Last-Modified` date is stable. Thus the crawler keeps a validator memo for each host:
+
+- After 3 full responses in sequence with the stored body, it stops the `ETag` for the host and sends only the date.
+- After 20 such requests, or after 7 days, it sends the `ETag` again one time. A `304` starts the `ETag` again.
+- When the date alone also fails, it sends the two validators again, because they cost nothing.
+
+The memo is in `hosts.sqlite`, so the processes on one store share it, and it stays after a restart.
+
 ## Content signals
 
 A site can state the uses of its content in robots.txt or in a header. Two formats exist: the `Content-Signal` lines of Cloudflare, and the `ai-use` of the IETF AIPREF draft. When a page refuses AI input, the crawler keeps the page but holds back its text from an AI reader. A training opt-out (`ai-train=no`) does not apply, because the crawler trains no model. The crawler also records the RSL `License` lines of robots.txt and the TDMRep reservation (`tdm-reservation` and `tdm-policy`, in a header or a `<meta>` tag) with each capture. These records do not change what it does.

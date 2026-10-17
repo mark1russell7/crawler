@@ -105,6 +105,11 @@
         },
         "etag": { "$ref": "#/$defs/nullableString" },
         "last_modified": { "$ref": "#/$defs/nullableString" },
+        "validators": {
+          "description": "The validators that a conditional request sent. The validator memo of the host can leave out if-none-match.",
+          "type": "array",
+          "items": { "enum": ["if-none-match", "if-modified-since"] }
+        },
         "revisit_of": {
           "description": "The capture whose body a 304 confirmed.",
           "type": "string"

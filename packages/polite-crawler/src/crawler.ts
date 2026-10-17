@@ -17,6 +17,8 @@ import type {
   PolicyOptions,
   PolitenessPolicy,
   RestInput,
+  ValidatorAnswer,
+  ValidatorMemo,
 } from "./politeness.ts";
 import {
   DEFAULT_POLICY,
@@ -28,6 +30,7 @@ import {
   policyFor,
   realClock,
   restAfter,
+  validatorsToSend,
 } from "./politeness.ts";
 import type { CaptureRecord } from "./record.ts";
 import { makeRecord } from "./record.ts";
@@ -1057,6 +1060,15 @@ export class Crawler {
     return work;
   }
 
+  /** This method gives the validator memo of a host. The memo is a hint, so an error of its store gives no memo. */
+  private memoOf(host: string): ValidatorMemo | undefined {
+    try {
+      return this.scheduler.store.validators?.(host);
+    } catch {
+      return undefined;
+    }
+  }
+
   private stopHost(host: string, until: number, reason: string): void {
     this.scheduler.store.stop(host, until, reason);
     this.emit({ type: "stop", host, until, reason });
@@ -1756,9 +1768,22 @@ export class Crawler {
           if (usable?.blob && (usable.etag || usable.last_modified))
             stored = await this.options.blobs.get(usable.blob);
           const headers: Record<string, string> = { ...sent };
-          if (stored !== undefined && usable?.etag) headers["if-none-match"] = usable.etag;
-          if (stored !== undefined && usable?.last_modified)
+          // the memo of the host can leave out an ETag that never matches; robots.txt is often a
+          // static file with validators of its own, so it keeps the two and teaches the memo nothing
+          const send =
+            stored === undefined || usable === undefined
+              ? { etag: false, lastModified: false }
+              : validatorsToSend(
+                  robotsFile ? undefined : this.memoOf(host),
+                  { etag: Boolean(usable.etag), lastModified: Boolean(usable.last_modified) },
+                  this.clock.now(),
+                );
+          if (send.etag && usable?.etag) headers["if-none-match"] = usable.etag;
+          if (send.lastModified && usable?.last_modified)
             headers["if-modified-since"] = usable.last_modified;
+          const validators = ["if-none-match", "if-modified-since"].filter(
+            (name) => headers[name] !== undefined,
+          );
           const started = this.clock.now();
           const timeout = AbortSignal.timeout(policy.requestTimeoutMs);
           const abort = AbortSignal.any([timeout, signal]);
@@ -1971,6 +1996,7 @@ export class Crawler {
               blob: blob ?? null,
               etag,
               last_modified: lastModified,
+              ...(validators.length > 0 ? { validators } : {}),
               ...(revisit ? { revisit_of: usable.capture } : {}),
               robots: request_.mode === "page" ? "allowed" : "not-checked",
               ...(check !== undefined ? { robots_check: check } : {}),
@@ -2036,6 +2062,32 @@ export class Crawler {
               },
               next,
             );
+          }
+          // the memo of the host learns which validator gets a 304 (a 200 with the stored body is a miss)
+          const answer: ValidatorAnswer | undefined =
+            validators.length === 0 || capture === undefined || robotsFile
+              ? undefined
+              : outcome === "not-modified"
+                ? "not-modified"
+                : outcome === "ok" && blob !== undefined && !cut
+                  ? blob === usable?.blob
+                    ? "same"
+                    : "changed"
+                  : undefined;
+          if (answer !== undefined) {
+            try {
+              this.scheduler.store.noteValidators?.(
+                host,
+                {
+                  etag: headers["if-none-match"] !== undefined,
+                  lastModified: headers["if-modified-since"] !== undefined,
+                  answer,
+                },
+                fetchedAt,
+              );
+            } catch {
+              // the memo is a hint: an error of its store does not fail the fetch
+            }
           }
           const delayMs = this.settle(host, policy, {
             outcome,

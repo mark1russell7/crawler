@@ -223,13 +223,13 @@ The readers give more facts than before:
 
 - `egress`: the addresses that the crawler fetches. By default, the crawler fetches only public addresses. Set `allowPrivate: true` for loopback, private and link-local addresses, or name hosts and ranges in `allowHosts`. With a dispatcher of your own, put `egressLookup` in its connection options.
 - `politeness`: the limits of the policy, for each host or for some hosts (`hosts: { "*.example.org": { pageIntervalMs: 10_000 } }`). `DEFAULT_POLICY` has the defaults. A value that is not valid throws a `RangeError`.
-- `hostState`: the store of the pace, the counts and the stops of each host (`HostStateStore`). The default keeps them in memory (`MemoryHostStateStore`). `SqliteHostStateStore` keeps them in a file that processes share.
+- `hostState`: the store of the pace, the counts, the stops and the validator memo of each host (`HostStateStore`). The default keeps them in memory (`MemoryHostStateStore`). `SqliteHostStateStore` keeps them in a file that processes share.
 - `onEvent`: a function that gets an event for each request, response, wait, stop and skip.
 - `obeyDefaultToken`: a crawler with a token of your own also obeys the group of `PoliteCrawler` when its `User-Agent` links the bot page of polite-crawler. Site owners read that page. The stricter rules apply. Set false when you host a bot page of your own.
 - `maxRenders`: the pages that the browser renders at one time. The default is 2, because each render holds a browser context. A render waits for a slot before the lease of its host, so the wait is not time of the host.
 - `scope`, `labels` and `scopeRank`: the labels of each record. One fetch of a robots.txt can serve requests of different scopes. Its record takes the labels of each request and the scope with the highest `scopeRank`, the most private one.
 
-`openCrawler` takes `egress`, `politeness` and `hostState` too, and also `clock`, `scope`, `onEvent` and `extractors`. Its default `hostState` is the file `hosts.sqlite` in the store. Thus the processes on one store share the pace and the stops of each host.
+`openCrawler` takes `egress`, `politeness` and `hostState` too, and also `clock`, `scope`, `onEvent` and `extractors`. Its default `hostState` is the file `hosts.sqlite` in the store. Thus the processes on one store share the pace, the stops and the validator memo of each host.
 
 `FetchRequest.maxAgeMs` can be `"auto"`: the crawler then uses the freshness that the server gave (`Cache-Control`, `Expires`, or 10 percent of the age of `Last-Modified`). `crawler.resetHosts(host?)` removes the stops and the failure counts of one host or of each host, for a process that runs for a long time.
 
@@ -264,6 +264,21 @@ User-agent: PoliteCrawler
 Disallow: /
 ```
 
+## Stored copies and conditional requests
+
+A fetch uses the stored copy of a URL, with no request, while the copy is younger than `maxAge` (24 hours by default). With `maxAge: "auto"`, the crawler uses the freshness that the server gave: `Cache-Control`, `Expires`, or 10 percent of the age of `Last-Modified`. `no-store` and `no-cache` make a copy stale at once. A response that varies on a request header (`Vary`) has a stored copy for each value of that header.
+
+When the stored copy is too old, the crawler sends a conditional request. `If-None-Match` sends the `ETag` of the copy, and `If-Modified-Since` sends its `Last-Modified` date. A `304 Not Modified` sends no body, and the crawler uses the stored body again. The capture log records each request, with the validators that it sent (`validators`).
+
+A server examines `If-None-Match` first, and it ignores `If-Modified-Since` when the request has the two (RFC 9110, section 13.1.3). Some hosts give a different `ETag` at each response, for example one for each edge server. Such a host does not answer 304 to the two validators, also when its `Last-Modified` date is stable. Thus the crawler keeps a validator memo for each host:
+
+1. After 3 responses in sequence that send the stored body again, with `If-None-Match` and a `Last-Modified` date, the crawler stops the `ETag` for the host. It then sends only `If-Modified-Since`.
+2. After 20 such requests, or after 7 days, the next request sends the `ETag` again (a probe). A 304 to the probe starts the `ETag` again. A 200 keeps it stopped until the next probe.
+3. When the date alone also fails 3 times in sequence, the crawler sends the two validators again, because they cost nothing. The memo records that neither validator works.
+4. A changed body tells nothing about a validator. The robots.txt of a host is not part of its memo, because it is often a static file with validators of its own.
+
+The memo is in the host state store. `openCrawler` keeps it in `hosts.sqlite`, so the processes on one store share it, and it stays after a restart. `MemoryHostStateStore` keeps it in memory. A `HostStateStore` of your own gets a memo when it has the optional methods `validators` and `noteValidators`. `nextValidatorMemo` and `VALIDATOR_MEMO` give the rules and the limits.
+
 ## The store
 
 | Path | What it holds |
@@ -271,7 +286,7 @@ Disallow: /
 | `captures/fetch/<yyyy>/<mm>.ndjson` | The capture log: one line for each fetch decision, and the declined fetches too. |
 | `blobs/` | The bodies of the responses, by SHA-256 hash. |
 | `index.sqlite` | The search index. It is a projection: `polite-crawler reindex` builds it again from the other two. |
-| `hosts.sqlite` | The pace, the counts and the stops of each host. The processes on one store share it. |
+| `hosts.sqlite` | The pace, the counts, the stops and the validator memo of each host. The processes on one store share it. |
 
 The package publishes the JSON Schema of a line of the log: `polite-crawler/record.schema.json`. A program that reads the log can check each record with it.
 

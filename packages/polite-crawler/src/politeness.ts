@@ -133,7 +133,176 @@ export interface HostStateStore {
    * host. It keeps the next times and the leases, so a reset cannot make a host go faster than its pace.
    */
   reset(host?: string): void;
+  /**
+   * This method gives the validator memo of a host, when the store has one. A store without this
+   * method and `noteValidators` has no memo. The crawler then sends each validator of a stored copy.
+   */
+  validators?(host: string): ValidatorMemo | undefined;
+  /**
+   * This method adds one conditional request to the memo of a host, with the rules of
+   * `nextValidatorMemo`, in one atomic step. It gives the new memo.
+   */
+  noteValidators?(host: string, report: ValidatorReport, now: number): ValidatorMemo;
 }
+
+/** This value tells the result that the crawler learned for one validator of a host. */
+export type ValidatorVerdict = "unknown" | "works" | "fails";
+
+/**
+ * This value tells what one conditional request got:
+ *
+ * - `not-modified`: a 304.
+ * - `same`: a 200 with the body that the store has. Thus the validator did not match.
+ * - `changed`: a 200 with a different body. This answer tells nothing about the validator.
+ */
+export type ValidatorAnswer = "not-modified" | "same" | "changed";
+
+/** This report tells the validators that one conditional request sent, and the answer that it got. */
+export interface ValidatorReport {
+  /** This value is true when the request sent `If-None-Match`. */
+  readonly etag: boolean;
+  /** This value is true when the request sent `If-Modified-Since`. */
+  readonly lastModified: boolean;
+  readonly answer: ValidatorAnswer;
+}
+
+/**
+ * A validator memo holds what the crawler learned about the validators of one host. A server
+ * examines `If-None-Match` first, and it ignores `If-Modified-Since` when the request has the two
+ * (RFC 9110, section 13.1.3). Thus a host with unstable ETags does not answer 304 to a request with
+ * the two validators at any time. Its stable `Last-Modified` date does not help. `nextValidatorMemo`
+ * gives the rules.
+ */
+export interface ValidatorMemo {
+  /** This value is true when the crawler leaves out `If-None-Match` for the host and sends only `If-Modified-Since`. */
+  readonly skipEtag: boolean;
+  /** This value tells if a request with `If-None-Match` got a 304 (`works`) or the stored body again (`fails`). */
+  readonly etag: ValidatorVerdict;
+  /** This value tells the same for a request with only `If-Modified-Since`. */
+  readonly lastModified: ValidatorVerdict;
+  /** This value counts the stored bodies in sequence that came back to a request with `If-None-Match`. */
+  readonly etagMisses: number;
+  /** This value counts the stored bodies in sequence that came back to a request with only `If-Modified-Since`. */
+  readonly dateMisses: number;
+  /** This value counts the requests with only `If-Modified-Since` since the crawler stopped the ETag, or since the last probe. */
+  readonly sinceProbe: number;
+  /** This time (milliseconds since the epoch) is the last time that the crawler stopped or started the ETag, or probed it. */
+  readonly changedAt: number;
+}
+
+/** These are the limits of the validator memo. */
+export interface ValidatorLimits {
+  /** After this number of stored bodies in sequence, a validator fails. The value is 3. */
+  readonly misses: number;
+  /** After this number of requests with only `If-Modified-Since`, the next request sends the ETag again (a probe). The value is 20. */
+  readonly probeEvery: number;
+  /** After this time with no probe, the next request is a probe. The value is 7 days. */
+  readonly probeAgeMs: number;
+}
+
+/** These are the limits of the validator memo of the crawler. */
+export const VALIDATOR_MEMO: ValidatorLimits = {
+  misses: 3,
+  probeEvery: 20,
+  probeAgeMs: 7 * 24 * 60 * 60 * 1000,
+};
+
+const EMPTY_MEMO: ValidatorMemo = {
+  skipEtag: false,
+  etag: "unknown",
+  lastModified: "unknown",
+  etagMisses: 0,
+  dateMisses: 0,
+  sinceProbe: 0,
+  changedAt: 0,
+};
+
+/**
+ * This function tells which validators the next conditional request to a host sends. It sends
+ * each validator of the stored copy, except when the memo stopped the ETag and the copy has a
+ * `Last-Modified` date. Then it sends only `If-Modified-Since`, and the ETag too for a probe.
+ * A probe comes after `probeEvery` requests or after `probeAgeMs`.
+ */
+export const validatorsToSend = (
+  memo: ValidatorMemo | undefined,
+  stored: { readonly etag: boolean; readonly lastModified: boolean },
+  now: number,
+): { readonly etag: boolean; readonly lastModified: boolean } => {
+  if (memo?.skipEtag !== true || !stored.etag || !stored.lastModified) return stored;
+  const probe =
+    memo.sinceProbe >= VALIDATOR_MEMO.probeEvery ||
+    now - memo.changedAt >= VALIDATOR_MEMO.probeAgeMs;
+  return { etag: probe, lastModified: true };
+};
+
+/**
+ * This function adds one conditional request to the memo of a host, and gives the new memo.
+ * These are the rules, with the limits of `VALIDATOR_MEMO`:
+ *
+ * 1. A 304 to a request with `If-None-Match` marks the ETag `works`. After a probe, the crawler sends the ETag again.
+ * 2. After `misses` stored bodies in sequence with `If-None-Match`, the ETag fails. When the request also sent
+ *    `If-Modified-Since`, the crawler stops the ETag for the host.
+ * 3. A probe that gets a 200 keeps the ETag stopped, and the count to the next probe starts again.
+ * 4. After `misses` stored bodies in sequence with only `If-Modified-Since`, that validator fails too. Then the
+ *    crawler sends the two validators again, because they cost nothing. It tries the date alone again after `probeAgeMs`.
+ * 5. A changed body tells nothing about a validator.
+ */
+export const nextValidatorMemo = (
+  memo: ValidatorMemo | undefined,
+  report: ValidatorReport,
+  now: number,
+): ValidatorMemo => {
+  const next: { -readonly [K in keyof ValidatorMemo]: ValidatorMemo[K] } = {
+    ...(memo ?? EMPTY_MEMO),
+  };
+  if (report.etag) {
+    const probe = next.skipEtag;
+    if (report.answer === "not-modified") {
+      next.etag = "works";
+      next.etagMisses = 0;
+      if (probe) {
+        next.skipEtag = false;
+        next.sinceProbe = 0;
+        next.changedAt = now;
+      }
+    } else if (probe) {
+      if (report.answer === "same") next.etagMisses += 1;
+      next.sinceProbe = 0;
+      next.changedAt = now;
+    } else if (report.answer === "same") {
+      next.etagMisses += 1;
+      if (next.etagMisses >= VALIDATOR_MEMO.misses) {
+        next.etag = "fails";
+        // a date that failed gets a new try only after probeAgeMs, so the memo does not swing at each request
+        const dateLeft =
+          next.lastModified !== "fails" || now - next.changedAt >= VALIDATOR_MEMO.probeAgeMs;
+        if (report.lastModified && dateLeft) {
+          next.skipEtag = true;
+          next.dateMisses = 0;
+          next.sinceProbe = 0;
+          next.changedAt = now;
+        }
+      }
+    }
+  } else if (report.lastModified) {
+    if (next.skipEtag) next.sinceProbe += 1;
+    if (report.answer === "not-modified") {
+      next.lastModified = "works";
+      next.dateMisses = 0;
+    } else if (report.answer === "same") {
+      next.dateMisses += 1;
+      if (next.dateMisses >= VALIDATOR_MEMO.misses) {
+        next.lastModified = "fails";
+        if (next.skipEtag) {
+          next.skipEtag = false;
+          next.sinceProbe = 0;
+          next.changedAt = now;
+        }
+      }
+    }
+  }
+  return next;
+};
 
 interface MemoryState {
   nextAt: number;
@@ -146,9 +315,12 @@ interface MemoryState {
 /**
  * This store keeps the state of each host in memory, for one process. It removes the state of an
  * idle host (no rest left, no lease, no counts and no stop) when it holds more than `maxHosts` hosts.
+ * It keeps the validator memos of the `maxHosts` hosts that it used last.
  */
 export class MemoryHostStateStore implements HostStateStore {
   private readonly states = new Map<string, MemoryState>();
+  /** The validator memos, the memo used last at the end. */
+  private readonly memos = new Map<string, ValidatorMemo>();
   private sweepAt: number;
 
   constructor(private readonly maxHosts: number = 10_000) {
@@ -234,6 +406,19 @@ export class MemoryHostStateStore implements HostStateStore {
       const state = this.states.get(host);
       if (state !== undefined) clear(state);
     }
+  }
+
+  validators(host: string): ValidatorMemo | undefined {
+    return this.memos.get(host);
+  }
+
+  noteValidators(host: string, report: ValidatorReport, now: number): ValidatorMemo {
+    const memo = nextValidatorMemo(this.memos.get(host), report, now);
+    // the memo of each change goes to the end, so the first memo is the memo used longest ago
+    this.memos.delete(host);
+    this.memos.set(host, memo);
+    if (this.memos.size > this.maxHosts) this.memos.delete(this.memos.keys().next().value!);
+    return memo;
   }
 }
 

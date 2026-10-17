@@ -92,8 +92,19 @@ export type {
   HostStop,
   PolicyOptions,
   PolitenessPolicy,
+  ValidatorAnswer,
+  ValidatorLimits,
+  ValidatorMemo,
+  ValidatorReport,
+  ValidatorVerdict,
 } from "./politeness.ts";
-export { DEFAULT_POLICY, MemoryHostStateStore, realClock } from "./politeness.ts";
+export {
+  DEFAULT_POLICY,
+  MemoryHostStateStore,
+  VALIDATOR_MEMO,
+  nextValidatorMemo,
+  realClock,
+} from "./politeness.ts";
 export type { CaptureRecord, RecordInput } from "./record.ts";
 export { makeRecord } from "./record.ts";
 export type {

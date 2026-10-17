@@ -28,7 +28,7 @@ Many people can use the software. When the operator gave a contact, the `User-Ag
 - **It fetches the pages that it was asked for.** It does not follow every link of your site.
 - **It obeys `Retry-After`** on a 429 or a 503.
 - **It stops at a refusal.** After a 401 or a 403, it sends no more requests to your site for 1 hour. After a challenge or a 402, it stops for 24 hours. The stop stays when the crawler starts again.
-- **It sends conditional requests.** With an `ETag` or a `Last-Modified` date, your server can answer `304 Not Modified` and send no body.
+- **It sends conditional requests.** With an `ETag` or a `Last-Modified` date, your server can answer `304 Not Modified` and send no body. When your `ETag` changes at each response and your `Last-Modified` date does not, the crawler learns it. It then sends only the date, so a `304` comes back.
 
 ## What it keeps
 

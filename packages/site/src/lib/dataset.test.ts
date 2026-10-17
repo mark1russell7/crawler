@@ -67,7 +67,8 @@ describe("the dataset for Zenodo", () => {
       else current.push(line);
     }
     expect(tables.length).toBe(2);
-    for (const rows of tables) expect(new Set(rows.map((row) => row.split("|").length)).size).toBe(1);
+    for (const rows of tables)
+      expect(new Set(rows.map((row) => row.split("|").length)).size).toBe(1);
   });
 
   it("names the DOI in the README and the CITATION.cff only when Zenodo reserved one", () => {

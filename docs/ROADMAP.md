@@ -6,35 +6,50 @@ Change this file and the tracker together. Each item has an id, a status, an are
 
 ## Waiting on Mark
 
-### `w12`: A DOI for the study, and a press contact (W-12)
+### `actions-pr`: Let the monthly study open its pull request
 
-The Zenodo draft exists, and its DOI 10.5281/zenodo.23443375 is reserved. Zenodo had refused Node's default User-Agent, and the workflow sends its own now. After Mark publishes, the DOI goes on the study page.
-
-- Area: Site and growth
-- What Mark does: Open https://zenodo.org/deposit/23443375, check the record, and click Publish. Then tell Claude.
-- Started: 2026-10-17
-- [The Zenodo draft](https://zenodo.org/deposit/23443375)
-- [The study](https://mark1russell7.github.io/crawler/)
-
-### `tag-rule`: Let CI create release tags
-
-markt-54 added SemVer checks to the release workflow (template #8, crawler #7): a version must be greater than npm's latest, a prerelease goes to the next tag, and no version is reused. Until the ruleset changes, markt-54 makes each tag by hand, as it did for v0.1.2.
+The monthly study workflow opens a pull request with the month's data. The repository does not let GitHub Actions open pull requests yet, so the job only pushes its branch until this changes.
 
 - Area: Release and CI
-- Waits for: `rel011`
-- What Mark does: Tell markt-54 yourself, in its own session, that GitHub Actions may create v* tags in the crawler repository, or change the release tags ruleset yourself. Its permission check does not act on a yes relayed by another session.
-- Owner: Session markt-54
-- [Rulesets](https://github.com/mark1russell7/crawler/settings/rules)
+- Waits for: `study-monthly`
+- What Mark does: In github.com/mark1russell7/crawler: Settings > Actions > General > Workflow permissions, turn on "Allow GitHub Actions to create and approve pull requests". Before 2 November 2026, when the first monthly run starts.
+- [Actions settings](https://github.com/mark1russell7/crawler/settings/actions)
 
 ## In progress
 
+### `daemon`: A daemon mode, with MCP tasks for long jobs
+
+On main since 2026-10-18, in the next release. polite-crawler daemon runs the watch list on a schedule, writes confirmed changes as JSON lines, and can run the operator's command for each change. Opt-in MCP over local HTTP needs a token, binds to loopback, and blocks foreign origins. Long jobs are native MCP tasks with cancel, and clients without tasks get progress.
+
+- Area: Package
+- Waits for: `watch`
+- Started: 2026-10-18
+- [Main at 2c0e9d2](https://github.com/mark1russell7/crawler/commit/2c0e9d2)
+
 ### `hybrid`: Hybrid search: full text plus a local vector index
 
-Mark chose both: transformers.js as an optional peer (A) and Ollama over its local API (B), behind one pluggable Embedder interface. Opt-in rank "hybrid" fuses full-text and vector results. Exact full-text ranking stays the default.
+On main since 2026-10-18, in the next release. One Embedder interface with two adapters: transformers.js (an optional peer, bge-small by default, a real-model test in CI) and Ollama (nomic-embed-text by default, loopback only unless allowed). rank "hybrid" fuses 50 full-text and 50 vector results (k = 60). Vectors are kept per text and model in vectors.sqlite, and held-back pages are never embedded. A search over 89,000 chunks takes about 0.1 s. Exact full-text ranking stays the default.
 
 - Area: Package
 - Waits for: `s30`
 - Started: 2026-10-17
+- [Main at 045c716](https://github.com/mark1russell7/crawler/commit/045c716)
+
+### `recipes-up`: Venue-hours and product recipes move into the package
+
+The generic parts of the venue-hours and product recipes move into polite-crawler: hours readings from JSON-LD and page text with their sources, and schema.org Product reading. Only logic moves, with made-up test sites. jarvis keeps its policy, and switches in its new public code repo.
+
+- Area: jarvis
+- Waits for: `rel011`
+- Started: 2026-10-18
+
+### `sdk`: A recipe SDK
+
+A documented way for anyone to write a recipe: what to fetch, how to read it, and what to keep.
+
+- Area: Package
+- Waits for: `recipes-up`
+- Started: 2026-10-18
 
 ## Blocked
 
@@ -65,44 +80,16 @@ jarvis's morning recheck of venue hours runs on the package's watch feature inst
 - Area: jarvis
 - Waits for: `watch`, `j7`
 
-### `daemon`: A daemon mode, with MCP tasks for long jobs
-
-Run as a background service, so long crawls and watches run as MCP tasks that a client can check on.
-
-- Area: Package
-- Waits for: `watch`
-
-### `recipes-up`: Venue-hours and product recipes move into the package
-
-The jarvis recipes that know nothing about Mark move into polite-crawler, so others can use them.
-
-- Area: jarvis
-- Waits for: `rel011`
-
-### `sdk`: A recipe SDK
-
-A documented way for anyone to write a recipe: what to fetch, how to read it, and what to keep.
-
-- Area: Package
-- Waits for: `recipes-up`
-
-### `study-monthly`: The robots.txt study, every month
-
-Re-run the study monthly and publish it with an RSS feed and a CSV.
-
-- Area: Site and growth
-- Waits for: `w12`
-
-### `eval`: Published eval: tokens per verified claim
-
-Mark chose C: a reproducible count in CI for every release (A), and real Claude Code runs once for the published number (B). A is next after hybrid search.
-
-- Area: Site and growth
-- Waits for: `rel011`
-
 ### `showhn`: Directories and Show HN
 
 List the package in the MCP and tool directories, then post it to Show HN.
+
+- Area: Site and growth
+- Waits for: `eval`
+
+### `eval-b`: Eval, part B: real Claude Code runs
+
+Run the same 30 claims through Claude Code with polite-crawler's MCP tools and with WebFetch, and measure the real tokens with Claude's own count. It uses Mark's subscription once, and gives the number to publish on the site.
 
 - Area: Site and growth
 - Waits for: `eval`
@@ -114,6 +101,38 @@ Score a local open-weight decision model (for example Laya) on labelled data fro
 - Area: jarvis
 
 ## Shipped
+
+### `eval`: Eval, part A: tokens per verified claim in CI
+
+30 of 30 claims on stable public pages verified. The full page as Markdown (the WebFetch way) costs 8.9 times the tokens of polite-crawler in total, and 2.2 times for the median claim, up to 57 times on a long RFC. On a very short page polite-crawler costs more. Each run archives its pages as a WACZ, so the numbers can be recomputed offline, and it runs again on each release.
+
+- Area: Site and growth
+- Waits for: `rel011`
+- Started: 2026-10-18
+- Shipped: 2026-10-18
+- [Eval run](https://github.com/mark1russell7/crawler/actions/runs/39085336453)
+- [eval/README.md](https://github.com/mark1russell7/crawler/blob/main/packages/polite-crawler/eval/README.md)
+
+### `study-monthly`: The robots.txt study, every month
+
+On main. On the 2nd of each month a CI job runs the study again on the top 1,000 sites (robots.txt only), checks the site, and opens a pull request with the month's data and CI on it. The study page has the runs, a trend chart of six AI agents, an RSS feed, and a CSV and JSON per run. The concept DOI 10.5281/zenodo.23443374 names the study; each month gets a version DOI. The first scheduled run is 2 November 2026.
+
+- Area: Site and growth
+- Waits for: `w12`
+- Started: 2026-10-18
+- Shipped: 2026-10-18
+- [Main at 65803c5](https://github.com/mark1russell7/crawler/commit/65803c5)
+- [Concept DOI](https://doi.org/10.5281/zenodo.23443374)
+
+### `consent-fix`: A failed consent question keeps a page held back
+
+When the MCP client can ask the user before releasing a held-back page, but the question times out or fails, the page now stays held back. The operator's opt-in applies only to a client that cannot ask. This is the rule of the shared MCP host too, so the later move keeps it. On main, in the next release.
+
+- Area: Package
+- Waits for: `pub010`
+- Started: 2026-10-18
+- Shipped: 2026-10-18
+- [Commit 38caa18](https://github.com/mark1russell7/crawler/commit/38caa18)
 
 ### `timetravel`: Read a page as it was on a date
 
@@ -205,6 +224,16 @@ On main since 2026-10-17, in the next release. crawler.discover finds a site's p
 - Shipped: 2026-10-17
 - [Main at 3c3a800](https://github.com/mark1russell7/crawler/commit/3c3a800)
 
+### `tag-rule`: Let CI create release tags
+
+With Mark's direct OK, the release tags ruleset now blocks only changing and deleting v* tags. Creating one is open to accounts with write access: Mark and the workflow token. From the next release on, the workflow makes v<version> itself. markt-54 also added SemVer checks: a version must be greater than npm's latest, a prerelease goes to the next tag, and no version is reused.
+
+- Area: Release and CI
+- Waits for: `rel011`
+- Owner: Session markt-54
+- Shipped: 2026-10-17
+- [Rulesets](https://github.com/mark1russell7/crawler/settings/rules)
+
 ### `rel012`: Release 0.1.2
 
 polite-crawler 0.1.2 is on npm, published by CI with provenance: discovery and the site crawl, WARC export, watch and diff, reading at a time, the archived fallback, signed requests and verified extraction. It only adds to the API, and compat.test.ts proves that 0.1.1 code still compiles.
@@ -216,6 +245,16 @@ polite-crawler 0.1.2 is on npm, published by CI with provenance: discovery and t
 - [npm package](https://www.npmjs.com/package/polite-crawler)
 - [GitHub release v0.1.2](https://github.com/mark1russell7/crawler/releases/tag/v0.1.2)
 - [Pull request #6](https://github.com/mark1russell7/crawler/pull/6)
+
+### `w12`: A DOI for the study, and a press contact (W-12)
+
+The robots.txt study is a citable CC BY 4.0 dataset on Zenodo with the DOI 10.5281/zenodo.23443375. The study page cites it with BibTeX, and shows the press contact.
+
+- Area: Site and growth
+- Started: 2026-10-17
+- Shipped: 2026-10-17
+- [DOI 10.5281/zenodo.23443375](https://doi.org/10.5281/zenodo.23443375)
+- [The study](https://mark1russell7.github.io/crawler/)
 
 ### `j7swap`: jarvis uses the @procedures 0.7.0 helpers
 

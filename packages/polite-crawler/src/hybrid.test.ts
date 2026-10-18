@@ -253,6 +253,8 @@ describe("hybrid search over a runtime", () => {
     expect(few.length).toBeGreaterThanOrEqual(1);
     expect(few.length).toBeLessThanOrEqual(2);
     expect((await search.find("bread", { limit: 1 })).length).toBe(1);
+    // a limit that is not a number reads as 10, as in the other modes
+    expect((await search.find("bread", { limit: Number.NaN })).length).toBe(5);
     expect((await search.find("bread", { fusionK: 0 })).length).toBeGreaterThan(0);
     await expect(search.find("bread", { candidates: 0 })).rejects.toThrow(RangeError);
     await expect(search.find("bread", { neighbors: Number.NaN })).rejects.toThrow(RangeError);

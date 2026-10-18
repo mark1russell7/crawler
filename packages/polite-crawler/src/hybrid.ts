@@ -398,7 +398,8 @@ export const createHybridSearch = (
     async find(q, findOptions = {}) {
       const query = parseQuery(q);
       if (query === undefined) return [];
-      const limit = count("limit", findOptions.limit, 10, 1000);
+      // the limit reads as the limit of `find` in the other modes: 1 to 1000, and 10 for a value that is not a number
+      const limit = Math.max(1, Math.min(1000, Math.floor(findOptions.limit ?? 10) || 10));
       const candidates = count(
         "candidates",
         findOptions.candidates,

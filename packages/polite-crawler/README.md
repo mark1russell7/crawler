@@ -472,16 +472,16 @@ const embedder: Embedder = {
 - A vector takes 4 bytes for each dimension: 1.5 KiB for 384 dimensions and 3 KiB for 768. With the keys and the indexes of SQLite, a chunk of 384 dimensions took 2.4 KiB of the file in the benchmark.
 - The first hybrid search reads the vectors of the embedder into memory. Thus the memory is approximately the size of the vectors.
 
-The benchmark `bench/find.mts --hybrid` measured the time in CI ([the results](https://github.com/mark1russell7/crawler/actions/runs/39081724908)). A fake embedder of almost no cost gave the vectors, so the time of a real model comes on top. The index had 30,000 documents of 900 words, which gave 89,100 chunks of 384 dimensions. Each time is the median of 12 questions on Node.js 24:
+The benchmark `bench/find.mts --hybrid` measured the time in CI ([the results](https://github.com/mark1russell7/crawler/actions/runs/39082851222)). A fake embedder of almost no cost gave the vectors, so the time of a real model comes on top. The index had 30,000 documents of 900 words, which gave 89,100 chunks of 384 dimensions. Each time is the median of 12 questions on Node.js 24:
 
 | Step | Time |
 | --- | ---: |
 | The cosine of a question and each of the 89,100 vectors | 82 ms |
-| `find`, `rank: "hybrid"`, 1 word | 89 ms |
-| `find`, `rank: "hybrid"`, 16 words | 123 ms |
-| `rankWithin` of 40,000 ids, `rank: "hybrid"`, 16 words | 532 ms |
-| The first search: it reads 131 MiB of vectors into memory | 755 ms |
-| `embed` of the 30,000 documents, with no time for a model | 18 s |
+| `find`, `rank: "hybrid"`, 1 word | 88 ms |
+| `find`, `rank: "hybrid"`, 16 words | 122 ms |
+| `rankWithin` of 40,000 ids, `rank: "hybrid"`, 16 words | 528 ms |
+| The first search: it reads 131 MiB of vectors into memory | 714 ms |
+| `embed` of the 30,000 documents, with no time for a model | 17 s |
 
 - The brute-force cosine is linear in the number of chunks. It is a good fit up to approximately 100,000 chunks (approximately 30,000 pages of this size). A search then takes approximately 0.1 s, and the vectors take approximately 150 MiB of memory at 384 dimensions.
 - One million chunks take approximately 1 s for each search and 1.5 GiB of memory. A larger store needs an index of the vectors, and the package does not have one.

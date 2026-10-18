@@ -95,16 +95,94 @@ const proseCode = {
   ],
 };
 
-const NO_PLUGINS =
-  "the Markdown processor has no hastPlugins: the code of the prose wraps as before";
+/** A table of this number of columns or more is a card table: a phone shows each row as a card. */
+const CARD_COLUMNS = 3;
 
-/** This integration adds `proseCode` to the Markdown processor (Sätteri), as Starlight does. */
+/**
+ * The class of a card table. Do not use a class of a figure here: the class `pc-stack` of the
+ * stacked bars (`display: flex` and a height of 28px) once made the rows of the tables disappear.
+ */
+const CARDS = "pc-cards";
+
+/**
+ * The roles of the parts of a card table. A phone shows a card table with `display: block`, and some
+ * browsers then do not tell a screen reader that it is a table. The roles keep the table for them.
+ */
+const ROLES = {
+  table: "table",
+  thead: "rowgroup",
+  tbody: "rowgroup",
+  tr: "row",
+  th: "columnheader",
+  td: "cell",
+};
+
+/** The element children of a node of the HTML tree (hast), all of them or those of one tag name. */
+const elementsOf = (node, tagName) =>
+  (node?.children ?? []).filter(
+    (child) => child.type === "element" && (tagName === undefined || child.tagName === tagName),
+  );
+
+/** The names of the columns of a table: the text of each cell of the first row of its head. */
+const columnsOf = (table, ctx) => {
+  const head = elementsOf(elementsOf(table, "thead")[0], "tr")[0];
+  return elementsOf(head, "th").map((th) => ctx.textContent(th).trim());
+};
+
+/** The nearest table around a node of the HTML tree, or undefined. */
+const tableOf = (node, ctx) => {
+  for (let parent = ctx.parent(node); parent !== undefined; parent = ctx.parent(parent)) {
+    if (parent.type === "element" && parent.tagName === "table") return parent;
+  }
+  return undefined;
+};
+
+/**
+ * This Sätteri plugin makes card tables: the tables of the prose with three or more columns.
+ * - The table gets the class `pc-cards`. On a phone, the CSS of theme.css shows each row as a card.
+ * - Each cell gets the name of its column in `data-label`. The card shows it before the value.
+ * - Each part of the table gets its role (ROLES).
+ * At each other width, a card table looks as a table with no class. A table of two columns stays a table.
+ */
+const proseTables = {
+  name: "polite-crawler-prose-tables",
+  element: [
+    {
+      filter: ["table"],
+      visit(node, ctx) {
+        if (columnsOf(node, ctx).length < CARD_COLUMNS) return;
+        ctx.setProperty(node, "class", CARDS);
+        ctx.setProperty(node, "role", ROLES.table);
+      },
+    },
+    {
+      filter: ["thead", "tbody", "tr", "th", "td"],
+      visit(node, ctx) {
+        const table = tableOf(node, ctx);
+        if (table === undefined) return;
+        const columns = columnsOf(table, ctx);
+        if (columns.length < CARD_COLUMNS) return;
+        ctx.setProperty(node, "role", ROLES[node.tagName]);
+        if (node.tagName !== "td") return;
+        // the column of the cell: the number of the element cells before it in its row
+        const before = (ctx.parent(node).children ?? []).slice(0, ctx.indexOf(node) ?? 0);
+        const column = before.filter((child) => child.type === "element").length;
+        ctx.setProperty(node, "data-label", columns[column] ?? "");
+      },
+    },
+  ],
+};
+
+const NO_PLUGINS =
+  "the Markdown processor has no hastPlugins: the code of the prose wraps as before, and no table is a card table";
+
+/** This integration adds `proseCode` and `proseTables` to the Markdown processor (Sätteri), as Starlight does. */
 const proseCodeIntegration = {
   name: "polite-crawler-prose-code",
   hooks: {
     "astro:config:setup": ({ config, logger }) => {
       const plugins = config.markdown?.processor?.options?.hastPlugins;
-      if (Array.isArray(plugins)) plugins.push(proseCode);
+      if (Array.isArray(plugins)) plugins.push(proseCode, proseTables);
       else logger.warn(NO_PLUGINS);
     },
   },

@@ -1,12 +1,14 @@
 // This script checks the built site in dist/ (build it first with SITE_BASE=/crawler):
 // - each internal link and each asset of each page goes to a file of the build;
 // - no page scrolls sideways at 320, 375, 768 and 1024 pixels;
+// - each row of each table of the prose is in the box of its table at each of these widths, and at 1440;
 // - no page logs an error in the console;
 // - no page loads the search UI before a reader uses the search, and the search finds pages;
 // - with each island hydrated, no page loads more than JS_BUDGET bytes of JavaScript (gzip);
 // - one sitemap lists each page, with the date of its last change;
 // - the feed of the study is RSS 2.0 that a parser reads, with one item for each run and full addresses;
-// - the figures of the guides and the recipe reader answer a click with the result of the package.
+// - the figures of the guides and the recipe reader answer a click with the result of the package;
+// - the explorer of the options of the command line filters its table, and keeps the filter in the address.
 // With --shots <dir>, it also saves a screenshot of each page: desktop and phone, light and dark. It
 // also saves each figure after its click: desktop in the light theme, and phone in the dark theme.
 //   pnpm --filter @crawler/site check [--shots <dir>]
@@ -127,6 +129,37 @@ if (
 )
   problems.push(`the Dataset of the study has the identifier ${String(dataset.identifier)}`);
 
+/**
+ * The tables of the prose and the card tables with a row that a reader cannot see: a row with no
+ * box, or a row out of the box of its table. The class `pc-stack` of a chart once made each card
+ * table 28px high: the rows were in a scroll box on a wide screen, and they covered the next
+ * sections on a phone. A row that a filter hides (`hidden`) does not count.
+ */
+const lostRows = (page) =>
+  page.evaluate(() => {
+    const lost = [];
+    const tables = document.querySelectorAll(
+      ".sl-markdown-content table:not(:where(.not-content *)), table.pc-cards",
+    );
+    for (const [index, table] of [...tables].entries()) {
+      if (table.closest("[hidden]") !== null) continue;
+      const box = table.getBoundingClientRect();
+      for (const row of table.querySelectorAll(":scope > tbody > tr")) {
+        if (row.closest("[hidden]") !== null) continue;
+        const rect = row.getBoundingClientRect();
+        if (
+          row.getClientRects().length === 0 ||
+          rect.top < box.top - 1 ||
+          rect.bottom > box.bottom + 1
+        ) {
+          lost.push(index + 1);
+          break;
+        }
+      }
+    }
+    return lost;
+  });
+
 const browser = await chromium.launch();
 const context = await browser.newContext();
 for (const path of pages) {
@@ -171,6 +204,8 @@ for (const path of pages) {
     );
   if (bytes > most.bytes) most = { path, bytes };
   sizes.push({ path, bytes });
+  for (const table of await lostRows(page))
+    problems.push(`${path}: a row of table ${String(table)} is out of its table at 1440 px`);
   for (const width of [320, 375, 768, 1024]) {
     await page.setViewportSize({ width, height: 900 });
     await page.waitForTimeout(150);
@@ -180,6 +215,10 @@ for (const path of pages) {
     }));
     if (scroll > client)
       problems.push(`${path}: the page is ${String(scroll)} px wide at ${String(width)} px`);
+    for (const table of await lostRows(page))
+      problems.push(
+        `${path}: a row of table ${String(table)} is out of its table at ${String(width)} px`,
+      );
   }
   // the Pagefind UI loads at the first use of the search, not on each page (src/components/Search.astro)
   if (await page.locator("#starlight__search > *").count())
@@ -298,6 +337,41 @@ const INTERACTIONS = [
     },
   },
   {
+    // the explorer filters the static table of the page: the shot shows the explorer and the table
+    path: `${BASE}/reference/cli/`,
+    name: "figure-cli-options",
+    figure: ".pc-optx",
+    shot: ".pc-optx-wrap",
+    act: async (page) => {
+      await page.getByRole("radio", { name: "crawl", exact: true }).click();
+      // the arrow keys move in the chips: to the next command, and back
+      await page.keyboard.press("ArrowRight");
+      await page.keyboard.press("ArrowLeft");
+      await page.getByRole("searchbox", { name: "Option name" }).fill("max");
+      await page.waitForFunction(
+        () => {
+          const rows = [...document.querySelectorAll(".pc-optx-wrap tbody tr")];
+          const shown = rows.filter((row) => !row.hidden);
+          const count = document.querySelector(".pc-optx-status strong")?.textContent;
+          return (
+            shown.length > 0 &&
+            shown.length < rows.length &&
+            count === String(shown.length) &&
+            shown.every(
+              (row) =>
+                [...row.cells[0].querySelectorAll("code")].some(
+                  (code) => code.textContent === "crawl" && code.classList.contains("pc-hit"),
+                ) && row.cells[1].textContent.includes("--max"),
+            ) &&
+            window.location.hash === "#command=crawl&option=max"
+          );
+        },
+        undefined,
+        { timeout: 10_000 },
+      );
+    },
+  },
+  {
     path: `${BASE}/guide/daemon/`,
     name: "figure-daemon-end",
     figure: ".pc-dm",
@@ -319,7 +393,7 @@ for (const { scheme, viewport, device } of shots === undefined
     reducedMotion: "reduce",
     deviceScaleFactor: 1,
   });
-  for (const { path, name, figure, act } of INTERACTIONS) {
+  for (const { path, name, figure, shot, act } of INTERACTIONS) {
     const page = await context.newPage();
     page.on("pageerror", (error) => problems.push(`${path}: ${error.message}`));
     try {
@@ -344,7 +418,7 @@ for (const { scheme, viewport, device } of shots === undefined
         });
         await page.waitForTimeout(300);
         await page
-          .locator(figure)
+          .locator(shot ?? figure)
           .first()
           .screenshot({ path: join(shots, `${name}-${device}-${scheme}.png`) });
       }

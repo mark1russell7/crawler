@@ -1236,3 +1236,182 @@ header.header {
     padding-inline-start: 0;
   }
 }
+
+/* ================================================================================================ */
+/* Card tables and the explorer of the options of the command line (feat/site-tables).              */
+/* Keep these rules together, at the end of the file.                                              */
+/* ================================================================================================ */
+
+/*
+ * A card table is a table of the prose with three or more columns (proseTables of astro.config.mjs
+ * gives it the class pc-cards, and each cell the data-label of its column), or the table of the runs
+ * of the study. On a phone, each row is a card, and each cell is a line with the name of its column.
+ * At each other width, no rule here applies, and a card table looks as a table.
+ */
+@media (max-width: 40rem) {
+  .sl-markdown-content table.pc-cards:not(:where(.not-content *)),
+  .pc-table.pc-cards {
+    --pc-card-gutter: 6.75rem;
+    --pc-card-line: 1.625rem;
+    --pc-card-label-line: 1.25rem;
+    display: block;
+    overflow: visible;
+  }
+  /* The head stays for a screen reader. Each line of a card shows the name of its column. */
+  .pc-cards > thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  /* one column that never grows to the width of a long word: the word breaks in its card */
+  .pc-cards > tbody {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-2);
+    margin: 0;
+  }
+  .pc-cards > tbody > tr {
+    display: block;
+    min-width: 0;
+    margin: 0;
+    padding: var(--space-2) var(--space-3);
+    border: 1px solid var(--color-rule);
+    border-radius: var(--radius);
+    background: var(--color-surface);
+  }
+  .pc-cards > tbody > tr[hidden] {
+    display: none;
+  }
+  .pc-cards > tbody > tr:target {
+    border-color: var(--color-accent);
+    background: var(--color-accent-wash);
+  }
+  .pc-cards > tbody > tr:target > * {
+    background: none;
+  }
+  /*
+   * A line of a card. The name of the column floats in the gutter, on the left of the value. A
+   * float, and not a grid: in a grid, each word of text and each code of a cell is a grid item.
+   */
+  .sl-markdown-content .pc-cards > tbody > tr > td:not(:where(.not-content *)),
+  .pc-table.pc-cards > tbody > tr > td {
+    display: flow-root;
+    margin: 0;
+    padding: 0 0 0 var(--pc-card-gutter);
+    border: 0;
+    line-height: var(--pc-card-line);
+    white-space: normal;
+    overflow-wrap: break-word;
+  }
+  /* The label of a line: its lines are closer than the lines of the value, and its first line is
+     in the middle of the first line of the value. */
+  .pc-cards > tbody > tr > td::before {
+    content: attr(data-label);
+    /* the screen reader gets the name of the column from the head, so it does not read it twice */
+    content: attr(data-label) / "";
+    float: left;
+    width: calc(var(--pc-card-gutter) - var(--space-3));
+    margin-top: calc((var(--pc-card-line) - var(--pc-card-label-line)) / 2);
+    margin-left: calc(-1 * var(--pc-card-gutter));
+    color: var(--color-ink-muted);
+    font-size: var(--text-xs);
+    line-height: var(--pc-card-label-line);
+  }
+  .pc-cards > tbody > tr > td:empty {
+    display: none;
+  }
+  /* A code name breaks at the <wbr> of proseCode. It breaks in a word only when the word is wider than the line. */
+  .pc-cards td code {
+    overflow-wrap: break-word;
+    white-space: normal;
+  }
+  /* The date of a run of the study (a th of the row) is the title of its card. */
+  .pc-table.pc-cards > tbody > tr > th {
+    display: block;
+    margin: 0;
+    padding: 0 0 var(--space-1);
+    border: 0;
+    font-weight: 600;
+    white-space: normal;
+  }
+}
+
+/* The explorer of the options of one command (OptionExplorer.tsx, on the page "Command line"). */
+.pc-optx {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--color-rule-strong);
+  border-top: 3px solid var(--color-ink);
+  border-radius: 0 0 var(--radius) var(--radius);
+  background: var(--color-surface);
+  /* a link to a filter puts the explorer below the header and the bar "On this page" */
+  scroll-margin-top: calc(
+    var(--sl-nav-height, 3.5rem) + var(--sl-mobile-toc-height, 0rem) + var(--space-4)
+  );
+}
+.pc-optx-name {
+  max-width: 24rem;
+}
+.pc-optx-group {
+  display: grid;
+  gap: var(--space-1);
+}
+.pc-optx-label {
+  font-size: var(--text-sm);
+  color: var(--color-ink-muted);
+}
+.pc-optx-commands {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.pc-optx .pc-chip {
+  padding-block: 0.15rem;
+}
+.pc-optx .pc-chip[aria-checked="true"] {
+  border-color: var(--color-ink);
+  background: var(--color-ink);
+  color: var(--color-surface);
+}
+.pc-optx code {
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+}
+.pc-optx-status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2) var(--space-3);
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--color-ink-secondary);
+}
+.pc-optx-status strong {
+  color: var(--color-ink);
+  font-variant-numeric: tabular-nums;
+}
+.pc-optx-hint {
+  color: var(--color-ink-muted);
+}
+.pc-optx-wrap :is(table, tr)[hidden] {
+  display: none;
+}
+/* The command of the filter, in the column of the commands of each row that it shows. */
+.pc-optx-wrap td code.pc-hit {
+  outline: 1px solid var(--color-accent);
+  outline-offset: -1px;
+  background: var(--color-accent-wash);
+  color: var(--color-accent-strong);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .pc-optx .pc-chip {
+    transition:
+      background-color 0.15s,
+      border-color 0.15s,
+      color 0.15s;
+  }
+}

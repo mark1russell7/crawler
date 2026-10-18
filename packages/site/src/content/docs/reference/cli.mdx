@@ -3,6 +3,8 @@ title: Command line
 description: The polite-crawler command line - fetch, find, read, verify, extract, reindex, mcp, discover, crawl, export, diff, watch, daemon, embed, venue, product and key-directory, with each option.
 ---
 
+import OptionExplorer from "../../../components/OptionExplorer.tsx";
+
 ```sh
 npx polite-crawler <command> [options]
 ```
@@ -50,6 +52,15 @@ These options apply to each command:
 | `-h`, `--help` | | Print the commands and the options, and stop. |
 
 These options apply to one command. The command line is wrong when another command gets them.
+
+<div id="one-command-options" class="pc-optx-wrap">
+
+<OptionExplorer
+  client:load
+  table="one-command-options"
+  order={["fetch", "find", "read", "verify", "extract", "mcp", "export", "discover", "crawl", "diff", "watch add", "watch run", "daemon", "embed", "venue", "product"]}
+  elsewhere={{ daemon: "daemon" }}
+/>
 
 | Command | Option | Default | What it does |
 | --- | --- | --- | --- |
@@ -111,6 +122,8 @@ These options apply to one command. The command line is wrong when another comma
 | `venue`, `product` | `--budget <time>` | no limit | No request starts after this time, for example `2m`. |
 | `venue`, `product` | `--on-behalf-of <agent>` | | Apply the robots.txt rules of this agent too, for example `Claude-User`. Repeat the option for more agents. |
 | `venue`, `product` | `--user-provided` | | Read a page that asked not to be AI input, as for `read`. |
+
+</div>
 
 ## Daemon
 

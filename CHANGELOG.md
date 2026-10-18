@@ -15,6 +15,8 @@ A prerelease version (`0.2.0-beta.1`) goes to the npm tag `next`. Each other ver
 
 ## Unreleased
 
+## 0.1.3 - 2026-10-18
+
 - **The recipes only add to the API.** Code that compiled against 0.1.1 or 0.1.2 compiles against this version, and `compat.test.ts` and `compat-012.test.ts` stay green. The capture log, the bodies and the capture ids do not change.
   - `RuntimeOptions`, and thus `OpenOptions`, has the optional `recipes`. `OpenedCrawler`, `HybridCrawler` and `PoliteCrawler` do not change.
   - `polite-crawler/hours` has the new `compareHours` and `HoursComparison`. Its size for a browser stays in its budget.

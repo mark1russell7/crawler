@@ -214,7 +214,7 @@ Each event has the kind of the check: `new`, `changed`, `unchanged`, `gone`, `re
 - With `confirm: 2`, a change is `suspected` at its first check. The next check gives `confirmed` when it sees the same version.
 - A check that finds a stopped host is due again at the end of the stop.
 - A run claims each entry with a lease, so two processes do not check one entry two times.
-- The package has no daemon. A scheduler of the operator starts `watch.run`.
+- A scheduler of the operator starts `watch.run`, or the [daemon](#the-daemon) starts it on a schedule.
 
 ### `reindex()`
 
@@ -264,6 +264,39 @@ const result = await exportWacz(crawler.runtime, { out: "site.wacz", host: "exam
 
 The result counts the records of each type, the captures with no body, the missing bodies and the damaged lines of the log. A capture keeps only some headers, so the export rebuilds the HTTP header block and marks the record. The README of the package tells what goes into the archive and why.
 
+## The daemon
+
+```ts title="A daemon in your code"
+import { startDaemon } from "polite-crawler";
+
+const daemon = await startDaemon({
+  dir: "./crawl",
+  tick: "1m",
+  onChange: (event) => console.log(event.url, event.kind, event.capture),
+  mcp: { port: 9307 }, // the MCP tools over local HTTP, with a bearer token
+});
+await daemon.done; // after SIGINT, SIGTERM or daemon.stop()
+```
+
+`startDaemon` checks the watch list on a schedule. Each tick is one `watch.run`, so each polite rule applies. It takes the options of `openCrawler` and these options:
+
+| Option | Default | What it does |
+| --- | --- | --- |
+| `tick` | `1m` | The longest wait between two ticks, `1s` or more. A tick comes sooner when an entry is due sooner. |
+| `jitter` | `10s` | A random wait from 0 to this time after each tick. A check does not come before its time. |
+| `budget` | `10m` | The budget of the checks of one tick. |
+| `maxPages` | `100` | The most checks of one tick. |
+| `grace` | `10s` | At a stop, the checks in progress get this time to end. Then they abort, and their leases end. |
+| `events` | the standard output | A file or a function for the change lines, one JSON line for each change. `false` writes no line. |
+| `onChange` | none | A function for each change. `changeCommand(command)` gives a function that starts a command of the operator. |
+| `mcp` | none | The MCP server over HTTP: `port`, `host`, `allowRemote`, `token`, `tokenFile`, `onBehalfOf` and `allowUserProvided`. |
+| `mcpHost` | Streamable HTTP | The seam to the MCP server. A different MCP host can replace the default. |
+| `signals` | `true` | `false` installs no handler of `SIGINT` and `SIGTERM`. |
+
+- A change is an event with `confirmed: true`. The `Daemon` gives `status()`, `stop(grace?)`, `done`, `crawler`, `mcp` and `stateFile`.
+- `readDaemonState(dir)` reads the state file of a store. `scheduleWatches(watch, options)` gives the schedule over the watch list of a crawler of your own.
+- `startMcpHttpServer(crawler, options)` in `polite-crawler/mcp` serves the tools over HTTP. There, `crawl_site` and `crawl_discover` are MCP tasks.
+
 ## The MCP server
 
 The MCP server is in its own entry point, `polite-crawler/mcp`. Only this entry point loads the MCP SDK and `zod`.
@@ -294,7 +327,7 @@ The package is ESM only. These are its entry points:
 | Import | What it gives |
 | --- | --- |
 | `polite-crawler` | `openCrawler`, and the parts of the runtime for an application. It needs Node.js. |
-| `polite-crawler/mcp` | `createMcpServer` and `startMcpServer`. It needs Node.js. |
+| `polite-crawler/mcp` | `createMcpServer`, `startMcpServer` and `startMcpHttpServer`. It needs Node.js. |
 | `polite-crawler/robots` | `parseRobots`, `decide`, `robotsFromStatus`, `robotsFromResponse`, `productToken`: robots.txt as RFC 9309 specifies it. `decide` gives the rule that decided and its line. A robots.txt that is a web page is unreadable. |
 | `polite-crawler/html` | `extractPage`: the JSON-LD, the visible text, the links and the decision about JavaScript. It also gives the canonical URL, a quick redirect, the name of a bot check and notes about what it left out. |
 | `polite-crawler/hours` | `fromText`, `fromSchemaOrg`, `fromCompact`, `describeWeek`: opening hours. A reading tells its season and if it left out a rule (`season`, `partial`). |

@@ -96,7 +96,8 @@ npx polite-crawler watch list
 - `read --at` and `verify --at` use the version that was current at that time. [Read a page as it was at a time](#read-a-page-as-it-was-at-a-time) gives the rules.
 - `diff` prints the changed lines as a unified diff. A changed line marks its words with `[-removed-]` and `{+added+}`. `--from` and `--to` take a capture id or a time.
 - `watch add` takes `--every` (1 hour or more, `24h` by default), `--confirm 1` or `2`, `--render`, `--scope` and `--label <name=value>`.
-- `watch run` takes `--budget` (default `10m`) and `--max-pages` (default 100). It prints each check, then a summary. A scheduler of the operator starts it: the package has no daemon.
+- `watch run` takes `--budget` (default `10m`) and `--max-pages` (default 100). It prints each check, then a summary. A scheduler of the operator starts it.
+- `daemon` checks the watch list on a schedule, until you stop it. With `--mcp-http`, it also serves the MCP tools over local HTTP. [The daemon](#the-daemon) tells how.
 
 The command gives these exit codes:
 
@@ -161,6 +162,8 @@ The server gives nine tools:
 The MCP server applies the robots.txt rules for `Claude-User` too, because an assistant asks for these pages.
 
 No tool adds a watch. A watch commits future requests to a site, so the operator adds it with `polite-crawler watch add`. An assistant can read the list (`crawl_watch_list`) and compare the versions of a watched page (`crawl_diff`).
+
+The daemon serves the same tools over local HTTP, with a bearer token (`polite-crawler daemon --mcp-http`). There, `crawl_site` and `crawl_discover` are MCP tasks: a client gets a task id at once, and gets the result later. [MCP over HTTP](#mcp-over-http) tells how.
 
 ### Web text is data, not instructions
 
@@ -325,6 +328,8 @@ These parts are the stable API:
 - The diff: `diffDocument`, `diffTexts`, `DIFF_LIMITS`, `DiffOptions`, `DiffResult`, `DiffSide`, `DiffSummary`, `DiffHunk`, `DiffLine`, `WordPart`, `MetaChange`, `VersionChoice`, `DiffLimits`, `DiffInput` and `TextDiff`.
 - The time travel: `versionAtTime`, `isoTime` and `VersionAt`.
 - The watch list: `WatchList`, `WatchOptions`, `WatchEntry`, `WatchPending`, `WatchKind`, `WatchRun`, `WatchRunOptions`, `WatchEvent`, `WatchSummary`, `WatchStop`, `WATCH_LIMITS` and the file `watch.sqlite` (`WATCH_SCHEMA`). For a runtime of your own, it also has `WatchStore`, `WatchStoreOptions`, `runWatch` and `WatchRunnerOptions`. The lease steps of `WatchStore` (`claim`, `release` and `settle`) are the engine.
+- The daemon: `startDaemon`, `scheduleWatches`, `changeCommand`, `readDaemonState`, `daemonStateFile`, `DAEMON_DEFAULTS`, their options and results, and the state file (`DAEMON_STATE_SCHEMA`). `polite-crawler/mcp` adds `startMcpHttpServer`, `mcpHttpHost`, `CrawlTaskStore`, `TASK_LIMITS`, `MCP_HTTP_DEFAULTS`, `sameToken` and `makeToken`.
+- The MCP tasks follow the task API of the MCP SDK, which the SDK marks as experimental. When the SDK changes that API, the tasks change with it, and `CHANGELOG.md` says so.
 - The options and the results of `discover` and `crawl`: `DiscoverOptions`, `DiscoverResult`, `DiscoveredUrl`, `DiscoverSource`, `DiscoverStop`, `CrawlOptions`, `CrawlRun`, `CrawlPage`, `CrawlSummary`, `CrawlStop`, `UrlPattern` and `ScopeOptions`.
 - `polite-crawler/mcp`: `createMcpServer`, `startMcpServer` and its tools.
 - The readers: `polite-crawler/robots`, `/hours`, `/html`, `/classify`, `/politeness` and `/signals`. The site and its tools use them in the browser.
@@ -461,9 +466,180 @@ The `diff` of an event of the kind `changed` gives the counts of the diff from t
 - Each step is one SQLite transaction (`BEGIN IMMEDIATE`) in WAL mode, and it waits for the lock of a different process (`busy_timeout`).
 - A run claims each entry with a lease before its check. The lease holds until the end of the budget and 2 minutes more. Thus two processes that run at the same time check each entry one time. A process that stops holds its leases until they end.
 - The list stays after a restart, with the state of each entry: the last confirmed capture, the suspected change and the counts.
-- The package has no daemon. A scheduler of the operator (cron, a systemd timer or a job of an application) starts `watch.run`.
+- A scheduler of the operator (cron, a systemd timer or a job of an application) starts `watch.run`. Or the daemon starts it on a schedule: [The daemon](#the-daemon).
 - The command line has `watch add <url...>`, `watch remove <url...>`, `watch list` and `watch run`. The MCP tool `crawl_watch_list` lists the entries.
 - No MCP tool adds a watch. A watch commits future requests to a site, so it is an action of the operator, not of an assistant.
+
+## The daemon
+
+The daemon is a local process that runs for a long time. It checks the watch list on a schedule, and it can serve the MCP tools over local HTTP.
+
+```sh
+npx polite-crawler watch add https://example.com/hours --every 6h
+npx polite-crawler daemon --events ~/changes.jsonl --on-change "jq -c . >> ~/seen.jsonl"
+npx polite-crawler daemon status
+```
+
+```ts
+import { startDaemon } from "polite-crawler";
+
+const daemon = await startDaemon({
+  dir: "./crawl",
+  tick: "1m",
+  onChange: (event) => console.log(event.url, event.kind, event.capture),
+});
+console.log(daemon.status().next_due);
+await daemon.stop(); // or SIGINT and SIGTERM
+```
+
+### The schedule
+
+- Each tick is one `watch run`, with the budget and the maximum of checks of a tick. Thus each polite rule applies: robots.txt, the egress policy, one request at a time to each host, the stops of a host and `Retry-After`.
+- The next tick comes when the first entry is due, and one tick (`--tick`, `1m` by default) after the last tick at the latest.
+- A random jitter from 0 to `--jitter` (`10s` by default) comes after it. Thus a check does not come before its time.
+- When a tick stops at its budget (`--tick-budget`, `10m` by default) or at its maximum (`--tick-pages`, 100 by default), the entries that stay due wait for the next tick.
+- An entry that a different process holds waits for the end of its lease. Only one daemon operates on a store: a second daemon does not start.
+- `scheduleWatches(crawler.watch, options)` gives the same schedule over the watch list of a crawler of your own.
+
+### The changes
+
+A change is an event of `watch run` with `confirmed: true`: the last confirmed version of the page changed. The first version of a page is not a change.
+
+- The daemon writes each change as one JSON line, to the standard output or to `--events <file>`. The library takes `events` (a file or a function) and `onChange` (a function).
+- `--on-change <command>` starts your command for each change. The command gets the event as one JSON line on its standard input.
+- The commands run one at a time, in the order of the changes. A command that runs for more than 1 minute stops. A command that fails becomes the last error of the status.
+
+`--on-change` is a command of the operator. Obey these rules:
+
+- The daemon starts the command in the shell of the system, as the user of the daemon, with the environment of the daemon. Give only a command that you wrote or trust.
+- Do not take the command from a page, from an assistant or from a different user.
+- The daemon gives the event only on the standard input, not in the command line. Thus no text of a page goes into a shell command.
+- The event holds URLs and notes from sites. In your command, read the event as data, for example with `jq`. Do not give its text to `eval` or to a shell.
+
+### The stop
+
+- At `SIGINT` or `SIGTERM`, the daemon starts no new check. The checks in progress get `--grace` (`10s` by default) to end and write their state.
+- After the grace, the checks in progress abort, and the daemon releases their leases. The entries stay due for the next start. A second signal aborts the checks at once.
+- The daemon stops its MCP server and cancels its tasks. It writes the state file, closes the store and exits with code 0.
+- A daemon that stops with no clean stop (a crash, or a forced stop on Windows) keeps its leases until they end: the budget of the tick and 2 minutes.
+
+### The status
+
+`polite-crawler daemon status` reads the state file `<store>/daemon/state.json`. It sends no request, and it opens no store.
+
+- It shows the next due watches, the last tick, the next tick, the counts, the MCP endpoint, the tasks that run and the last error.
+- It exits with code 0 when a daemon operates on the store, and with 1 when no daemon operates. `--json` prints the JSON of the state file.
+- The daemon writes the state file after each tick and at each change of a task. The file is for the owner only.
+- With `--mcp-http`, `GET /status` with the bearer token gives the same JSON.
+
+### MCP over HTTP
+
+```sh
+npx polite-crawler daemon --mcp-http
+claude mcp add --transport http polite-crawler http://127.0.0.1:9307/mcp --header "Authorization: Bearer $(cat ~/.polite-crawler/daemon/mcp-token)"
+```
+
+- `--mcp-http` serves the nine tools over the Streamable HTTP transport of MCP, at `http://127.0.0.1:9307/mcp`. `--mcp-port` and `--mcp-host` change the address.
+- The tools, the envelope, elicitation and `--allow-user-provided` are the same as for `polite-crawler mcp`.
+- `crawl_site` and `crawl_discover` are MCP tasks (the task primitive of the MCP specification 2025-11-25). The task support is native: it uses the tasks of the MCP SDK.
+- A client that asks for a task gets a task id at once. It polls the status (`tasks/get`), gets the result (`tasks/result`) and can cancel the task (`tasks/cancel`). A cancel stops the requests in progress.
+- A client with no tasks gets the result in the call, with a progress notification for each page, as from `polite-crawler mcp`.
+- The status message of a task holds only counts, for example `3 of 10 done`, and no text of a page.
+- A task and its result stay for 1 hour. The server has 8 tasks in progress at most: a task above the limit fails at once, with the reason.
+- Each session has its own tasks. When a session closes, its tasks stop.
+
+The library has `startMcpHttpServer(crawler, options)` in `polite-crawler/mcp`. The daemon reaches it through a small seam, `DaemonOptions.mcpHost`, so a different MCP host can replace it.
+
+#### The token
+
+- Each request needs `Authorization: Bearer <token>`. The server compares the SHA-256 digests of the two tokens in constant time.
+- By default, the daemon makes a new random token at each start. It writes the token to `<store>/daemon/mcp-token`, for the owner only where the system has file modes. On Windows, the folder of the store in your profile protects it.
+- To keep one token across starts, write it to a file of your own and give `--mcp-token-file <file>`. The daemon reads the file and writes nothing. It warns when other users can read the file.
+
+```sh
+node -e "console.log(require('node:crypto').randomBytes(32).toString('base64url'))" > ~/.polite-crawler-token
+chmod 600 ~/.polite-crawler-token
+npx polite-crawler daemon --mcp-http --mcp-token-file ~/.polite-crawler-token
+```
+
+#### The address
+
+- The server binds to `127.0.0.1` by default, so only your computer can reach it.
+- On a loopback address, the server accepts only a loopback name in the `Host` header. An `Origin` header must name the same host. Thus a web page cannot reach the server by DNS rebinding.
+- A host that is not loopback, for example `--mcp-host 0.0.0.0`, needs `--allow-remote`. Without it, the command line is wrong.
+
+> **Warning:** With `--allow-remote`, each computer that reaches the port can try the token. The server speaks plain HTTP, so a computer on the path can read the token and the pages. The tools also fetch pages from the address of your computer. Use `--allow-remote` only on a private network or behind a TLS proxy of your own. Do not open the port to the internet.
+
+### Start the daemon as a service
+
+The package installs no service. These examples start the daemon at login, and they stop it with `SIGTERM`. Install the package one time (`npm install -g polite-crawler`), and change the paths.
+
+On Linux, with a user service of systemd:
+
+```ini
+# ~/.config/systemd/user/polite-crawler.service
+[Unit]
+Description=polite-crawler daemon
+After=network-online.target
+
+[Service]
+ExecStart=/usr/local/bin/polite-crawler daemon --events %h/.polite-crawler/changes.jsonl
+Restart=on-failure
+KillSignal=SIGTERM
+TimeoutStopSec=30
+
+[Install]
+WantedBy=default.target
+```
+
+```sh
+systemctl --user daemon-reload
+systemctl --user enable --now polite-crawler
+journalctl --user -u polite-crawler -f
+npx polite-crawler daemon status
+```
+
+On macOS, with a launch agent of launchd:
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- ~/Library/LaunchAgents/io.github.polite-crawler.daemon.plist -->
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>io.github.polite-crawler.daemon</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/usr/local/bin/polite-crawler</string>
+    <string>daemon</string>
+    <string>--events</string>
+    <string>/Users/you/.polite-crawler/changes.jsonl</string>
+  </array>
+  <key>RunAtLoad</key><true/>
+  <key>KeepAlive</key><dict><key>SuccessfulExit</key><false/></dict>
+  <key>StandardErrorPath</key><string>/Users/you/.polite-crawler/daemon.log</string>
+</dict>
+</plist>
+```
+
+```sh
+launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/io.github.polite-crawler.daemon.plist
+launchctl bootout gui/$(id -u)/io.github.polite-crawler.daemon
+```
+
+On Windows, with the Task Scheduler (PowerShell):
+
+```powershell
+$action = New-ScheduledTaskAction -Execute "$env:APPDATA\npm\polite-crawler.cmd" `
+  -Argument "daemon --events `"$env:USERPROFILE\.polite-crawler\changes.jsonl`""
+$trigger = New-ScheduledTaskTrigger -AtLogOn
+# no time limit: the default limit of 3 days stops the daemon
+$settings = New-ScheduledTaskSettingsSet -ExecutionTimeLimit ([TimeSpan]::Zero) `
+  -RestartCount 3 -RestartInterval (New-TimeSpan -Minutes 1)
+Register-ScheduledTask -TaskName "polite-crawler daemon" -Action $action -Trigger $trigger -Settings $settings
+```
+
+The Task Scheduler stops a task with no signal. Thus the checks in progress stop at once, and their leases end after the budget of the tick and 2 minutes. `daemon status` then says that the daemon stopped with no clean stop.
 
 ## Check field values against a page
 

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  compareHours,
   describeWeek,
   disagreements,
   fromCompact,
@@ -499,5 +500,59 @@ describe("schema.org and OpenStreetMap, more strictly", () => {
     expect(describeWeek(fromCompact("Mo-Fr 09:00-17:00, We off")!.week)).toBe(
       "Mon–Tue 09:00–17:00; Wed closed; Thu–Fri 09:00–17:00",
     );
+  });
+});
+
+describe("comparing a reading with a stored week", () => {
+  const stored = {
+    mon: [["09:00", "17:00"]],
+    tue: [["09:00", "17:00"]],
+    sat: [["10:00", "24:00"]],
+    sun: [],
+  } as const;
+
+  it("compares only the days that the two weeks state", () => {
+    expect(compareHours(stored, { mon: [["9:00", "17:00"]], sat: [["10:00", "00:00"]] })).toEqual({
+      status: "same",
+      days: [],
+      added: [],
+      skipped: [],
+    });
+    expect(
+      compareHours(stored, { mon: [["09:00", "18:00"]], sun: [["10:00", "14:00"]], fri: [] }),
+    ).toEqual({ status: "changed", days: ["mon", "sun"], added: ["fri"], skipped: [] });
+    // a closed day and an open day differ
+    expect(compareHours(stored, { tue: [] }).days).toEqual(["tue"]);
+  });
+
+  it("gives new for a stored week with no day, and leaves out a split day with skipSplit", () => {
+    expect(compareHours(undefined, { mon: [["09:00", "17:00"]], sun: [] })).toEqual({
+      status: "new",
+      days: ["mon", "sun"],
+      added: [],
+      skipped: [],
+    });
+    expect(compareHours({}, { wed: [] }).status).toBe("new");
+    const split = {
+      mon: [
+        ["11:30", "14:30"],
+        ["17:00", "22:00"],
+      ],
+    } as const;
+    expect(compareHours(stored, split).days).toEqual(["mon"]);
+    expect(compareHours(stored, split, { skipSplit: true })).toEqual({
+      status: "same",
+      days: [],
+      added: [],
+      skipped: ["mon"],
+    });
+    // the order of the intervals does not matter
+    const lunch = {
+      mon: [
+        ["17:00", "22:00"],
+        ["11:30", "14:30"],
+      ],
+    } as const;
+    expect(compareHours(split, lunch).status).toBe("same");
   });
 });

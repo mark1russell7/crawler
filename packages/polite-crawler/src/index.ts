@@ -22,6 +22,8 @@
  * - The check of proposed field values against a stored page: `checkFields` and `extractDocument`.
  * - Hybrid search: the `Embedder` interface, the adapters `transformersEmbedder` and
  *   `ollamaEmbedder`, and the engine `createHybridSearch`, `VectorStore`, `chunkText` and `fuseRanks`.
+ * - The recipe SDK: `defineRecipe`, `runRecipe` and `registerRecipe`. The recipes of the package
+ *   read the hours of a venue (`readVenue`) and a product page (`readProduct`).
  *
  * The other entry points give the rest:
  *
@@ -193,9 +195,10 @@ export type {
   UrlPattern,
 } from "./frontier.ts";
 export { CRAWL_LIMITS, crawlSite } from "./frontier.ts";
-export type { Day, Hours, Interval, Week } from "./hours.ts";
+export type { Day, Hours, HoursComparison, Interval, Week } from "./hours.ts";
 export {
   DAYS,
+  compareHours,
   describeWeek,
   disagreements,
   fromCompact,
@@ -259,6 +262,61 @@ export {
 } from "./politeness.ts";
 export type { CaptureRecord, RecordInput } from "./record.ts";
 export { makeRecord } from "./record.ts";
+// ── recipes ──
+export type {
+  Recipe,
+  RecipeCapture,
+  RecipeDefinition,
+  RecipeDoc,
+  RecipeExtract,
+  RecipeRequest,
+  RecipeRequestOptions,
+  RecipeResult,
+  RecipeRunOptions,
+  RecipeTarget,
+} from "./recipe.ts";
+export {
+  RECIPE_LIMITS,
+  RESERVED_RECIPES,
+  defineRecipe,
+  registerRecipe,
+  runRecipe,
+} from "./recipe.ts";
+export type {
+  VenueLink,
+  VenueLocation,
+  VenueOptions,
+  VenueOsm,
+  VenuePage,
+  VenueRead,
+  VenueReading,
+  VenueResult,
+  VenueSource,
+} from "./recipe-venue.ts";
+export {
+  VENUE_LIMITS,
+  locationMatches,
+  namesVenue,
+  rankHoursLinks,
+  readVenue,
+  venueReadingsOf,
+} from "./recipe-venue.ts";
+export type {
+  Money,
+  ProductOptions,
+  ProductRead,
+  ProductResult,
+  ProductVariant,
+} from "./recipe-product.ts";
+export {
+  PRODUCT_LIMITS,
+  pickProduct,
+  pickVariant,
+  productOf,
+  readAmount,
+  readProduct,
+} from "./recipe-product.ts";
+// ── end of recipes ──
 export type {
   PlaywrightRenderer,
   RefusedReason,

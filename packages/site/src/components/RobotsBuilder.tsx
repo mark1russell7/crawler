@@ -330,10 +330,13 @@ export default function RobotsBuilder(): ReactElement {
         </p>
         {leaks.length > 0 ? (
           <p className="pc-callout pc-callout-warn" aria-live="polite">
-            <strong>A named group replaces the group *.</strong> {leaks.length}{" "}
-            {leaks.length === 1 ? "agent" : "agents"} can fetch <code>{privatePath}</code>, for
-            example <code>{leaks[0]!.label}</code>. Their groups do not repeat the private paths.
-            Select “Repeat the private paths in each group” to keep them out.
+            <strong>A named group replaces the group *.</strong>
+            <span>
+              {leaks.length} {leaks.length === 1 ? "agent" : "agents"} can fetch{" "}
+              <code>{privatePath}</code>, for example <code>{leaks[0]!.label}</code>. Their groups
+              do not repeat the private paths. Select “Repeat the private paths in each group” to
+              keep them out.
+            </span>
           </p>
         ) : null}
       </div>

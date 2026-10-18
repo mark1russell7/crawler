@@ -368,8 +368,8 @@
 .pc-rr-new {
   border-left-color: var(--color-accent);
 }
-.pc-rr-days td:first-of-type,
-.pc-rr-days td {
+.pc-rr-compact td:first-of-type,
+.pc-rr-compact td {
   font-variant-numeric: tabular-nums;
 }
 .pc-rr-mark {
@@ -830,13 +830,13 @@
     top: calc(var(--sl-nav-height, 4rem) + 1rem);
   }
 }
-.pc-rr-days th,
-.pc-rr-days td {
+.pc-rr-compact th,
+.pc-rr-compact td {
   padding-inline: 0.3rem;
   font-size: var(--text-xs);
   white-space: normal;
 }
-.pc-rr-days td:last-child {
+.pc-rr-compact td:last-child {
   white-space: nowrap;
 }
 .pc-dm-stats dd {

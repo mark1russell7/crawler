@@ -370,7 +370,7 @@ export default function RecipeReader({ initial }: { readonly initial: RecipeView
                             : ": each day that the two weeks state is the same."}
                       </p>
                       <div className="pc-table-wrap">
-                        <table className="pc-table pc-rr-days">
+                        <table className="pc-table pc-rr-compact">
                           <thead>
                             <tr>
                               <th scope="col">Day</th>
@@ -467,7 +467,7 @@ export default function RecipeReader({ initial }: { readonly initial: RecipeView
 
                     {product.variants.length > 0 ? (
                       <div className="pc-table-wrap">
-                        <table className="pc-table">
+                        <table className="pc-table pc-rr-compact">
                           <thead>
                             <tr>
                               <th scope="col">Variant</th>

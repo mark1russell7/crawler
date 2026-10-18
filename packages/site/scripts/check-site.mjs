@@ -337,6 +337,8 @@ for (const { scheme, viewport, device } of shots === undefined
       await act(page);
       if (shots !== undefined) {
         mkdirSync(shots, { recursive: true });
+        // the header of the page stays on top, and it hides a part of a tall figure
+        await page.addStyleTag({ content: "header.header { visibility: hidden; }" });
         await page.waitForTimeout(300);
         await page
           .locator(figure)

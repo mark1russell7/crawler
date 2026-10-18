@@ -32,7 +32,10 @@ const PILL = 24;
 const TOP = 6;
 
 interface Layout {
+  /** This value is true when the side columns show the names of the pages. */
   readonly wide: boolean;
+  /** This value is true when the side columns have room for a score after each name. */
+  readonly values: boolean;
   readonly width: number;
   readonly side: number;
   readonly midX: number;
@@ -40,17 +43,30 @@ interface Layout {
   readonly rightX: number;
 }
 
-/** This function gives the columns for a width. A narrow figure shows only the ranks at the sides. */
+/**
+ * This function gives the columns for a width. A wide figure shows a score after each name. A
+ * figure of medium width shows the names only, and the readout and the table give the scores. A
+ * narrow figure shows only the ranks at the sides, and the fused list with its scores when they fit.
+ */
 const layoutOf = (width: number): Layout => {
   if (width >= 560) {
     const side = Math.min(214, Math.floor((width - 96) / 3));
     const gap = Math.floor((width - 3 * side) / 2);
-    return { wide: true, width, side, midX: side + gap, midW: side, rightX: 2 * side + 2 * gap };
+    return {
+      wide: true,
+      values: width >= 680,
+      width,
+      side,
+      midX: side + gap,
+      midW: side,
+      rightX: 2 * side + 2 * gap,
+    };
   }
   const side = 30;
   const gap = 30;
   return {
     wide: false,
+    values: width >= 340,
     width,
     side,
     midX: side + gap,
@@ -263,9 +279,11 @@ export default function HybridRanks(): ReactElement {
             <text className="pc-hy-label" x={x + 30} y={top + 16.5}>
               {labelOf(doc)}
             </text>
-            <text className="pc-hy-value" x={x + layout.side - 7} y={top + 16.5} textAnchor="end">
-              {value}
-            </text>
+            {layout.values ? (
+              <text className="pc-hy-value" x={x + layout.side - 7} y={top + 16.5} textAnchor="end">
+                {value}
+              </text>
+            ) : null}
           </>
         ) : null}
       </g>
@@ -516,14 +534,16 @@ export default function HybridRanks(): ReactElement {
                   <text className="pc-hy-label" x={layout.midX + 30} y={top + 16.5}>
                     {labelOf(row.doc)}
                   </text>
-                  <text
-                    className="pc-hy-value"
-                    x={layout.midX + layout.midW - 7}
-                    y={top + 16.5}
-                    textAnchor="end"
-                  >
-                    {fixed(row.score, 4)}
-                  </text>
+                  {layout.values ? (
+                    <text
+                      className="pc-hy-value"
+                      x={layout.midX + layout.midW - 7}
+                      y={top + 16.5}
+                      textAnchor="end"
+                    >
+                      {fixed(row.score, 4)}
+                    </text>
+                  ) : null}
                 </g>
               );
             })}

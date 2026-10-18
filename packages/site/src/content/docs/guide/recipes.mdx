@@ -1,0 +1,45 @@
+---
+title: Write a recipe
+seoTitle: "Write a crawler recipe: from a capture to documents you can cite"
+description: "A recipe tells polite-crawler what to fetch and how to read it into documents. See a worked defineRecipe example, and start it in your browser: the request, the capture, the extractor, the documents and the quote check."
+---
+
+import { Code } from "@astrojs/starlight/components";
+import RecipeBench from "../../../components/RecipeBench.tsx";
+import example from "../../../lib/recipe-example.ts?raw";
+
+A recipe tells the crawler what to fetch and how to read it. The package has two recipes: `readVenue` reads the opening hours of a venue, and `readProduct` reads a product page. The [recipe reader](../../tools/recipe-reader/) starts their readers on a page that you paste. For a source of your own, write a recipe with `defineRecipe`.
+
+## A recipe in three parts
+
+- **The name** goes into each capture record, so it is part of each capture id. `reindex` finds the extractor by it. Do not change it after the first capture.
+- **The request** (`fetch`) changes an input into a URL. With no `fetch`, the input is the URL.
+- **The extractor** (`extract`) reads one captured body into documents. It is pure: the same body always gives the same documents, and it sends no request.
+
+This recipe reads the menu of a made-up bakery from its JSON API:
+
+<Code code={example} lang="ts" title="recipe-example.ts" />
+
+## Start it in your browser
+
+The figure starts this recipe, compiled into this page. Select an input and an answer of the API, or change the body. The crawler does not fetch here: the figure gives the body of the capture.
+
+<RecipeBench client:visible />
+
+## From a capture to a citation
+
+1. **The request.** `menu.request("tue")` gives the request of the crawler. It names the recipe, the mode and the pace. `runRecipe(crawler, menu, "tue")` fetches it.
+2. **The capture.** The crawler fetches the URL with each polite rule, and it writes a capture record and the body. The capture id is a hash of the record, so a citation can name it.
+3. **The extractor.** The runtime gives the body to the extractor. The extractor checks each document: an id, a kind, a title, a text, a URL and metadata that is JSON. A document that is not correct makes it throw, and the runtime reports the error.
+4. **The documents.** One capture can give many documents. Each document is a version in the index, with the capture that it came from.
+5. **The reading.** `find`, `read`, `verify`, `extract`, `diff` and the time travel use the documents. `reindex` reads each capture of the recipe again, with no request.
+
+## The rules
+
+- **The mode.** `page` (the default) is a web page: robots.txt applies. `api` is a documented API with terms of its own: robots.txt does not apply, and the pace of `minInterval` does.
+- **A body that is not JSON.** `readJson(body, capture)` reads JSON in the encoding of the response. A login page or a maintenance page throws an error that names the URL and the content type.
+- **A stored copy that the extractor cannot read** does not stay as the answer. `runRecipe` then asks the source one more time.
+- **The names of the crawler.** A recipe cannot take a name of `RESERVED_RECIPES`: `page`, `archive-copy`, `archive-index`, `robots.txt`, `sitemap` and `feed`.
+- **Register the recipe at open.** Give it to `openCrawler({ recipes: [menu] })`. Then `reindex` reads its captures before the first fetch.
+
+The [library API](../../reference/api/#definerecipedefinition) gives each value of a recipe, and the [README of the package](https://github.com/mark1russell7/crawler/tree/main/packages/polite-crawler#writing-a-recipe) gives each rule.

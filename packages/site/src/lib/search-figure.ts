@@ -1,6 +1,6 @@
 /**
  * The fusion of the figure "How hybrid search ranks". The page and the test use it. It cuts the two
- * rankings of `search-figure.json` to the candidate counts, and fuses them with the real
+ * rankings of `search-figure.json` to the candidate counts. Then it fuses them with the real
  * `fuseRanks` of polite-crawler, as the `find` of hybrid search does.
  */
 import { fuseRanks } from "polite-crawler";

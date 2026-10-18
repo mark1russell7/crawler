@@ -37,13 +37,6 @@ export const CORPUS: readonly CorpusDoc[] = [
     text: "Forno Esempio\nNeapolitan pies from a wood-fired oven, with a thin, blistered crust. On Fridays and Saturdays the kitchen takes the last order at 1 am.",
   },
   {
-    id: "night-market",
-    title: "The Thursday night market",
-    label: "Night market",
-    url: "https://citta-esempio.example/events/night-market",
-    text: "The Thursday night market\nFrom June to September, Piazza Esempio fills with food stalls and a brass band each Thursday. The stalls close at 11 pm.",
-  },
-  {
     id: "pizza-stone",
     title: "Care of a pizza stone",
     label: "Pizza stone care",
@@ -127,24 +120,26 @@ export const CORPUS: readonly CorpusDoc[] = [
     url: "https://citta-esempio.example/events/monday-market",
     text: "The Monday farmers' market\nFarmers sell fruit, cheese and honey on Monday mornings, in the car park behind the museum.",
   },
+  {
+    id: "olio",
+    title: "Olio Esempio, 500 ml",
+    label: "Olio Esempio",
+    url: "https://bottega-campione.example/products/olio-esempio",
+    text: "Olio Esempio, 500 ml\nExtra virgin olive oil from one grove. GTIN 8001234567896. Keep it away from light and heat.",
+  },
 ];
 
 export const QUESTIONS: readonly CorpusQuestion[] = [
-  { id: "pizza", q: "late night pizza", label: "late night pizza", target: "forno" },
-  { id: "filter", q: "FX-2207 cartridge", label: "FX-2207 cartridge", target: "fx-2207" },
-  { id: "rye", q: "rye bread with a dark crust", label: "rye bread, dark crust", target: "rye" },
-  {
-    id: "museum",
-    q: "Is the museum open on Monday?",
-    label: "museum on Monday?",
-    target: "museum-hours",
-  },
+  { id: "pizza", q: "pizza after midnight", label: "pizza after midnight", target: "forno" },
+  { id: "entrance", q: "step-free entrance", label: "step-free entrance", target: "museum-visit" },
+  { id: "gtin", q: "8001234567896", label: "8001234567896", target: "olio" },
   {
     id: "access",
     q: "wheelchair access to the museum",
     label: "wheelchair access",
     target: "museum-visit",
   },
+  { id: "rye", q: "rye bread with a dark crust", label: "rye bread, dark crust", target: "rye" },
 ];
 
 /** This value is the time of the fetch of each page of the corpus. */

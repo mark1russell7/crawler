@@ -6,8 +6,12 @@
 import type { Study } from "./study.ts";
 import { DATA_LICENSE, STUDY_AUTHOR } from "./study.ts";
 
+/** This address is the site of polite-crawler, with a `/` at the end. A feed and llms.txt use full addresses. */
+export const SITE_URL = "https://mark1russell7.github.io/crawler/";
 /** This address is the page of the study. */
-export const STUDY_PAGE = "https://mark1russell7.github.io/crawler/notes/robots-txt-ai-agents/";
+export const STUDY_PAGE = `${SITE_URL}notes/robots-txt-ai-agents/`;
+/** This day is the day of the first version of the study. A new run changes the date of the data, not this day. */
+export const STUDY_PUBLISHED = "2026-10-12";
 /** This address is the repository of the crawler and of the study script. */
 export const REPOSITORY = "https://github.com/mark1russell7/crawler";
 /** This text is the title of the dataset on Zenodo. */
@@ -40,12 +44,18 @@ export const STUDY_KEYWORDS: readonly string[] = [
 export const studyVersion = (study: Study): string => study.fetched.from.slice(0, 10);
 
 /**
- * The file `study-doi.json` names the DOI of the dataset on Zenodo and the version of the study that
- * the DOI names. Both values are null until Zenodo publishes the record.
+ * The file `study-doi.json` names the DOIs of the dataset on Zenodo. Each value is null until Zenodo
+ * publishes the record.
+ *
+ * - `doi` is the DOI of one version: the data of one run.
+ * - `version` is the version of the study that `doi` names.
+ * - `concept` is the concept DOI. It names the study and all its versions, and it resolves to the
+ *   newest version.
  */
 export interface StudyDoi {
   readonly doi: string | null;
   readonly version: string | null;
+  readonly concept: string | null;
 }
 
 const DOI = /^10\.\d{4,9}\/\S+$/;
@@ -63,6 +73,10 @@ export const doiOf = (study: Study, file: StudyDoi): string | undefined =>
     ? file.doi
     : undefined;
 
+/** This function gives the concept DOI of the study, or undefined when the file names no DOI. */
+export const conceptOf = (file: StudyDoi): string | undefined =>
+  file.concept !== null && isDoi(file.concept) ? file.concept : undefined;
+
 /** This function gives the address of a DOI. */
 export const doiUrl = (doi: string): string => `https://doi.org/${doi}`;
 
@@ -75,6 +89,13 @@ export const datasetCitation = (study: Study): string => {
   const version = studyVersion(study);
   return `${CITATION_AUTHOR}. ${version.slice(0, 4)}. "${DATASET_TITLE}." Version ${version}. Dataset.`;
 };
+
+/**
+ * This function gives the citation of the study as one line of text, for the concept DOI. It names
+ * no version, because the concept DOI names each version.
+ */
+export const studyCitation = (): string =>
+  `${CITATION_AUTHOR}. ${STUDY_PUBLISHED.slice(0, 4)}. "${DATASET_TITLE}." Dataset, a new version each month.`;
 
 /**
  * This function gives a BibTeX entry for the study. With a DOI, the entry names the dataset on

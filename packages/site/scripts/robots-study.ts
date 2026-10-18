@@ -1,18 +1,33 @@
 // The robots.txt study. polite-crawler reads /robots.txt of each domain of a Tranco list, and this
-// script writes the verdict for each AI agent to src/data/robots-study.json and
-// public/data/robots-study.csv.
+// script writes the verdict for each AI agent. Each run keeps its own files, and the newest run is
+// also the "latest" copy that the pages read:
+//   src/data/study/<version>.json, public/data/robots-study-<version>.csv  each run
+//   src/data/robots-study.json, public/data/robots-study.csv               the newest run
+//   src/data/study-history.json                                            the numbers and the DOI of each run
 //
 // Start it from the root of the repository:
+//   pnpm exec tsx packages/site/scripts/robots-study.ts tranco <out.csv>
 //   pnpm exec tsx packages/site/scripts/robots-study.ts fetch <tranco.csv> <list id> <list date> [store dir]
 //   pnpm exec tsx packages/site/scripts/robots-study.ts derive <store dir>
+//   pnpm exec tsx packages/site/scripts/robots-study.ts history
+//   pnpm exec tsx packages/site/scripts/robots-study.ts doi <version> <doi>
+//   pnpm exec tsx packages/site/scripts/robots-study.ts report <out.md> [check...]
+//
+// `tranco` gets the newest daily Tranco list through polite-crawler, with its User-Agent, and writes
+// its top 1,000 domains. It also writes the id and the date of the list to GITHUB_OUTPUT.
 //
 // `fetch` sends one request for /robots.txt to each domain (and follows its redirects), with the
 // default User-Agent of the crawler and no contact. It needs a fresh store: with no stored copy, the
 // crawler sends no conditional request, so no answer is a 304. Without a store dir, it makes one in
-// the temp folder. The store keeps the capture log, the bodies and answers.ndjson.
+// the temp folder. The store keeps the capture log, the bodies and answers.ndjson. The environment
+// variable STUDY_RUNNER names the computer of the run in the dataset, for example a GitHub runner.
 //
-// `derive` reads answers.ndjson and the bodies again and writes the dataset. It sends no request,
-// so a change to the classification in src/lib/study.ts needs no new run.
+// `derive` reads answers.ndjson and the bodies again and writes the files of the run. It sends no
+// request, so a change to the classification in src/lib/study.ts needs no new run.
+//
+// `history` writes study-history.json again from the files in src/data/study, and keeps each DOI.
+// `doi` records the DOI of a version on Zenodo in the history, and in study-doi.json for the newest run.
+// `report` writes the body of the pull request of the newest run, with the checks that passed.
 import {
   appendFileSync,
   existsSync,
@@ -37,6 +52,23 @@ import {
   defaultUserAgent,
 } from "polite-crawler";
 import { robotsFromResponse } from "polite-crawler/robots";
+import type { StudyDoi } from "../src/lib/cite.ts";
+import { studyVersion } from "../src/lib/cite.ts";
+import { studyDoiFile } from "../src/lib/dataset.ts";
+import type { StudyHistory } from "../src/lib/runs.ts";
+import {
+  STUDY_SIZE,
+  TRANCO,
+  historyText,
+  latestRun,
+  runCsvPath,
+  runOf,
+  runReport,
+  topDomains,
+  trancoListOf,
+  withDoi,
+  withRun,
+} from "../src/lib/runs.ts";
 import type { RawAnswer, Study, StudySite } from "../src/lib/study.ts";
 import { DATA_LICENSE, answerOf, toCsv } from "../src/lib/study.ts";
 
@@ -84,11 +116,92 @@ interface Run {
   readonly list: Study["list"];
   readonly fetched: Study["fetched"];
   readonly userAgent: string;
+  readonly runner?: string;
 }
 
 const site = fileURLToPath(new URL("..", import.meta.url));
 const jsonOut = join(site, "src/data/robots-study.json");
 const csvOut = join(site, "public/data/robots-study.csv");
+const runsDir = join(site, "src/data/study");
+const historyOut = join(site, "src/data/study-history.json");
+const doiOut = join(site, "src/data/study-doi.json");
+const runJson = (version: string): string => join(runsDir, `${version}.json`);
+const runCsv = (version: string): string => join(site, "public", runCsvPath(version));
+
+const readHistory = (): StudyHistory =>
+  existsSync(historyOut)
+    ? (JSON.parse(readFileSync(historyOut, "utf8")) as StudyHistory)
+    : { runs: [] };
+
+/**
+ * This function writes the files of one run: its dataset, its CSV and its line in the history. When
+ * the run is the newest, it also writes the latest copy that the pages read.
+ */
+const writeRun = (text: string): void => {
+  const study = JSON.parse(text) as Study;
+  const version = studyVersion(study);
+  const csv = toCsv(study);
+  mkdirSync(runsDir, { recursive: true });
+  writeFileSync(runJson(version), text);
+  mkdirSync(dirname(runCsv(version)), { recursive: true });
+  writeFileSync(runCsv(version), csv);
+  const history = withRun(readHistory(), runOf(study));
+  writeFileSync(historyOut, historyText(history));
+  const written = [runJson(version), runCsv(version), historyOut];
+  if (latestRun(history)?.version === version) {
+    writeFileSync(jsonOut, text);
+    writeFileSync(csvOut, csv);
+    written.push(jsonOut, csvOut);
+  }
+  console.info(`wrote ${written.join(", ")}`);
+};
+
+/** This function gets the newest daily Tranco list through polite-crawler and writes its top domains. */
+const tranco = async (out: string): Promise<void> => {
+  const store = mkdtempSync(join(tmpdir(), "tranco-"));
+  const crawler = new Crawler({
+    token: DEFAULT_TOKEN,
+    userAgent: defaultUserAgent(),
+    log: new CaptureLog(join(store, "captures")),
+    blobs: new FileBlobStore(join(store, "blobs")),
+    index: new DocIndex(join(store, "index.sqlite")),
+    maxActive: 1,
+  });
+  // the Tranco API is documented for programs (mode "api"), and it asks for one request each second
+  const get = async (url: string, accept: string): Promise<string> => {
+    const fetched = await crawler.fetch({
+      url,
+      mode: "api",
+      recipe: "tranco",
+      accept,
+      maxBytes: 4 * 1024 * 1024,
+      minIntervalMs: 1100,
+    });
+    if (fetched.status !== 200 || fetched.body === undefined)
+      throw new Error(
+        `${url}: status ${String(fetched.status)}, ${fetched.outcome}${fetched.note === undefined ? "" : `, ${fetched.note}`}`,
+      );
+    return new TextDecoder("utf-8").decode(fetched.body);
+  };
+  try {
+    const id = (await get(`${TRANCO}/top-1m-id`, "text/plain")).trim();
+    const list = trancoListOf(
+      id,
+      JSON.parse(await get(`${TRANCO}/api/lists/id/${id}`, "application/json")) as unknown,
+    );
+    const csv = topDomains(
+      await get(`${TRANCO}/download/${id}/${String(STUDY_SIZE)}`, "text/csv"),
+      STUDY_SIZE,
+    );
+    writeFileSync(out, csv);
+    console.info(`the Tranco list ${list.id} of ${list.date}: ${String(STUDY_SIZE)} domains`);
+    const output = process.env["GITHUB_OUTPUT"];
+    if (output !== undefined && output.length > 0)
+      appendFileSync(output, [`id=${list.id}`, `date=${list.date}`, ""].join("\n"));
+  } finally {
+    await crawler.close();
+  }
+};
 
 /** One code for each agent: refused by a named group, refused by `*`, permitted by a named group, permitted. */
 const code = (decision: RobotsDecision, token: string): string => {
@@ -161,16 +274,18 @@ const fetchAll = async (
     }),
   );
   await crawler.close();
+  const runner = process.env["STUDY_RUNNER"]?.trim();
   const run: Run = {
     list: {
       name: "Tranco",
       id: listId,
       date: listDate,
-      url: `https://tranco-list.eu/list/${listId}/1000`,
+      url: `${TRANCO}/list/${listId}/${String(STUDY_SIZE)}`,
       size: domains.length,
     },
     fetched: { from, to: new Date().toISOString() },
     userAgent: defaultUserAgent(),
+    ...(runner === undefined || runner.length === 0 ? {} : { runner }),
   };
   writeFileSync(join(store, "run.json"), `${JSON.stringify(run, null, 2)}\n`);
   console.info(`the store is ${store}`);
@@ -272,14 +387,13 @@ const derive = async (store: string): Promise<void> => {
     list: run.list,
     fetched: run.fetched,
     userAgent: run.userAgent,
+    ...(run.runner === undefined ? {} : { runner: run.runner }),
     pagePath: PAGE_PATH,
     license: DATA_LICENSE.id,
     agents: AGENTS,
   });
   // one site on each line, so that the next run gives a readable diff
-  mkdirSync(dirname(jsonOut), { recursive: true });
-  writeFileSync(
-    jsonOut,
+  writeRun(
     [
       `${head.slice(0, -1)},"sites":[`,
       sites.map((entry) => JSON.stringify(entry)).join(",\n"),
@@ -287,16 +401,50 @@ const derive = async (store: string): Promise<void> => {
       "",
     ].join("\n"),
   );
-  const study = JSON.parse(readFileSync(jsonOut, "utf8")) as Study;
-  mkdirSync(dirname(csvOut), { recursive: true });
-  writeFileSync(csvOut, toCsv(study));
   const states = new Map<string, number>();
   for (const entry of sites) states.set(entry.state, (states.get(entry.state) ?? 0) + 1);
-  console.info(
-    `wrote ${jsonOut} and ${csvOut}: ${String(sites.length)} sites`,
-    Object.fromEntries(states),
-  );
+  console.info(`${String(sites.length)} sites`, Object.fromEntries(states));
 };
+
+/** This function writes study-history.json again from the files of the runs, and keeps each DOI. */
+const rebuildHistory = (): void => {
+  const old = readHistory();
+  let history: StudyHistory = { runs: [] };
+  const names = readdirSync(runsDir)
+    .filter((name) => name.endsWith(".json"))
+    .sort();
+  for (const name of names) {
+    const study = JSON.parse(readFileSync(join(runsDir, name), "utf8")) as Study;
+    const version = studyVersion(study);
+    if (name !== `${version}.json`) throw new Error(`${name} has the version ${version}`);
+    const doi = old.runs.find((run) => run.version === version)?.doi ?? null;
+    history = withRun(history, runOf(study, doi));
+  }
+  writeFileSync(historyOut, historyText(history));
+  console.info(`wrote ${historyOut}: ${String(history.runs.length)} runs`);
+};
+
+/** This function records the DOI of a version on Zenodo, and names it in study-doi.json for the newest run. */
+const recordDoi = (version: string, doi: string): void => {
+  const history = withDoi(readHistory(), version, doi);
+  writeFileSync(historyOut, historyText(history));
+  const written = [historyOut];
+  if (latestRun(history)?.version === version) {
+    const current = JSON.parse(readFileSync(doiOut, "utf8")) as StudyDoi;
+    writeFileSync(doiOut, studyDoiFile(doi, version, current.concept));
+    written.push(doiOut);
+  }
+  console.info(`wrote ${written.join(" and ")}`);
+};
+
+const USAGE = [
+  "usage: robots-study.ts tranco <out.csv>",
+  "       robots-study.ts fetch <tranco.csv> <list id> <list date> [store dir]",
+  "       robots-study.ts derive <store dir>",
+  "       robots-study.ts history",
+  "       robots-study.ts doi <version> <doi>",
+  "       robots-study.ts report <out.md> [check...]",
+];
 
 const [command, ...args] = process.argv.slice(2);
 if (command === "fetch" && args.length >= 3) {
@@ -304,9 +452,18 @@ if (command === "fetch" && args.length >= 3) {
   await derive(await fetchAll(csv, listId, listDate, store));
 } else if (command === "derive" && args[0] !== undefined) {
   await derive(args[0]);
+} else if (command === "tranco" && args[0] !== undefined) {
+  await tranco(args[0]);
+} else if (command === "history") {
+  rebuildHistory();
+} else if (command === "doi" && args[0] !== undefined && args[1] !== undefined) {
+  recordDoi(args[0], args[1]);
+} else if (command === "report" && args[0] !== undefined) {
+  const [out, ...checks] = args as [string, ...string[]];
+  const repository = process.env["GITHUB_REPOSITORY"] ?? "mark1russell7/crawler";
+  writeFileSync(out, runReport(readHistory(), { checks, repository }));
+  console.info(`wrote ${out}`);
 } else {
-  console.error(
-    "usage: robots-study.ts fetch <tranco.csv> <list id> <list date> [store dir]\n       robots-study.ts derive <store dir>",
-  );
+  console.error(USAGE.join("\n"));
   process.exit(2);
 }

@@ -9,7 +9,17 @@ on:
     branches: [main]
   pull_request:
   workflow_dispatch:
+    inputs:
+      shots:
+        description: "Also save a screenshot of each page of the site, light and dark (the artifact site-shots)"
+        type: boolean
+        default: false
+  # release.yml calls this workflow with no inputs, so shots stays false there.
   workflow_call:
+    inputs:
+      shots:
+        type: boolean
+        default: false
   schedule:
     # Each Monday. The smoke test installs the tarball with the newest versions of its dependencies.
     - cron: "17 6 * * 1"
@@ -158,7 +168,22 @@ jobs:
         run: pnpm --filter @crawler/site exec playwright-core install --with-deps chromium-headless-shell
         env:
           PLAYWRIGHT_BROWSERS_PATH: ${{ github.workspace }}/.cache/ms-playwright
+      # With the input shots of a run by hand, the check also saves a screenshot of each page.
       - name: Check the site
-        run: pnpm --filter @crawler/site run check
+        run: |
+          if [ "$SHOTS" = true ]; then
+            pnpm --filter @crawler/site exec node scripts/check-site.mjs --shots "$RUNNER_TEMP/shots"
+          else
+            pnpm --filter @crawler/site run check
+          fi
         env:
           PLAYWRIGHT_BROWSERS_PATH: ${{ github.workspace }}/.cache/ms-playwright
+          SHOTS: ${{ inputs.shots && 'true' || 'false' }}
+      - name: Upload the screenshots
+        if: ${{ inputs.shots && !cancelled() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: site-shots
+          path: ${{ runner.temp }}/shots/
+          if-no-files-found: warn
+          retention-days: 14

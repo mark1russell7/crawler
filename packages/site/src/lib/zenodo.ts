@@ -48,6 +48,8 @@ export interface DepositResult {
 export interface Deposition {
   readonly id: number;
   readonly submitted?: boolean;
+  /** This value is the concept DOI: it names all the versions of the record. A new record has none. */
+  readonly conceptdoi?: string;
   readonly metadata?: { readonly prereserve_doi?: { readonly doi?: string } };
   readonly links?: Readonly<Record<string, string | undefined>>;
   readonly files?: ReadonlyArray<{

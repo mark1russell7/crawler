@@ -15,6 +15,7 @@ import {
   datasetCitation,
   doiUrl,
   isDoi,
+  studyCitation,
   studyVersion,
 } from "./cite.ts";
 import type { Study } from "./study.ts";
@@ -36,6 +37,8 @@ export interface DatasetInput {
   readonly page: string;
   /** This value is the DOI that Zenodo reserved for the record, when it is known. */
   readonly doi?: string | undefined;
+  /** This value is the concept DOI of the study: it names each version. */
+  readonly concept?: string | undefined;
 }
 
 const ROLE_WORDS: Readonly<Record<string, string>> = {
@@ -71,8 +74,34 @@ const table = (head: readonly string[], rows: ReadonlyArray<readonly string[]>):
     ...rows.map((row) => `| ${row.join(" | ")} |`),
   ].join("\n");
 
+/**
+ * This function gives the section of the README about the versions on Zenodo. The concept DOI names
+ * the study and each of its versions. The DOI of a version names the data of one run.
+ */
+const versionsOf = (version: string, doi?: string, concept?: string): string => {
+  const lines = [
+    "The study runs again each month. Each run is a new version of one record on Zenodo, with its own files.",
+    "",
+  ];
+  if (concept !== undefined)
+    lines.push(
+      `- The concept DOI [${concept}](${doiUrl(concept)}) names the study and all its versions. It goes to the newest version. Cite it for the study.`,
+    );
+  lines.push(
+    doi === undefined
+      ? "- Each version has its own DOI. It names the data of one run. Cite it for the numbers of that month."
+      : `- The DOI [${doi}](${doiUrl(doi)}) names this version (${version}) only: the data of one run. Cite it for the numbers of this month.`,
+  );
+  return lines.join("\n");
+};
+
 /** This function gives the README of the dataset. */
-export const readme = (study: Study, limits: readonly string[], doi?: string): string => {
+export const readme = (
+  study: Study,
+  limits: readonly string[],
+  doi?: string,
+  concept?: string,
+): string => {
   const version = studyVersion(study);
   const summary = summarize(study);
   const size = summary.listSize.toLocaleString("en-US");
@@ -81,6 +110,10 @@ export const readme = (study: Study, limits: readonly string[], doi?: string): s
     doi === undefined
       ? `${datasetCitation(study)} ${STUDY_PAGE}`
       : `${datasetCitation(study)} Zenodo. ${doiUrl(doi)}`;
+  const citeStudy =
+    concept === undefined
+      ? ""
+      : `\n\nTo cite the study and all its versions: ${studyCitation()} Zenodo. ${doiUrl(concept)}`;
   return `# ${DATASET_TITLE}
 
 Version ${version}, by ${STUDY_AUTHOR.name}. The data is under the ${DATA_LICENSE.name} license.${doi === undefined ? "" : ` DOI: [${doi}](${doiUrl(doi)}).`}
@@ -101,7 +134,7 @@ ${table(
 ## The method
 
 1. **The list.** The study used the top ${size} domains of the Tranco list \`${study.list.id}\` (${study.list.url}), from ${study.list.date}. Tranco makes the list from the ranks of five sources across 30 days.
-2. **The requests.** The crawler polite-crawler sent one request for \`https://<domain>/robots.txt\` to each domain, and followed a maximum of 5 redirects. It did not try again, and it did not try \`www.<domain>\`. All requests went out from one computer, with a new, empty store.
+2. **The requests.** The crawler polite-crawler sent one request for \`https://<domain>/robots.txt\` to each domain, and followed a maximum of 5 redirects. It did not try again, and it did not try \`www.<domain>\`. All requests went out from one computer${study.runner === undefined ? "" : ` (${study.runner})`}, with a new, empty store.
 3. **The User-Agent.** Each request sent \`${study.userAgent}\`, with no contact.
 4. **The verdicts.** The function \`decide\` of polite-crawler decided each agent alone, as RFC 9309 specifies. The path was \`${study.pagePath}\`, a page path that no site names. Thus a refusal of this path is a refusal of the pages of the site.
 5. **The answers.** The study put each answer into one of four states:
@@ -169,6 +202,7 @@ The verdicts:
 - \`list\`: the Tranco list (\`name\`, \`id\`, \`date\`, \`url\`, \`size\`).
 - \`fetched\`: the time of the first request and of the last answer (\`from\`, \`to\`), in ISO 8601 and UTC.
 - \`userAgent\`, \`pagePath\` and \`license\` (an SPDX id).
+- \`runner\`: the computer that sent the requests, for example a GitHub Actions runner. The first run does not have this field.
 - \`agents\`: the agents, in the sequence of the codes (\`token\`, \`owner\`, \`role\`). The role is \`training\`, \`search\`, \`user\` or \`control\`.
 - \`sites\`: one object for each domain, in the sequence of the ranks:
   - \`rank\`, \`domain\`, \`status\`, \`state\`, and \`host\` when it is different from the domain.
@@ -187,9 +221,21 @@ ${limits.map((limit) => `- ${limit}`).join("\n")}
 
 The data is under the ${DATA_LICENSE.name} license (${DATA_LICENSE.url}). You can use it for any purpose when you name the source. The code of polite-crawler and the script that made the data are under the MIT license.
 
+## The versions
+
+${versionsOf(version, doi, concept)}
+
+## Each month
+
+1. On day 2 of each month, the workflow \`study-monthly.yml\` of the repository runs the study again on a GitHub Actions runner. It opens a pull request with the new data and the checks of the site.
+2. A person reviews the pull request and merges it.
+3. The workflow \`study-zenodo.yml\` makes a new version of the record on Zenodo, as a draft.
+4. The owner checks the draft on Zenodo and publishes it.
+5. The site records the new version: its DOI goes into the history of the runs and on the study page.
+
 ## How to cite
 
-${cite}
+${cite}${citeStudy}
 
 ## The source
 
@@ -202,7 +248,7 @@ ${cite}
 const yaml = (value: string): string => JSON.stringify(value);
 
 /** This function gives the `CITATION.cff` of the dataset (Citation File Format 1.2.0). */
-export const citationCff = (study: Study, doi?: string): string => {
+export const citationCff = (study: Study, doi?: string, concept?: string): string => {
   const version = studyVersion(study);
   const [family, given] = CITATION_AUTHOR.split(", ");
   const lines = [
@@ -216,6 +262,14 @@ export const citationCff = (study: Study, doi?: string): string => {
     `version: ${yaml(version)}`,
     `date-released: ${yaml(version)}`,
     ...(doi === undefined ? [] : [`doi: ${yaml(doi)}`]),
+    ...(concept === undefined
+      ? []
+      : [
+          "identifiers:",
+          "  - type: doi",
+          `    value: ${yaml(concept)}`,
+          `    description: ${yaml("The concept DOI: the study and all its versions")}`,
+        ]),
     `license: ${DATA_LICENSE.id}`,
     `url: ${yaml(STUDY_PAGE)}`,
     `repository-code: ${yaml(REPOSITORY)}`,
@@ -242,10 +296,12 @@ export const datasetFiles = (input: DatasetInput): readonly DatasetFile[] => {
   if (decoder.decode(input.csv) !== toCsv(study))
     throw new Error("robots-study.csv is not the CSV of robots-study.json: run the derive step");
   if (input.doi !== undefined && !isDoi(input.doi)) throw new Error(`not a DOI: ${input.doi}`);
+  if (input.concept !== undefined && !isDoi(input.concept))
+    throw new Error(`not a DOI: ${input.concept}`);
   const limits = limitsOf(input.page);
   const files: DatasetFile[] = [
-    { name: "CITATION.cff", bytes: encoder.encode(citationCff(study, input.doi)) },
-    { name: "README.md", bytes: encoder.encode(readme(study, limits, input.doi)) },
+    { name: "CITATION.cff", bytes: encoder.encode(citationCff(study, input.doi, input.concept)) },
+    { name: "README.md", bytes: encoder.encode(readme(study, limits, input.doi, input.concept)) },
     { name: "robots-study.csv", bytes: input.csv },
     { name: "robots-study.json", bytes: input.json },
   ];
@@ -307,6 +363,6 @@ export const zenodoMetadata = (study: Study): ZenodoMetadata => {
   };
 };
 
-/** This function gives the text of `study-doi.json` for a DOI and the version that it names. */
-export const studyDoiFile = (doi: string, version: string): string =>
-  `${JSON.stringify({ doi, version } satisfies StudyDoi, null, 2)}\n`;
+/** This function gives the text of `study-doi.json`: a DOI, the version that it names and the concept DOI. */
+export const studyDoiFile = (doi: string, version: string, concept: string | null): string =>
+  `${JSON.stringify({ doi, version, concept } satisfies StudyDoi, null, 2)}\n`;

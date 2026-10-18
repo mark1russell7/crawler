@@ -9,17 +9,25 @@
 import { mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import type { StudyDoi } from "../src/lib/cite.ts";
+import { conceptOf } from "../src/lib/cite.ts";
 import type { DatasetFile, DatasetInput } from "../src/lib/dataset.ts";
 import { datasetFiles } from "../src/lib/dataset.ts";
 
 const site = fileURLToPath(new URL("..", import.meta.url));
 
-/** This function reads the input of the dataset from the site: the JSON, the CSV and the study page. */
+/**
+ * This function reads the input of the dataset from the site: the JSON and the CSV of the newest run,
+ * the study page, and the concept DOI in study-doi.json.
+ */
 export const readInput = (doi?: string): DatasetInput => ({
   json: new Uint8Array(readFileSync(join(site, "src/data/robots-study.json"))),
   csv: new Uint8Array(readFileSync(join(site, "public/data/robots-study.csv"))),
   page: readFileSync(join(site, "src/content/docs/notes/robots-txt-ai-agents.mdx"), "utf8"),
   doi,
+  concept: conceptOf(
+    JSON.parse(readFileSync(join(site, "src/data/study-doi.json"), "utf8")) as StudyDoi,
+  ),
 });
 
 /**

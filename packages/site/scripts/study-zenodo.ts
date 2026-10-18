@@ -55,20 +55,36 @@ writeFileSync(
   `${JSON.stringify({ sandbox, doi: result.doi, url: result.url, published: result.published, files: result.files, deposition: result.deposition }, null, 2)}\n`,
 );
 const version = studyVersion(study);
+// a new version keeps the concept DOI of the record: a different one means a different record
+const given = result.deposition.conceptdoi;
+const concept = given !== undefined && given.length > 0 ? given : undefined;
 const lines = [
   `## The robots.txt study on ${sandbox ? "sandbox.zenodo.org" : "Zenodo"}`,
   "",
-  `- DOI: \`${result.doi}\`${result.published ? "" : " (reserved: it resolves after you publish the record)"}`,
+  `- DOI of this version: \`${result.doi}\`${result.published ? "" : " (reserved: it resolves after you publish the record)"}`,
+  `- Concept DOI of the study: \`${concept ?? input.concept ?? "not known yet"}\``,
   `- ${result.published ? "Record" : "Draft"}: ${result.url}`,
   `- Version: ${version}`,
   `- Files: ${result.files.map((file) => `\`${file.name}\` (${String(file.size)} bytes)`).join(", ")}`,
+  ...(concept !== undefined && input.concept !== undefined && concept !== input.concept
+    ? [
+        "",
+        `**Warning:** Zenodo gives the concept DOI \`${concept}\`, but \`study-doi.json\` names \`${input.concept}\`. Make sure that \`new_version_of\` is a version of the study.`,
+      ]
+    : []),
   "",
   result.published
-    ? "After the record is public, put this text in `packages/site/src/data/study-doi.json`:"
-    : "Review the draft on Zenodo and click Publish. Then put this text in `packages/site/src/data/study-doi.json`:",
+    ? "After the record is public, record its DOI from the root of the repository:"
+    : "Review the draft on Zenodo and click Publish. Then record its DOI from the root of the repository:",
+  "",
+  "```sh",
+  `pnpm exec tsx packages/site/scripts/robots-study.ts doi ${version} ${result.doi}`,
+  "```",
+  "",
+  "The command writes the DOI in `study-history.json`. For the newest run, it also writes `study-doi.json`:",
   "",
   "```json",
-  studyDoiFile(result.doi, version).trimEnd(),
+  studyDoiFile(result.doi, version, concept ?? input.concept ?? null).trimEnd(),
   "```",
 ];
 console.info(lines.join("\n"));

@@ -20,9 +20,14 @@ head:
 import { Code } from "@astrojs/starlight/components";
 import study from "../../../data/robots-study.json";
 import studyDoi from "../../../data/study-doi.json";
-import { PRESS_CONTACT, bibtex, datasetCitation, doiOf, doiUrl } from "../../../lib/cite.ts";
+import history from "../../../data/study-history.json";
+import { PRESS_CONTACT, bibtex, conceptOf, datasetCitation, doiOf, doiUrl, studyCitation, studyVersion } from "../../../lib/cite.ts";
+import { FEED_PATH } from "../../../lib/feed.ts";
+import { trendOf } from "../../../lib/runs.ts";
 import { DATA_LICENSE, STUDY_AUTHOR, agentRows, companies, formatDay, oneIn, pack, summarize } from "../../../lib/study.ts";
 import StudyData from "../../../components/StudyData.astro";
+import StudyRuns from "../../../components/StudyRuns.astro";
+import { TrendChart } from "../../../components/StudyTrend.tsx";
 import CopyText from "../../../components/CopyText.tsx";
 import {
   AnswerChart,
@@ -44,6 +49,10 @@ export const day = formatDay(study.fetched.from);
 export const blocked403 = s.blockedStatuses.find((entry) => entry.status === 403)?.sites ?? 0;
 export const pageUrl = "https://mark1russell7.github.io/crawler/notes/robots-txt-ai-agents/";
 export const doi = doiOf(study, studyDoi);
+export const concept = conceptOf(studyDoi);
+export const trend = trendOf(history);
+export const feedUrl = `${base}/${FEED_PATH}`;
+export const runCsvUrl = `${base}/data/robots-study-${studyVersion(study)}.csv`;
 
 <p class="pc-byline">
   By <a href={STUDY_AUTHOR.url}>{STUDY_AUTHOR.name}</a>. The crawler read the files on <time datetime={s.fetchedOn}>{day}</time>. The data is under <a href={DATA_LICENSE.url}>{DATA_LICENSE.name}</a>.
@@ -122,10 +131,20 @@ A robots.txt file can also tell how the site permits the use of its content. Clo
 
 When a page refuses AI input, polite-crawler keeps the page but holds back its text from the AI reader. [Test a robots.txt with signals](../../tools/robots-txt-tester/).
 
+## The monthly runs
+
+The study runs again on the second day of each month, with the newest Tranco list and the same method. Each run keeps its own data files, and each run becomes a new version of the dataset on Zenodo. To get each new run, use the <a href={feedUrl}>RSS feed</a>.
+
+<TrendChart client:visible trend={trend} />
+
+The table gives each run, the newest first. The DOI of a run comes after the owner publishes its version on Zenodo.
+
+<StudyRuns history={history} />
+
 ## The method
 
 1. **The list.** The study used the top 1,000 domains of the Tranco list <code>{study.list.id}</code>, from {study.list.date}. Tranco makes the list from the ranks of five sources across 30 days.
-2. **The requests.** The crawler sent one request for `https://<domain>/robots.txt` to each domain, and followed a maximum of 5 redirects. It did not try again, and it did not try `www.<domain>`. All requests went out from one computer on {day}, with a new, empty store.
+2. **The requests.** The crawler sent one request for `https://<domain>/robots.txt` to each domain, and followed a maximum of 5 redirects. It did not try again, and it did not try `www.<domain>`. All requests went out from one computer{study.runner !== undefined ? ` (${study.runner})` : ""} on {day}, with a new, empty store.
 3. **The User-Agent.** Each request sent <code>{study.userAgent}</code>, with no contact. The address in it goes to [the page for site owners](../../bot/).
 4. **The verdicts.** The function `decide` of polite-crawler decided each agent alone, as RFC 9309 specifies. The path was <code>{study.pagePath}</code>, a page path that no site names. Thus a refusal of this path is a refusal of the pages of the site.
 5. **Redirects.** RFC 9309 lets a crawler read more than 5 redirects as "no file". The study, as the crawler, reads them as unreachable.
@@ -139,12 +158,15 @@ When a page refuses AI input, polite-crawler keeps the page but holds back its t
 - **Content signals.** A file can write a different `Content-Signal` line for each group. The table counts such a site in "Different in two groups", not by its first line.
 - **Domains, not websites.** The list includes domains for content delivery networks, APIs and the DNS. Such a domain with no file counts as a site that states no rules.
 - **A snapshot.** A site can change its robots.txt at any time, and some sites give a different file to different countries.
+- **The network of the monthly runs.** The monthly runs send the requests from a GitHub Actions runner in a data center. Some sites block a data center more often than a home connection. Thus a change in the blocked sites can come from the network, not from the sites.
 - **A request only.** A robots.txt does not stop a crawler that ignores it.
 
 ## Get the data
 
 - <a href={dataUrl}>The dataset as JSON</a>: each domain, its state, its verdicts and the lines that decided them.
 - <a href={csvUrl}>The dataset as CSV</a>: each domain, its state and its verdicts, with one column for each agent.
+- <a href={runCsvUrl}>The CSV of this run</a>, at an address that does not change. The table of [the monthly runs](#the-monthly-runs) gives the files of each run.
+- <a href={feedUrl}>The RSS feed</a>: one item for each run, with its CSV and its DOI.
 - <a href="https://github.com/mark1russell7/crawler/blob/main/packages/site/scripts/robots-study.ts">The script</a> that sent the requests and wrote the dataset.
 
 The data and the text of this study are under the <a href={DATA_LICENSE.url}>{DATA_LICENSE.name}</a> license. You can use them for any purpose when you name the source. The code of polite-crawler and the script are under the MIT license.
@@ -156,9 +178,16 @@ The data and the text of this study are under the <a href={DATA_LICENSE.url}>{DA
   <p>{STUDY_AUTHOR.name}. "Who lets AI agents in? The robots.txt rules of the top 1,000 domains." polite-crawler field notes, {day}. <a href={pageUrl}>{pageUrl}</a>. Data: {DATA_LICENSE.name}.</p>
 </figure>
 
+{concept !== undefined && (
+  <figure class="pc-cite not-content">
+    <figcaption>To cite the study and all its monthly runs, use its concept DOI on Zenodo:</figcaption>
+    <p>{studyCitation()} Zenodo. <a href={doiUrl(concept)}>{doiUrl(concept)}</a></p>
+  </figure>
+)}
+
 {doi !== undefined && (
   <figure class="pc-cite not-content">
-    <figcaption>To cite the data, use its DOI on Zenodo:</figcaption>
+    <figcaption>To cite the data of this run ({studyVersion(study)}), use the DOI of its version:</figcaption>
     <p>{datasetCitation(study)} Zenodo. <a href={doiUrl(doi)}>{doiUrl(doi)}</a></p>
   </figure>
 )}

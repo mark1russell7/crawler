@@ -9,15 +9,16 @@ import pkg from "polite-crawler/package.json";
 import font from "../node_modules/@fontsource-variable/atkinson-hyperlegible-next/files/atkinson-hyperlegible-next-latin-wght-normal.woff2?url";
 import study from "./data/robots-study.json";
 import studyDoi from "./data/study-doi.json";
-import { STUDY_KEYWORDS, datasetCreator, doiOf, doiUrl } from "./lib/cite.ts";
+import { STUDY_KEYWORDS, STUDY_PUBLISHED, datasetCreator, doiOf, doiUrl } from "./lib/cite.ts";
+import { FEED_PATH, FEED_TITLE } from "./lib/feed.ts";
 import type { Study } from "./lib/study.ts";
 import { DATA_LICENSE, STUDY_AUTHOR, headline, summarize } from "./lib/study.ts";
 
 const SITE = "https://mark1russell7.github.io/crawler/";
 const NAME = "polite-crawler";
 const STUDY_ID = "notes/robots-txt-ai-agents";
-/** The day of the first version of the study. A new run changes the date of the data, not this day. */
-const STUDY_PUBLISHED = "2026-10-12";
+/** The base of the build, with a `/` at the end: `/crawler/`. */
+const BASE = `${import.meta.env.BASE_URL.replace(/\/$/, "")}/`;
 
 type HeadEntry = {
   tag: string;
@@ -199,6 +200,16 @@ export const onRequest = defineRouteMiddleware((context) => {
       (study as unknown as Study).fetched.from.slice(0, 10),
     );
     setMeta("property", "article:author", STUDY_AUTHOR.name);
+    // the feed of the monthly runs, for a feed reader that finds feeds in the head of a page
+    head.push({
+      tag: "link",
+      attrs: {
+        rel: "alternate",
+        type: "application/rss+xml",
+        title: FEED_TITLE,
+        href: `${BASE}${FEED_PATH}`,
+      },
+    });
   }
 
   // the 404 page is not a page to index, and its address is not its own

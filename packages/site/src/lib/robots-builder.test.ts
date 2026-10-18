@@ -43,6 +43,13 @@ describe("the robots.txt builder", () => {
     }
   });
 
+  it("writes the content signal of the recipe", () => {
+    expect(buildRobots(RECIPE_CHOICES)).toContain(
+      "Content-Signal: search=yes, ai-input=yes, ai-train=no",
+    );
+    expect(buildRobots({ ...RECIPE_CHOICES, signal: false })).not.toContain("Content-Signal");
+  });
+
   it("refuses Google-Extended and still permits Googlebot", () => {
     const robots = parseRobots(buildRobots(RECIPE_CHOICES));
     expect(decide(robots, ["Google-Extended"], "/").allowed).toBe(false);

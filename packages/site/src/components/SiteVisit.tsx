@@ -119,11 +119,12 @@ const toneOf = (row: VisitRow): string => {
 /** This function gives the text of a wait, with its reason. */
 const waitText = (wait: Wait, at: number): string =>
   wait.kind === "stop"
-    ? `no request until ${clockText(at + wait.ms)}: ${wait.text}`
+    ? `no request until ${clockText(at + wait.ms)}. ${wait.text}`
     : `it waits ${durationText(wait.ms)}: ${wait.text}`;
 
 /** This function gives the text of a row that sent no request. */
 const localText = (row: VisitRow): string => {
+  if (row.path === "") return row.note;
   if (row.kind === "store") return `the store answers with ${row.note}: no request`;
   if (row.kind === "refused") return `robots.txt refuses it (${row.note}): no request`;
   return `${row.note}: no request`;
@@ -147,7 +148,7 @@ const LogRow = ({ row }: { readonly row: VisitRow }): ReactElement => {
         <time>{clockText(row.at)}</time>
         <p>
           <span className="pc-visit-dot" aria-hidden="true" />
-          <code>{row.path}</code> <span>{localText(row)}</span>
+          {row.path === "" ? null : <code>{row.path}</code>} <span>{localText(row)}</span>
         </p>
       </li>
     );

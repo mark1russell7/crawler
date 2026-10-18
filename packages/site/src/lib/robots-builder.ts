@@ -121,6 +121,8 @@ export interface BuilderChoices {
   readonly privatePaths: readonly string[];
   /** With the value true, each group repeats the private paths. A named group replaces the group `*`. */
   readonly repeat: boolean;
+  /** With the value true, the group `*` gets a content signal line. */
+  readonly signal: boolean;
 }
 
 /** The choices of the recipe on the page: it refuses training and lets the assistants in. */
@@ -129,6 +131,7 @@ export const RECIPE_CHOICES: BuilderChoices = {
   path: "/members/",
   privatePaths: ["/account/"],
   repeat: true,
+  signal: true,
 };
 
 /** The address of the sitemap in the file. */
@@ -168,14 +171,36 @@ const rulesOf = (id: GroupId, rule: GroupRule, choices: BuilderChoices): readonl
   return lines;
 };
 
+/** Each key of the content signal, and the group whose rule gives its value. */
+const SIGNAL_KEYS: ReadonlyArray<readonly [string, GroupId]> = [
+  ["search", "engines"],
+  ["ai-input", "user"],
+  ["ai-train", "training"],
+];
+
+/**
+ * This function gives the value of the content signal of the choices (the format of Cloudflare).
+ * A group that is let in gives `yes`, and a group that is kept out gives `no`. A group that is
+ * kept out of one path gives no key, because one line applies to each path.
+ */
+export const signalOf = (choices: BuilderChoices): string | undefined => {
+  const parts = SIGNAL_KEYS.flatMap(([key, id]) => {
+    const rule = choices.rules[id];
+    return rule === "path" ? [] : [`${key}=${rule === "allow" ? "yes" : "no"}`];
+  });
+  return parts.length === 0 ? undefined : parts.join(", ");
+};
+
 /** This function writes the robots.txt of the choices. */
 export const buildRobots = (choices: BuilderChoices): string => {
+  const signal = choices.signal ? signalOf(choices) : undefined;
   const blocks = BUILDER_GROUPS.map((group) => {
     const agents = group.id === "others" ? ["*"] : group.agents.map((agent) => agent.token);
     return [
       `# ${group.comment}`,
       ...agents.map((token) => `User-agent: ${token}`),
       ...rulesOf(group.id, choices.rules[group.id], choices),
+      ...(group.id === "others" && signal !== undefined ? [`Content-Signal: ${signal}`] : []),
     ].join("\n");
   });
   return `${blocks.join("\n\n")}\n\nSitemap: ${BUILDER_SITEMAP}\n`;

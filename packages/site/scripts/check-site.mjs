@@ -372,7 +372,7 @@ const INTERACTIONS = [
     name: "debug-builder-leak",
     figure: ".pc-rbuild",
     act: async (page) => {
-      await page.getByText("Repeat the private paths in each group").click();
+      await page.getByRole("checkbox", { name: "Repeat the private paths in each group" }).click();
       await page.getByText("A named group replaces").waitFor({ timeout: 10_000 });
     },
   },

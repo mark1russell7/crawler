@@ -101,6 +101,7 @@ export default function RobotsBuilder(): ReactElement {
   const [pathText, setPathText] = useState(RECIPE_CHOICES.path);
   const [privateText, setPrivateText] = useState(RECIPE_CHOICES.privatePaths.join(", "));
   const [repeat, setRepeat] = useState(RECIPE_CHOICES.repeat);
+  const [signal, setSignal] = useState(RECIPE_CHOICES.signal);
   const [selected, setSelected] = useState<string | undefined>(undefined);
   const [copied, setCopied] = useState<boolean | undefined>(undefined);
   /** The group whose rule the reader changed last: the file marks its lines. */
@@ -111,6 +112,7 @@ export default function RobotsBuilder(): ReactElement {
     path: pathText,
     privatePaths: pathsOf(privateText),
     repeat,
+    signal,
   };
   const text = buildRobots(choices);
   const robots = useMemo(() => parseRobots(text), [text]);
@@ -169,6 +171,7 @@ export default function RobotsBuilder(): ReactElement {
             setPathText(RECIPE_CHOICES.path);
             setPrivateText(RECIPE_CHOICES.privatePaths.join(", "));
             setRepeat(RECIPE_CHOICES.repeat);
+            setSignal(RECIPE_CHOICES.signal);
             setSelected(undefined);
             setTouched(undefined);
           }}
@@ -202,6 +205,14 @@ export default function RobotsBuilder(): ReactElement {
             onChange={(event) => setRepeat(event.currentTarget.checked)}
           />
           <span>Repeat the private paths in each group</span>
+        </label>
+        <label className="pc-rbuild-check">
+          <input
+            type="checkbox"
+            checked={signal}
+            onChange={(event) => setSignal(event.currentTarget.checked)}
+          />
+          <span>Add a content signal: the uses of the pages for search, AI input and training</span>
         </label>
       </div>
 

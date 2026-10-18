@@ -225,6 +225,14 @@ interface SendOptions {
   readonly note: string;
 }
 
+/** This function gives the note of a request: the note of the job, or the meaning of a refusal. */
+const noteOf = (status: number, note: string): string =>
+  status === 429 || status === 503
+    ? "the site asks the crawler to wait"
+    : status === 403
+      ? "the site refuses the crawler"
+      : note;
+
 /** This function starts the simulation and gives the log of the hour. */
 export const simulateVisit = async (input: VisitInput, seed = 11): Promise<Visit> => {
   const clock = new VirtualClock(0);
@@ -278,7 +286,11 @@ export const simulateVisit = async (input: VisitInput, seed = 11): Promise<Visit
         const reason = `asked to wait ${String(Math.round(retryAfterMs / SECOND))} s`;
         scheduler.stop(VISIT_HOST, reason, until);
         stop = { at: now, until, reason, cause: "the 429 with a long Retry-After" };
-        return { ms: until - now, kind: "stop", text: "Retry-After is more than 1 hour: a stop" };
+        return {
+          ms: until - now,
+          kind: "stop",
+          text: "A Retry-After of more than 1 hour stops the site.",
+        };
       }
       if (retryAfterMs !== undefined)
         return retryAfterMs > rest.ms
@@ -293,7 +305,7 @@ export const simulateVisit = async (input: VisitInput, seed = 11): Promise<Visit
       const until = now + policy.blockedStopMs;
       scheduler.stop(VISIT_HOST, "blocked", until);
       stop = { at: now, until, reason: "blocked", cause: "a 403" };
-      return { ms: until - now, kind: "stop", text: "a 403 stops the site for 1 hour" };
+      return { ms: until - now, kind: "stop", text: "A 403 stops the site for 1 hour." };
     }
     store.record(VISIT_HOST, "success");
     return restWait();
@@ -348,7 +360,7 @@ export const simulateVisit = async (input: VisitInput, seed = 11): Promise<Visit
           status: answer.status,
           sent,
           wait,
-          note: options.note,
+          note: noteOf(answer.status, options.note),
         };
         rows.push(row);
         return { value: row, delayMs: wait.kind === "stop" ? rest.ms : wait.ms };
@@ -475,8 +487,8 @@ export const simulateVisit = async (input: VisitInput, seed = 11): Promise<Visit
         push({
           at: clock.now(),
           kind: "stopped",
-          path: `${String(queue.length)} more links`,
-          note: "the site is stopped for the rest of the crawl",
+          path: "",
+          note: `The other ${String(queue.length)} links of the crawl get no request: the site is stopped.`,
         });
         reason = "The crawl ends: the site is stopped, so the other pages get no request.";
         break;

@@ -4,65 +4,6 @@ This file is the roadmap of polite-crawler, its site, and the jarvis side that u
 The tracker page https://claude.ai/artifact/Tby9J8r39c3fz4ggXoi1QZ shows the same items, with a dependency map and a timeline.
 Change this file and the tracker together. Each item has an id, a status, an area, the items it waits for, dates and links.
 
-## Waiting on Mark
-
-### `actions-pr`: Let the monthly study open its pull request
-
-The monthly study workflow opens a pull request with the month's data. The repository does not let GitHub Actions open pull requests yet, so the job only pushes its branch until this changes.
-
-- Area: Release and CI
-- Waits for: `study-monthly`
-- What Mark does: In github.com/mark1russell7/crawler: Settings > Actions > General > Workflow permissions, turn on "Allow GitHub Actions to create and approve pull requests". Before 2 November 2026, when the first monthly run starts.
-- [Actions settings](https://github.com/mark1russell7/crawler/settings/actions)
-
-### `rel013`: Release 0.1.3
-
-A patch release: hybrid search, the daemon with MCP tasks, the recipe SDK with the venue and product recipes, and the consent fix. Compat tests prove that 0.1.1 and 0.1.2 code still compiles. Pull request #8 is ready. The npm session (markt-54) merges it, and CI publishes and tags it. Low memory stopped that session's merge watcher, and it restarts stopped work only on Mark's go.
-
-- Area: Release and CI
-- Waits for: `hybrid`, `daemon`, `consent-fix`, `recipes-up`, `sdk`
-- What Mark does: Tell the npm session (markt-54) "go". It then merges pull request #8, and the release workflow publishes 0.1.3 to npm. The same go also starts its client 0.8.0 publish.
-- Started: 2026-10-18
-- [Pull request #8](https://github.com/mark1russell7/crawler/pull/8)
-
-## In progress
-
-### `daemon`: A daemon mode, with MCP tasks for long jobs
-
-On main since 2026-10-18, in the next release. polite-crawler daemon runs the watch list on a schedule, writes confirmed changes as JSON lines, and can run the operator's command for each change. Opt-in MCP over local HTTP needs a token, binds to loopback, and blocks foreign origins. Long jobs are native MCP tasks with cancel, and clients without tasks get progress.
-
-- Area: Package
-- Waits for: `watch`
-- Started: 2026-10-18
-- [Main at 2c0e9d2](https://github.com/mark1russell7/crawler/commit/2c0e9d2)
-
-### `hybrid`: Hybrid search: full text plus a local vector index
-
-On main since 2026-10-18, in the next release. One Embedder interface with two adapters: transformers.js (an optional peer, bge-small by default, a real-model test in CI) and Ollama (nomic-embed-text by default, loopback only unless allowed). rank "hybrid" fuses 50 full-text and 50 vector results (k = 60). Vectors are kept per text and model in vectors.sqlite, and held-back pages are never embedded. A search over 89,000 chunks takes about 0.1 s. Exact full-text ranking stays the default.
-
-- Area: Package
-- Waits for: `s30`
-- Started: 2026-10-17
-- [Main at 045c716](https://github.com/mark1russell7/crawler/commit/045c716)
-
-### `recipes-up`: Venue-hours and product recipes move into the package
-
-On main since 2026-10-18, in 0.1.3. readVenue reads a venue's hours from its own site, each reading with its source and a quote that verify finds. readProduct reads a schema.org Product, its price as money, its variants and availability, and skips related products. Only generic logic moved, with made-up test sites. jarvis switches in its new public code repo, with a migration note ready.
-
-- Area: jarvis
-- Waits for: `rel011`
-- Started: 2026-10-18
-- [Main at 4a03bc5](https://github.com/mark1russell7/crawler/commit/4a03bc5)
-
-### `sdk`: A recipe SDK
-
-On main since 2026-10-18, in 0.1.3. defineRecipe and runRecipe let anyone write a recipe: what to fetch and how to read it into documents. Reindex, time travel and the archived fallback work with it. The README has a worked example.
-
-- Area: Package
-- Waits for: `recipes-up`
-- Started: 2026-10-18
-- [Main at 4a03bc5](https://github.com/mark1russell7/crawler/commit/4a03bc5)
-
 ## Blocked
 
 ### `client070`: Stream helpers in @procedures 0.7.0
@@ -136,15 +77,77 @@ On main. On the 2nd of each month a CI job runs the study again on the top 1,000
 - [Main at 65803c5](https://github.com/mark1russell7/crawler/commit/65803c5)
 - [Concept DOI](https://doi.org/10.5281/zenodo.23443374)
 
+### `sdk`: A recipe SDK
+
+Shipped in 0.1.3 on 2026-10-18. defineRecipe and runRecipe let anyone write a recipe: what to fetch and how to read it into documents. Reindex, time travel and the archived fallback work with it. The README has a worked example.
+
+- Area: Package
+- Waits for: `recipes-up`
+- Started: 2026-10-18
+- Shipped: 2026-10-18
+- [Release v0.1.3](https://github.com/mark1russell7/crawler/releases/tag/v0.1.3)
+
+### `recipes-up`: Venue-hours and product recipes move into the package
+
+Shipped in 0.1.3 on 2026-10-18. readVenue reads a venue's hours from its own site, each reading with its source and a quote that verify finds. readProduct reads a schema.org Product, its price as money, its variants and availability, and skips related products. Only generic logic moved, with made-up test sites. jarvis switches in its new public code repo, with a migration note ready.
+
+- Area: jarvis
+- Waits for: `rel011`
+- Started: 2026-10-18
+- Shipped: 2026-10-18
+- [Release v0.1.3](https://github.com/mark1russell7/crawler/releases/tag/v0.1.3)
+
+### `hybrid`: Hybrid search: full text plus a local vector index
+
+Shipped in 0.1.3 on 2026-10-18. One Embedder interface with two adapters: transformers.js (an optional peer, bge-small by default, a real-model test in CI) and Ollama (nomic-embed-text by default, loopback only unless allowed). rank "hybrid" fuses 50 full-text and 50 vector results (k = 60). Vectors are kept per text and model in vectors.sqlite, and held-back pages are never embedded. A search over 89,000 chunks takes about 0.1 s. Exact full-text ranking stays the default.
+
+- Area: Package
+- Waits for: `s30`
+- Started: 2026-10-17
+- Shipped: 2026-10-18
+- [Release v0.1.3](https://github.com/mark1russell7/crawler/releases/tag/v0.1.3)
+
+### `daemon`: A daemon mode, with MCP tasks for long jobs
+
+Shipped in 0.1.3 on 2026-10-18. polite-crawler daemon runs the watch list on a schedule, writes confirmed changes as JSON lines, and can run the operator's command for each change. Opt-in MCP over local HTTP needs a token, binds to loopback, and blocks foreign origins. Long jobs are native MCP tasks with cancel, and clients without tasks get progress.
+
+- Area: Package
+- Waits for: `watch`
+- Started: 2026-10-18
+- Shipped: 2026-10-18
+- [Release v0.1.3](https://github.com/mark1russell7/crawler/releases/tag/v0.1.3)
+
+### `rel013`: Release 0.1.3
+
+A patch release, on npm since 2026-10-18: hybrid search, the daemon with MCP tasks, the recipe SDK with the venue and product recipes, and the consent fix. Compat tests prove that 0.1.1 and 0.1.2 code still compiles. The release workflow published it with provenance, put it in the MCP registry and made the tag.
+
+- Area: Release and CI
+- Waits for: `hybrid`, `daemon`, `consent-fix`, `recipes-up`, `sdk`
+- Started: 2026-10-18
+- Shipped: 2026-10-18
+- [Pull request #8](https://github.com/mark1russell7/crawler/pull/8)
+- [Release v0.1.3](https://github.com/mark1russell7/crawler/releases/tag/v0.1.3)
+- [npm 0.1.3](https://www.npmjs.com/package/polite-crawler/v/0.1.3)
+
+### `actions-pr`: Let the monthly study open its pull request
+
+GitHub Actions may open pull requests in the repository since 2026-10-18, so the monthly study opens its own pull request. The first one comes on 2 November 2026.
+
+- Area: Release and CI
+- Waits for: `study-monthly`
+- Shipped: 2026-10-18
+- [Actions settings](https://github.com/mark1russell7/crawler/settings/actions)
+
 ### `consent-fix`: A failed consent question keeps a page held back
 
-When the MCP client can ask the user before releasing a held-back page, but the question times out or fails, the page now stays held back. The operator's opt-in applies only to a client that cannot ask. This is the rule of the shared MCP host too, so the later move keeps it. On main, in the next release.
+When the MCP client can ask the user before releasing a held-back page, but the question times out or fails, the page now stays held back. The operator's opt-in applies only to a client that cannot ask. This is the rule of the shared MCP host too, so the later move keeps it. Shipped in 0.1.3.
 
 - Area: Package
 - Waits for: `pub010`
 - Started: 2026-10-18
 - Shipped: 2026-10-18
 - [Commit 38caa18](https://github.com/mark1russell7/crawler/commit/38caa18)
+- [Release v0.1.3](https://github.com/mark1russell7/crawler/releases/tag/v0.1.3)
 
 ### `timetravel`: Read a page as it was on a date
 
@@ -413,7 +416,7 @@ Eight reviewers read the crawler, the site and the jarvis side line by line and 
 - Area: Package
 - Started: 2026-10-12
 - Shipped: 2026-10-12
-- [The review, with each finding's outcome](https://claude.ai/artifact/7SHEaVHYqLwMxmvGhzzL9G)
+- [The review, with each finding's outcome](https://claude.ai/artifact/98FDfTTVFAusA21ZoDkPoM)
 
 ## Never
 

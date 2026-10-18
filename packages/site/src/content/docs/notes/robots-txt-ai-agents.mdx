@@ -54,9 +54,7 @@ export const trend = trendOf(history);
 export const feedUrl = `${base}/${FEED_PATH}`;
 export const runCsvUrl = `${base}/data/robots-study-${studyVersion(study)}.csv`;
 
-<p class="pc-byline">
-  By <a href={STUDY_AUTHOR.url}>{STUDY_AUTHOR.name}</a>. The crawler read the files on <time datetime={s.fetchedOn}>{day}</time>. The data is under <a href={DATA_LICENSE.url}>{DATA_LICENSE.name}</a>.
-</p>
+<p class="pc-byline">By <a href={STUDY_AUTHOR.url}>{STUDY_AUTHOR.name}</a>. The crawler read the files on <time datetime={s.fetchedOn}>{day}</time>. The data is under <a href={DATA_LICENSE.url}>{DATA_LICENSE.name}</a>.</p>
 
 On {day}, polite-crawler read the robots.txt file of each of the top {s.listSize.toLocaleString("en-US")} domains of the <a href={study.list.url}>Tranco list</a>. This page shows which sites let 15 agents in, from GPTBot and ClaudeBot to Claude-User and Googlebot. For each verdict, it also shows the rule that decided it.
 

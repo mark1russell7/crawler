@@ -1,6 +1,6 @@
 ---
 title: Command line
-description: The polite-crawler command line - fetch, find, read, verify, extract, reindex, mcp, discover, crawl, export, diff, watch and embed, with each option.
+description: The polite-crawler command line - fetch, find, read, verify, extract, reindex, mcp, discover, crawl, export, diff, watch, embed, venue and product, with each option.
 ---
 
 ```sh
@@ -30,6 +30,8 @@ npx polite-crawler <command> [options]
 | `daemon status` | It prints the state of the daemon of the store. It opens no store. |
 | `key-directory` | It prints the key directory (a JSON Web Key Set) of `--sign-key`, for you to host. |
 | `embed --embedder <name>` | It gives vectors to the stored pages that have none, for `find --rank hybrid`. It sends no request to a site. |
+| `venue <url>` | It reads the opening hours of a venue from its own site, with the source of each reading. |
+| `product <url>` | It reads the schema.org Product data of a product page: the name, the codes, the price, the availability and the variant. |
 
 ## Options
 
@@ -41,7 +43,7 @@ These options apply to each command:
 | `--contact <text>` | `$POLITE_CRAWLER_CONTACT` | An email (in `From` and the `User-Agent`) or a URL (in the `User-Agent` only). |
 | `--allow-private` | `$POLITE_CRAWLER_ALLOW_PRIVATE=1` | Fetch loopback, private and link-local addresses too. By default, the crawler refuses them. |
 | `--no-browser` | | Do not open the headless browser. |
-| `--sign-key <file>` | `$POLITE_CRAWLER_SIGN_KEY` | Sign each request (Web Bot Auth) with this Ed25519 key: PKCS#8 PEM or a JWK. It needs `--signature-agent`. `fetch`, `discover`, `crawl`, `watch run`, `mcp` and `key-directory` take it. |
+| `--sign-key <file>` | `$POLITE_CRAWLER_SIGN_KEY` | Sign each request (Web Bot Auth) with this Ed25519 key: PKCS#8 PEM or a JWK. It needs `--signature-agent`. `fetch`, `discover`, `crawl`, `watch run`, `mcp`, `key-directory`, `venue` and `product` take it. |
 | `--signature-agent <url>` | `$POLITE_CRAWLER_SIGNATURE_AGENT` | Where a site finds the public key: the https origin of the key directory, or the URL of a JSON Web Key Set on a path. |
 | `--json` | | Print JSON. |
 | `-v`, `--version` | | Print the version and stop. |
@@ -51,10 +53,10 @@ These options apply to one command. The command line is wrong when another comma
 
 | Command | Option | Default | What it does |
 | --- | --- | --- | --- |
-| `fetch`, `crawl`, `watch add` | `--render <mode>` | `auto` | `auto`, `never` or `always`. |
-| `fetch`, `crawl`, `discover` | `--max-age <age>` | `24h` | A stored copy younger than this age answers with no request. `0` fetches the page again. |
-| `fetch` | `--archive-fallback` | | When the site refuses the page or is down, give a copy from the Wayback Machine or Common Crawl. The result marks it as archived, with its date. |
-| `fetch` | `--archive-despite-robots` | | With `--archive-fallback`: also give a copy of a page that the current robots.txt of its site disallows. |
+| `fetch`, `crawl`, `watch add`, `venue`, `product` | `--render <mode>` | `auto` | `auto`, `never` or `always`. |
+| `fetch`, `crawl`, `discover`, `venue`, `product` | `--max-age <age>` | `24h` | A stored copy younger than this age answers with no request. `0` fetches the page again. |
+| `fetch`, `venue`, `product` | `--archive-fallback` | | When the site refuses the page or is down, give a copy from the Wayback Machine or Common Crawl. The result marks it as archived, with its date. |
+| `fetch`, `venue`, `product` | `--archive-despite-robots` | | With `--archive-fallback`: also give a copy of a page that the current robots.txt of its site disallows. |
 | `find` | `--limit <n>` | `10` | The number of results. |
 | `find` | `--kind <kind>` | all | Only this kind of document, for example `page` or `pdf`. |
 | `find` | `--rank <mode>` | `exact` | `exact` gives BM25 to each match. `fast` leaves the common words out of the documents that hold one word, so a long question is faster. `hybrid` also finds by meaning, and it needs `--embedder`. |
@@ -99,6 +101,16 @@ These options apply to one command. The command line is wrong when another comma
 | `embed` | `--budget <time>` | `10m` | The longest time of the work. No embedding starts after it. |
 | `embed` | `--max-docs <n>` | | The most texts that get vectors. |
 | `embed` | `--kind <kind>` | all | Only this kind of document, for example `page` or `pdf`. |
+| `venue` | `--name <text>` | | The name of the venue. The output tells if the home page names it. A domain that a venue let go can show a different business. |
+| `venue` | `--require-name` | | With `--name`: read no hours from a site that does not name the venue, and fetch no more pages. |
+| `venue` | `--address <text>` | | The street address of the venue. On a page that lists more than one location, the recipe reads only this location. |
+| `venue` | `--lat <n>`, `--lon <n>` | | The position of the venue, for the same use. A location within 150 m matches. Write a number below zero after `=`, for example `--lon=-20.5`. |
+| `venue` | `--osm <value>` | | An OpenStreetMap `opening_hours` value. The recipe reads it as one more reading. It sends no request to OpenStreetMap. |
+| `venue` | `--pages <n>` | `3` | The pages after the home page, from `0` to `8`. The recipe fetches the pages that most likely hold hours or a menu. |
+| `venue` | `--compare <file>` | | Compare the week of the site with a week that you keep, as JSON. The [venue and product](#venue-and-product) section gives the format. |
+| `venue`, `product` | `--budget <time>` | no limit | No request starts after this time, for example `2m`. |
+| `venue`, `product` | `--on-behalf-of <agent>` | | Apply the robots.txt rules of this agent too, for example `Claude-User`. Repeat the option for more agents. |
+| `venue`, `product` | `--user-provided` | | Read a page that asked not to be AI input, as for `read`. |
 
 ## Daemon
 
@@ -146,6 +158,35 @@ The package installs no service. The [README of the package](https://github.com/
 
 The README of the package tells what goes into the archive, what does not, and why.
 
+## Venue and product
+
+`venue` and `product` use the recipes of the package: `readVenue` and `readProduct`. Each page is a fetch of the crawler, so robots.txt, the pace and the capture log apply.
+
+```sh
+npx polite-crawler venue https://forno-esempio.example/ --name "Forno Esempio" --pages 2
+npx polite-crawler venue https://trattoria-campione.example/ --address "12 Via Esempio"
+npx polite-crawler venue https://forno-esempio.example/ --compare kept-week.json
+npx polite-crawler product "https://bottega-campione.example/products/olio-esempio?variant=222"
+```
+
+`venue` prints these lines:
+
+- The week of the site (`from_site`). It is the best reading of the site itself, with no guessed am or pm.
+- Each reading, the best first, with its rank, its source URL, its capture and its quote. The quote of a reading of the text is a quote for `verify`.
+- The days where the readings disagree, with the hours of each reading on that day.
+- The menus, the phone, the pages that the recipe fetched, and the notes. A note tells of a held-back page, a site that moved, or a page that lists more than one location.
+
+`venue --compare <file>` compares the week of the site with a week that you keep, through `compareHours`. It prints `same`, `changed`, `new` or `not read` for each day. A `changed` day shows the kept hours and the new hours.
+
+- The file is a week, for example `{"mon": [["07:00", "15:00"]], "sun": []}`. `[]` and `null` are a closed day.
+- A day can also give one interval, `["07:00", "15:00"]`, as `toHoursWeek` writes it.
+- An object with the field `week` or `hours_week` is correct too. Thus the `from_site` of `venue --json` is a kept week.
+- With `--json`, the result gets the field `compare`: the file, the kept week and the `comparison`. The `comparison` is null when the result has no `from_site`.
+
+`product` prints the name, the brand, the SKU and the GTIN. Then it prints the price as an amount and an ISO 4217 code, and the range of the offers. Then come the availability, the variant of the URL and the seller. A wall and a held-back page say so.
+
+`--json` prints the `VenueResult` or the `ProductResult` of the library.
+
 ## Exit codes
 
 | Code | Meaning |
@@ -153,6 +194,8 @@ The README of the package tells what goes into the archive, what does not, and w
 | `0` | The command did its work. |
 | `1` | The command did not do its work: a page that the crawler did not fetch, no search result, a quote that is not in the document, a document that is not stored or that is held back, or an error. `discover` gives `1` when it finds no URL, and `crawl` when it gets no page. `read --at` and `verify --at` give `1` for a time before the first capture. `watch run` gives `1` when a check is `refused` or an `error`, or when entries stay due. With `--archive-fallback`, a page with an archived copy counts as done. `extract` gives `1` when a field is not `verified` or `normalized`. `embed` gives `1` when its budget stops it before each page has vectors. |
 | `2` | The command line is wrong. The command opens no store. |
+| `3` | `venue` and `product` read nothing: no opening hours of the site or no Product data, a page that is held back, or a page that did not come. |
+| `4` | `venue` and `product`: the site refused the crawler (a wall). The causes are a 401, a 402 or a 403, a challenge, a bot check, robots.txt or a stop of the host. The crawler does not try a different identity. |
 
 ## Examples
 
@@ -195,6 +238,13 @@ npx polite-crawler watch run --budget 5m
 ollama pull nomic-embed-text
 npx polite-crawler embed --embedder ollama --budget 30m
 npx polite-crawler find "a loaf with a dark crust" --rank hybrid --embedder ollama
+
+# the hours of a venue from its own site, compared with the week that you keep
+npx polite-crawler venue https://forno-esempio.example/ --compare kept-week.json
+
+# the price of a product page as JSON for a program, and a stop at a wall
+npx polite-crawler product "https://bottega-campione.example/products/olio-esempio" --json
+[ $? -eq 4 ] && echo "the shop refused the crawler"
 ```
 
 ## Discover and crawl

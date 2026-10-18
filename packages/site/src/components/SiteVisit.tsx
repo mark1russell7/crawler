@@ -71,6 +71,10 @@ const PRESETS: ReadonlyArray<{ readonly name: string; readonly text: string }> =
   { name: "Blocks PoliteCrawler", text: "User-agent: PoliteCrawler\nDisallow: /\n" },
 ];
 
+/** The zoom shows the first 3 minutes. */
+const ZOOM = 3 * MINUTE;
+const zpct = (ms: number): string =>
+  `${((Math.max(0, Math.min(ZOOM, ms)) / ZOOM) * 100).toFixed(3)}%`;
 const pct = (ms: number): string =>
   `${((Math.max(0, Math.min(VISIT_SPAN, ms)) / VISIT_SPAN) * 100).toFixed(3)}%`;
 
@@ -104,7 +108,7 @@ const LogRow = ({ row }: { readonly row: VisitRow }): ReactElement => {
     return (
       <li className={`pc-visit-row pc-visit-${row.kind}`}>
         <time>{clockText(row.at)}</time>
-        <p>{row.kind === "end" ? `The crawl ends. ${row.note}.` : row.note}</p>
+        <p>{row.note}</p>
       </li>
     );
   }
@@ -137,7 +141,7 @@ const LogRow = ({ row }: { readonly row: VisitRow }): ReactElement => {
           {row.sent.length > 0 ? `. It sent ${row.sent.join(" and ")}` : ""}.
         </p>
         {wait !== null ? (
-          <p className={`pc-visit-wait pc-visit-wait-${wait.kind}`}>
+          <p className={`pc-visit-then pc-visit-wait-${wait.kind}`}>
             <span className="pc-visit-bar" aria-hidden="true">
               <span style={{ width: `${((barMs / BAR_SPAN) * 100).toFixed(2)}%` }} />
             </span>
@@ -379,7 +383,11 @@ export default function SiteVisit(): ReactElement {
         </p>
         <div className="pc-axis-track pc-visit-axis">
           {[0, 10, 20, 30, 40, 50, 60].map((minute) => (
-            <span key={minute} style={{ left: pct(minute * MINUTE) }}>
+            <span
+              key={minute}
+              style={{ left: pct(minute * MINUTE) }}
+              className={minute % 30 === 0 ? undefined : "pc-tick-minor"}
+            >
               {minute === 0 ? "0:00" : `${String(minute)} min`}
             </span>
           ))}
@@ -407,6 +415,62 @@ export default function SiteVisit(): ReactElement {
             ) : null,
           )}
           {visit !== null ? <span className="pc-visit-now" style={{ left: pct(now) }} /> : null}
+        </div>
+        <p className="pc-visit-part pc-visit-zoomhead">
+          The first 3 minutes, to scale <span>each request, and the wait after it</span>
+        </p>
+        <div className="pc-axis-track pc-visit-axis">
+          {[0, 30, 60, 90, 120, 150, 180].map((second) => (
+            <span
+              key={second}
+              style={{ left: zpct(second * 1000) }}
+              className={second % 60 === 0 ? undefined : "pc-tick-minor"}
+            >
+              {second === 0
+                ? "0:00"
+                : second % 60 === 0
+                  ? `${String(second / 60)} min`
+                  : `${String(second)} s`}
+            </span>
+          ))}
+        </div>
+        <div className="pc-visit-zoom">
+          {stopShown && stop !== null && stop.at < ZOOM ? (
+            <span
+              className="pc-visit-stopband"
+              style={{ left: zpct(stop.at), width: zpct(Math.min(ZOOM, stop.until) - stop.at) }}
+            />
+          ) : null}
+          {rows.map((row, index) => {
+            if (row.at >= ZOOM) return null;
+            if (row.kind !== "request")
+              return row.kind === "ask" || row.kind === "end" ? null : (
+                <span
+                  key={index}
+                  className={`pc-visit-local-tick pc-visit-local-${row.kind}`}
+                  style={{ left: zpct(row.at) }}
+                />
+              );
+            const end = row.end ?? row.at;
+            const wait = row.wait;
+            return (
+              <span key={index}>
+                <span
+                  className={`pc-visit-zreq pc-visit-${toneOf(row)}`}
+                  style={{ left: zpct(row.at), width: zpct(end - row.at) }}
+                />
+                {wait !== null && wait.kind !== "stop" && end < ZOOM ? (
+                  <span
+                    className={`pc-visit-zwait pc-visit-wait-${wait.kind}`}
+                    style={{ left: zpct(end), width: zpct(Math.min(ZOOM, end + wait.ms) - end) }}
+                  />
+                ) : null}
+              </span>
+            );
+          })}
+          {visit !== null && now < ZOOM ? (
+            <span className="pc-visit-now" style={{ left: zpct(now) }} />
+          ) : null}
         </div>
       </div>
 
@@ -487,6 +551,17 @@ export default function SiteVisit(): ReactElement {
             <span className="pc-visit-key pc-visit-stopkey" />
             Stopped
           </li>
+          <li>
+            <span className="pc-visit-wkey pc-visit-wait-pace" />A wait: the pace
+          </li>
+          <li>
+            <span className="pc-visit-wkey pc-visit-wait-crawl-delay" />
+            Crawl-delay, or a slow server
+          </li>
+          <li>
+            <span className="pc-visit-wkey pc-visit-wait-retry-after" />
+            Retry-After, or a backoff
+          </li>
         </ul>
         <p className="pc-visit-model">
           The robots.txt parser, the scheduler of each site, the rest after each request and the
@@ -513,9 +588,7 @@ export default function SiteVisit(): ReactElement {
                 row.kind === "ask" || row.kind === "end" ? (
                   <tr key={index}>
                     <td>{clockText(row.at)}</td>
-                    <td colSpan={3}>
-                      {row.kind === "end" ? `The crawl ends. ${row.note}.` : row.note}
-                    </td>
+                    <td colSpan={3}>{row.note}</td>
                   </tr>
                 ) : row.kind === "request" ? (
                   <tr key={index}>

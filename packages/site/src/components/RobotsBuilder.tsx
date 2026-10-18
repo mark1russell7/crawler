@@ -37,6 +37,7 @@ interface Row {
 interface Section {
   readonly id: string;
   readonly name: string;
+  readonly detail: string;
   readonly rows: readonly Row[];
 }
 
@@ -44,6 +45,7 @@ const SECTIONS: readonly Section[] = [
   ...BUILDER_GROUPS.map((group) => ({
     id: group.id,
     name: group.name,
+    detail: group.detail,
     rows:
       group.id === "others"
         ? [
@@ -66,6 +68,7 @@ const SECTIONS: readonly Section[] = [
   {
     id: "polite",
     name: "polite-crawler",
+    detail: "Its MCP server obeys the rules for PoliteCrawler and for Claude-User.",
     rows: [
       {
         key: "mcp",
@@ -164,93 +167,88 @@ export default function RobotsBuilder(): ReactElement {
         </button>
       </header>
 
-      <div className="pc-rbuild-body">
-        <div className="pc-rbuild-controls">
-          {BUILDER_GROUPS.map((group) => (
-            <div className="pc-rbuild-group" key={group.id}>
-              <div className="pc-rbuild-gname">
-                <strong id={`pc-rbuild-${group.id}`}>{group.name}</strong>
-                <span>{group.detail}</span>
-              </div>
-              <div className="pc-seg" role="group" aria-labelledby={`pc-rbuild-${group.id}`}>
-                {RULES.map((rule) => (
-                  <button
-                    type="button"
-                    key={rule.id}
-                    aria-pressed={rules[group.id] === rule.id}
-                    onClick={() => setRule(group.id, rule.id)}
-                  >
-                    {rule.label}
-                  </button>
-                ))}
-              </div>
-              {group.agents.length > 0 ? (
-                <p className="pc-rbuild-tokens">
-                  {group.agents.map((agent) => (
-                    <code key={agent.token}>{agent.token}</code>
-                  ))}
-                </p>
-              ) : null}
-            </div>
-          ))}
-          <div className="pc-rbuild-paths">
-            <label className="pc-field">
-              <span>The path for “Keep out of the path”</span>
-              <input
-                value={pathText}
-                spellcheck={false}
-                onInput={(event) => setPathText(event.currentTarget.value)}
-              />
-            </label>
-            <label className="pc-field">
-              <span>Private paths: no bot can fetch them</span>
-              <input
-                value={privateText}
-                spellcheck={false}
-                placeholder="For example /account/, /cart"
-                onInput={(event) => setPrivateText(event.currentTarget.value)}
-              />
-            </label>
-            <label className="pc-rbuild-check">
-              <input
-                type="checkbox"
-                checked={repeat}
-                onChange={(event) => setRepeat(event.currentTarget.checked)}
-              />
-              <span>Repeat the private paths in each group</span>
-            </label>
-          </div>
-        </div>
+      <div className="pc-rbuild-paths">
+        <label className="pc-field">
+          <span>The path for “Keep out of the path”</span>
+          <input
+            value={pathText}
+            spellcheck={false}
+            onInput={(event) => setPathText(event.currentTarget.value)}
+          />
+        </label>
+        <label className="pc-field">
+          <span>Private paths: no bot can fetch them</span>
+          <input
+            value={privateText}
+            spellcheck={false}
+            placeholder="For example /account/, /cart"
+            onInput={(event) => setPrivateText(event.currentTarget.value)}
+          />
+        </label>
+        <label className="pc-rbuild-check">
+          <input
+            type="checkbox"
+            checked={repeat}
+            onChange={(event) => setRepeat(event.currentTarget.checked)}
+          />
+          <span>Repeat the private paths in each group</span>
+        </label>
+      </div>
 
-        <div className="pc-rbuild-verdicts">
-          <p className="pc-rbuild-count" aria-live="polite">
-            <strong>
-              {homeCount} of {agents.length}
-            </strong>{" "}
-            agents can fetch the home page <code>/</code>.
-          </p>
-          <div
-            className="pc-table-wrap"
-            tabIndex={0}
-            role="region"
-            aria-label="The verdict for each agent and each path"
-          >
-            <table className="pc-table pc-rbuild-table">
-              <thead>
-                <tr>
-                  <th scope="col">Agent</th>
-                  {paths.map((target) => (
-                    <th scope="col" key={target}>
-                      <code>{target}</code>
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              {SECTIONS.map((section) => (
+      <div className="pc-rbuild-verdicts">
+        <p className="pc-rbuild-count" aria-live="polite">
+          <strong>
+            {homeCount} of {agents.length}
+          </strong>{" "}
+          agents can fetch the home page <code>/</code>. Pick a rule for each group.
+        </p>
+        <div
+          className="pc-table-wrap"
+          tabIndex={0}
+          role="region"
+          aria-label="The rule of each group, and the verdict for each agent and each path"
+        >
+          <table className="pc-table pc-rbuild-table">
+            <thead>
+              <tr>
+                <th scope="col">Agent</th>
+                {paths.map((target) => (
+                  <th scope="col" key={target}>
+                    <code>{target}</code>
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            {SECTIONS.map((section) => {
+              const group = BUILDER_GROUPS.find((one) => one.id === section.id);
+              return (
                 <tbody key={section.id}>
                   <tr className="pc-rbuild-section">
                     <th scope="colgroup" colSpan={paths.length + 1}>
-                      {section.name}
+                      <div className="pc-rbuild-ghead">
+                        <div className="pc-rbuild-gname">
+                          <strong id={`pc-rbuild-${section.id}`}>{section.name}</strong>
+                          <span>{section.detail}</span>
+                        </div>
+                        {group === undefined ? null : (
+                          <div
+                            className="pc-seg"
+                            role="group"
+                            aria-labelledby={`pc-rbuild-${section.id}`}
+                          >
+                            {RULES.map((rule) => (
+                              <button
+                                type="button"
+                                key={rule.id}
+                                aria-pressed={rules[group.id] === rule.id}
+                                onClick={() => setRule(group.id, rule.id)}
+                              >
+                                {rule.id === "path" ? `Keep out of ${path}` : rule.label}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
                     </th>
                   </tr>
                   {section.rows.map((row) => (
@@ -258,9 +256,6 @@ export default function RobotsBuilder(): ReactElement {
                       <th scope="row" title={row.note}>
                         <code>{row.label}</code>
                         {row.tokenOnly ? <span className="pc-rbuild-tag">a token</span> : null}
-                        {row.key === "mcp" ? (
-                          <span className="pc-tester-sub">and Claude-User</span>
-                        ) : null}
                       </th>
                       {paths.map((target) => {
                         const decision = verdict(row, target);
@@ -286,10 +281,21 @@ export default function RobotsBuilder(): ReactElement {
                     </tr>
                   ))}
                 </tbody>
-              ))}
-            </table>
-          </div>
+              );
+            })}
+          </table>
         </div>
+        <p className="pc-rbuild-why" aria-live="polite">
+          {chosen === undefined ? (
+            "Select a verdict to see the line of the file that decided it."
+          ) : (
+            <>
+              <code>{chosen.row.label}</code> on <code>{chosen.path}</code>:{" "}
+              <strong>{chosen.decision.allowed ? "permitted" : "refused"}</strong>,{" "}
+              {reason(chosen.decision)}.
+            </>
+          )}
+        </p>
       </div>
 
       <div className="pc-rbuild-notes">
@@ -313,10 +319,11 @@ export default function RobotsBuilder(): ReactElement {
 
       <div className="pc-listing pc-rbuild-file">
         <div className="pc-rbuild-filehead">
-          <p className="pc-listing-head" aria-live="polite">
+          <p className="pc-listing-head">
+            <strong>robots.txt</strong>{" "}
             {chosen === undefined
-              ? "robots.txt. Select a verdict to see the line that decided it."
-              : `${chosen.row.label} on ${chosen.path}: ${chosen.decision.allowed ? "permitted" : "refused"}, ${reason(chosen.decision)}.`}
+              ? `${String(lines.length)} lines`
+              : `the marked line decides ${chosen.row.label} on ${chosen.path}`}
           </p>
           <button
             type="button"

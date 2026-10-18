@@ -64,14 +64,14 @@ describe("an hour of PoliteCrawler on a site", () => {
 
   it("ends a crawl at its limit of pages, or at its budget with a long crawl delay", async () => {
     const crawl = await simulateVisit({ ...base, scenario: "crawl", robots: VISIT_ROBOTS });
-    expect(crawl.rows.at(-1)?.note).toMatch(/^max-pages/);
+    expect(crawl.rows.at(-1)?.note).toMatch(/at its limit of 12 pages/);
     expect(requests(crawl.rows)).toHaveLength(CRAWL_PAGES + 1);
     const slow = await simulateVisit({
       ...base,
       scenario: "crawl",
       robots: "User-agent: *\nCrawl-delay: 90\n",
     });
-    expect(slow.rows.at(-1)?.note).toMatch(/^budget/);
+    expect(slow.rows.at(-1)?.note).toMatch(/at its budget/);
     // the crawler obeys a crawl delay up to 60 seconds
     const pages = requests(slow.rows).slice(1);
     expect(pages[1]!.at - pages[0]!.end!).toBe(60_000);

@@ -26,7 +26,8 @@ const pathOf = (lane: PaceLane): string =>
   lane.requests
     .map((request) => {
       const x = (request.start / PACE_SPAN) * WIDTH;
-      const width = Math.max(1.4, ((request.end - request.start) / PACE_SPAN) * WIDTH);
+      // a gap of the surface between two requests in sequence, so that each request stays a mark
+      const width = Math.max(1, ((request.end - request.start) / PACE_SPAN) * WIDTH - 2.5);
       return `M${x.toFixed(2)} 0h${width.toFixed(2)}v20h-${width.toFixed(2)}z`;
     })
     .join("");
@@ -43,13 +44,14 @@ export default function PaceTimeline(): ReactElement {
   const lanes = useMemo(() => simulatePace(latency), [latency]);
   const paths = useMemo(() => lanes.map(pathOf), [lanes]);
 
-  const play = useCallback(() => {
+  /** This function plays the timeline from the time `from`. With reduced motion, it shows the end. */
+  const play = useCallback((from = 0) => {
     if (isReduced()) {
       setNow(PACE_SPAN);
       return;
     }
     cancelAnimationFrame(frame.current);
-    const started = performance.now();
+    const started = performance.now() - (from / PACE_SPAN) * PLAY_MS;
     setPlaying(true);
     const step = (time: number): void => {
       const at = Math.min(PACE_SPAN, ((time - started) / PLAY_MS) * PACE_SPAN);
@@ -57,7 +59,7 @@ export default function PaceTimeline(): ReactElement {
       if (at < PACE_SPAN) frame.current = requestAnimationFrame(step);
       else setPlaying(false);
     };
-    setNow(0);
+    setNow(from);
     frame.current = requestAnimationFrame(step);
   }, []);
 
@@ -72,7 +74,7 @@ export default function PaceTimeline(): ReactElement {
     const observer = new IntersectionObserver((entries) => {
       if (!entries.some((entry) => entry.isIntersecting)) return;
       observer.disconnect();
-      play();
+      play(0);
     });
     observer.observe(element);
     return () => {
@@ -112,7 +114,7 @@ export default function PaceTimeline(): ReactElement {
                 aria-pressed={latency === ms}
                 onClick={() => {
                   setLatency(ms);
-                  play();
+                  play(0);
                 }}
               >
                 {ms === 2000 ? "A slow site: 2 s" : seconds(ms)}
@@ -124,10 +126,18 @@ export default function PaceTimeline(): ReactElement {
               Pause
             </button>
           ) : (
-            <button type="button" className="pc-button" onClick={play}>
-              Replay
+            <button
+              type="button"
+              className="pc-button"
+              disabled={now >= PACE_SPAN}
+              onClick={() => play(now)}
+            >
+              Play
             </button>
           )}
+          <button type="button" className="pc-button" onClick={() => play(0)}>
+            Replay
+          </button>
         </div>
       </header>
 
@@ -135,13 +145,9 @@ export default function PaceTimeline(): ReactElement {
         <div className="pc-pace-row pc-pace-axis" aria-hidden="true">
           <span />
           <div className="pc-axis-track">
-            {[0, 30, 60, 90, 120, 150, 180].map((at) => (
-              <span
-                key={at}
-                style={{ left: pct(at * 1000, PACE_SPAN) }}
-                className={at % 60 === 0 ? undefined : "pc-tick-minor"}
-              >
-                {at === 0 ? "0" : at % 60 === 0 ? `${String(at / 60)} min` : `${String(at)} s`}
+            {[0, 60, 120, 180].map((at) => (
+              <span key={at} style={{ left: pct(at * 1000, PACE_SPAN) }}>
+                {at === 0 ? "0" : `${String(at / 60)} min`}
               </span>
             ))}
           </div>
@@ -169,8 +175,11 @@ export default function PaceTimeline(): ReactElement {
                 <span className="pc-pace-now" style={{ left: pct(now, PACE_SPAN) }} />
               </div>
               <p className="pc-pace-rate">
-                <strong>{rate(lane)}</strong>
-                <span>{countAt(lane, now)} so far</span>
+                <strong>{Math.round(lane.perMinute)}</strong>
+                <span>a minute</span>
+                <span>
+                  {countAt(lane, now)} {now >= PACE_SPAN ? "in 3 min" : "so far"}
+                </span>
               </p>
             </div>
           );

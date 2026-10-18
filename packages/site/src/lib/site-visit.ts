@@ -461,14 +461,14 @@ export const simulateVisit = async (input: VisitInput, seed = 11): Promise<Visit
     ];
     const seen = new Set<string>(["/"]);
     let given = 0;
-    let reason = "done: the crawl followed each link";
+    let reason = "The crawl ends: it followed each link.";
     for (;;) {
       if (clock.now() >= deadline) {
-        reason = "budget: no request starts after 10 minutes";
+        reason = "The crawl ends at its budget: no request starts after 10 minutes.";
         break;
       }
       if (given >= CRAWL_PAGES) {
-        reason = `max-pages: the crawl gave ${String(CRAWL_PAGES)} pages, its limit`;
+        reason = `The crawl ends at its limit of ${String(CRAWL_PAGES)} pages.`;
         break;
       }
       if (scheduler.stopOf(VISIT_HOST) !== undefined) {
@@ -478,7 +478,7 @@ export const simulateVisit = async (input: VisitInput, seed = 11): Promise<Visit
           path: `${String(queue.length)} more links`,
           note: "the site is stopped for the rest of the crawl",
         });
-        reason = "done: each other page got the answer of the stop";
+        reason = "The crawl ends: the site is stopped, so the other pages get no request.";
         break;
       }
       const item = queue.shift();
@@ -491,7 +491,7 @@ export const simulateVisit = async (input: VisitInput, seed = 11): Promise<Visit
         note: item.depth === 0 ? "the start of the crawl" : `a link, depth ${String(item.depth)}`,
       });
       if (result === "budget") {
-        reason = "budget: no request starts after 10 minutes";
+        reason = "The crawl ends at its budget: no request starts after 10 minutes.";
         break;
       }
       // a link that robots.txt refuses costs no fetch, and it does not count as a page

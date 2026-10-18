@@ -184,7 +184,7 @@ export default function RecipeReader({ initial }: { readonly initial: RecipeView
         ))}
       </div>
       <div className="pc-tool-grid">
-        <div className="pc-tool-side">
+        <div className="pc-tool-side pc-rr-inputs">
           <label className="pc-field">
             <span>The URL of the page</span>
             <input
@@ -197,11 +197,36 @@ export default function RecipeReader({ initial }: { readonly initial: RecipeView
             <span>HTML</span>
             <textarea
               value={html}
-              rows={18}
+              rows={14}
               spellcheck={false}
               onInput={(event) => setHtml(event.currentTarget.value)}
             />
           </label>
+          {tab === "hours" ? (
+            <>
+              <label className="pc-field">
+                <span>
+                  The address of the venue, for a page with more than one location (
+                  <code>location</code>)
+                </span>
+                <input
+                  value={location}
+                  spellcheck={false}
+                  placeholder="for example 40 Corso Esempio"
+                  onInput={(event) => setLocation(event.currentTarget.value)}
+                />
+              </label>
+              <label className="pc-field">
+                <span>The hours that you keep, in OpenStreetMap notation</span>
+                <input
+                  value={kept}
+                  spellcheck={false}
+                  placeholder="for example Tu-Su 07:00-15:00"
+                  onInput={(event) => setKept(event.currentTarget.value)}
+                />
+              </label>
+            </>
+          ) : null}
         </div>
 
         <div className="pc-tool-side" aria-live="polite" aria-busy={busy}>
@@ -257,18 +282,6 @@ export default function RecipeReader({ initial }: { readonly initial: RecipeView
                   the page. Each reading has a rank: JSON-LD is 0, a text below an hours heading is
                   1, and a different schedule is 4.
                 </p>
-                <label className="pc-field">
-                  <span>
-                    The address of the venue, for a page with more than one location (
-                    <code>location</code>)
-                  </span>
-                  <input
-                    value={location}
-                    spellcheck={false}
-                    placeholder="for example 40 Corso Esempio"
-                    onInput={(event) => setLocation(event.currentTarget.value)}
-                  />
-                </label>
                 {venue.notes.length > 0 ? (
                   <ul className="pc-notes">
                     {venue.notes.map((note) => (
@@ -318,15 +331,10 @@ export default function RecipeReader({ initial }: { readonly initial: RecipeView
 
                 <section className="pc-rr-compare" aria-label="Compare with the kept hours">
                   <p className="pc-out-title">Compare with the hours that you keep</p>
-                  <label className="pc-field">
-                    <span>The kept hours, in OpenStreetMap notation</span>
-                    <input
-                      value={kept}
-                      spellcheck={false}
-                      placeholder="for example Tu-Su 07:00-15:00"
-                      onInput={(event) => setKept(event.currentTarget.value)}
-                    />
-                  </label>
+                  <p className="pc-rr-lead">
+                    <code>compareHours</code> compares the kept hours with one reading, day by day.
+                    Select the reading.
+                  </p>
                   {venue.readings.length > 1 ? (
                     <div className="pc-presets" role="group" aria-label="The reading to compare">
                       {venue.readings.map((reading, index) => (

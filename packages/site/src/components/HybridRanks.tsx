@@ -296,8 +296,11 @@ export default function HybridRanks(): ReactElement {
         </div>
         <div className="pc-hy-sliders">
           <label className="pc-hy-slider">
-            <span>
-              The fusion constant <code>k</code>: <strong>{k}</strong>
+            <span className="pc-hy-slider-name">
+              <span>
+                The fusion constant <code>k</code>
+              </span>
+              <strong>{k}</strong>
             </span>
             <input
               type="range"
@@ -309,8 +312,9 @@ export default function HybridRanks(): ReactElement {
             />
           </label>
           <label className="pc-hy-slider">
-            <span>
-              Full-text candidates: <strong>{countText(candidates)}</strong>
+            <span className="pc-hy-slider-name">
+              <span>Full-text candidates</span>
+              <strong>{countText(candidates)}</strong>
             </span>
             <input
               type="range"
@@ -324,8 +328,9 @@ export default function HybridRanks(): ReactElement {
             />
           </label>
           <label className="pc-hy-slider">
-            <span>
-              Vector neighbors: <strong>{countText(neighbors)}</strong>
+            <span className="pc-hy-slider-name">
+              <span>Vector neighbors</span>
+              <strong>{countText(neighbors)}</strong>
             </span>
             <input
               type="range"

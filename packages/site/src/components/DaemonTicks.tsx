@@ -275,7 +275,11 @@ export default function DaemonTicks(): ReactElement {
             <span />
             <div className="pc-axis-track pc-dm-axis">
               {hourTicks.map((tick) => (
-                <span key={tick} style={{ left: at(DAEMON_START + tick) }}>
+                <span
+                  key={tick}
+                  style={{ left: at(DAEMON_START + tick) }}
+                  className={tick % (60 * MINUTE) === 0 ? undefined : "pc-tick-minor"}
+                >
                   {clock(DAEMON_START + tick).slice(0, 5)}
                 </span>
               ))}
@@ -468,7 +472,9 @@ export default function DaemonTicks(): ReactElement {
                     ),
                   )}
                   {stopInTick && view.stoppedAt !== null ? (
-                    <span className="pc-dm-zstop" style={{ left: zoomAt(view.stoppedAt) }} />
+                    <span className="pc-dm-zstop" style={{ left: zoomAt(view.stoppedAt) }}>
+                      {row === 0 ? <span>stop</span> : null}
+                    </span>
                   ) : null}
                   {zoomNow !== null && shown !== undefined && zoomNow - shown.start <= ZOOM ? (
                     <span className="pc-now" style={{ left: zoomAt(zoomNow) }} aria-hidden="true" />

@@ -16,7 +16,7 @@ export interface RecipeSample {
 
 export const RECIPE_SAMPLES: readonly RecipeSample[] = [
   {
-    name: "A restaurant: the JSON-LD and the text disagree",
+    name: "Bakery: two sources disagree",
     url: "https://forno-esempio.example/",
     location: "",
     kept: "Tu-Su 07:00-15:00",
@@ -46,7 +46,7 @@ export const RECIPE_SAMPLES: readonly RecipeSample[] = [
 </html>`,
   },
   {
-    name: "A page with three locations",
+    name: "Café: three locations",
     url: "https://caffe-campione.example/locations",
     location: "40 Corso Esempio",
     kept: "Mo-Fr 07:00-18:00; Sa 08:00-14:00",
@@ -78,7 +78,7 @@ export const RECIPE_SAMPLES: readonly RecipeSample[] = [
 </html>`,
   },
   {
-    name: "A product with variants, a sale and related products",
+    name: "Shop: variants, sale, related",
     url: "https://bottega-campione.example/products/olio-esempio?variant=1l",
     location: "",
     kept: "",
@@ -133,7 +133,7 @@ export const RECIPE_SAMPLES: readonly RecipeSample[] = [
 </html>`,
   },
   {
-    name: "A wall: the shop sends a bot check",
+    name: "Shop: a bot check",
     url: "https://negozio-campione.example/products/tazza",
     location: "",
     kept: "",

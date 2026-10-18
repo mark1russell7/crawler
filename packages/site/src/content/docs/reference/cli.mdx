@@ -1,6 +1,6 @@
 ---
 title: Command line
-description: The polite-crawler command line - fetch, find, read, verify, extract, reindex, mcp, discover, crawl, export, diff and watch, with each option.
+description: The polite-crawler command line - fetch, find, read, verify, extract, reindex, mcp, discover, crawl, export, diff, watch and embed, with each option.
 ---
 
 ```sh
@@ -27,6 +27,7 @@ npx polite-crawler <command> [options]
 | `watch list` | It prints the watch list. |
 | `watch run` | It checks the pages that are due, within a budget, and prints what changed. |
 | `key-directory` | It prints the key directory (a JSON Web Key Set) of `--sign-key`, for you to host. |
+| `embed --embedder <name>` | It gives vectors to the stored pages that have none, for `find --rank hybrid`. It sends no request to a site. |
 
 ## Options
 
@@ -54,7 +55,11 @@ These options apply to one command. The command line is wrong when another comma
 | `fetch` | `--archive-despite-robots` | | With `--archive-fallback`: also give a copy of a page that the current robots.txt of its site disallows. |
 | `find` | `--limit <n>` | `10` | The number of results. |
 | `find` | `--kind <kind>` | all | Only this kind of document, for example `page` or `pdf`. |
-| `find` | `--rank <mode>` | `exact` | `exact` gives BM25 to each match. `fast` leaves the common words out of the documents that hold one word, so a long question is faster. |
+| `find` | `--rank <mode>` | `exact` | `exact` gives BM25 to each match. `fast` leaves the common words out of the documents that hold one word, so a long question is faster. `hybrid` also finds by meaning, and it needs `--embedder`. |
+| `find`, `embed`, `mcp` | `--embedder <name>` | `$POLITE_CRAWLER_EMBEDDER` | The local model of hybrid search: `transformers` (transformers.js in the process) or `ollama`. |
+| `find`, `embed`, `mcp` | `--embed-model <name>` | `$POLITE_CRAWLER_EMBED_MODEL` | The model: `Xenova/bge-small-en-v1.5` (transformers) or `nomic-embed-text` (Ollama) by default. |
+| `find`, `embed`, `mcp` | `--ollama-url <url>` | `$POLITE_CRAWLER_OLLAMA_URL`, or `http://127.0.0.1:11434` | The Ollama server. It needs `--embedder ollama`. |
+| `find`, `embed`, `mcp` | `--allow-remote-ollama` | `$POLITE_CRAWLER_ALLOW_REMOTE_OLLAMA=1` | Permit an Ollama server on a different computer. The page text goes to that server. |
 | `read` | `--from <n>` | `0` | The position where the range starts. |
 | `read` | `--length <n>` | `4000` | The number of characters to print. |
 | `read` | `--user-provided` | | Read a page that asked not to be AI input. Use it only for a URL that you gave yourself. The crawler records each such read. |
@@ -89,6 +94,9 @@ These options apply to one command. The command line is wrong when another comma
 | `watch add` | `--label <name=value>` | | A label for the captures of each check. Repeat the option for more labels. |
 | `watch run` | `--budget <time>` | `10m` | The longest time of the run. No request starts after it, and an entry that it did not check stays due. |
 | `watch run` | `--max-pages <n>` | `100` | The most pages to check. |
+| `embed` | `--budget <time>` | `10m` | The longest time of the work. No embedding starts after it. |
+| `embed` | `--max-docs <n>` | | The most texts that get vectors. |
+| `embed` | `--kind <kind>` | all | Only this kind of document, for example `page` or `pdf`. |
 
 ## Export to a web archive
 
@@ -106,7 +114,7 @@ The README of the package tells what goes into the archive, what does not, and w
 | Code | Meaning |
 | --- | --- |
 | `0` | The command did its work. |
-| `1` | The command did not do its work: a page that the crawler did not fetch, no search result, a quote that is not in the document, a document that is not stored or that is held back, or an error. `discover` gives `1` when it finds no URL, and `crawl` when it gets no page. `read --at` and `verify --at` give `1` for a time before the first capture. `watch run` gives `1` when a check is `refused` or an `error`, or when entries stay due. With `--archive-fallback`, a page with an archived copy counts as done. `extract` gives `1` when a field is not `verified` or `normalized`. |
+| `1` | The command did not do its work: a page that the crawler did not fetch, no search result, a quote that is not in the document, a document that is not stored or that is held back, or an error. `discover` gives `1` when it finds no URL, and `crawl` when it gets no page. `read --at` and `verify --at` give `1` for a time before the first capture. `watch run` gives `1` when a check is `refused` or an `error`, or when entries stay due. With `--archive-fallback`, a page with an archived copy counts as done. `extract` gives `1` when a field is not `verified` or `normalized`. `embed` gives `1` when its budget stops it before each page has vectors. |
 | `2` | The command line is wrong. The command opens no store. |
 
 ## Examples
@@ -145,6 +153,11 @@ npx polite-crawler diff "url:https://example.com/" --from 2026-10-01
 # check the hours page each 6 hours: add it one time, and let cron start the run
 npx polite-crawler watch add https://example.com/hours --every 6h
 npx polite-crawler watch run --budget 5m
+
+# vectors for each stored page with Ollama, then a search by meaning and by words
+ollama pull nomic-embed-text
+npx polite-crawler embed --embedder ollama --budget 30m
+npx polite-crawler find "a loaf with a dark crust" --rank hybrid --embedder ollama
 ```
 
 ## Discover and crawl
@@ -172,3 +185,14 @@ npx polite-crawler watch run --budget 5m
 - A check that finds a stopped host is due again at the end of the stop.
 - Two runs at the same time check each page one time, because a run takes a lease on each page.
 - The command has no daemon. Start `watch run` with cron, a systemd timer or a different scheduler.
+
+## Hybrid search
+
+`find --rank hybrid` fuses the BM25 ranking with the ranking of the vectors of a local model. The default ranking does not change.
+
+- `--embedder transformers` uses transformers.js in the process. Install it with `npm install @huggingface/transformers`. The first use downloads the model from the Hugging Face Hub into `<store>/models`, not through the polite crawler.
+- `--embedder ollama` sends the texts to a local Ollama server. Install Ollama, then `ollama pull nomic-embed-text`. The command refuses a server on a different computer, unless `--allow-remote-ollama`.
+- `embed` gives vectors to each stored page within `--budget`. Start it again to continue. A search gives vectors only to its BM25 candidates.
+- A page that asks not to be AI input does not go to the model, and no result gives it.
+- The vectors go into `vectors.sqlite` in the store. A reindex keeps them.
+- A hit gives its best chunk as `[passage start–end]`, with the positions in the text for `read --from`.

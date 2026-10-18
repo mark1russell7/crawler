@@ -15,6 +15,25 @@ A prerelease version (`0.2.0-beta.1`) goes to the npm tag `next`. Each other ver
 
 ## Unreleased
 
+- **This version only adds to the API.** Code that compiled against 0.1.1 or 0.1.2 compiles against this version. `compat.test.ts` (0.1.1) and `compat-012.test.ts` (0.1.2) are the proof. The capture log, the bodies and the capture ids do not change.
+  - `OpenedCrawler` does not change. `openCrawler` gives a `HybridCrawler`: an `OpenedCrawler` with `hybrid`, `embed`, `rankWithin` and a `find` that takes `SearchOptions`.
+  - `PoliteCrawler` has the optional `hybrid`, `embed` and `rankWithin`. `ReadingIndex` has the optional `digests`, and `Found` has the optional `passage`.
+  - The class `DocIndex` has the new method `digests`. A subclass of your own with a member of the same name can conflict with it.
+- **Hybrid search, opt-in.** `find(q, { rank: "hybrid" })` fuses the BM25 ranking with the ranking of the vectors of a local embedding model. The default ranking stays exact BM25.
+  - `Embedder` is the extension point: `{ id, dimensions, maxInputTokens?, embed(texts, { signal, purpose }) }`. The option `embedder` of `openCrawler` takes one.
+  - `transformersEmbedder` uses transformers.js (`@huggingface/transformers`) in the process. The package is an optional peer (`^3.0.0 || ^4.0.0`), and it loads at the first text. The default model is `Xenova/bge-small-en-v1.5`.
+  - The first use of a transformers.js model downloads it from the Hugging Face Hub. That download does not go through the polite crawler.
+  - `ollamaEmbedder` sends the texts to a local Ollama server (`POST /api/embed`), with no new dependency. It accepts only a loopback address, unless `allowRemote` is true. Its errors say `ollama serve` and `ollama pull <model>`.
+  - The vectors go into `vectors.sqlite`, a projection beside the index, with WAL and `busy_timeout`. The key of a row is the hash of the text, the chunk and the id of the embedder. Thus a reindex keeps each vector.
+  - A chunk is a window of whole sentences that ends at a paragraph when it can. It fits the input of the model (512 tokens at most), with an overlap of 10 percent. Each hit gives the `passage` of its best chunk.
+  - A search gives vectors to its BM25 candidates. `crawler.embed({ budget })` and the command `embed` give vectors to each stored page. A held-back page does not go to the embedder, and no result gives it.
+  - The fusion is reciprocal rank fusion with k = 60, over 50 BM25 candidates and 50 vector neighbors (`HYBRID_DEFAULTS`). Each one is an option of `find` and `rankWithin`.
+  - Without an embedder, `rank: "hybrid"` rejects with `NO_EMBEDDER`. It does not change to BM25 in silence.
+  - The command line has `--embedder transformers|ollama`, `--embed-model`, `--ollama-url`, `--allow-remote-ollama`, `find --rank hybrid` and `embed`. `embed` takes `--budget`, `--max-docs` and `--kind`.
+  - The MCP tool `crawl_find` takes `rank: "hybrid"` only when the server has an embedder.
+  - The search compares the question with each stored vector. The README gives the measured time: 82 ms for 89,100 chunks of 384 dimensions.
+- **The benchmark.** `bench/find.mts --hybrid` and the input `hybrid` of `bench.yml` time hybrid search with a fake embedder.
+
 ## 0.1.2 - 2026-10-17
 
 - **This version only adds to the API.** Code that compiled against 0.1.1 compiles against this version, and `packages/polite-crawler/src/compat.test.ts` is the proof. The capture log, the bodies and the capture ids do not change.

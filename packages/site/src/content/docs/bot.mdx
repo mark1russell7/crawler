@@ -8,6 +8,7 @@ import { Code } from "@astrojs/starlight/components";
 import crawlerPackage from "polite-crawler/package.json";
 import study from "../../data/robots-study.json";
 import { formatDay } from "../../lib/study.ts";
+import SiteVisit from "../../components/SiteVisit.tsx";
 
 export const day = formatDay(study.fetched.from);
 export const header = `User-Agent: PoliteCrawler/${crawlerPackage.version} (+https://mark1russell7.github.io/crawler/bot/)`;
@@ -31,6 +32,14 @@ Many people can use the software. When the operator gave a contact, the `User-Ag
 - **It obeys `Retry-After`** on a 429 or a 503.
 - **It stops at a refusal.** After a 401 or a 403, it sends no more requests to your site for 1 hour. After a challenge or a 402, it stops for 24 hours. The stop stays when the crawler starts again.
 - **It sends conditional requests.** With an `ETag` or a `Last-Modified` date, your server can answer `304 Not Modified` and send no body. When your `ETag` changes at each response and your `Last-Modified` date does not, the crawler learns it. It then sends only the date, so a `304` comes back.
+
+## An hour on your site
+
+Give your robots.txt and pick a job of the crawler. The figure shows one hour of requests to a made-up site with your robots.txt, and the wait after each request. Change the answer to the second page to see what a 429, a 503 or a 403 does.
+
+<SiteVisit client:visible />
+
+The figure starts the code of polite-crawler in your browser. This code is the robots.txt parser, the scheduler of each site, the rest after each request (`restAfter`) and the meaning of each status (`classify`). The full crawler keeps a store on disk, so it does not operate in a browser. A small model connects these parts in its place. The model obeys the rules on this page, and it sends no request.
 
 ## What it keeps
 

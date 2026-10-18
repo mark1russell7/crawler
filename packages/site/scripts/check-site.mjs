@@ -380,6 +380,47 @@ const INTERACTIONS = [
       await page.getByText('"confirmed":true').waitFor({ timeout: 20_000 });
     },
   },
+  {
+    path: `${BASE}/block-ai-training-crawlers/`,
+    name: "figure-robots-builder",
+    figure: ".pc-rbuild",
+    act: async (page) => {
+      // keep the assistants out: the MCP server obeys Claude-User, so it is refused too
+      await page
+        .getByRole("group", { name: "AI assistants" })
+        .getByRole("button", { name: "Keep out", exact: true })
+        .click();
+      await page.getByText("6 of 16").waitFor({ timeout: 10_000 });
+      await page.getByRole("button", { name: "Refused PoliteCrawler on /", exact: true }).click();
+      await page.getByText("in the group for Claude-User").first().waitFor({ timeout: 10_000 });
+    },
+  },
+  {
+    path: `${BASE}/bot/`,
+    name: "figure-site-visit",
+    figure: ".pc-visit",
+    act: async (page) => {
+      await page.getByRole("button", { name: "A small crawl" }).click();
+      await page.locator(".pc-visit select").first().selectOption("403");
+      // with reduced motion, the figure shows the whole hour at once
+      await page
+        .locator(".pc-visit .pc-crawl-verdict")
+        .getByText(/After a 403, it sends no request/)
+        .waitFor({ timeout: 10_000 });
+    },
+  },
+  {
+    path: `${BASE}/guide/compare/`,
+    name: "figure-pace",
+    figure: ".pc-pace",
+    act: async (page) => {
+      await page.getByRole("button", { name: "A slow site: 2 s" }).click();
+      await page
+        .locator(".pc-pace .pc-crawl-verdict")
+        .getByText(/polite-crawler sends 5 a minute/)
+        .waitFor({ timeout: 10_000 });
+    },
+  },
 ];
 for (const { scheme, viewport, device } of shots === undefined
   ? [{ scheme: "light", viewport: { width: 1280, height: 900 }, device: "desktop" }]

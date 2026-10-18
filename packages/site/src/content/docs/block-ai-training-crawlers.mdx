@@ -8,6 +8,7 @@ import { Code } from "@astrojs/starlight/components";
 import study from "../../data/robots-study.json";
 import { summarize } from "../../lib/study.ts";
 import { TRAINING_BLOCK_ROBOTS } from "../../lib/recipes.ts";
+import RobotsBuilder from "../../components/RobotsBuilder.tsx";
 
 export const s = summarize(study);
 
@@ -22,6 +23,17 @@ Put this file at `/robots.txt` on your site. Change `/account/` to the paths tha
 <Code code={TRAINING_BLOCK_ROBOTS} lang="text" title="robots.txt" />
 
 <a href="../tools/robots-txt-tester/?example=training">Open this file in the robots.txt tester</a> to see the verdict for each agent and each path.
+
+## Make a file for your site
+
+Pick a rule for each group of agents. The figure writes the robots.txt, and the grid gives the verdict for each agent on three paths. The robots.txt parser of polite-crawler makes each verdict in your browser. Select a verdict to see the line that decided it.
+
+<RobotsBuilder client:visible />
+
+Two rules of robots.txt are easy to miss:
+
+- **A token is not always a crawler.** `Google-Extended` and `Applebot-Extended` fetch no page. Googlebot and Applebot fetch the pages, and the two tokens tell Google and Apple if their models can train on these pages. Thus a refusal of `Google-Extended` does not stop Googlebot, and the site stays in Google Search.
+- **A group that names an agent replaces the group `*`.** The agent obeys only the rules of its own group. Clear "Repeat the private paths in each group" to see the agents that can then fetch `/account/`.
 
 ## The agents
 

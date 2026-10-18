@@ -1253,6 +1253,7 @@ header.header {
   .pc-table.pc-cards {
     --pc-card-gutter: 6.75rem;
     --pc-card-line: 1.625rem;
+    --pc-card-label-line: 1.25rem;
     display: block;
     overflow: visible;
   }
@@ -1265,13 +1266,16 @@ header.header {
     clip-path: inset(50%);
     white-space: nowrap;
   }
+  /* one column that never grows to the width of a long word: the word breaks in its card */
   .pc-cards > tbody {
     display: grid;
+    grid-template-columns: minmax(0, 1fr);
     gap: var(--space-2);
     margin: 0;
   }
   .pc-cards > tbody > tr {
     display: block;
+    min-width: 0;
     margin: 0;
     padding: var(--space-2) var(--space-3);
     border: 1px solid var(--color-rule);
@@ -1300,17 +1304,21 @@ header.header {
     border: 0;
     line-height: var(--pc-card-line);
     white-space: normal;
+    overflow-wrap: break-word;
   }
+  /* The label of a line: its lines are closer than the lines of the value, and its first line is
+     in the middle of the first line of the value. */
   .pc-cards > tbody > tr > td::before {
     content: attr(data-label);
     /* the screen reader gets the name of the column from the head, so it does not read it twice */
     content: attr(data-label) / "";
     float: left;
     width: calc(var(--pc-card-gutter) - var(--space-3));
+    margin-top: calc((var(--pc-card-line) - var(--pc-card-label-line)) / 2);
     margin-left: calc(-1 * var(--pc-card-gutter));
     color: var(--color-ink-muted);
     font-size: var(--text-xs);
-    line-height: var(--pc-card-line);
+    line-height: var(--pc-card-label-line);
   }
   .pc-cards > tbody > tr > td:empty {
     display: none;

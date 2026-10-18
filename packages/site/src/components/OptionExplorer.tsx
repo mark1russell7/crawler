@@ -121,9 +121,28 @@ export default function OptionExplorer({ table, order, elsewhere }: Props): Reac
 
   // the table shows the rows of the filter, and marks the command of the filter in each row
   useEffect(() => {
+    const element = rows[0]?.element.closest("table");
+    if (element === null || element === undefined) return undefined;
+    const heads = [...(element.tHead?.rows[0]?.cells ?? [])];
+    const filtered = filter.command !== "" || filter.option.trim() !== "";
     const visible = new Set(shown);
+    // While a filter applies, each column keeps its width in the whole table, so no column moves
+    // while a reader types. The rows show for a moment to get these widths, in the same task, so
+    // the browser paints no frame with them.
+    const apply = (): void => {
+      for (const head of heads) head.style.width = "";
+      element.hidden = false;
+      for (const row of rows) row.element.hidden = false;
+      const widths = filtered ? heads.map((head) => head.getBoundingClientRect().width) : [];
+      for (const row of rows) row.element.hidden = !visible.has(row);
+      for (const [index, head] of heads.entries()) {
+        const width = widths[index];
+        if (width !== undefined && width > 0) head.style.width = `${String(width)}px`;
+      }
+      element.hidden = shown.length === 0;
+    };
+    apply();
     for (const row of rows) {
-      row.element.hidden = !visible.has(row);
       for (const [index, code] of row.codes.entries()) {
         code.classList.toggle(
           "pc-hit",
@@ -131,9 +150,11 @@ export default function OptionExplorer({ table, order, elsewhere }: Props): Reac
         );
       }
     }
-    const element = rows[0]?.element.closest("table");
-    if (element !== null && element !== undefined) element.hidden = shown.length === 0;
-  }, [rows, shown, filter.command]);
+    if (!filtered) return undefined;
+    // a different width of the window gives different widths of the columns
+    window.addEventListener("resize", apply);
+    return () => window.removeEventListener("resize", apply);
+  }, [rows, shown, filter.command, filter.option]);
 
   // the address keeps the filter. With no filter, it keeps a different "#" part, for example a heading.
   useEffect(() => {

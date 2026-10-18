@@ -43,7 +43,8 @@ export default defineConfig({
   base,
   trailingSlash: "ignore",
   // the islands and their workers use the pure parts of polite-crawler, with no Node.js part (pure-crawler.mjs)
-  vite: { plugins: [pureCrawler()], worker: { plugins: () => [pureCrawler()] } },
+  // the workers are ES modules ({ type: "module" }), so a worker can have chunks of its own
+  vite: { plugins: [pureCrawler()], worker: { format: "es", plugins: () => [pureCrawler()] } },
   integrations: [
     // the sitemap of the site, with the date of each page: Starlight adds no second one when this one is here
     sitemap({

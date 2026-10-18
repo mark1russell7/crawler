@@ -74,6 +74,8 @@ pages.sort((a, b) => a.localeCompare(b));
 
 const problems = [];
 let most = { path: "", bytes: 0 };
+// the JavaScript of each page, for the log
+const sizes = [];
 
 // one sitemap, with each page and the date of its last change (a shallow clone has no dates, so it is not checked)
 const sitemaps = readdirSync(dist)
@@ -166,6 +168,7 @@ for (const path of pages) {
       `${path}: ${String(bytes)} bytes of JavaScript (gzip), more than ${String(JS_BUDGET)}`,
     );
   if (bytes > most.bytes) most = { path, bytes };
+  sizes.push({ path, bytes });
   for (const width of [320, 375, 768, 1024]) {
     await page.setViewportSize({ width, height: 900 });
     await page.waitForTimeout(150);
@@ -314,3 +317,5 @@ console.info(
 console.info(
   `the most JavaScript: ${String(most.bytes)} bytes (gzip) on ${most.path}, of ${String(JS_BUDGET)}`,
 );
+for (const { path, bytes } of sizes)
+  console.info(`  ${path}: ${String(bytes)} bytes of JavaScript (gzip)`);

@@ -1,0 +1,44 @@
+---
+title: Recipe reader
+seoTitle: "Read opening hours and product prices from HTML: the recipe reader"
+description: Paste the HTML of a venue page or a product page, and see what the recipes of polite-crawler read. You get each hours reading with its source and quote, and the price, the variants and the product of the page.
+tableOfContents: false
+---
+
+import RecipeReader from "../../../components/RecipeReader.tsx";
+import { readRecipes } from "../../../lib/recipe-read.ts";
+import { RECIPE_SAMPLES } from "../../../lib/recipe-samples.ts";
+
+export const initial = readRecipes({ ...RECIPE_SAMPLES[0], compareWith: null, skipSplit: false });
+
+A recipe tells the crawler what to fetch and how to read it. The package has two recipes: `readVenue` reads the opening hours of a venue, and `readProduct` reads a product page. This tool starts their readers on one page. Paste the HTML of a page, or select an example.
+
+The tool uses the real code of polite-crawler, compiled into this page: `extractPage`, `venueReadingsOf`, `productOf`, `pickProduct`, `readAmount`, `locate` and `compareHours`. It sends no request, and your HTML stays in your browser.
+
+<RecipeReader client:visible initial={initial} />
+
+## What the venue reader reads
+
+- **The JSON-LD of a venue.** A record of a venue type (`Restaurant`, `Bakery`, `Store` and more) can give `openingHoursSpecification` or `openingHours`. Such a reading has the rank 0.
+- **The text of the page.** The [hours parser](../opening-hours/) reads the text. A reading below a heading, for example "Hours", has the rank 1. A different schedule, for example a brunch or a happy hour, has the rank 4.
+- **A quote for each reading of the text.** The `raw` text of a reading is a quote that `verify` finds in the stored page. A citation can thus point at the exact words.
+- **One location of a group.** A page can list more than one location. Then the reader reads only the location that matches `location`, by its street address or its position. With no `location`, it reads none of them, and a note says so.
+
+`readVenue` also fetches the pages of the site that most likely hold hours, and it reads each one the same way. It gives the best reading, the best reading of the site with no guess (`from_site`), and the days where two readings disagree.
+
+## What the product reader reads
+
+- **The product of the page, not a related product.** The reader takes the Product record whose `url` or `@id` names the page. With no such record, it takes the largest record with offers. A related product with many reviews can be larger, so the URL comes first. Select the product example to see it.
+- **The price as money.** A price is an amount and an ISO 4217 currency, for example `{ amount: 21, currency: "EUR", raw: "21,00" }`. `readAmount` reads `21,00`, `1.299,00` and `$19.99`. A list price or a struck-through price is not the price.
+- **The variants.** `price` and `price_to` give the range of the variants. A URL with `?variant=`, `sku` or `gtin` names one variant, and `variant` gives its price and availability.
+- **A wall is a clean stop.** A shop that refuses the crawler, or sends a bot check, gives `wall: true` and a note. The crawler does not try a different identity.
+
+## Compare with the hours that you keep
+
+An application keeps the hours of a venue. `compareHours(kept, reading)` compares a new reading with them, day by day:
+
+- **same:** each day that the two weeks state has the same intervals.
+- **changed:** a day of the two weeks is different. The result names the days.
+- **new:** the application keeps no hours for the venue.
+
+A day that only the reading states is new. It is not a change. A change is not a fact yet: confirm it with a second reading, as a [watch](../../guide/daemon/) does. The first example shows why. Its JSON-LD gives the old hours, and its text gives the new hours, so the reading of the site says "same" and `disagree` names six days.

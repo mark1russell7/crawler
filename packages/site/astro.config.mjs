@@ -112,13 +112,20 @@ export default defineConfig({
             "guide/mcp",
             "guide/how-it-works",
             "guide/search",
+            "guide/recipes",
+            "guide/daemon",
             "guide/politeness",
             "guide/compare",
           ],
         },
         {
           label: "Tools",
-          items: ["tools/robots-txt-tester", "tools/page-reader", "tools/opening-hours"],
+          items: [
+            "tools/robots-txt-tester",
+            "tools/page-reader",
+            "tools/opening-hours",
+            "tools/recipe-reader",
+          ],
         },
         {
           label: "Field notes",

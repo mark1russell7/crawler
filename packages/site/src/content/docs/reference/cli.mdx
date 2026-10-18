@@ -102,7 +102,7 @@ These options apply to one command. The command line is wrong when another comma
 
 ## Daemon
 
-`polite-crawler daemon` checks the watch list on a schedule, until `SIGINT` or `SIGTERM`. Each tick is one `watch run`, so each polite rule applies. With `--mcp-http`, the daemon also serves the MCP tools over local HTTP.
+`polite-crawler daemon` checks the watch list on a schedule, until `SIGINT` or `SIGTERM`. Each tick is one `watch run`, so each polite rule applies. With `--mcp-http`, the daemon also serves the MCP tools over local HTTP. [The daemon, tick by tick](../../guide/daemon/) shows a schedule.
 
 ```sh
 npx polite-crawler watch add https://example.com/hours --every 6h

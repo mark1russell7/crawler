@@ -33,6 +33,8 @@ A document is what a reader cites, not what the crawler fetched. A web page is o
 
 A recipe turns one kind of capture into documents. The built-in recipe `page` reads web pages and PDFs. An application can add its own recipes, for example for the JSON of an API. `reindex` replays each capture through its recipe.
 
+[Write a recipe](../recipes/) starts a recipe of `defineRecipe` in your browser, from the request to the quote check. The [recipe reader](../../tools/recipe-reader/) starts the readers of the venue recipe and the product recipe on a page that you paste.
+
 ```ts
 import { fetchAndIndex, openCrawler } from "polite-crawler";
 
@@ -57,3 +59,11 @@ await fetchAndIndex(crawler.runtime, {
   maxAgeMs: 7 * 24 * 3600 * 1000,
 });
 ```
+
+## Search by words and by meaning
+
+`find` ranks the stored passages by BM25 by default. With an embedder, `rank: "hybrid"` also ranks them by the vectors of a local model, and fuses the two lists. [How hybrid search ranks](../search/) shows the two lists and their fusion for a few questions.
+
+## Watch pages on a schedule
+
+A watch list keeps the pages that the crawler checks again. The daemon checks the list on a schedule and writes each confirmed change as one JSON line. [The daemon, tick by tick](../daemon/) shows the ticks, the budgets and the drain at a stop.

@@ -29,6 +29,9 @@ Install it with \`npm install polite-crawler\`. Use \`openCrawler({ dir })\` and
 - [Quick start](${SITE}guide/quick-start/): install, the command line, the library
 - [MCP web fetch server](${SITE}guide/mcp/): the MCP server for Claude Code, Claude Desktop, Cursor, VS Code and other clients, and its tools
 - [How it works](${SITE}guide/how-it-works/): the path of a request, the store, capture ids, recipes
+- [How hybrid search ranks](${SITE}guide/search/): the BM25 ranking, the vector ranking of a local model and their reciprocal rank fusion (\`rank: "hybrid"\`, \`fusionK\`, \`candidates\`, \`neighbors\`), with an interactive figure
+- [Write a recipe](${SITE}guide/recipes/): \`defineRecipe\` with \`name\`, \`fetch\` and \`extract\`, \`runRecipe\`, \`readJson\`, and the path from a capture to documents that \`verify\` can cite
+- [The daemon, tick by tick](${SITE}guide/daemon/): \`polite-crawler daemon\` and \`scheduleWatches\`: due times, \`--tick\`, \`--jitter\`, \`--tick-budget\`, \`--tick-pages\`, the drain at a stop and the JSON line of a confirmed change
 - [How the crawler is polite](${SITE}guide/politeness/): rests, refusals, the User-Agent, content signals
 - [Library API](${SITE}reference/api/): each option, method and part
 - [Command line](${SITE}reference/cli/): each command and option
@@ -45,6 +48,7 @@ Install it with \`npm install polite-crawler\`. Use \`openCrawler({ dir })\` and
 - [robots.txt tester](${SITE}tools/robots-txt-tester/): which rule permits or refuses a path, for GPTBot, ClaudeBot, Claude-User and your own user agent, and the verdict of the MCP server
 - [What the crawler sees](${SITE}tools/page-reader/): JSON-LD, visible text, links and the JavaScript decision for pasted HTML
 - [Opening hours parser](${SITE}tools/opening-hours/): the week that page text, schema.org or OpenStreetMap hours give
+- [Recipe reader](${SITE}tools/recipe-reader/): the opening hours (\`venueReadingsOf\`, with the rank, the source and the quote of each reading, and \`compareHours\`) and the product (\`productOf\`, \`pickProduct\`, \`readAmount\`) of pasted HTML
 
 ## Field notes
 

@@ -60,6 +60,26 @@ crawler.find("robots exclusion"); // ranked passages, with no request
 crawler.verify(page.doc!, "robots.txt protocol"); // the exact span and the capture to cite
 ```
 
+## How it works, in figures
+
+<CardGrid>
+  <LinkCard
+    title="How hybrid search ranks"
+    description="Full-text ranks, vector ranks and their fusion, side by side. Move k and the counts, and see each page move."
+    href="guide/search/"
+  />
+  <LinkCard
+    title="Write a recipe"
+    description="Declare what to fetch and how to read it, then start the recipe in your browser: request, capture, documents, quote."
+    href="guide/recipes/"
+  />
+  <LinkCard
+    title="The daemon, tick by tick"
+    description="A watch list on a schedule: due times, jitter, budgets, the drain at a stop and the JSON line of a confirmed change."
+    href="guide/daemon/"
+  />
+</CardGrid>
+
 ## Field notes
 
 <CardGrid>
@@ -99,6 +119,11 @@ These tools start the code of the package in your browser. Nothing goes to a ser
     title="Opening-hours parser"
     description="Paste the hours from a page, and get the week that the crawler reads."
     href="tools/opening-hours/"
+  />
+  <LinkCard
+    title="Recipe reader"
+    description="Paste a venue page or a product page, and get the hours with their quotes, or the price, the variants and the product of the page."
+    href="tools/recipe-reader/"
   />
   <LinkCard
     title="Compare the crawlers"

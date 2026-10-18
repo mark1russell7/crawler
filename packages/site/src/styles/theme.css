@@ -1199,6 +1199,12 @@ header.header {
 .sl-markdown-content td code {
   overflow-wrap: anywhere;
 }
+/* On a wide screen, an option in a table stays whole: no `--allow-` on one line and `remote-` below. */
+@media (min-width: 50rem) {
+  .sl-markdown-content td code.pc-option {
+    white-space: nowrap;
+  }
+}
 /*
  * On a wide screen, a short code name in a sentence stays on one line: no lone "-" at the end of a
  * line. The rehype plugin of astro.config.mjs marks these names. A long code span can still wrap.

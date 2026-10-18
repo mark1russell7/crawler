@@ -104,10 +104,20 @@
   justify-content: end;
   text-align: end;
 }
-/* the key of the vectors stays next to its word, at the right edge */
+/*
+ * The key of the vectors stays next to its word, at the right edge. A grid does not do it: the small
+ * line below spans the two columns and makes the column of the key wide.
+ */
 .pc-hy-head-vec {
-  grid-template-columns: auto auto;
-  justify-content: end;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: center;
+  column-gap: 0.4rem;
+}
+.pc-hy-head-vec small {
+  flex-basis: 100%;
+  text-align: end;
 }
 .pc-hy-key {
   display: inline-block;

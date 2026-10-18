@@ -42,23 +42,55 @@ const lastmodOf = (url) => {
 const textOf = (node) =>
   node.type === "text" ? node.value : (node.children ?? []).map((child) => textOf(child)).join("");
 
+/** This function adds a class to an element of the HTML tree (hast). */
+const addClass = (node, name) => {
+  const names = node.properties.className;
+  node.properties.className = [...(Array.isArray(names) ? names : []), name];
+};
+
+/** A break is good after these characters of a long name: `$POLITE_CRAWLER_DIR`, a path, `A=1`. */
+const BREAK_AFTER = /(?<=[_/=])/;
+
+/** The element <wbr>: a place where a line can break, with no character. */
+const wbr = () => ({ type: "element", tagName: "wbr", properties: {}, children: [] });
+
+/** This function puts a <wbr> after each "_", "/" and "=" of the text of a code element. */
+const addBreaks = (node) => {
+  const children = [];
+  for (const child of node.children) {
+    if (child.type !== "text") {
+      children.push(child);
+      continue;
+    }
+    for (const [index, part] of child.value.split(BREAK_AFTER).entries()) {
+      if (index > 0) children.push(wbr());
+      children.push({ type: "text", value: part });
+    }
+  }
+  node.children = children;
+};
+
 /**
- * This rehype plugin marks the short code names of the prose, for example `--allow-user-provided`.
- * The CSS keeps such a name on one line on a wide screen, so a line does not end with a lone "-".
- * A long code span (a test name with spaces) gets no mark, and it can still wrap.
+ * This rehype plugin sets where the inline code of the prose can break:
+ * - A short code name with no space, for example `--allow-user-provided`, gets the class `pc-name`.
+ *   The CSS keeps it on one line on a wide screen, so a line does not end with a lone "-".
+ * - An option in a table cell (it starts with "-") gets the class `pc-option`, and it stays whole.
+ * - In a table cell, a long name gets a <wbr> after each "_", "/" and "=", so it breaks there and
+ *   not in the middle of a word.
  */
 const shortCode = () => (tree) => {
-  const visit = (node, parent) => {
+  const visit = (node, parent, inCell) => {
     if (node.type === "element" && node.tagName === "code" && parent?.tagName !== "pre") {
       const text = textOf(node);
-      if (text.length <= 40 && !/\s/.test(text)) {
-        const names = node.properties.className;
-        node.properties.className = [...(Array.isArray(names) ? names : []), "pc-name"];
-      }
+      if (text.length <= 40 && !/\s/.test(text)) addClass(node, "pc-name");
+      if (inCell && text.startsWith("-") && text.length <= 28) addClass(node, "pc-option");
+      if (inCell) addBreaks(node);
+      return;
     }
-    for (const child of node.children ?? []) visit(child, node);
+    const cell = inCell || ["td", "th"].includes(node.tagName);
+    for (const child of node.children ?? []) visit(child, node, cell);
   };
-  visit(tree, undefined);
+  visit(tree, undefined, false);
 };
 
 export default defineConfig({

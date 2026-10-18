@@ -545,11 +545,9 @@ export default function RecipeReader({ initial }: { readonly initial: RecipeView
                               {amount.amount === null ? (
                                 <span>not an amount</span>
                               ) : (
-                                <code>
-                                  {amount.currency === null
-                                    ? `{ amount: ${String(amount.amount)} }`
-                                    : `{ amount: ${String(amount.amount)}, currency: "${amount.currency}" }`}
-                                </code>
+                                <span>
+                                  <code>{String(amount.amount)}</code> {amount.currency ?? ""}
+                                </span>
                               )}
                               {amount.old ? (
                                 <span className="pc-tag">an old price: not the price</span>

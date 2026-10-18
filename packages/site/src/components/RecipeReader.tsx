@@ -466,36 +466,33 @@ export default function RecipeReader({ initial }: { readonly initial: RecipeView
                     </dl>
 
                     {product.variants.length > 0 ? (
-                      <div className="pc-table-wrap">
-                        <table className="pc-table pc-rr-compact">
-                          <thead>
-                            <tr>
-                              <th scope="col">Variant</th>
-                              <th scope="col">Price</th>
-                              <th scope="col">Old price</th>
-                              <th scope="col">Availability</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {product.variants.map((variant) => (
-                              <tr
-                                key={variant.sku ?? variant.name ?? ""}
-                                className={variant.named ? "pc-rr-named" : undefined}
-                              >
-                                <th scope="row">
-                                  {variant.name ?? variant.sku}
-                                  {variant.named ? " (the URL names it)" : ""}
-                                </th>
-                                <td>{money(variant.price)}</td>
-                                <td>{variant.old === null ? "none" : <s>{variant.old}</s>}</td>
-                                <td>
-                                  <code>{variant.availability ?? "none"}</code>
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
+                      <section className="pc-out" aria-label="The variants">
+                        <p className="pc-out-title">The variants, each read alone with productOf</p>
+                        <ul className="pc-rr-variants">
+                          {product.variants.map((variant) => (
+                            <li
+                              key={variant.sku ?? variant.name ?? ""}
+                              className={variant.named ? "pc-rr-named" : undefined}
+                            >
+                              <span className="pc-rr-variant-name">
+                                <strong>{variant.name ?? variant.sku}</strong>
+                                {variant.named ? (
+                                  <span className="pc-tag pc-tag-best">the URL names it</span>
+                                ) : null}
+                              </span>
+                              <span className="pc-rr-variant-facts">
+                                <span>{money(variant.price)}</span>
+                                {variant.old !== null ? (
+                                  <span>
+                                    old price <s>{variant.old}</s>
+                                  </span>
+                                ) : null}
+                                <code>{variant.availability ?? "no availability"}</code>
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+                      </section>
                     ) : null}
 
                     <section className="pc-out" aria-label="The product of the page">

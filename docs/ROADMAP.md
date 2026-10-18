@@ -6,14 +6,6 @@ Change this file and the tracker together. Each item has an id, a status, an are
 
 ## Blocked
 
-### `client070`: Stream helpers in @procedures 0.7.0
-
-The NDJSON writer, the keep-alive and the 'as they finish' helper move into the shared client packages, where the extraction law puts them.
-
-- Area: jarvis
-- Blocked: The client repository is frozen for its 0.6.0 release. These changes land after it, as 0.7.0.
-- Owner: The client-repo sessions
-
 ### `mcp-host`: The MCP server moves onto the shared MCP host
 
 Mark's decision D12 in the server-stack plan (OTH-3): the polite-crawler MCP entry moves onto @procedures/mcp-server, and the library stays a leaf. The MCP entry becomes its own package, so polite-crawler itself depends on no package of Mark's. Moving the export and the npx command is breaking, so it is a minor version (0.2.0), with a deprecation path, a new MCP registry entry and the same MCP features.
@@ -281,6 +273,15 @@ jarvis deleted its local stream code and uses writeNdjsonStream, the stream mark
 - Shipped: 2026-10-17
 - [jarvis pull request #39](https://github.com/mark1russell7/jarvis/pull/39)
 - [Merge commit bf82aa8](https://github.com/mark1russell7/jarvis/commit/bf82aa8)
+
+### `client070`: Stream helpers in @procedures 0.7.0
+
+The NDJSON writer, the keep-alive and the 'as they finish' helper moved into the shared client packages in @procedures 0.7.0, where the extraction law puts them. jarvis pull request #39 replaced its stand-ins with writeNdjsonStream and asSettled.
+
+- Area: jarvis
+- Owner: The client-repo sessions
+- Shipped: 2026-10-17
+- [jarvis #39](https://github.com/mark1russell7/jarvis/pull/39)
 
 ### `j7`: Stream long jarvis calls (J-7)
 

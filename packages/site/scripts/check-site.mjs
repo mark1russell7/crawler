@@ -10,7 +10,7 @@
 // With --shots <dir>, it also saves a screenshot of each page: desktop and phone, light and dark. It
 // also saves each figure after its click: desktop in the light theme, and phone in the dark theme.
 //   pnpm --filter @crawler/site check [--shots <dir>]
-import { existsSync, mkdirSync, readFileSync, readdirSync, statSync } from "node:fs";
+import { copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { createServer } from "node:http";
 import { extname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -360,6 +360,9 @@ for (const { scheme, viewport, device } of shots === undefined
 
 if (shots !== undefined) {
   mkdirSync(shots, { recursive: true });
+  // DEBUG (fix/site-review): the HTML of two pages with tables, to read the output of proseCode
+  for (const page of ["reference/cli", "guide/compare"])
+    copyFileSync(join(dist, page, "index.html"), join(shots, `${page.replace("/", "-")}.html`));
   for (const scheme of ["light", "dark"]) {
     for (const { device, viewport } of [
       { device: "desktop", viewport: { width: 1440, height: 900 } },

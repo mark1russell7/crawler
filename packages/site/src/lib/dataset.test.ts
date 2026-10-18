@@ -57,7 +57,10 @@ describe("the dataset for Zenodo", () => {
     expect(text).toContain(study.userAgent);
     expect(text).toContain("CC BY 4.0");
     expect(text).toContain("https://creativecommons.org/licenses/by/4.0/");
-    expect(text).not.toContain("DOI");
+    // with no DOI, the README names no DOI: it tells only that each version has one
+    expect(text).not.toMatch(/10\.5281|doi\.org/);
+    expect(text).toContain("## Each month");
+    expect(text).toContain("`study-monthly.yml`");
     // each row of a table has the cells of its head: no "|" in a cell breaks a row
     const tables: string[][] = [];
     let current: string[] | undefined;
@@ -82,6 +85,28 @@ describe("the dataset for Zenodo", () => {
     expect(fileOf(files, "CITATION.cff")).toContain('doi: "10.5281/zenodo.1234567"');
     expect(fileOf(files, "README.md")).toContain("https://doi.org/10.5281/zenodo.1234567");
     expect(() => datasetFiles({ ...input, doi: "zenodo.1234567" })).toThrow(/not a DOI/);
+  });
+
+  it("names the concept DOI for the study and the DOI of the version for one run", () => {
+    const files = datasetFiles({
+      ...input,
+      doi: "10.5281/zenodo.1234567",
+      concept: "10.5281/zenodo.1234566",
+    });
+    const text = fileOf(files, "README.md");
+    expect(text).toContain(
+      "The concept DOI [10.5281/zenodo.1234566](https://doi.org/10.5281/zenodo.1234566) names the study and all its versions.",
+    );
+    expect(text).toContain(
+      `The DOI [10.5281/zenodo.1234567](https://doi.org/10.5281/zenodo.1234567) names this version (${study.fetched.from.slice(0, 10)}) only`,
+    );
+    expect(text).toContain("To cite the study and all its versions:");
+    const cff = fileOf(files, "CITATION.cff");
+    expect(cff).toContain('doi: "10.5281/zenodo.1234567"');
+    expect(cff).toContain(
+      ["identifiers:", "  - type: doi", '    value: "10.5281/zenodo.1234566"'].join("\n"),
+    );
+    expect(() => datasetFiles({ ...input, concept: "zenodo.1" })).toThrow(/not a DOI/);
   });
 
   it("refuses a CSV that is not the CSV of the JSON", () => {

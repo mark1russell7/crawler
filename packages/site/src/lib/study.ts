@@ -73,6 +73,8 @@ export interface Study {
   };
   readonly fetched: { readonly from: string; readonly to: string };
   readonly userAgent: string;
+  /** where the requests went out, for example a GitHub Actions runner. The dataset of 12 October 2026 has none. */
+  readonly runner?: string;
   readonly pagePath: string;
   /** the license of the dataset, as an SPDX id */
   readonly license?: string;

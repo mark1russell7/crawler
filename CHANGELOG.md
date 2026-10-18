@@ -15,6 +15,31 @@ A prerelease version (`0.2.0-beta.1`) goes to the npm tag `next`. Each other ver
 
 ## Unreleased
 
+- **The recipes only add to the API.** Code that compiled against 0.1.1 or 0.1.2 compiles against this version, and `compat.test.ts` and `compat-012.test.ts` stay green. The capture log, the bodies and the capture ids do not change.
+  - `RuntimeOptions`, and thus `OpenOptions`, has the optional `recipes`. `OpenedCrawler`, `HybridCrawler` and `PoliteCrawler` do not change.
+  - `polite-crawler/hours` has the new `compareHours` and `HoursComparison`. Its size for a browser stays in its budget.
+  - In this version, `createRuntime` registers the extractors before it opens a file of the store. Thus an extractor that it refuses leaves no open file.
+- **The recipe SDK.** `defineRecipe({ name, fetch, extract })` declares what a recipe fetches and how it reads a body into documents. The README section "Writing a recipe" gives a full example and the rules.
+  - `runRecipe(crawler, recipe, input)` fetches the request of an input through the crawler and gives the documents of its capture. `registerRecipe` registers a recipe in a runtime of your own.
+  - `mode: "page"` obeys robots.txt. `mode: "api"` is a documented API: robots.txt does not apply, and the pace (`minInterval`) does.
+  - `reindex` reads the captures of each recipe again, and the time travel (`at`, `versions`, `diff`) works on its documents. A runtime with no recipe keeps the documents.
+  - The extractor of a recipe checks each document. A document that is not valid, a document id with the prefix `archive:` and the kind `archived` make the extractor throw. The runtime reports the error.
+  - When the extractor cannot read a stored copy, `runRecipe` asks the source one more time. A held-back document shows no title and only its structural metadata, unless `userProvided`.
+  - With `fallback: "archive"`, a recipe of the mode `page` gets an archived copy after a refusal. The page reader reads the copy, so the documents of the recipe come only from live captures.
+  - A recipe cannot use a name of the crawler (`RESERVED_RECIPES`): `page`, `archive-copy`, `archive-index`, `robots.txt`, `sitemap` and `feed`.
+- **The venue recipe.** `readVenue(crawler, url)` reads the opening hours of a venue from its own site. It reads the JSON-LD and the text of the home page, and of the pages that most likely hold hours or a menu.
+  - Each reading names its page, its document and its capture. The result gives the best reading, the best reading of the site with no guess (`from_site`), and the days where the readings disagree.
+  - It reads an OpenStreetMap `opening_hours` value that the caller gives (`osm`). It sends no request to OpenStreetMap.
+  - On a page that lists more than one location, it reads only the location that matches `location`. With `name`, it tells if the home page names the venue. `requireName` stops at a site that does not name it.
+  - It gives the menu links and the phone, and it tells when the site moved to a different host.
+  - `venueReadingsOf` reads one stored document or version with no request. `compareHours` compares a reading with the week that an application keeps.
+- **The product recipe.** `readProduct(crawler, url)` reads the schema.org Product data of a product page. It gives the name, the brand, the SKU, the GTIN, the price, the availability, the seller and the image.
+  - A price is an amount and an ISO 4217 currency. `price` and `price_to` give the range of the variants. A list price and a struck-through price are not the price.
+  - It picks the product of the page, not a related product on the page. It reads the variant that the URL names.
+  - It reads a product that is larger than the JSON-LD of the index from the stored body. It renders the page once when the plain page has no Product data.
+  - A shop that refuses the crawler gives `wall: true` and a note. `productOf` reads JSON-LD records with no request, and `readAmount` reads an amount as a shop writes it.
+- **The library only.** The command line and the MCP server do not change: the MCP server keeps its nine tools.
+
 - **A failed question keeps the text held back.** When the MCP client can ask the user about `user_provided`, but the question fails (a timeout, a lost connection or a cancel), the text stays held back. Before, the opt-in of the operator (`--allow-user-provided`) released it. That opt-in applies only to a client that cannot ask.
 
 - **This version only adds to the API.** Code that compiled against 0.1.1 or 0.1.2 compiles against this version. `compat.test.ts` (0.1.1) and `compat-012.test.ts` (0.1.2) are the proof. The capture log, the bodies and the capture ids do not change.

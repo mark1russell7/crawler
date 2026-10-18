@@ -1,6 +1,6 @@
 ---
 title: Library API
-description: "The library API of polite-crawler: openCrawler and its options, fetch, find, read, verify, extract, discover, crawl, diff, watch, hybrid search and reindex, and the parts that you can import alone."
+description: "The library API of polite-crawler: openCrawler and its options, fetch, find, read, verify, extract, discover, crawl, diff, watch, hybrid search, reindex, the recipes and the recipe SDK, and the parts that you can import alone."
 ---
 
 ```ts title="The import"
@@ -30,6 +30,7 @@ The function opens a crawler on a folder and gives a `HybridCrawler`. It is an `
 | `scope` | `string` | none | A label for each capture record. |
 | `onEvent` | `(event) => void` | none | A function that gets each request, response, wait, stop and skip. |
 | `extractors` | `Record<string, Extractor>` | the recipe `page` | The readers of the recipes of an application. |
+| `recipes` | `Recipe[]` | none | The recipes of [`defineRecipe`](#definerecipedefinition). `reindex` reads their captures. |
 | `watchFloor` | a duration, for example `"1h"` | `"1h"` | The shortest `every` of a watch. |
 | `embedder` | `Embedder` | none | The local model of [hybrid search](#hybrid-search): `transformersEmbedder`, `ollamaEmbedder` or your own. |
 
@@ -227,6 +228,100 @@ The method builds the index again from the capture log and the blobs, with no re
 
 The method closes the browser, the log files and the index. A second close does nothing, and a method after the close rejects.
 
+## Recipes
+
+A recipe tells the crawler what to fetch and how to read it into documents. The package has two recipes, and an SDK for a recipe of your own. Each fetch of a recipe is a fetch of the crawler, so robots.txt, the pace, the stops and the capture log apply.
+
+`readVenue`, `readProduct` and `runRecipe` take a crawler or a runtime of `createRuntime`. The option `onBehalfOf` of `openCrawler` does not apply to them: give `onBehalfOf` to each call.
+
+### `readVenue(crawler, url, options?)`
+
+The function reads the opening hours of a venue from its own site. It reads the JSON-LD and the text of the home page, and of the pages that most likely hold hours or a menu.
+
+```ts title="The hours of a venue"
+import { compareHours, readVenue } from "polite-crawler";
+
+const venue = await readVenue(crawler, "https://forno-esempio.example/", {
+  name: "Forno Esempio",
+  osm: "Mo-Fr 07:00-15:00; Sa 08:00-13:00; Su off",
+});
+console.log(venue.best?.hours, venue.best?.capture, venue.disagree);
+const change = compareHours(keptWeek, venue.from_site!.week);
+```
+
+| Option | Default | What it does |
+| --- | --- | --- |
+| `pages` | `3` | The pages after the home page that the recipe reads, from 0 to 8. |
+| `name` | none | The name of the venue. `names_venue` tells if the home page names it. |
+| `requireName` | `false` | With `true`, a home page that does not name the venue gives no reading. |
+| `location` | none | The `address`, or `lat` and `lon`, of the venue, for a page that lists more than one location. |
+| `osm` | none | An OpenStreetMap `opening_hours` value. The recipe sends no request to OpenStreetMap. |
+| `render`, `maxAge`, `onBehalfOf`, `signal`, `scope`, `labels`, `job` | as for `fetch` | These options apply to each page. |
+| `budget` | none | No request starts after this time. |
+| `userProvided`, `fallback`, `archiveDespiteRobots` | as for `read` and `fetch` | The rule for a held-back page, and the archived copies. |
+
+- Each reading gives `from` (`jsonld`, `text` or `osm`), `rank`, `label`, `week`, `hours`, `inferred`, `partial`, `season` and `raw`. It names its `url`, `doc` and `capture`.
+- `best` is the best reading of the opening hours. `from_site` is the best reading of the site itself, with no guess. `disagree` names the days where the readings disagree.
+- The result also gives `pages`, `menus`, `phone`, `captures`, `moved` and `held_back`.
+- `venueReadingsOf(doc)` reads one stored document or version with no request.
+- `compareHours(kept, reading, { skipSplit })` compares two weeks, day by day. It gives `status` (`same`, `changed` or `new`) and the `days` that changed.
+
+### `readProduct(crawler, url, options?)`
+
+The function reads the schema.org Product data of a product page. It takes the options of `readVenue` that apply to one page.
+
+```ts title="A product page"
+import { readProduct } from "polite-crawler";
+
+const product = await readProduct(crawler, "https://bottega-campione.example/products/olio-esempio");
+console.log(product.wall, product.name, product.price, product.price_to, product.availability);
+```
+
+- The result gives `name`, `brand`, `sku`, `gtin`, `price`, `price_to`, `availability`, `availabilities`, `variant`, `seller`, `image`, `doc` and `capture`.
+- A price is `{ amount, currency, raw }`, with an ISO 4217 currency. `price_to` is the highest price of a range.
+- The recipe picks the product of the page, not a related product. `variant` is the variant that the URL names.
+- A shop that refuses the crawler gives `wall: true` and a note. The crawler does not try a different identity.
+- `productOf(records, url)` reads JSON-LD records with no request.
+
+### `defineRecipe(definition)`
+
+The function declares a recipe of your own: its name, the request for an input and the extractor.
+
+```ts title="A recipe for a menu API"
+import { defineRecipe, openCrawler, runRecipe } from "polite-crawler";
+
+const menu = defineRecipe({
+  name: "forno-menu",
+  mode: "api",
+  minInterval: "2s",
+  fetch: (day: string) => `https://api.forno-esempio.example/menu?day=${day}`,
+  extract: (body, capture) =>
+    (JSON.parse(new TextDecoder().decode(body)) as { items: { id: string; name: string }[] }).items.map((item) => ({
+      doc: `menu:forno-esempio/${item.id}`,
+      kind: "menu-item",
+      title: item.name,
+      text: item.name,
+      url: capture.url,
+      meta: {},
+    })),
+});
+
+const crawler = openCrawler({ dir: "./crawl", recipes: [menu] });
+const run = await runRecipe(crawler, menu, "mon");
+```
+
+| Value | Default | What it does |
+| --- | --- | --- |
+| `name` | (necessary) | The name that goes into each capture record. Do not change it. |
+| `extract` | (necessary) | The pure function that reads a body into documents. |
+| `fetch` | the input is the URL | The function that gives the request for an input. |
+| `mode` | `page` | `page` obeys robots.txt. `api` is a documented API. |
+| `accept`, `minInterval`, `maxAge`, `maxBytes`, `description` | | The `Accept` header, the pace of the source, the age of a stored copy and the size of a body. |
+
+- `runRecipe(crawler, recipe, input, options?)` gives `outcome`, `docs`, `capture`, `from_cache`, `held_back`, `error` and `note`. `reindex` reads the captures of the recipe again.
+- An extractor is pure and sends no request. When it throws, the runtime reports the error, and the fetch continues.
+- The name of a recipe is part of each capture id. The [README of the package](https://github.com/mark1russell7/crawler/tree/main/packages/polite-crawler#writing-a-recipe) gives each rule.
+
 ## Hybrid search
 
 Hybrid search fuses the BM25 ranking with the ranking of the vectors of a local model. It is opt-in, and it needs the option `embedder`.
@@ -365,7 +460,7 @@ The package is ESM only. These are its entry points:
 | `polite-crawler/mcp` | `createMcpServer`, `startMcpServer` and `startMcpHttpServer`. It needs Node.js. |
 | `polite-crawler/robots` | `parseRobots`, `decide`, `robotsFromStatus`, `robotsFromResponse`, `productToken`: robots.txt as RFC 9309 specifies it. `decide` gives the rule that decided and its line. A robots.txt that is a web page is unreadable. |
 | `polite-crawler/html` | `extractPage`: the JSON-LD, the visible text, the links and the decision about JavaScript. It also gives the canonical URL, a quick redirect, the name of a bot check and notes about what it left out. |
-| `polite-crawler/hours` | `fromText`, `fromSchemaOrg`, `fromCompact`, `describeWeek`: opening hours. A reading tells its season and if it left out a rule (`season`, `partial`). |
+| `polite-crawler/hours` | `fromText`, `fromSchemaOrg`, `fromCompact`, `describeWeek` and `compareHours`: opening hours. A reading tells its season and if it left out a rule (`season`, `partial`). |
 | `polite-crawler/classify` | `classify`, `parseRetryAfter`: the outcome of a response. |
 | `polite-crawler/politeness` | `HostScheduler`, `backoffMs`, `restAfter`: one request in progress for each host, and the rest of a host after a request. |
 | `polite-crawler/signals` | `readSignals`: content signals for AI input. |
@@ -374,4 +469,4 @@ The entry points below `polite-crawler/mcp` have no Node.js dependency, so they 
 
 The main entry point also exports `Crawler`, `CaptureLog`, `DocIndex`, `FileBlobStore`, `Extractors`, `fetchAndIndex`, `fetchPage`, `reindex` and `makeRecord`, for an application that builds its own runtime. It exports the readers that such an application uses: `extractPage`, `decodeBody`, `readPdf`, the hours reader, `parseRobots` and `decide`.
 
-The stable API is `openCrawler` with its results (`extract` too), `polite-crawler/mcp`, the reader entry points, and `exportWarc` and `exportWacz`. The diff, the watch list, the command line and the store on disk are stable too. The parts of the runtime are the engine: before version 1.0.0, a minor version can change them, and the changelog says so.
+The stable API is `openCrawler` with its results (`extract` too), `polite-crawler/mcp`, the reader entry points, and `exportWarc` and `exportWacz`. The recipes (`readVenue`, `readProduct`, `compareHours`) and the recipe SDK (`defineRecipe`, `runRecipe`) are stable too. The diff, the watch list, the command line and the store on disk are stable too. The parts of the runtime are the engine: before version 1.0.0, a minor version can change them, and the changelog says so.

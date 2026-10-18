@@ -5,8 +5,10 @@
 // - no page loads the search UI before a reader uses the search, and the search finds pages;
 // - with each island hydrated, no page loads more than JS_BUDGET bytes of JavaScript (gzip);
 // - one sitemap lists each page, with the date of its last change;
-// - the feed of the study is RSS 2.0 that a parser reads, with one item for each run and full addresses.
-// With --shots <dir>, it also saves a screenshot of each page: desktop and phone, light and dark.
+// - the feed of the study is RSS 2.0 that a parser reads, with one item for each run and full addresses;
+// - the figures of the guides and the recipe reader answer a click with the result of the package.
+// With --shots <dir>, it also saves a screenshot of each page: desktop and phone, light and dark. It
+// also saves each figure after its click: desktop in the light theme, and phone in the dark theme.
 //   pnpm --filter @crawler/site check [--shots <dir>]
 import { existsSync, mkdirSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { createServer } from "node:http";
@@ -74,6 +76,8 @@ pages.sort((a, b) => a.localeCompare(b));
 
 const problems = [];
 let most = { path: "", bytes: 0 };
+// the JavaScript of each page, for the log
+const sizes = [];
 
 // one sitemap, with each page and the date of its last change (a shallow clone has no dates, so it is not checked)
 const sitemaps = readdirSync(dist)
@@ -166,6 +170,7 @@ for (const path of pages) {
       `${path}: ${String(bytes)} bytes of JavaScript (gzip), more than ${String(JS_BUDGET)}`,
     );
   if (bytes > most.bytes) most = { path, bytes };
+  sizes.push({ path, bytes });
   for (const width of [320, 375, 768, 1024]) {
     await page.setViewportSize({ width, height: 900 });
     await page.waitForTimeout(150);
@@ -260,6 +265,96 @@ for (const path of pages) {
     problems.push("the study page has no <link rel=alternate> to the feed");
 }
 
+// the figures answer a reader: a click, then the result that the code of the package gives
+const INTERACTIONS = [
+  {
+    path: `${BASE}/guide/search/`,
+    name: "figure-search-k0",
+    figure: ".pc-hy",
+    act: async (page) => {
+      await page.getByRole("button", { name: "wheelchair access" }).click();
+      await page.locator(".pc-hy input[type=range]").first().fill("0");
+      await page.getByText("Fused: rank 2 of").waitFor({ timeout: 10_000 });
+    },
+  },
+  {
+    path: `${BASE}/tools/recipe-reader/`,
+    name: "figure-recipe-product",
+    figure: ".pc-tool",
+    act: async (page) => {
+      await page.getByRole("button", { name: "Shop: variants, sale, related" }).click();
+      await page
+        .getByText("Without that url, the reader takes Aceto Esempio")
+        .waitFor({ timeout: 10_000 });
+    },
+  },
+  {
+    path: `${BASE}/guide/recipes/`,
+    name: "figure-recipe-error",
+    figure: ".pc-rb",
+    act: async (page) => {
+      await page.getByRole("button", { name: "An item with no name" }).click();
+      await page.getByText("title must be a text").waitFor({ timeout: 10_000 });
+    },
+  },
+  {
+    path: `${BASE}/guide/daemon/`,
+    name: "figure-daemon-end",
+    figure: ".pc-dm",
+    act: async (page) => {
+      // with reduced motion, the figure shows the whole schedule at once
+      await page.getByText('"confirmed":true').waitFor({ timeout: 20_000 });
+    },
+  },
+];
+for (const { scheme, viewport, device } of shots === undefined
+  ? [{ scheme: "light", viewport: { width: 1280, height: 900 }, device: "desktop" }]
+  : [
+      { scheme: "light", viewport: { width: 1280, height: 900 }, device: "desktop" },
+      { scheme: "dark", viewport: { width: 375, height: 812 }, device: "phone" },
+    ]) {
+  const context = await browser.newContext({
+    viewport,
+    colorScheme: scheme,
+    reducedMotion: "reduce",
+    deviceScaleFactor: 1,
+  });
+  for (const { path, name, figure, act } of INTERACTIONS) {
+    const page = await context.newPage();
+    page.on("pageerror", (error) => problems.push(`${path}: ${error.message}`));
+    try {
+      await page.goto(`${origin}${path}`, { waitUntil: "networkidle" });
+      await page.locator(figure).first().scrollIntoViewIfNeeded();
+      // an island hydrates when it comes into view: astro-island drops its ssr attribute then
+      await page.waitForFunction(
+        (selector) => {
+          const island = document.querySelector(selector)?.closest("astro-island");
+          return island !== null && island !== undefined && !island.hasAttribute("ssr");
+        },
+        figure,
+        { timeout: 10_000 },
+      );
+      await act(page);
+      if (shots !== undefined) {
+        mkdirSync(shots, { recursive: true });
+        // the header of the page stays on top, and it hides a part of a tall figure
+        await page.addStyleTag({ content: "header.header { visibility: hidden; }" });
+        await page.waitForTimeout(300);
+        await page
+          .locator(figure)
+          .first()
+          .screenshot({ path: join(shots, `${name}-${device}-${scheme}.png`) });
+      }
+    } catch (error) {
+      problems.push(
+        `${path}: the figure did not answer: ${error instanceof Error ? (error.message.split("\n")[0] ?? "") : String(error)}`,
+      );
+    }
+    await page.close();
+  }
+  await context.close();
+}
+
 if (shots !== undefined) {
   mkdirSync(shots, { recursive: true });
   for (const scheme of ["light", "dark"]) {
@@ -314,3 +409,5 @@ console.info(
 console.info(
   `the most JavaScript: ${String(most.bytes)} bytes (gzip) on ${most.path}, of ${String(JS_BUDGET)}`,
 );
+for (const { path, bytes } of sizes)
+  console.info(`  ${path}: ${String(bytes)} bytes of JavaScript (gzip)`);

@@ -102,20 +102,47 @@ export const SITES: readonly SiteScript[] = [
  * animation can show the real scheduler at any speed.
  */
 export class VirtualClock implements Clock {
-  private time = 0;
+  private time: number;
   private sequence = 0;
   private readonly timers: Array<{ at: number; seq: number; resolve: () => void }> = [];
 
+  /** The clock starts at `start`, in milliseconds since the epoch. The default is 0. */
+  constructor(start = 0) {
+    this.time = start;
+  }
+
   readonly now = (): number => this.time;
 
-  readonly sleep = (ms: number): Promise<void> =>
+  /** This function waits `ms` milliseconds of the clock. When the signal aborts, the wait ends at once. */
+  readonly sleep = (ms: number, signal?: AbortSignal): Promise<void> =>
     new Promise<void>((resolve) => {
-      this.timers.push({ at: this.time + Math.max(0, ms), seq: this.sequence++, resolve });
+      if (signal?.aborted === true) {
+        resolve();
+        return;
+      }
+      const timer = { at: this.time + Math.max(0, ms), seq: this.sequence++, resolve };
+      this.timers.push(timer);
+      signal?.addEventListener(
+        "abort",
+        () => {
+          const at = this.timers.indexOf(timer);
+          if (at !== -1) this.timers.splice(at, 1);
+          resolve();
+        },
+        { once: true },
+      );
     });
 
   /** This value is true when a sleep waits. */
   get waiting(): boolean {
     return this.timers.length > 0;
+  }
+
+  /** This value is the time when the next sleep ends, or undefined when no sleep waits. */
+  get nextAt(): number | undefined {
+    let first: number | undefined;
+    for (const timer of this.timers) if (first === undefined || timer.at < first) first = timer.at;
+    return first;
   }
 
   /** This method moves the time to `target`, and it wakes each sleep that ends on the way, in order. */

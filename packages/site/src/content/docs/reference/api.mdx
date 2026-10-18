@@ -232,6 +232,8 @@ The method closes the browser, the log files and the index. A second close does 
 
 A recipe tells the crawler what to fetch and how to read it into documents. The package has two recipes, and an SDK for a recipe of your own. Each fetch of a recipe is a fetch of the crawler, so robots.txt, the pace, the stops and the capture log apply.
 
+The [recipe reader](../../tools/recipe-reader/) starts the readers of the two recipes in your browser. [Write a recipe](../../guide/recipes/) starts a recipe of your own.
+
 `readVenue`, `readProduct` and `runRecipe` take a crawler or a runtime of `createRuntime`. The option `onBehalfOf` of `openCrawler` does not apply to them: give `onBehalfOf` to each call.
 
 ### `readVenue(crawler, url, options?)`
@@ -325,7 +327,7 @@ const run = await runRecipe(crawler, menu, "mon");
 
 ## Hybrid search
 
-Hybrid search fuses the BM25 ranking with the ranking of the vectors of a local model. It is opt-in, and it needs the option `embedder`.
+Hybrid search fuses the BM25 ranking with the ranking of the vectors of a local model. It is opt-in, and it needs the option `embedder`. [How hybrid search ranks](../../guide/search/) shows the two lists and their fusion.
 
 ```ts title="Hybrid search with transformers.js or Ollama"
 import { ollamaEmbedder, openCrawler, transformersEmbedder } from "polite-crawler";
@@ -409,7 +411,7 @@ const daemon = await startDaemon({
 await daemon.done; // after SIGINT, SIGTERM or daemon.stop()
 ```
 
-`startDaemon` checks the watch list on a schedule. Each tick is one `watch.run`, so each polite rule applies. It takes the options of `openCrawler` and these options:
+`startDaemon` checks the watch list on a schedule. Each tick is one `watch.run`, so each polite rule applies. [The daemon, tick by tick](../../guide/daemon/) shows a schedule. It takes the options of `openCrawler` and these options:
 
 | Option | Default | What it does |
 | --- | --- | --- |

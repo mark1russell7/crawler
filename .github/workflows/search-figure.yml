@@ -1,0 +1,63 @@
+# The data of the figure "How hybrid search ranks" (packages/site/src/data/search-figure.json).
+# scripts/search-figure.ts puts the corpus into the real index of polite-crawler, and runs the real
+# model (bge-small through transformers.js) for the vector ranks. The model runs here, not on a laptop.
+#
+# It runs when the corpus, the script or this file changes on a branch, and when a person starts it:
+#   gh workflow run search-figure.yml -R mark1russell7/crawler --ref <branch>
+# The artifact "search-figure" holds the JSON, with the model, the versions, the date and the commit.
+# Commit it as packages/site/src/data/search-figure.json. The test of the figure fails when the
+# corpus changed and the JSON did not.
+name: Search figure
+
+on:
+  push:
+    paths:
+      - packages/site/src/lib/search-corpus.ts
+      - packages/site/src/lib/search-index.ts
+      - packages/site/scripts/search-figure.ts
+      - .github/workflows/search-figure.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: search-figure-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  figure:
+    name: The rankings of the figure
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # The pnpm version comes from "packageManager" in package.json
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # The first use of the model downloads it from the Hugging Face Hub (approximately 34 MB).
+      - name: Rank the corpus
+        run: pnpm exec tsx packages/site/scripts/search-figure.ts --out search-figure.json
+      - name: The summary
+        run: |
+          {
+            echo "## The data of the search figure"
+            echo
+            echo "Download the artifact search-figure, and commit it as packages/site/src/data/search-figure.json."
+            echo
+            echo '```json'
+            node -e "const d=require('./search-figure.json'); console.log(JSON.stringify(d.provenance, null, 2))"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: search-figure
+          path: search-figure.json
+          if-no-files-found: error
+          retention-days: 90

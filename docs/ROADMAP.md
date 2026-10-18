@@ -17,6 +17,15 @@ The monthly study workflow opens a pull request with the month's data. The repos
 
 ## In progress
 
+### `rel013`: Release 0.1.3
+
+A patch release: hybrid search, the daemon with MCP tasks, the recipe SDK with the venue and product recipes, and the consent fix. compat tests prove that 0.1.1 and 0.1.2 code still compiles. markt-54 merges pull request #8, and CI publishes and tags it.
+
+- Area: Release and CI
+- Waits for: `hybrid`, `daemon`, `consent-fix`, `recipes-up`, `sdk`
+- Started: 2026-10-18
+- [Pull request #8](https://github.com/mark1russell7/crawler/pull/8)
+
 ### `daemon`: A daemon mode, with MCP tasks for long jobs
 
 On main since 2026-10-18, in the next release. polite-crawler daemon runs the watch list on a schedule, writes confirmed changes as JSON lines, and can run the operator's command for each change. Opt-in MCP over local HTTP needs a token, binds to loopback, and blocks foreign origins. Long jobs are native MCP tasks with cancel, and clients without tasks get progress.
@@ -37,19 +46,21 @@ On main since 2026-10-18, in the next release. One Embedder interface with two a
 
 ### `recipes-up`: Venue-hours and product recipes move into the package
 
-The generic parts of the venue-hours and product recipes move into polite-crawler: hours readings from JSON-LD and page text with their sources, and schema.org Product reading. Only logic moves, with made-up test sites. jarvis keeps its policy, and switches in its new public code repo.
+On main since 2026-10-18, in 0.1.3. readVenue reads a venue's hours from its own site, each reading with its source and a quote that verify finds. readProduct reads a schema.org Product, its price as money, its variants and availability, and skips related products. Only generic logic moved, with made-up test sites. jarvis switches in its new public code repo, with a migration note ready.
 
 - Area: jarvis
 - Waits for: `rel011`
 - Started: 2026-10-18
+- [Main at 4a03bc5](https://github.com/mark1russell7/crawler/commit/4a03bc5)
 
 ### `sdk`: A recipe SDK
 
-A documented way for anyone to write a recipe: what to fetch, how to read it, and what to keep.
+On main since 2026-10-18, in 0.1.3. defineRecipe and runRecipe let anyone write a recipe: what to fetch and how to read it into documents. Reindex, time travel and the archived fallback work with it. The README has a worked example.
 
 - Area: Package
 - Waits for: `recipes-up`
 - Started: 2026-10-18
+- [Main at 4a03bc5](https://github.com/mark1russell7/crawler/commit/4a03bc5)
 
 ## Blocked
 

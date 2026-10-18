@@ -3,7 +3,7 @@
   "name": "io.github.mark1russell7/polite-crawler",
   "title": "polite-crawler",
   "description": "A polite crawler for agents: obeys robots.txt, fetches each page once, finds and verifies quotes.",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "websiteUrl": "https://mark1russell7.github.io/crawler/",
   "repository": {
     "url": "https://github.com/mark1russell7/crawler",
@@ -15,7 +15,7 @@
       "registryType": "npm",
       "registryBaseUrl": "https://registry.npmjs.org",
       "identifier": "polite-crawler",
-      "version": "0.1.3",
+      "version": "0.1.4",
       "runtimeHint": "npx",
       "transport": {
         "type": "stdio"

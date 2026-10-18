@@ -69,6 +69,8 @@ export default function DaemonTicks(): ReactElement {
   const [picked, setPicked] = useState<number | null>(null);
   const sim = useRef<DaemonSim | undefined>(undefined);
   const busy = useRef(false);
+  /** The number of the animation loop: a new loop ends the old one. */
+  const chain = useRef(0);
   const play = useRef(false);
   const root = useRef<HTMLElement | null>(null);
 
@@ -91,10 +93,11 @@ export default function DaemonTicks(): ReactElement {
   }, [refresh]);
 
   const loop = useCallback(() => {
+    const id = ++chain.current;
     let last = performance.now();
     const frame = (time: number): void => {
       const current = sim.current;
-      if (!play.current || current === undefined) return;
+      if (!play.current || current === undefined || id !== chain.current) return;
       const step = Math.min(time - last, 100);
       last = time;
       if (!busy.current) {
@@ -190,8 +193,18 @@ export default function DaemonTicks(): ReactElement {
   const change =
     lastLine === undefined ? undefined : (JSON.parse(lastLine) as Record<string, unknown>);
 
+  const stoppedInRun =
+    view.stoppedAt !== null &&
+    ticks.some(
+      (tick) =>
+        view.stoppedAt !== null &&
+        tick.start <= view.stoppedAt &&
+        (tick.end === null || view.stoppedAt <= tick.end),
+    );
   const status = view.done
-    ? "The daemon stopped. The check in progress ended and wrote its state, and the run started no new check."
+    ? stoppedInRun
+      ? "The daemon stopped. The check in progress ended and wrote its state, and the run started no new check."
+      : "The daemon stopped between two ticks, when no check was in progress."
     : view.stoppedAt !== null
       ? "The stop signal came. The run starts no new check, and the checks in progress end."
       : view.running
@@ -259,7 +272,12 @@ export default function DaemonTicks(): ReactElement {
           <button
             type="button"
             className="pc-button"
-            onClick={() => void reset().then(() => start())}
+            onClick={() =>
+              void reset().then(() => {
+                // with reduced motion, the replay waits at the start: use Step
+                if (!window.matchMedia("(prefers-reduced-motion: reduce)").matches) start();
+              })
+            }
           >
             Replay
           </button>

@@ -10,12 +10,17 @@
 //   bundle. In `astro dev`, which does not drop code, the stand-in lets the modules load.
 // - The HTML reader (linkedom and Readability) is real, but an island that does not read HTML
 //   gets none of it.
+// - A constant that a module makes with Buffer when it loads (`const CRLF2 = Buffer.from(...)` in
+//   fallback.ts) is pure for the bundler, and undefined where Buffer does not exist. The browser
+//   has no Buffer, and the code that uses such a constant is not in the bundle.
 //
 // The tests of the site (vitest) do not use this plugin: they use the real modules.
 import { readFileSync } from "node:fs";
 
 /** A module of the source of polite-crawler. */
 const SOURCE = /[\\/]polite-crawler[\\/]src[\\/][^\\/]+\.ts$/;
+/** A constant of a module that Node.js makes with Buffer when the module loads. */
+const BUFFER_CONSTANT = /^(\s*(?:export\s+)?const\s+[\w$]+\s*=\s*)Buffer\.from\(([^()\n]*)\);$/gm;
 /** A Node.js module, or a package by its name. A virtual module of Vite starts with a NUL character. */
 const PACKAGE = /^(?:node:|(?:@[\w.~-]+\/)?[\w~-][\w.~-]*(?:\/|$))/;
 /** The packages that the pure parts use in the browser: the HTML reader. */
@@ -100,5 +105,14 @@ export const pureCrawler = () => ({
     const at = id.indexOf("?");
     const names = id.slice(at + 1);
     return standIn(id.slice(STAND_IN.length, at), names === "" ? [] : names.split(","));
+  },
+  transform(code, id) {
+    if (!SOURCE.test(id) || !code.includes("Buffer.from(")) return null;
+    const next = code.replace(
+      BUFFER_CONSTANT,
+      (_, head, args) =>
+        `${head}/* @__PURE__ */ (() => (typeof Buffer === "undefined" ? undefined : Buffer.from(${args})))();`,
+    );
+    return next === code ? null : { code: next, map: null };
   },
 });

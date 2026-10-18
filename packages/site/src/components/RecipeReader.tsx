@@ -244,12 +244,9 @@ export default function RecipeReader({ initial }: { readonly initial: RecipeView
             </div>
           ) : null}
 
-          <div className="pc-toggle pc-rr-tabs" role="tablist" aria-label="The reader">
+          <div className="pc-toggle pc-rr-tabs" role="group" aria-label="The reader">
             <button
               type="button"
-              role="tab"
-              id="pc-rr-tab-hours"
-              aria-selected={tab === "hours"}
               aria-pressed={tab === "hours"}
               aria-controls="pc-rr-panel"
               onClick={() => setTab("hours")}
@@ -258,9 +255,6 @@ export default function RecipeReader({ initial }: { readonly initial: RecipeView
             </button>
             <button
               type="button"
-              role="tab"
-              id="pc-rr-tab-product"
-              aria-selected={tab === "product"}
               aria-pressed={tab === "product"}
               aria-controls="pc-rr-panel"
               onClick={() => setTab("product")}
@@ -272,8 +266,8 @@ export default function RecipeReader({ initial }: { readonly initial: RecipeView
           <div
             className="pc-rr-panel"
             id="pc-rr-panel"
-            role="tabpanel"
-            aria-labelledby={tab === "hours" ? "pc-rr-tab-hours" : "pc-rr-tab-product"}
+            role="region"
+            aria-label={tab === "hours" ? "The venue reader" : "The product reader"}
           >
             {tab === "hours" ? (
               <>

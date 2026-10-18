@@ -506,7 +506,7 @@ export default function RecipeReader({ initial }: { readonly initial: RecipeView
                             className={candidate.picked ? "pc-rr-picked" : undefined}
                           >
                             <span className="pc-rr-mark" aria-hidden="true">
-                              {candidate.picked ? "✓" : "·"}
+                              {candidate.picked ? "✓" : ""}
                             </span>
                             <span>
                               <strong>{candidate.name}</strong>
@@ -542,10 +542,15 @@ export default function RecipeReader({ initial }: { readonly initial: RecipeView
                             <li key={`${amount.raw}-${String(index)}`}>
                               <code>“{amount.raw}”</code>
                               <span aria-hidden="true">→</span>
-                              <span>
-                                {amount.amount === null ? "not an amount" : String(amount.amount)}{" "}
-                                {amount.currency ?? ""}
-                              </span>
+                              {amount.amount === null ? (
+                                <span>not an amount</span>
+                              ) : (
+                                <code>
+                                  {amount.currency === null
+                                    ? `{ amount: ${String(amount.amount)} }`
+                                    : `{ amount: ${String(amount.amount)}, currency: "${amount.currency}" }`}
+                                </code>
+                              )}
                               {amount.old ? (
                                 <span className="pc-tag">an old price: not the price</span>
                               ) : null}

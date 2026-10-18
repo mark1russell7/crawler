@@ -17,7 +17,7 @@ const { differences } = Astro.props;
     differences.map((one) => (
       <li>
         <p>
-          <a href={one.href}><code>{one.test}</code>, line {one.line}</a>: {one.what}
+          <a href={one.href}><code>{one.test}</code> at line {one.line}</a>: {one.what}
         </p>
         <p>
           Google: {one.literal ? <code>{one.google}</code> : one.google}. polite-crawler: {one.literal ? <code>{one.crawler}</code> : one.crawler}.

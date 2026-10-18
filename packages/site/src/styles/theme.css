@@ -1148,3 +1148,52 @@ header.header {
   height: 10px;
   border-radius: 0 4px 4px 0;
 }
+
+/* ---------------------------------------------------------------- the parts of Starlight */
+
+/* Ink on graph paper has no shadows: the cards, the pagination, the menu button and the search dialog. */
+:root,
+:root[data-theme="light"],
+:root[data-theme="dark"] {
+  --sl-shadow-sm: none;
+  --sl-shadow-md: none;
+  --sl-shadow-lg: none;
+}
+/* The menu button on a phone: a hairline button, not a bright disc in the dark theme. */
+.sl-menu-button,
+:root[data-theme="light"] .sl-menu-button {
+  border: 1px solid var(--color-rule-strong);
+  background-color: var(--color-surface);
+  color: var(--color-ink);
+}
+/* The icons of the cards on the home page wear the blue ink, not four colors of Starlight. */
+.sl-markdown-content .card .icon {
+  border-color: var(--color-rule-strong);
+  background-color: var(--color-accent-wash);
+  color: var(--color-accent);
+}
+/* Code in a heading is part of the heading: no chip. On a phone it gets smaller and keeps the name whole. */
+.sl-markdown-content :is(h2, h3, h4) code {
+  padding: 0;
+  background: none;
+}
+@media (max-width: 30rem) {
+  .sl-markdown-content :is(h2, h3) code {
+    font-size: 0.8em;
+  }
+}
+/*
+ * A long name in code (an environment variable, a path) can break in a table cell. Else its column
+ * takes the width of the table, and the column of the description gets a few letters per line.
+ */
+.sl-markdown-content td code {
+  overflow-wrap: anywhere;
+}
+@media (max-width: 50rem) {
+  .sl-markdown-content :is(th, td):not(:where(.not-content *)) {
+    padding-inline: 0.5rem;
+  }
+  .sl-markdown-content :is(th:first-child, td:first-child):not(:where(.not-content *)) {
+    padding-inline-start: 0;
+  }
+}

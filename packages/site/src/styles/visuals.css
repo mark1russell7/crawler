@@ -104,6 +104,11 @@
   justify-content: end;
   text-align: end;
 }
+/* the key of the vectors stays next to its word, at the right edge */
+.pc-hy-head-vec {
+  grid-template-columns: auto auto;
+  justify-content: end;
+}
 .pc-hy-key {
   display: inline-block;
   width: 18px;
@@ -421,6 +426,11 @@
   background: var(--color-ink);
   color: var(--color-surface);
 }
+/* a record that the reader did not pick: an empty box */
+.pc-rr-candidates li:not(.pc-rr-picked) .pc-rr-mark {
+  border: 1px solid var(--color-control-border);
+  background: var(--color-surface);
+}
 .pc-rr-amounts {
   display: grid;
   gap: var(--space-1);
@@ -536,6 +546,13 @@
   padding-left: 3px;
   font: 600 var(--text-xs) / 26px var(--font-sans);
   color: var(--color-mark);
+}
+/* near the end of the schedule, the label goes to the left of the line, inside the figure */
+.pc-dm-stop-end {
+  padding: 0 3px 0 0;
+  border-left: 0;
+  border-right: 2px solid var(--color-mark);
+  transform: translateX(-100%);
 }
 .pc-dm-due {
   position: absolute;
@@ -661,6 +678,19 @@
   font: var(--text-xs) / 1.6 var(--font-mono);
   white-space: pre-wrap;
   overflow-wrap: anywhere;
+}
+/* the terminal stays dark in the dark theme too: no bright block on a dark page */
+:root[data-theme="dark"] .pc-dm-out pre {
+  border: 1px solid var(--color-rule-strong);
+  background: var(--color-page);
+  color: var(--color-ink);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .pc-dm-out pre {
+    border: 1px solid var(--color-rule-strong);
+    background: var(--color-page);
+    color: var(--color-ink);
+  }
 }
 .pc-dm-out pre:focus-visible {
   outline: 2px solid var(--color-accent);
@@ -853,7 +883,12 @@
 .pc-hy-slider-name {
   display: flex;
   justify-content: space-between;
+  align-items: last baseline;
   gap: var(--space-2);
+}
+/* "50 (default)" stays on one line; the name wraps first */
+.pc-hy-slider-name strong {
+  white-space: nowrap;
 }
 .pc-rr-variants {
   display: grid;

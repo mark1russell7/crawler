@@ -1,6 +1,6 @@
 ---
 title: Library API
-description: "The library API of polite-crawler: openCrawler and its options, fetch, find, read, verify, extract, discover, crawl, diff, watch, hybrid search, reindex, the recipes and the recipe SDK, and the parts that you can import alone."
+description: "The library API of polite-crawler: openCrawler and its options, fetch, find, read, verify, extract, discover, crawl, diff, watch, hybrid search, the recipes, the daemon, the MCP server and the parts that you can import alone."
 ---
 
 ```ts title="The import"
@@ -34,9 +34,11 @@ The function opens a crawler on a folder and gives a `HybridCrawler`. It is an `
 | `watchFloor` | a duration, for example `"1h"` | `"1h"` | The shortest `every` of a watch. |
 | `embedder` | `Embedder` | none | The local model of [hybrid search](#hybrid-search): `transformersEmbedder`, `ollamaEmbedder` or your own. |
 
-`createRuntime(options)` takes the same options, and your own `log`, `blobs` and `index` in place of `dir`. It gives the parts of the runtime that `openCrawler` uses. Then use `catchUpIndex(runtime)`, as `openCrawler` does at open. It rebuilds a stale index. It also gives an index that is behind the log the captures that it missed.
+`createRuntime(options)` takes the same options, and your own `log`, `blobs` and `index` in place of `dir`. It gives the parts of the runtime that `openCrawler` uses. Then use `catchUpIndex(runtime)`, as `openCrawler` does at open. It rebuilds a stale index. When the index is behind the log, it adds the captures that the index missed.
 
 ## `PoliteCrawler`
+
+The crawler of `openCrawler` has these methods. `find`, `read`, `verify`, `extract`, `versions` and `diff` read the store and send no request.
 
 ### `fetch(url, options?)`
 

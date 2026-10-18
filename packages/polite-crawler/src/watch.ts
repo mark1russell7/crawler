@@ -30,7 +30,7 @@ import { cacheKeyOf } from "./urls.ts";
  * - The list is in `watch.sqlite` in the store, so it stays after a restart. A run claims each entry
  *   with a lease in that file, so two processes do not check one entry two times.
  *
- * The package has no daemon. A scheduler of the operator starts `watch.run`.
+ * A scheduler of the operator starts `watch.run`, or the daemon (`startDaemon`) starts it on a schedule.
  */
 
 /** This value is the version of the schema of `watch.sqlite`. */
@@ -126,6 +126,11 @@ export interface WatchRunOptions {
   readonly maxPages?: number | undefined;
   /** When this signal aborts, the run stops the checks in progress and ends. */
   readonly signal?: AbortSignal | undefined;
+  /**
+   * When this signal aborts, the run starts no new check. The checks in progress end and write
+   * their state, and the run stops with `cancelled`. The daemon uses it for a clean stop.
+   */
+  readonly drain?: AbortSignal | undefined;
 }
 
 /** These options control `runWatch`: the options of a run, and the parts of `openCrawler`. */
@@ -816,6 +821,11 @@ export const runWatch = (
       const deadline = startedAt + budgetMs;
       for (;;) {
         if (stopping === undefined && abort.signal.aborted) stopping = "cancelled";
+        if (stopping === undefined && options.drain?.aborted === true) {
+          // a drain starts no new check, and the checks in progress end with their state
+          stopping = "cancelled";
+          reason = "the run stopped for a shutdown: the checks in progress ended first";
+        }
         if (stopping === undefined && now() >= deadline) stopping = "budget";
         while (
           stopping === undefined &&

@@ -352,6 +352,44 @@ describe("a run of the watch list", () => {
     expect(entries.every((entry) => entry.leased_until === null)).toBe(true);
   });
 
+  it("drains for a shutdown: the check in progress ends with its state, and no new check starts", async () => {
+    const clock = fakeClock();
+    const crawler = crawlerOn(await store(), clock);
+    let release: () => void = () => undefined;
+    const held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const made = await siteWith(clock, (path) =>
+      path === "/a" || path === "/b"
+        ? { type: "text/html", body: htmlPage(path), ...(path === "/a" ? { after: held } : {}) }
+        : undefined,
+    );
+    cleanups.push(() => release());
+    // the two entries are on one host, so the second check waits for the first
+    await crawler.watch.add(`${made.origin}/a`, { every: "1h" });
+    await crawler.watch.add(`${made.origin}/b`, { every: "1h" });
+    const drain = new AbortController();
+    const run = crawler.watch.run({ drain: drain.signal });
+    const events: WatchEvent[] = [];
+    const loop = (async () => {
+      for await (const event of run) events.push(event);
+    })();
+    const end = Date.now() + 10_000;
+    while (!made.hits.some((hit) => hit.path === "/a") && Date.now() < end)
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    drain.abort();
+    release();
+    await loop;
+    expect(events.map((event) => [event.url, event.kind])).toEqual([[`${made.origin}/a`, "new"]]);
+    expect(await run.summary).toMatchObject({
+      checked: 1,
+      due: 1,
+      stopped: "cancelled",
+      reason: "the run stopped for a shutdown: the checks in progress ended first",
+    });
+    expect(pagesOf(made)).toEqual(["/a"]);
+  });
+
   it("rejects after the close of the crawler", async () => {
     const clock = fakeClock();
     const crawler = crawlerOn(await store(), clock);

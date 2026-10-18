@@ -1,7 +1,7 @@
 /*
  * The command line of polite-crawler without its work: the options, the checks of the whole command
- * line, and the text of each result. `cli.ts` does the work. This file imports only Node.js and the
- * duration parser, so `--help` and `--version` answer at once. The tests use it in their own
+ * line, and the text of each result. `cli.ts` does the work. This file imports only Node.js, the
+ * duration parser and the loopback check, so `--help` and `--version` answer at once. The tests use it in their own
  * process, so the checks and the texts count in the coverage of the package.
  */
 import { readFileSync } from "node:fs";
@@ -11,9 +11,11 @@ import { parseArgs } from "node:util";
 import type { VersionChoice } from "./diff.ts";
 import type { DiscoverResult } from "./discover.ts";
 import type { Found } from "./docs.ts";
+import type { DaemonState } from "./daemon.ts";
 import { durationMs } from "./duration.ts";
 import type { ExtractResult } from "./extract.ts";
 import type { CrawlSummary } from "./frontier.ts";
+import { isLoopbackHost } from "./loopback.ts";
 import type { PageResult, ReadResult, ReindexResult, VerifyResult } from "./runtime.ts";
 import type { WaczResult } from "./wacz.ts";
 import type { WarcResult } from "./warc.ts";
@@ -92,6 +94,20 @@ const COMMAND_OPTIONS = {
   "sign-key": { type: "string" },
   "signature-agent": { type: "string" },
   // ── end of archived fallback and signed requests ──
+  // ── daemon ──
+  tick: { type: "string" },
+  jitter: { type: "string" },
+  "tick-budget": { type: "string" },
+  "tick-pages": { type: "string" },
+  grace: { type: "string" },
+  events: { type: "string" },
+  "on-change": { type: "string" },
+  "mcp-http": { type: "boolean" },
+  "mcp-port": { type: "string" },
+  "mcp-host": { type: "string" },
+  "mcp-token-file": { type: "string" },
+  "allow-remote": { type: "boolean" },
+  // ── end of daemon ──
   // ── extract ──
   field: { type: "string", multiple: true },
   capture: { type: "string" },
@@ -115,6 +131,22 @@ interface ParseConfig {
 /** This is the result of `parseArgs` for the command line. */
 type ParsedArgs = ReturnType<typeof parseArgs<ParseConfig>>;
 
+/** These options belong to `daemon`, and not to `daemon status`. */
+export const DAEMON_RUN_OPTIONS: readonly string[] = [
+  "tick",
+  "jitter",
+  "tick-budget",
+  "tick-pages",
+  "grace",
+  "events",
+  "on-change",
+  "mcp-http",
+  "mcp-port",
+  "mcp-host",
+  "mcp-token-file",
+  "allow-remote",
+];
+
 /** These options belong to one command, or to the commands that the text names. */
 export const OWNER: Readonly<Record<string, string>> = {
   render: "fetch crawl watch",
@@ -125,7 +157,7 @@ export const OWNER: Readonly<Record<string, string>> = {
   from: "read diff",
   length: "read",
   "user-provided": "read extract",
-  "allow-user-provided": "mcp",
+  "allow-user-provided": "mcp daemon",
   ...Object.fromEntries(Object.keys(EXPORT_OPTIONS).map((option) => [option, "export"])),
   // ── discover and crawl ──
   "max-urls": "discover",
@@ -149,9 +181,12 @@ export const OWNER: Readonly<Record<string, string>> = {
   // ── archived fallback and signed requests ──
   "archive-fallback": "fetch",
   "archive-despite-robots": "fetch",
-  "sign-key": "fetch discover crawl watch mcp key-directory",
-  "signature-agent": "fetch discover crawl watch mcp key-directory",
+  "sign-key": "fetch discover crawl watch mcp key-directory daemon",
+  "signature-agent": "fetch discover crawl watch mcp key-directory daemon",
   // ── end of archived fallback and signed requests ──
+  // ── daemon ──
+  ...Object.fromEntries(DAEMON_RUN_OPTIONS.map((option) => [option, "daemon"])),
+  // ── end of daemon ──
   // ── extract ──
   field: "extract",
   capture: "extract",
@@ -177,6 +212,9 @@ export const COMMANDS: Readonly<
   diff: { min: 1, max: 1, wants: "diff wants one document id" },
   watch: { min: 1, max: Infinity, wants: "watch wants add, remove, list or run" },
   // ── end of diff and watch ──
+  // ── daemon ──
+  daemon: { min: 0, max: 1, wants: "daemon takes no argument, or status" },
+  // ── end of daemon ──
   // ── signed requests ──
   "key-directory": {
     min: 0,
@@ -512,6 +550,183 @@ export const describeEvent = (event: WatchEvent): string => {
 export const describeWatchSummary = (summary: WatchSummary): string =>
   `${String(summary.checked)} checked: ${String(summary.new)} new, ${String(summary.changed)} changed, ${String(summary.unchanged)} unchanged, ${String(summary.gone)} gone, ${String(summary.refused)} refused, ${String(summary.error)} errors. ${String(summary.suspected)} suspected, ${String(summary.confirmed)} confirmed, ${String(summary.due)} still due. Stopped (${summary.stopped}): ${summary.reason}.`;
 
+// ── daemon ──────────────────────────────────────────────────────────────────
+
+/** These are the options of `daemon`, read from the command line before the store opens. */
+export interface DaemonLine {
+  /** This value is `run` (the daemon itself) or `status`. */
+  readonly action: "run" | "status";
+  readonly tickMs: number | undefined;
+  readonly jitterMs: number | undefined;
+  readonly budgetMs: number | undefined;
+  readonly maxPages: number | undefined;
+  readonly graceMs: number | undefined;
+  /** This file gets the change events. Without it, they go to the standard output. */
+  readonly events: string | undefined;
+  /** This command of the operator gets each change event on its standard input. */
+  readonly onChange: string | undefined;
+  /** These options serve MCP over HTTP, or undefined without `--mcp-http`. */
+  readonly mcp:
+    | {
+        readonly port: number;
+        readonly host: string;
+        readonly allowRemote: boolean;
+        readonly tokenFile: string | undefined;
+      }
+    | undefined;
+}
+
+/** This function reads a file name of the command line: a leading `~` is the home folder. */
+const fileOf = (text: string): string =>
+  text === "~"
+    ? homedir()
+    : /^~[\\/]/.test(text)
+      ? resolve(homedir(), text.slice(2))
+      : resolve(text);
+
+/** This function reads a duration of `daemon`, with a floor in milliseconds. */
+const daemonDuration = (
+  name: string,
+  text: string | undefined,
+  floor: number,
+): number | undefined => {
+  if (text === undefined) return undefined;
+  let ms: number;
+  try {
+    ms = durationMs(text);
+  } catch (error) {
+    throw new UsageError(`--${name}: ${(error as Error).message}`, { cause: error });
+  }
+  if (ms < floor) {
+    throw new UsageError(
+      floor === 0
+        ? `--${name} wants 0 or more`
+        : `--${name} wants ${String(floor / 1000)}s or more`,
+    );
+  }
+  return ms;
+};
+
+/** These options of `daemon` belong to its MCP server, so they need `--mcp-http`. */
+const MCP_OPTIONS = ["mcp-port", "mcp-host", "mcp-token-file", "allow-remote"] as const;
+
+/** This function checks the options of `daemon` and of `daemon status`. */
+export const daemonLineOf = (values: Values, rest: readonly string[]): DaemonLine => {
+  const [action] = rest;
+  if (action !== undefined && action !== "status")
+    throw new UsageError(`daemon takes no argument, or status, not "${action}"`);
+  if (action === "status") {
+    const run = [...DAEMON_RUN_OPTIONS, "allow-user-provided", "sign-key", "signature-agent"];
+    for (const option of run) {
+      if (values[option as keyof Values] !== undefined)
+        throw new UsageError(`--${option} is an option of daemon, not of daemon status`);
+    }
+  }
+  if (values["mcp-http"] !== true) {
+    for (const option of MCP_OPTIONS) {
+      if (values[option] !== undefined) throw new UsageError(`--${option} goes with --mcp-http`);
+    }
+  }
+  const host = (values["mcp-host"] ?? "127.0.0.1").trim();
+  if (host === "") throw new UsageError("--mcp-host wants a host");
+  const allowRemote = values["allow-remote"] === true;
+  if (values["mcp-http"] === true && !isLoopbackHost(host) && !allowRemote) {
+    throw new UsageError(
+      `--mcp-host ${host} is not a loopback address: add --allow-remote to serve other computers, after you read the warning in the README`,
+    );
+  }
+  const port = whole("mcp-port", values["mcp-port"], 9307, 0);
+  if (port > 65_535) throw new UsageError("--mcp-port wants a port from 0 to 65535");
+  const onChange = values["on-change"];
+  if (onChange !== undefined && onChange.trim() === "")
+    throw new UsageError("--on-change wants a command");
+  const events = values.events;
+  if (events !== undefined && events.trim() === "") throw new UsageError("--events wants a file");
+  const tokenFile = values["mcp-token-file"];
+  if (tokenFile !== undefined && tokenFile.trim() === "")
+    throw new UsageError("--mcp-token-file wants a file");
+  return {
+    action: action === "status" ? "status" : "run",
+    tickMs: daemonDuration("tick", values.tick, 1000),
+    jitterMs: daemonDuration("jitter", values.jitter, 0),
+    budgetMs: daemonDuration("tick-budget", values["tick-budget"], 1000),
+    maxPages:
+      values["tick-pages"] === undefined
+        ? undefined
+        : whole("tick-pages", values["tick-pages"], 1, 1),
+    graceMs: daemonDuration("grace", values.grace, 0),
+    events: events === undefined ? undefined : fileOf(events),
+    onChange,
+    mcp:
+      values["mcp-http"] === true
+        ? {
+            port,
+            host,
+            allowRemote,
+            tokenFile: tokenFile === undefined ? undefined : fileOf(tokenFile),
+          }
+        : undefined,
+  };
+};
+
+/** This function gives the first line of `daemon status`: the daemon runs, stopped, or stopped with no clean stop. */
+const daemonHead = (state: DaemonState): string =>
+  state.alive
+    ? `the daemon runs (process ${String(state.pid)}) since ${state.started_at}, on the store ${state.store}`
+    : state.running
+      ? `the daemon of process ${String(state.pid)} does not run: it stopped with no clean stop. Its state is of ${state.updated_at}`
+      : `the daemon stopped at ${state.stopped_at ?? state.updated_at}`;
+
+/** This function gives the line of the last tick of `daemon status`. */
+const lastTick = (state: DaemonState): string => {
+  const tick = state.last_tick;
+  if (tick === null) return "last tick: none yet";
+  if (tick.summary === null) return `last tick: ${tick.ended_at}, failed: ${tick.error ?? "error"}`;
+  const summary = tick.summary;
+  return `last tick: ${tick.ended_at}, ${String(summary.checked)} checked, ${String(summary.confirmed)} changes, ${String(summary.refused)} refused, ${String(summary.error)} errors (${summary.stopped})`;
+};
+
+/** This function gives the text of `daemon status`. */
+export const describeDaemonStatus = (state: DaemonState | undefined, dir: string): string => {
+  if (state === undefined) return `no daemon has run on the store ${dir}`;
+  const lines = [daemonHead(state), lastTick(state)];
+  if (state.alive && state.next_tick_at !== null) lines.push(`next tick: ${state.next_tick_at}`);
+  lines.push(
+    `${String(state.ticks)} ticks, ${String(state.checked)} checks, ${String(state.changes)} changes`,
+  );
+  if (state.next_due.length === 0) lines.push("next due: no watch");
+  else {
+    lines.push("next due:");
+    for (const due of state.next_due) {
+      lines.push(
+        `  ${due.next_at}  ${due.url}  (every ${everyText(due.every_ms)}, last ${due.last_kind ?? "none"})`,
+      );
+    }
+  }
+  if (state.mcp !== null) {
+    const where = state.mcp.token_file === null ? "" : ` (the token is in ${state.mcp.token_file})`;
+    lines.push(`MCP: ${state.mcp.url}${where}`);
+    lines.push(
+      state.tasks.length === 0
+        ? "tasks: none running"
+        : `tasks: ${String(state.tasks.length)} running`,
+    );
+    for (const task of state.tasks) {
+      lines.push(
+        `  ${task.id}  ${task.tool}  ${task.status}${task.message === null ? "" : `: ${task.message}`}`,
+      );
+    }
+  }
+  lines.push(
+    state.last_error === null
+      ? "last error: none"
+      : `last error: ${state.last_error.at}: ${state.last_error.message}`,
+  );
+  return lines.join("\n");
+};
+
+// ── end of daemon ───────────────────────────────────────────────────────────
+
 /** These are the kinds of a field (`FIELD_KINDS` of `extract.ts`). The command line knows them before it loads the crawler. */
 export const KINDS: readonly string[] = [
   "text",
@@ -777,6 +992,8 @@ export interface Line {
   readonly diffFrom: VersionChoice | undefined;
   readonly diffTo: VersionChoice | undefined;
   readonly watchLine: WatchLine | undefined;
+  /** These are the options of `daemon`, or undefined for a different command. */
+  readonly daemonLine: DaemonLine | undefined;
   readonly extractFields: Record<string, CliField> | undefined;
   readonly exportPlan: ExportPlan | undefined;
   readonly dir: string;
@@ -825,18 +1042,21 @@ export const readLine = (args: readonly string[], env: Env): Parsed => {
   const diffTo = versionOf("to", values.to);
   const watchLine = command === "watch" ? watchLineOf(values, rest) : undefined;
   const extractFields = command === "extract" ? fieldsOf(values.field) : undefined;
+  const daemonLine = command === "daemon" ? daemonLineOf(values, rest) : undefined;
   const dir = storeDir(values.dir ?? (env["POLITE_CRAWLER_DIR"] || undefined));
   const allowPrivate =
     values["allow-private"] === true || envFlag(env, "POLITE_CRAWLER_ALLOW_PRIVATE");
   const allowUserProvided =
     values["allow-user-provided"] === true ||
-    (command === "mcp" && envFlag(env, "POLITE_CRAWLER_ALLOW_USER_PROVIDED"));
+    ((command === "mcp" || daemonLine?.action === "run") &&
+      envFlag(env, "POLITE_CRAWLER_ALLOW_USER_PROVIDED"));
   if (values["archive-despite-robots"] === true && values["archive-fallback"] !== true)
     throw new UsageError("--archive-despite-robots works only with --archive-fallback");
   // of the actions of watch, only run sends requests, so only run signs
   const signs =
     OWNER["sign-key"]!.split(" ").includes(command) &&
-    (watchLine === undefined || watchLine.action === "run");
+    (watchLine === undefined || watchLine.action === "run") &&
+    (daemonLine === undefined || daemonLine.action === "run");
   const signKey =
     values["sign-key"] ?? (signs ? env["POLITE_CRAWLER_SIGN_KEY"] || undefined : undefined);
   const signatureAgent =
@@ -871,6 +1091,7 @@ export const readLine = (args: readonly string[], env: Env): Parsed => {
     diffFrom,
     diffTo,
     watchLine,
+    daemonLine,
     extractFields,
     exportPlan: command === "export" ? exportPlan(values) : undefined,
     dir,

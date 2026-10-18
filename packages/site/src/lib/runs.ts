@@ -226,6 +226,39 @@ export const trendOf = (history: StudyHistory, tokens: readonly string[] = TREND
   };
 };
 
+/**
+ * This function gives the sideways step of each mark of the trend chart, with the key
+ * `<slot>:<run>`. In one run, marks that are nearer than `near` of the axis make a group. The marks
+ * of a group move apart in the sequence of the series, so that each mark stays in view. A mark with
+ * no near mark has the step 0.
+ */
+export const markOffsets = (trend: Trend, near = 0.07): Readonly<Record<string, number>> => {
+  const steps: Record<string, number> = {};
+  trend.runs.forEach((_, run) => {
+    const marks = trend.series
+      .flatMap((entry) => {
+        const point = entry.points.find((candidate) => candidate.run === run);
+        return point === undefined ? [] : [{ slot: entry.slot, share: point.share }];
+      })
+      .sort((a, b) => a.share - b.share || a.slot - b.slot);
+    const groups: Array<Array<{ readonly slot: number; readonly share: number }>> = [];
+    for (const mark of marks) {
+      const group = groups.at(-1);
+      const last = group?.at(-1);
+      if (group !== undefined && last !== undefined && mark.share - last.share < near * trend.max)
+        group.push(mark);
+      else groups.push([mark]);
+    }
+    for (const group of groups) {
+      group.sort((a, b) => a.slot - b.slot);
+      group.forEach((mark, index) => {
+        steps[`${String(mark.slot)}:${String(run)}`] = index - (group.length - 1) / 2;
+      });
+    }
+  });
+  return steps;
+};
+
 /* ---------------------------------------------------------------------------------------------- */
 /* The pull request of a run                                                                      */
 /* ---------------------------------------------------------------------------------------------- */

@@ -877,6 +877,11 @@ th.pc-vth-on span {
 .pc-runs th {
   font-variant-numeric: tabular-nums;
 }
+/* The heads wrap, so the DOI of a run fits beside the other columns. */
+.pc-runs thead th {
+  white-space: normal;
+  vertical-align: bottom;
+}
 .pc-runs tr:target th,
 .pc-runs tr:target td {
   background: var(--color-accent-wash);

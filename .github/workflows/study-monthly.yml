@@ -61,7 +61,7 @@ jobs:
         env:
           LIST_ID: ${{ steps.tranco.outputs.id }}
           LIST_DATE: ${{ steps.tranco.outputs.date }}
-          STUDY_RUNNER: a GitHub Actions runner (ubuntu-latest)
+          STUDY_RUNNER: a GitHub Actions runner, ubuntu-latest
         run: >-
           pnpm exec tsx packages/site/scripts/robots-study.ts fetch
           "$RUNNER_TEMP/tranco.csv" "$LIST_ID" "$LIST_DATE" "$RUNNER_TEMP/store"

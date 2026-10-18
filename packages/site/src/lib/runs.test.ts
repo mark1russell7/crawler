@@ -7,6 +7,7 @@ import type { StudyHistory, StudyRun } from "./runs.ts";
 import {
   TREND_AGENTS,
   historyText,
+  markOffsets,
   monthAfter,
   runOf,
   runReport,
@@ -214,6 +215,23 @@ describe("the trend", () => {
     expect(trend.series[1]?.points).toEqual([{ run: 1, share: 5, refused: 25 }]);
     expect(trend.series[2]?.points).toEqual([]);
     expect(trend.series[2]?.latest).toBeUndefined();
+  });
+
+  it("moves near marks of one run apart, in the sequence of the series", () => {
+    const steps = markOffsets(trendOf({ runs: [history.runs[0]!] }));
+    // GPTBot and ClaudeBot: 20.8% each. ChatGPT-User 14.3% and Claude-User 14.0%: 3 px apart
+    expect(steps).toEqual({
+      "1:0": -0.5,
+      "2:0": 0.5,
+      "3:0": 0,
+      "4:0": 0,
+      "5:0": -0.5,
+      "6:0": 0.5,
+    });
+    const three = markOffsets(
+      trendOf({ runs: [synthetic("2026-10-12", { GPTBot: 10, ClaudeBot: 10.5, CCBot: 10.2 })] }),
+    );
+    expect([three["1:0"], three["2:0"], three["4:0"]]).toEqual([-1, 0, 1]);
   });
 
   it("gives the month after a day, also across the end of a year", () => {

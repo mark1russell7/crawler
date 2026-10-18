@@ -12,6 +12,7 @@ import {
   type ReactElement,
 } from "react";
 import type { Trend } from "../lib/runs.ts";
+import { markOffsets } from "../lib/runs.ts";
 
 /**
  * The shape of the mark of each series, in the sequence of the series. The training crawlers have a
@@ -19,8 +20,8 @@ import type { Trend } from "../lib/runs.ts";
  */
 const SHAPES = ["circle", "square", "diamond", "triangle", "ring", "box"] as const;
 
-/** The space in pixels between two marks with the same value in the same run. */
-const DODGE = 8;
+/** The space in pixels between two near marks of the same run. */
+const DODGE = 11;
 
 const share = (value: number | undefined): string =>
   value === undefined ? "–" : `${value.toFixed(1)}%`;
@@ -60,21 +61,8 @@ export function TrendChart({ trend }: { readonly trend: Trend }): ReactElement {
     } else if (event.key === "Escape") setAt(undefined);
   };
 
-  // the marks with the same value in one run move apart, so that each stays in view
-  const offsets = new Map<string, number>();
-  runs.forEach((_, run) => {
-    const groups = new Map<string, number[]>();
-    for (const entry of series) {
-      const value = valueAt(entry.slot, run);
-      if (value === undefined) continue;
-      const key = value.toFixed(1);
-      groups.set(key, [...(groups.get(key) ?? []), entry.slot]);
-    }
-    for (const slots of groups.values())
-      slots.forEach((slot, index) =>
-        offsets.set(`${String(slot)}:${String(run)}`, (index - (slots.length - 1) / 2) * DODGE),
-      );
-  });
+  // the marks that are near in one run move apart, so that each stays in view
+  const offsets = markOffsets(trend);
 
   const every = Math.max(1, Math.ceil(runs.length / 6));
   const current = at === undefined ? undefined : runs[at];
@@ -173,7 +161,7 @@ export function TrendChart({ trend }: { readonly trend: Trend }): ReactElement {
                   {
                     left: `${String(runs[point.run]?.x ?? 0)}%`,
                     top: `${String(top(point.share))}%`,
-                    "--dodge": `${String(offsets.get(`${String(entry.slot)}:${String(point.run)}`) ?? 0)}px`,
+                    "--dodge": `${String((offsets[`${String(entry.slot)}:${String(point.run)}`] ?? 0) * DODGE)}px`,
                   } as CSSProperties
                 }
                 aria-hidden="true"

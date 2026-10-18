@@ -182,6 +182,7 @@ export type {
   Duration,
   FetchOptions,
   FindOptions,
+  HybridCrawler,
   OpenOptions,
   OpenedCrawler,
   PoliteCrawler,

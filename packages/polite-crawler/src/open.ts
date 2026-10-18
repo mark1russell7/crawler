@@ -431,10 +431,8 @@ export interface PoliteCrawler {
   // ── end of hybrid search ──
 }
 
-/** This crawler is the result of `openCrawler`: a `PoliteCrawler` with `discover`, `crawl`, `diff`, `watch`, `extract`, `embed` and `rankWithin`. */
+/** This crawler is the result of `openCrawler` in version 0.1.2: a `PoliteCrawler` with `discover`, `crawl`, `diff`, `watch` and `extract`. */
 export interface OpenedCrawler extends PoliteCrawler {
-  /** This method searches the stored documents. It also takes `rank: "hybrid"`, when the crawler has an embedder. */
-  find(q: string, options?: SearchOptions): Promise<Found[]>;
   /** This method finds the pages of a site from its sitemaps and its feeds. */
   discover(site: string, options?: DiscoverOptions): Promise<DiscoverResult>;
   /** This method crawls a site from its seeds, within its limits. A `for await` loop gets each page. */
@@ -452,6 +450,16 @@ export interface OpenedCrawler extends PoliteCrawler {
     fields: Readonly<Record<string, FieldClaim>>,
     options?: ExtractOptions,
   ): Promise<ExtractResult>;
+}
+
+/**
+ * This crawler is the result of `openCrawler`: an `OpenedCrawler` with hybrid search. Its `find`
+ * takes `rank: "hybrid"`, and it has `hybrid`, `embed` and `rankWithin`. `OpenedCrawler` does not
+ * change, so an object of your own that implements the `OpenedCrawler` of 0.1.2 stays correct.
+ */
+export interface HybridCrawler extends OpenedCrawler {
+  /** This method searches the stored documents. It also takes `rank: "hybrid"`, when the crawler has an embedder. */
+  find(q: string, options?: SearchOptions): Promise<Found[]>;
   /** This search ranks with the vectors of the embedder, or it is undefined when the crawler has no embedder. */
   readonly hybrid: HybridSearch | undefined;
   /** This method gives vectors to the stored documents that have none, within a budget. It rejects when the crawler has no embedder. */
@@ -473,7 +481,7 @@ export interface OpenedCrawler extends PoliteCrawler {
  * Each method gives a promise, and none throws before its promise. After `close`, each method
  * rejects.
  */
-export const openCrawler = (options: OpenOptions): OpenedCrawler => {
+export const openCrawler = (options: OpenOptions): HybridCrawler => {
   const floorMs =
     options.watchFloor === undefined ? WATCH_LIMITS.floorMs : durationMs(options.watchFloor);
   const runtime = createRuntime(options);

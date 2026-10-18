@@ -34,7 +34,7 @@ import {
 import type { DiffResult } from "./diff.ts";
 import type { Embedder } from "./embed.ts";
 import type { CrawlPage } from "./frontier.ts";
-import type { OpenOptions, OpenedCrawler, PoliteCrawler } from "./open.ts";
+import type { HybridCrawler, OpenOptions, OpenedCrawler, PoliteCrawler } from "./open.ts";
 import { VERSION } from "./version.ts";
 import type { WatchEntry, WatchEvent } from "./watch.ts";
 
@@ -420,7 +420,7 @@ const embedderFor = async (choice: EmbedderChoice, dir: string): Promise<Embedde
 
 /** This function gives vectors to the stored pages within the budget. The exit code is 0 when each page has vectors. */
 const runEmbed = async (
-  crawler: OpenedCrawler,
+  crawler: HybridCrawler,
   limits: CrawlLimits,
   options: { readonly maxDocs: number | undefined; readonly kind: string | undefined },
   json: boolean,
@@ -529,7 +529,7 @@ const main = async (args: readonly string[]): Promise<number> => {
     if (renderOff !== undefined) renderer = false;
   }
 
-  let crawler: OpenedCrawler;
+  let crawler: HybridCrawler;
   try {
     crawler = openCrawler({ ...options, renderer });
   } catch (error) {

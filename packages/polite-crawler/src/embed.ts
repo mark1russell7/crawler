@@ -378,20 +378,23 @@ export const fuseRanks = (
       entry[which] ??= at + 1;
     });
   });
-  const fused = [...ranks].map(([id, entry]) => ({
-    id,
-    score: entry.reduce<number>((sum, rank) => (rank === null ? sum : sum + 1 / (k + rank)), 0),
-    ranks: entry,
-  }));
-  const best = (entry: ReadonlyArray<number | null>): number =>
-    Math.min(...entry.map((rank) => rank ?? Number.POSITIVE_INFINITY));
-  const firstList = (entry: ReadonlyArray<number | null>): number =>
-    entry.findIndex((rank) => rank !== null);
-  return fused.sort(
+  // the keys of the sort come first, one time for each item: a long list sorts fast
+  const keyed = [...ranks].map(([id, entry]) => {
+    let score = 0;
+    let best = Number.POSITIVE_INFINITY;
+    for (const rank of entry) {
+      if (rank === null) continue;
+      score += 1 / (k + rank);
+      best = Math.min(best, rank);
+    }
+    return { id, score, ranks: entry, best, first: entry.findIndex((rank) => rank !== null) };
+  });
+  keyed.sort(
     (a, b) =>
       b.score - a.score ||
-      best(a.ranks) - best(b.ranks) ||
-      firstList(a.ranks) - firstList(b.ranks) ||
+      a.best - b.best ||
+      a.first - b.first ||
       (a.id < b.id ? -1 : a.id > b.id ? 1 : 0),
   );
+  return keyed.map(({ id, score, ranks: entry }) => ({ id, score, ranks: entry }));
 };

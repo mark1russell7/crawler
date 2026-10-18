@@ -15,6 +15,8 @@
  * - The time travel and the diff of the versions of a document: `versionAtTime`, `diffDocument`
  *   and `diffTexts`.
  * - The watch list: `WatchStore` and `runWatch`.
+ * - The daemon: `startDaemon`, `scheduleWatches`, `changeCommand` and `readDaemonState`. It loads
+ *   the MCP SDK only when it serves MCP over HTTP.
  * - The archived fallback: the types of an archived copy, `archivedDocId` and `archiveExtractor`.
  * - Signed requests (Web Bot Auth): `createWebBotAuthSigner`, `keyDirectory` and `verifySignature`.
  * - The check of proposed field values against a stored page: `checkFields` and `extractDocument`.
@@ -30,6 +32,34 @@
 export type { BlobStore } from "./blobs.ts";
 export { FileBlobStore } from "./blobs.ts";
 export { checkedRenderer } from "./browser.ts";
+// ── daemon ──
+export type {
+  ChangeCommandOptions,
+  Daemon,
+  DaemonDue,
+  DaemonMcpHooks,
+  DaemonMcpHost,
+  DaemonMcpOptions,
+  DaemonMcpService,
+  DaemonOptions,
+  DaemonState,
+  DaemonStatus,
+  DaemonTask,
+  DaemonTick,
+  ScheduleOptions,
+  ScheduleResult,
+  WatchSchedule,
+} from "./daemon.ts";
+export {
+  DAEMON_DEFAULTS,
+  DAEMON_STATE_SCHEMA,
+  changeCommand,
+  daemonStateFile,
+  readDaemonState,
+  scheduleWatches,
+  startDaemon,
+} from "./daemon.ts";
+// ── end of daemon ──
 export type {
   CacheEntry,
   CacheIndex,

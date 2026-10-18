@@ -1,14 +1,25 @@
 import { randomBytes } from "node:crypto";
+import type { ToolCallback } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import type { ToolTaskHandler } from "@modelcontextprotocol/sdk/experimental/tasks/interfaces.js";
+import type {
+  ShapeOutput,
+  ZodRawShapeCompat,
+} from "@modelcontextprotocol/sdk/server/zod-compat.js";
 import type { RequestHandlerExtra } from "@modelcontextprotocol/sdk/shared/protocol.js";
 import type {
   CallToolResult,
   ServerNotification,
   ServerRequest,
+  ToolAnnotations,
 } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
 import { browserMissing } from "./browser.ts";
+import type { DaemonMcpHost } from "./daemon.ts";
+import type { McpHttpOptions, McpHttpServer } from "./mcp-http.ts";
+import { serveMcpHttp } from "./mcp-http.ts";
+import { CrawlTaskStore, longTask } from "./mcp-tasks.ts";
 import type { DiffResult } from "./diff.ts";
 import { diffDocument, formatDiff } from "./diff.ts";
 import { discoverSite } from "./discover.ts";
@@ -50,6 +61,12 @@ export interface CrawlServerOptions {
   readonly allowUserProvided?: boolean | undefined;
   /** This text tells why the server renders no page. The result of a page that needs JavaScript shows it. */
   readonly renderOff?: string | undefined;
+  /**
+   * This store makes the long tools (`crawl_site` and `crawl_discover`) MCP tasks. A client that
+   * asks for a task gets a task id at once. A client with no tasks gets the result in the call. The
+   * server over HTTP gives the store. Without it, the long tools are normal tools.
+   */
+  readonly tasks?: CrawlTaskStore | undefined;
 }
 
 /** These options start the MCP server on the standard input and output. */
@@ -418,15 +435,50 @@ export const createMcpServer = (
   crawler: PoliteCrawler,
   options: CrawlServerOptions = {},
 ): McpServer => {
+  const tasks = options.tasks;
   const server = new McpServer(
     { name: "polite-crawler", version: VERSION },
-    { instructions: INSTRUCTIONS },
+    {
+      instructions: INSTRUCTIONS,
+      ...(tasks === undefined
+        ? {}
+        : {
+            capabilities: { tasks: { list: {}, cancel: {}, requests: { tools: { call: {} } } } },
+            taskStore: tasks,
+          }),
+    },
   );
   const onBehalfOf = options.onBehalfOf ?? ["Claude-User"];
   const noteOf = (page: PageResult): string | null =>
     options.renderOff !== undefined && page.note !== null && /no browser/i.test(page.note)
       ? `this page needs JavaScript, and rendering is off: ${options.renderOff}`
       : page.note;
+  /** This function registers a long tool: an MCP task when the server has a task store, else a normal tool. */
+  const registerLong = <OutputArgs extends ZodRawShapeCompat, InputArgs extends ZodRawShapeCompat>(
+    name: string,
+    config: {
+      readonly title: string;
+      readonly description: string;
+      readonly inputSchema: InputArgs;
+      readonly outputSchema: OutputArgs;
+      readonly annotations: ToolAnnotations;
+    },
+    run: (args: ShapeOutput<InputArgs>, extra: Extra) => Promise<CallToolResult>,
+  ): void => {
+    if (tasks === undefined) {
+      server.registerTool(name, config, run as ToolCallback<InputArgs>);
+      return;
+    }
+    server.experimental.tasks.registerToolTask(
+      name,
+      { ...config, execution: { taskSupport: "optional" } },
+      longTask(
+        tasks,
+        (notification) => server.server.notification(notification),
+        run,
+      ) as ToolTaskHandler<InputArgs>,
+    );
+  };
 
   server.registerTool(
     "crawl_fetch",
@@ -1000,7 +1052,7 @@ export const createMcpServer = (
 
   // ── discover and crawl ────────────────────────────────────────────────────
 
-  server.registerTool(
+  registerLong(
     "crawl_discover",
     {
       title: "Find the pages of a site",
@@ -1096,7 +1148,7 @@ export const createMcpServer = (
     },
   );
 
-  server.registerTool(
+  registerLong(
     "crawl_site",
     {
       title: "Crawl a few pages of a site",
@@ -1421,3 +1473,50 @@ export const startMcpServer = async (options: StartMcpOptions): Promise<void> =>
   process.stdin.once("end", exit);
   await server.connect(new StdioServerTransport());
 };
+
+// ── MCP over HTTP ───────────────────────────────────────────────────────────
+
+export type { McpHttpOptions, McpHttpServer } from "./mcp-http.ts";
+export { MCP_HTTP_DEFAULTS, makeToken, sameToken } from "./mcp-http.ts";
+export type { CrawlTaskStoreOptions, TaskInfo } from "./mcp-tasks.ts";
+export { CrawlTaskStore, TASK_LIMITS } from "./mcp-tasks.ts";
+
+/** These options serve the tools over HTTP: the options of the tools, and of the HTTP server. */
+export interface StartMcpHttpOptions extends McpHttpOptions, Omit<CrawlServerOptions, "tasks"> {}
+
+/**
+ * This function serves the tools of a crawler over the Streamable HTTP transport of MCP. Each
+ * session gets an MCP server with the nine tools of the server on the standard input and output.
+ * The envelope, the elicitation and the opt-ins are the same. `crawl_site` and `crawl_discover` are MCP tasks.
+ * Each request needs the bearer token. The function does not close the crawler.
+ */
+export const startMcpHttpServer = (
+  crawler: PoliteCrawler,
+  options: StartMcpHttpOptions = {},
+): Promise<McpHttpServer> => {
+  const { onBehalfOf, allowUserProvided, renderOff, ...http } = options;
+  const tasks = http.tasks ?? new CrawlTaskStore();
+  return serveMcpHttp(
+    (store) => createMcpServer(crawler, { onBehalfOf, allowUserProvided, renderOff, tasks: store }),
+    { ...http, tasks },
+  );
+};
+
+/**
+ * This host serves the tools of the daemon over HTTP. It is the seam between the daemon and its MCP
+ * transport: a different MCP host can replace it with `DaemonOptions.mcpHost`.
+ */
+export const mcpHttpHost: DaemonMcpHost = {
+  async start(crawler, options, hooks) {
+    const tasks = new CrawlTaskStore({ onChange: hooks.onTasks });
+    const served = await startMcpHttpServer(crawler, {
+      ...options,
+      tasks,
+      status: hooks.status,
+      log: hooks.log,
+    });
+    return { url: served.url, tasks: () => tasks.running(), close: () => served.close() };
+  },
+};
+
+// ── end of MCP over HTTP ────────────────────────────────────────────────────

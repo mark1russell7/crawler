@@ -195,6 +195,22 @@ claude mcp add polite-crawler -- npx -y polite-crawler mcp --embedder ollama
 - Each tool has an output schema, and its result has structured content. A client can show the JSON, or give it to a program.
 - No tool adds a watch. A watch commits future requests to a site, so the operator adds it with `polite-crawler watch add`.
 
+### Over local HTTP, from the daemon
+
+The daemon serves the same nine tools over the Streamable HTTP transport of MCP. Start it, then give the URL and the token to the client:
+
+```sh
+npx polite-crawler daemon --mcp-http
+claude mcp add --transport http polite-crawler http://127.0.0.1:9307/mcp --header "Authorization: Bearer $(cat ~/.polite-crawler/daemon/mcp-token)"
+```
+
+- Each request needs the bearer token. By default, the daemon makes a new token at each start in `<store>/daemon/mcp-token`. `--mcp-token-file` keeps one token of your own across starts.
+- The server binds to `127.0.0.1`. It refuses a `Host` or an `Origin` header of a different site, so a web page cannot reach it.
+- A different host needs `--allow-remote`. The server speaks plain HTTP, so use it only on a private network or behind a TLS proxy.
+- The envelope, elicitation and `--allow-user-provided` are the same as for the server on the standard input and output.
+
+`crawl_site` and `crawl_discover` are MCP tasks there. A client that asks for a task gets a task id at once. It polls the status, gets the result later, and can cancel the task. A cancel stops the requests in progress. A client with no tasks gets the result in the call, with progress, as before. The [command line](../../reference/cli/#daemon) gives each option of the daemon.
+
 ### Check field values
 
 An assistant often reads a value from a page: a price, a date, opening hours, an author or a DOI. `crawl_extract` checks each value that the assistant proposes against the stored copy. It does not make values. It only checks and locates the values that it gets.

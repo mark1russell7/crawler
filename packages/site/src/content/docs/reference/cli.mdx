@@ -26,6 +26,8 @@ npx polite-crawler <command> [options]
 | `watch remove <url...>` | It removes the pages from the watch list. |
 | `watch list` | It prints the watch list. |
 | `watch run` | It checks the pages that are due, within a budget, and prints what changed. |
+| `daemon` | It checks the watch list on a schedule, until `SIGINT` or `SIGTERM`. With `--mcp-http`, it also serves the MCP tools over local HTTP. |
+| `daemon status` | It prints the state of the daemon of the store. It opens no store. |
 | `key-directory` | It prints the key directory (a JSON Web Key Set) of `--sign-key`, for you to host. |
 | `embed --embedder <name>` | It gives vectors to the stored pages that have none, for `find --rank hybrid`. It sends no request to a site. |
 
@@ -97,6 +99,41 @@ These options apply to one command. The command line is wrong when another comma
 | `embed` | `--budget <time>` | `10m` | The longest time of the work. No embedding starts after it. |
 | `embed` | `--max-docs <n>` | | The most texts that get vectors. |
 | `embed` | `--kind <kind>` | all | Only this kind of document, for example `page` or `pdf`. |
+
+## Daemon
+
+`polite-crawler daemon` checks the watch list on a schedule, until `SIGINT` or `SIGTERM`. Each tick is one `watch run`, so each polite rule applies. With `--mcp-http`, the daemon also serves the MCP tools over local HTTP.
+
+```sh
+npx polite-crawler watch add https://example.com/hours --every 6h
+npx polite-crawler daemon --events ~/changes.jsonl --on-change "jq -c . >> ~/seen.jsonl"
+npx polite-crawler daemon status
+```
+
+| Option | Default | What it does |
+| --- | --- | --- |
+| `--tick <time>` | `1m` | The longest wait between two ticks, `1s` or more. A tick comes sooner when an entry is due sooner. |
+| `--jitter <time>` | `10s` | A random wait from 0 to this time after each tick. A check does not come before its time. |
+| `--tick-budget <time>` | `10m` | The longest time of the checks of one tick. The entries that stay due wait for the next tick. |
+| `--tick-pages <n>` | `100` | The most checks of one tick. |
+| `--grace <time>` | `10s` | At a stop, the checks in progress get this time to end. Then they abort, and the daemon releases their leases. |
+| `--events <file>` | the standard output | The file of the changes, one JSON line for each change. |
+| `--on-change <command>` | | Your command for each change. It gets the event as one JSON line on its standard input. |
+| `--mcp-http` | | Serve the MCP tools over HTTP. Each request needs the bearer token. |
+| `--mcp-port <n>` | `9307` | The port of the MCP server. `0` takes a free port. |
+| `--mcp-host <host>` | `127.0.0.1` | The host to bind. A host that is not loopback needs `--allow-remote`. |
+| `--mcp-token-file <file>` | a new token at each start, in `<store>/daemon/mcp-token` | The file of your token. The daemon reads it and writes nothing. |
+| `--allow-remote` | | Permit a `--mcp-host` that is not loopback. Read the warning in the README first. |
+| `--allow-user-provided` | `$POLITE_CRAWLER_ALLOW_USER_PROVIDED=1` | As for `mcp`. |
+
+- A change is an event with `confirmed: true`. The first version of a page is not a change.
+- `daemon status` reads `<store>/daemon/state.json`. It shows the next due watches, the last tick, the tasks that run and the last error. `--json` prints the JSON.
+- `daemon status` exits with `0` when a daemon operates on the store, and with `1` when no daemon operates. `daemon` exits with `0` after a clean stop.
+- Only one daemon operates on a store. A second daemon does not start.
+
+`--on-change` starts a command of the operator in the shell of the system, as the user of the daemon. The event comes only on the standard input, not in the command line. The event holds URLs and notes from sites, so read it as data, for example with `jq`. Do not take the command from a page or from an assistant.
+
+The package installs no service. The [README of the package](https://github.com/mark1russell7/crawler/tree/main/packages/polite-crawler#start-the-daemon-as-a-service) gives example files for systemd, launchd and the Task Scheduler of Windows.
 
 ## Export to a web archive
 
@@ -184,7 +221,7 @@ npx polite-crawler find "a loaf with a dark crust" --rank hybrid --embedder olla
 - A change is `suspected` at its first check. The next check confirms it when it sees the same version. One read can be a glitch, so `--confirm 2` is the default.
 - A check that finds a stopped host is due again at the end of the stop.
 - Two runs at the same time check each page one time, because a run takes a lease on each page.
-- The command has no daemon. Start `watch run` with cron, a systemd timer or a different scheduler.
+- Start `watch run` with cron, a systemd timer or a different scheduler. Or let the [daemon](#daemon) check the list.
 
 ## Hybrid search
 

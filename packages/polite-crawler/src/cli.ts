@@ -39,7 +39,8 @@ import { VERSION } from "./version.ts";
 import type { WatchEntry, WatchEvent } from "./watch.ts";
 
 // This file imports only Node.js, the version and `cli-line.ts` at start. A command loads the
-// crawler, and only `mcp` loads the MCP server, so `--version` and `--help` answer at once.
+// crawler, and only `mcp` and `daemon --mcp-http` load the MCP server, so `--version` and `--help`
+// answer at once.
 
 // node:sqlite of Node.js 22 writes "SQLite is an experimental feature" to the standard error at
 // each start. The command removes only that warning, before the store loads node:sqlite.
@@ -80,6 +81,9 @@ Usage:
   polite-crawler watch remove <url...> stop the watch of these pages
   polite-crawler watch list            print the watch list
   polite-crawler watch run             check the pages that are due, within a budget
+  polite-crawler daemon                check the watch list on a schedule, until SIGINT or SIGTERM;
+                                       with --mcp-http, serve the MCP tools over local HTTP too
+  polite-crawler daemon status         print the state of the daemon of the store
   polite-crawler key-directory         print the key directory (JWKS) of --sign-key, to host
   polite-crawler extract <doc> --field name=value[:kind]...
                                        check proposed field values against a stored page
@@ -153,6 +157,23 @@ Options:
              --render <mode> as for fetch
   watch run  --budget <time>  the longest time (default 10m); no request starts after it
              --max-pages <n>  how many pages to check (default 100)
+  daemon   --tick <time>     the longest wait between two ticks: 1s or more (default 1m)
+           --jitter <time>   a random wait from 0 to this after each tick (default 10s)
+           --tick-budget <time>  the longest time of the checks of one tick (default 10m)
+           --tick-pages <n>  how many pages one tick checks at most (default 100)
+           --grace <time>    at a stop, the checks in progress get this time to end (default 10s)
+           --events <file>   write each change as one JSON line to this file (default: the
+                             standard output)
+           --on-change <command>  start this command of yours for each change: it gets the
+                             event as one JSON line on its standard input
+           --mcp-http        serve the MCP tools over HTTP; each request needs the bearer token
+           --mcp-port <n>    the port (default 9307)
+           --mcp-host <host> the host to bind (default 127.0.0.1)
+           --mcp-token-file <file>  read the token from this file (default: a new token at each
+                             start, in <store>/daemon/mcp-token)
+           --allow-remote    permit a --mcp-host that is not loopback: read the README first
+           --allow-user-provided  as for mcp
+  daemon status              exit code 0 when a daemon runs on the store, 1 when none runs
   extract  --field <name=value[:kind]>  a value to check, never made up by the crawler (repeat it);
                              kind: text (default), number, money, date, url, email, phone,
                              or json-ld:<path> such as json-ld:Product.offers.price
@@ -512,6 +533,17 @@ const main = async (args: readonly string[]): Promise<number> => {
     await startMcpServer({ ...options, allowUserProvided: line.allowUserProvided });
     return 0;
   }
+
+  // ── daemon: the command loads the daemon, and the daemon loads MCP only for --mcp-http ──
+  if (command === "daemon") {
+    const { daemonCommand } = await import("./cli-daemon.ts");
+    return daemonCommand(line.daemonLine!, options, {
+      allowUserProvided: line.allowUserProvided,
+      json: values.json === true,
+      out,
+    });
+  }
+  // ── end of daemon ──
 
   // the export only reads the store, so it opens no crawler and no index
   if (line.exportPlan !== undefined)

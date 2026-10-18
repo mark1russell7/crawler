@@ -35,6 +35,22 @@ A prerelease version (`0.2.0-beta.1`) goes to the npm tag `next`. Each other ver
   - The MCP tool `crawl_find` takes `rank: "hybrid"` only when the server has an embedder.
   - The search compares the question with each stored vector. The README gives the measured time: 82 ms for 89,100 chunks of 384 dimensions.
 - **The benchmark.** `bench/find.mts --hybrid` and the input `hybrid` of `bench.yml` time hybrid search with a fake embedder.
+- **The daemon only adds to the API.** Code that compiled against 0.1.2 compiles against this version, and `compat.test.ts` stays green. The capture log, the bodies and the capture ids do not change.
+  - `WatchRunOptions` has the optional `drain`, and `CrawlServerOptions` has the optional `tasks`. Without `tasks`, the MCP server on the standard input and output does not change.
+  - The daemon writes its own folder, `<store>/daemon/`, with `state.json` and `mcp-token`. The other files of the store do not change.
+- **The daemon.** `polite-crawler daemon` and `startDaemon(options)` check the watch list on a schedule. Each tick is one `watch run`, so each polite rule applies.
+  - A due entry wakes the daemon at its time, with a random jitter after it (`--tick`, `--jitter`). A tick keeps its budget and its maximum (`--tick-budget`, `--tick-pages`). The entries that a tick leaves wait for the next tick.
+  - The daemon writes each confirmed change as one JSON line, to the standard output or to `--events <file>`. `onChange` and `--on-change <command>` get each change. The command gets the event on its standard input, not in its command line.
+  - At `SIGINT` or `SIGTERM`, the daemon starts no new check. The checks in progress get `--grace` to end, then they abort, and the daemon releases their leases.
+  - `polite-crawler daemon status` reads `<store>/daemon/state.json`: the next due watches, the last tick, the tasks that run and the last error. It exits with 0 when a daemon operates on the store.
+  - `scheduleWatches` gives the schedule over the watch list of a crawler of your own. `watch.run` takes `drain`: the run starts no new check, and the checks in progress end with their state.
+  - The package installs no service. The README gives example files for systemd, launchd and the Task Scheduler of Windows.
+- **MCP over local HTTP, with MCP tasks.** `daemon --mcp-http` serves the nine tools over the Streamable HTTP transport, at `http://127.0.0.1:9307/mcp`.
+  - Each request needs a bearer token. The daemon makes a new token at each start in `<store>/daemon/mcp-token`, for the owner only, or it reads `--mcp-token-file`. The check compares SHA-256 digests in constant time.
+  - The server binds to a loopback address. A different host needs `--allow-remote`. On a loopback address, the server refuses a `Host` or an `Origin` header of a different site.
+  - `crawl_site` and `crawl_discover` are MCP tasks, with the native tasks of the MCP SDK 1.32.1. A client gets a task id, polls the status, gets the result and can cancel the task. A client with no tasks gets the result in the call, with progress.
+  - The library has `startMcpHttpServer` and `mcpHttpHost` in `polite-crawler/mcp`. The daemon reaches MCP through the seam `DaemonOptions.mcpHost`, and it loads the MCP SDK only for `--mcp-http`.
+  - The MCP SDK marks its task API as experimental. When the SDK changes it, the tasks change with it.
 
 ## 0.1.2 - 2026-10-17
 

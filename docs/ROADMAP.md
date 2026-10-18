@@ -16,11 +16,12 @@ Interactive pieces for what 0.1.3 added: how hybrid search fuses the word rankin
 
 ### `cli-recipes`: venue and product commands
 
-polite-crawler venue <url> prints a venue's hours with each source and quote, and compares them with kept hours. polite-crawler product <url> prints a product's price, variants and availability. Both have --json.
+On main since 2026-10-18, for 0.1.4. polite-crawler venue <url> prints a venue's hours with each source and quote, where readings disagree, and the menus and phone; --compare checks kept hours day by day. polite-crawler product <url> prints a product's price as money, its variants and availability. Both have --json. Exit 3 means nothing was read, and exit 4 means a wall, so a script knows not to retry.
 
 - Area: Package
 - Waits for: `rel013`
 - Started: 2026-10-18
+- [Main at 5117994](https://github.com/mark1russell7/crawler/commit/5117994)
 
 ## Blocked
 

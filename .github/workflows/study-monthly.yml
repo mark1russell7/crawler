@@ -1,0 +1,280 @@
+# The robots.txt study, each month (roadmap item study-monthly). On day 2 of each month, this
+# workflow runs the study again on a GitHub runner, with the list size and the method of the first
+# run. polite-crawler reads only /robots.txt of each domain, with its own User-Agent and no contact.
+#   gh workflow run study-monthly.yml -R mark1russell7/crawler [--ref <branch>]
+#
+# A pull request that the token of GitHub Actions opens starts no workflow, so the job "study" does
+# the checks of the site itself. It runs the code of the repository, so it gets only "contents: read".
+# The jobs after it run no code of the repository, and each gets only its own permission:
+#   branch        commits the data on the branch study/<YYYY-MM> and pushes it   contents: write
+#   pull-request  opens the pull request into the branch of the run            pull-requests: write
+#   ci            starts ci.yml on the branch: the main ruleset requires its checks   actions: write
+# The workflow never pushes to main. The steps after the merge are in CLAUDE.md, section "Study".
+name: Study each month
+
+on:
+  schedule:
+    # 06:17 UTC on day 2 of each month. Tranco makes the list of day 1 at the end of day 1.
+    - cron: "17 6 2 * *"
+  workflow_dispatch:
+
+permissions: {}
+
+# One run at a time, so two runs never send requests to the same sites at the same time.
+concurrency:
+  group: study-monthly
+  cancel-in-progress: false
+
+jobs:
+  study:
+    name: Run the study and check the site
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+    outputs:
+      version: ${{ steps.data.outputs.version }}
+      month: ${{ steps.data.outputs.month }}
+    env:
+      # One browser folder. .cache/ is in .gitignore.
+      PLAYWRIGHT_BROWSERS_PATH: ${{ github.workspace }}/.cache/ms-playwright
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # The pnpm version comes from "packageManager" in package.json
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+
+      # The newest daily Tranco list, through polite-crawler: its id, its date and its top 1,000 domains
+      - name: Get the Tranco list
+        id: tranco
+        run: pnpm exec tsx packages/site/scripts/robots-study.ts tranco "$RUNNER_TEMP/tranco.csv"
+
+      # One request for /robots.txt to each domain, with a new, empty store, as in the first run.
+      # The step then writes the files of the run, the history and the latest copy.
+      - name: Run the study
+        env:
+          LIST_ID: ${{ steps.tranco.outputs.id }}
+          LIST_DATE: ${{ steps.tranco.outputs.date }}
+          STUDY_RUNNER: a GitHub Actions runner (ubuntu-latest)
+        run: >-
+          pnpm exec tsx packages/site/scripts/robots-study.ts fetch
+          "$RUNNER_TEMP/tranco.csv" "$LIST_ID" "$LIST_DATE" "$RUNNER_TEMP/store"
+
+      - name: The version of playwright-core
+        id: playwright
+        run: echo "version=$(node -p "require('./packages/site/node_modules/playwright-core/package.json').version")" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}
+      - name: Install the headless shell
+        run: pnpm --filter @crawler/site exec playwright-core install --with-deps chromium-headless-shell
+
+      # The share card of the study shows the date of the run and the share of GPTBot
+      - name: Render the share card of the study
+        run: pnpm --filter @crawler/site exec node scripts/og-image.mjs --study
+
+      # The checks of the site, as in ci.yml, on the new data
+      - name: Typecheck the site
+        run: pnpm --filter @crawler/site run typecheck
+      - name: Test the site
+        run: pnpm --filter @crawler/site run test
+      - name: Build the site
+        run: pnpm --filter @crawler/site run build
+        env:
+          SITE_BASE: /crawler
+          ASTRO_TELEMETRY_DISABLED: "1"
+      # The links, the width on a phone, the console, the JavaScript budget and the feed. It also
+      # saves a screenshot of each page for the review of the pull request.
+      - name: Check the site
+        run: pnpm --filter @crawler/site exec node scripts/check-site.mjs --shots "$RUNNER_TEMP/shots"
+
+      # The change has only the data of the study and its share card. A change to another file stays
+      # out of the change, and the log names it.
+      - name: Make the change and the text of the pull request
+        id: data
+        env:
+          LIST_ID: ${{ steps.tranco.outputs.id }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          git add -A -- packages/site/src/data packages/site/public/data packages/site/public/og-robots-study.png
+          other=$(git status --porcelain=v1 --untracked-files=all | grep -v '^[AMD]  ' || true)
+          if [ -n "$other" ]; then
+            echo "::warning::The run changed files outside the data of the study. The change does not include them."
+            echo "$other"
+          fi
+          if git diff --cached --quiet; then
+            echo "::error::The run changed no file of the study."
+            exit 1
+          fi
+          version=$(node -p "require('./packages/site/src/data/robots-study.json').fetched.from.slice(0, 10)")
+          if ! [[ "$version" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]]; then
+            echo "::error::The run has no version: $version"
+            exit 1
+          fi
+          mkdir -p "$RUNNER_TEMP/out"
+          git diff --cached --binary > "$RUNNER_TEMP/out/study.patch"
+          git diff --cached --stat
+          pnpm exec tsx packages/site/scripts/robots-study.ts report "$RUNNER_TEMP/out/body.md" \
+            "The Tranco list \`$LIST_ID\` and one request for \`/robots.txt\` to each of its top 1,000 domains" \
+            "The typecheck of the site" \
+            "The tests of the site: \`pnpm --filter @crawler/site run test\`" \
+            "The build of the site, with \`SITE_BASE=/crawler\`" \
+            "The site check: the links, the width on a phone, the console, the JavaScript budget and the RSS feed" \
+            "The share card of the study, rendered again"
+          {
+            echo "### The workflow run"
+            echo
+            echo "- $RUN_URL"
+            echo "- The artifact \`study-shots\` has a screenshot of each page, and \`study-store\` has the raw answers of the run."
+            echo "- This pull request starts no workflow by itself. The job \`ci\` of the run starts \`ci.yml\` on its branch, and its checks show here."
+          } >> "$RUNNER_TEMP/out/body.md"
+          cat "$RUNNER_TEMP/out/body.md" >> "$GITHUB_STEP_SUMMARY"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "month=${version:0:7}" >> "$GITHUB_OUTPUT"
+
+      - name: Upload the change
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: study-data
+          path: ${{ runner.temp }}/out/
+          if-no-files-found: error
+          retention-days: 30
+      # The raw records of the run: the capture log, the bodies, answers.ndjson, run.json and the list.
+      # `robots-study.ts derive <store>` writes the dataset again from them, with no request.
+      - name: Upload the store of the run
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: study-store
+          path: |
+            ${{ runner.temp }}/store/
+            ${{ runner.temp }}/tranco.csv
+          if-no-files-found: warn
+          retention-days: 90
+      - name: Upload the screenshots
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: study-shots
+          path: ${{ runner.temp }}/shots/
+          if-no-files-found: warn
+          retention-days: 30
+
+  branch:
+    name: Push the branch
+    needs: study
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    outputs:
+      branch: ${{ steps.push.outputs.branch }}
+    steps:
+      # This job runs no code of the repository. The checkout keeps its token, for the push.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: study-data
+          path: ${{ runner.temp }}/study-data
+      - name: Commit the data and push the branch
+        id: push
+        env:
+          VERSION: ${{ needs.study.outputs.version }}
+          MONTH: ${{ needs.study.outputs.month }}
+          PATCH: ${{ runner.temp }}/study-data/study.patch
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          if ! [[ "$VERSION" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ && "$MONTH" =~ ^[0-9]{4}-[0-9]{2}$ ]]; then
+            echo "::error::The version is not a day: $VERSION"
+            exit 1
+          fi
+          # the patch may change only the data of the study and its share card
+          git apply --numstat "$PATCH" | cut -f3 > "$RUNNER_TEMP/paths.txt"
+          if grep -Ev '^packages/site/(src/data/|public/data/|public/og-robots-study\.png$)' "$RUNNER_TEMP/paths.txt"; then
+            echo "::error::The patch changes a file outside the data of the study."
+            exit 1
+          fi
+          git apply --index "$PATCH"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          branch="study/$MONTH"
+          git switch -c "$branch"
+          git commit -q -m "study: the run of $VERSION" -m "The workflow study-monthly.yml ran the study again and checked the site: $RUN_URL"
+          # the branch belongs to this workflow: a second run in the same month replaces it
+          git push --force origin "$branch"
+          echo "branch=$branch" >> "$GITHUB_OUTPUT"
+
+  pull-request:
+    name: Open the pull request
+    needs: [study, branch]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: study-data
+          path: ${{ runner.temp }}/study-data
+      # GitHub refuses the pull request when "Allow GitHub Actions to create and approve pull
+      # requests" is off (Settings > Actions > General). The branch is then on GitHub, and the
+      # summary gives the address to open the pull request by hand.
+      - name: Open or update the pull request
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          BASE: ${{ github.ref_name }}
+          HEAD: ${{ needs.branch.outputs.branch }}
+          VERSION: ${{ needs.study.outputs.version }}
+          BODY: ${{ runner.temp }}/study-data/body.md
+        run: |
+          number=$(gh pr list -R "$REPO" --head "$HEAD" --base "$BASE" --state open --json number --jq '.[0].number // empty')
+          if [ -n "$number" ]; then
+            gh pr edit "$number" -R "$REPO" --body-file "$BODY"
+            echo "The run updated the pull request #$number." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          if url=$(gh pr create -R "$REPO" --base "$BASE" --head "$HEAD" --title "study: the run of $VERSION" --body-file "$BODY" 2> "$RUNNER_TEMP/error.txt"); then
+            echo "The run opened the pull request $url." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          cat "$RUNNER_TEMP/error.txt"
+          {
+            echo "## The pull request is not open"
+            echo
+            echo "GitHub refused it: $(head -c 400 "$RUNNER_TEMP/error.txt")"
+            echo
+            echo 'When the error says that GitHub Actions cannot create pull requests, the owner turns on "Allow GitHub Actions to create and approve pull requests" in Settings > Actions > General.'
+            echo
+            echo "The branch is on GitHub. Open the pull request by hand: https://github.com/$REPO/compare/$BASE...$HEAD?expand=1"
+          } >> "$GITHUB_STEP_SUMMARY"
+          exit 1
+
+  ci:
+    name: Start CI on the branch
+    needs: branch
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      actions: write
+    steps:
+      # A push of the token of GitHub Actions starts no workflow, but a workflow_dispatch does. The
+      # checks of ci.yml then show on the pull request, as the main ruleset requires.
+      - name: Start ci.yml on the branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          HEAD: ${{ needs.branch.outputs.branch }}
+        run: |
+          gh workflow run ci.yml -R "$REPO" --ref "$HEAD"
+          echo "The run started ci.yml on $HEAD: https://github.com/$REPO/actions/workflows/ci.yml" >> "$GITHUB_STEP_SUMMARY"

@@ -70,3 +70,34 @@ The rules for versions:
 - Do not publish to npm, and do not change npm settings. The owner and one named Claude session do all npm work.
 - Do not edit `.github/workflows/release.yml` or `scripts/release/`.
 - `RELEASING.md` tells how a release and the npm trust work.
+
+## Study
+
+`.github/workflows/study-monthly.yml` does the robots.txt study again at 06:17 UTC on day 2 of each month.
+
+The files of the study are in `packages/site`:
+
+- `src/data/study/<version>.json` and `public/data/robots-study-<version>.csv` are the dataset of each run. The version is the day of the run.
+- `src/data/robots-study.json` and `public/data/robots-study.csv` are a copy of the newest run. The pages read this copy.
+- `src/data/study-history.json` keeps the headline numbers and the DOI of each run. `scripts/robots-study.ts` writes it. Do not edit it by hand.
+- `src/data/study-doi.json` names the DOI of the newest version and the concept DOI.
+
+The DOIs on Zenodo:
+
+- The concept DOI `10.5281/zenodo.23443374` names the study and all its versions. Cite it for the study.
+- Each version has its own DOI for the data of one run. The first version is `10.5281/zenodo.23443375`.
+
+The steps of each month:
+
+1. The workflow does the study and the checks of the site. It opens a pull request from the branch `study/<YYYY-MM>` and starts `ci.yml` on that branch.
+2. A session or Mark reviews the pull request. Merge it when CI passes.
+3. Make the new version on Zenodo: `gh workflow run study-zenodo.yml -R mark1russell7/crawler -f new_version_of=<record id>`.
+4. Mark checks the draft on Zenodo and clicks Publish.
+5. Record the DOI: `pnpm exec tsx packages/site/scripts/robots-study.ts doi <version> <doi>`. Commit the change on a branch and open a pull request.
+
+The pull request of the run gives the commands of steps 3 and 5. The record id of step 3 is the number at the end of the DOI of the newest published version. Zenodo makes a new version only from the newest version.
+
+Rules:
+
+- Do not start the study on a laptop. The requests of the study go out only from CI.
+- GitHub Actions opens the pull request only when the setting "Allow GitHub Actions to create and approve pull requests" is on. When it is off, the run pushes the branch. Its summary then gives the address to open the pull request by hand.

@@ -112,4 +112,17 @@ The other options are `--claims` (a different question set), `--out`, `--markdow
 
 ## The latest numbers
 
-There is no run yet. The workflow file must be on the main branch before `gh workflow run` can start it.
+The eval of 2026-10-18 ([workflow 39085336453](https://github.com/mark1russell7/crawler/actions/runs/39085336453), commit `a8194ad`) verified 30 of 30 claims. Its archive `eval.wacz` has the SHA-256 `d32f43f95b8b8435`.
+
+| Path | Median tokens | Total tokens |
+| --- | ---: | ---: |
+| polite-crawler: fetch, find, read of 2,000 characters, verify | 3,679 | 110,718 |
+| polite-crawler, reads from the start in ranges of 4,000 | 4,746 | 201,572 |
+| WebFetch proxy: the page as Markdown (turndown) | 8,348 | 989,280 |
+| The page as visible text | 5,979 | 562,544 |
+
+- The Markdown proxy has 8.94 times the tokens of the polite-crawler path, as a ratio of the totals. For one claim, the median ratio is 2.22.
+- On a long page, the difference is large: RFC 9110 has approximately 57 times the tokens, and a long Wikipedia article approximately 49 times.
+- On a very short page, polite-crawler costs more. Its search snippets and its read window are larger than the page.
+- The tool definitions of the MCP server cost 8,539 tokens, one time in each session. The table does not include them.
+- The tokenizer is `cl100k_base`, a proxy. Part B of the eval measures the real cost with Claude Code.

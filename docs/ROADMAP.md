@@ -32,7 +32,7 @@ Mark's decision D12 in the server-stack plan (OTH-3): the polite-crawler MCP ent
 - Area: Package
 - Waits for: `rel013`
 - Blocked: It waits for the client's host factory, stdio under run(), MCP elicitation, and MCP tasks with a guarded HTTP server in the shared host (CLI-10, CLI-11, CLI-12, CLI-35).
-- Owner: markt-02 (the client session), since 2026-10-18
+- Owner: The server-stack session, since 2026-10-18
 - [Server-stack tracker](https://claude.ai/artifact/QbZd2i5apzg3ip5yiE57Pb)
 
 ## Later
@@ -280,11 +280,11 @@ On main since 2026-10-17, in the next release. crawler.discover finds a site's p
 
 ### `tag-rule`: Let CI create release tags
 
-With Mark's direct OK, the release tags ruleset now blocks only changing and deleting v* tags. Creating one is open to accounts with write access: Mark and the workflow token. From the next release on, the workflow makes v<version> itself. markt-54 also added SemVer checks: a version must be greater than npm's latest, a prerelease goes to the next tag, and no version is reused.
+With Mark's direct OK, the release tags ruleset now blocks only changing and deleting v* tags. Creating one is open to accounts with write access: Mark and the workflow token. From the next release on, the workflow makes v<version> itself. The release session also added SemVer checks: a version must be greater than npm's latest, a prerelease goes to the next tag, and no version is reused.
 
 - Area: Release and CI
 - Waits for: `rel011`
-- Owner: Session markt-54
+- Owner: The release session
 - Shipped: 2026-10-17
 - [Rulesets](https://github.com/mark1russell7/crawler/settings/rules)
 
@@ -380,7 +380,7 @@ A release now starts when a version change merges to main, after your approval. 
 
 - Area: Release and CI
 - Waits for: `registry`
-- Owner: Session markt-54
+- Owner: The release session
 - Started: 2026-10-17
 - Shipped: 2026-10-17
 - [Pull request #2](https://github.com/mark1russell7/crawler/pull/2)

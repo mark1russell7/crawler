@@ -187,7 +187,7 @@ text (characters 0 to 4000 of 25000):
 
 When a page asks not to be AI input (`ai-input=no`), the server holds back its text. The tool `crawl_read` has the parameter `user_provided` for a URL that the user gave. A page can tell the assistant to set this parameter, so the server needs a signal from a person:
 
-1. When the client can ask the user (MCP elicitation), the server asks the user to confirm. The text comes back only when the user confirms.
+1. When the client can ask the user (MCP elicitation), the server asks the user to confirm. The text comes back only when the user confirms. When the question fails, for example at a timeout, the text stays held back. The opt-in of the operator does not answer for a user who does not answer.
 2. When the client cannot ask, the server releases the text only when the operator started it with `POLITE_CRAWLER_ALLOW_USER_PROVIDED=1` or `--allow-user-provided`.
 3. Else the text stays held back, and the note tells how to permit it.
 

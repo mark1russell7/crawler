@@ -237,7 +237,7 @@ Each answer has a new random id. A page cannot close its envelope early, because
 When a page asks not to be AI input, the server keeps the page but holds back its text. The parameter `user_provided` of `crawl_read` is for a URL that the user gave. A page can tell the assistant to set this parameter, so the server needs a signal from a person:
 
 1. When the client can ask the user (MCP elicitation), the server asks the user to confirm. The text comes back only when the user confirms.
-2. When the client cannot ask, the server releases the text only when the operator started it with `--allow-user-provided` or `POLITE_CRAWLER_ALLOW_USER_PROVIDED=1`.
+2. When the client cannot ask, the server releases the text only when the operator started it with `--allow-user-provided` or `POLITE_CRAWLER_ALLOW_USER_PROVIDED=1`. When the client can ask but the question fails, for example at a timeout, the text stays held back.
 3. Else the text stays held back, and the note tells how to permit it.
 
 The crawler records each release in the capture log.

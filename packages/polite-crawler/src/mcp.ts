@@ -648,13 +648,13 @@ export const createMcpServer = (
           note: "The user did not confirm that they gave this URL, so the text stays held back.",
         };
       } catch (error) {
-        if (options.allowUserProvided !== true) {
-          const reason = error instanceof Error ? error.message : String(error);
-          return {
-            allowed: false,
-            note: `The server could not ask the user (${reason}), so the text stays held back.`,
-          };
-        }
+        // The client can ask, but the question failed (a timeout, a lost connection or a cancel).
+        // Silence is no answer: the opt-in of the operator applies only to a client that cannot ask.
+        const reason = error instanceof Error ? error.message : String(error);
+        return {
+          allowed: false,
+          note: `The server could not get an answer from the user (${reason}), so the text stays held back.`,
+        };
       }
     }
     if (options.allowUserProvided === true) return { allowed: true };

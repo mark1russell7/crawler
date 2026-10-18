@@ -15,6 +15,8 @@ A prerelease version (`0.2.0-beta.1`) goes to the npm tag `next`. Each other ver
 
 ## Unreleased
 
+- **A failed question keeps the text held back.** When the MCP client can ask the user about `user_provided`, but the question fails (a timeout, a lost connection or a cancel), the text stays held back. Before, the opt-in of the operator (`--allow-user-provided`) released it. That opt-in applies only to a client that cannot ask.
+
 - **This version only adds to the API.** Code that compiled against 0.1.1 or 0.1.2 compiles against this version. `compat.test.ts` (0.1.1) and `compat-012.test.ts` (0.1.2) are the proof. The capture log, the bodies and the capture ids do not change.
   - `OpenedCrawler` does not change. `openCrawler` gives a `HybridCrawler`: an `OpenedCrawler` with `hybrid`, `embed`, `rankWithin` and a `find` that takes `SearchOptions`.
   - `PoliteCrawler` has the optional `hybrid`, `embed` and `rankWithin`. `ReadingIndex` has the optional `digests`, and `Found` has the optional `passage`.

@@ -452,6 +452,17 @@ describe("user_provided", () => {
     expect(read.web).toBe("");
   });
 
+  it("keeps the text held back when the question fails, also with the opt-in of the operator", async () => {
+    const { read, asked } = await heldBack({ allowUserProvided: true }, () => {
+      throw new Error("the user did not answer in time");
+    });
+    expect(asked).toHaveLength(1);
+    expect(read.data).toMatchObject({ held_back: true });
+    expect(String((read.data as { note: string }).note)).toContain("could not get an answer");
+    expect(read.web).toBe("");
+    expect(JSON.stringify(read)).not.toContain("7319");
+  });
+
   it("keeps the text held back when the user accepts but does not confirm", async () => {
     const { read } = await heldBack({}, () => ({ action: "accept", content: { gave_url: false } }));
     expect(read.data).toMatchObject({ held_back: true });

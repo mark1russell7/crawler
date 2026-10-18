@@ -247,6 +247,12 @@
   .pc-rbuild-table .pc-verdict {
     font-size: var(--text-sm);
   }
+  .pc-rbuild-table thead th:first-child {
+    width: 37%;
+  }
+  .pc-rbuild-table thead th code {
+    font-size: 0.625rem;
+  }
   .pc-rbuild-tag {
     display: block;
     width: max-content;

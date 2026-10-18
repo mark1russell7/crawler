@@ -103,6 +103,8 @@ export default function RobotsBuilder(): ReactElement {
   const [repeat, setRepeat] = useState(RECIPE_CHOICES.repeat);
   const [selected, setSelected] = useState<string | undefined>(undefined);
   const [copied, setCopied] = useState<boolean | undefined>(undefined);
+  /** The group whose rule the reader changed last: the file marks its lines. */
+  const [touched, setTouched] = useState<GroupId | undefined>(undefined);
 
   const choices: BuilderChoices = {
     rules,
@@ -137,10 +139,17 @@ export default function RobotsBuilder(): ReactElement {
       ? agents.filter((row) => row.key !== OTHER_TOKEN && verdict(row, privatePath).allowed)
       : [];
   const lines = text.replace(/\n$/, "").split("\n");
+  // the block of each group: the groups are in the order of BUILDER_GROUPS, with an empty line between two
+  const blockOf = (number: number): GroupId | undefined => {
+    let block = 0;
+    for (let index = 0; index < number - 1; index += 1) if (lines[index] === "") block += 1;
+    return BUILDER_GROUPS[block]?.id;
+  };
 
   const setRule = (id: GroupId, rule: GroupRule): void => {
     setRules({ ...rules, [id]: rule });
     setSelected(undefined);
+    setTouched(id);
   };
 
   return (
@@ -161,6 +170,7 @@ export default function RobotsBuilder(): ReactElement {
             setPrivateText(RECIPE_CHOICES.privatePaths.join(", "));
             setRepeat(RECIPE_CHOICES.repeat);
             setSelected(undefined);
+            setTouched(undefined);
           }}
         >
           Start again from the recipe
@@ -321,9 +331,11 @@ export default function RobotsBuilder(): ReactElement {
         <div className="pc-rbuild-filehead">
           <p className="pc-listing-head">
             <strong>robots.txt</strong>{" "}
-            {chosen === undefined
-              ? `${String(lines.length)} lines`
-              : `the marked line decides ${chosen.row.label} on ${chosen.path}`}
+            {chosen !== undefined
+              ? `the marked line decides ${chosen.row.label} on ${chosen.path}`
+              : touched !== undefined
+                ? `the marked lines are the group for ${BUILDER_GROUPS.find((group) => group.id === touched)?.name ?? ""}`
+                : `${String(lines.length)} lines`}
           </p>
           <button
             type="button"
@@ -352,7 +364,17 @@ export default function RobotsBuilder(): ReactElement {
             return (
               <li
                 key={index}
-                className={decided ? "pc-line-decided" : inGroup ? "pc-line-group" : undefined}
+                className={
+                  decided
+                    ? "pc-line-decided"
+                    : inGroup ||
+                        (chosen === undefined &&
+                          touched !== undefined &&
+                          line !== "" &&
+                          blockOf(number) === touched)
+                      ? "pc-line-group"
+                      : undefined
+                }
               >
                 <code>{line.length > 0 ? line : " "}</code>
               </li>

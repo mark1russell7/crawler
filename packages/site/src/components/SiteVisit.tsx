@@ -72,9 +72,38 @@ const PRESETS: ReadonlyArray<{ readonly name: string; readonly text: string }> =
 ];
 
 /** The zoom shows the first 3 minutes. */
-const ZOOM = 3 * MINUTE;
-const zpct = (ms: number): string =>
-  `${((Math.max(0, Math.min(ZOOM, ms)) / ZOOM) * 100).toFixed(3)}%`;
+/**
+ * The zoom shows the first burst of requests to scale. Its span is the shortest of these spans that
+ * holds the burst: the requests before the first gap of 2 minutes, and their waits.
+ */
+const ZOOMS: ReadonlyArray<{
+  readonly span: number;
+  readonly name: string;
+  readonly step: number;
+  readonly minor: number;
+}> = [
+  { span: 30_000, name: "30 seconds", step: 10_000, minor: 15 },
+  { span: MINUTE, name: "minute", step: 20_000, minor: 12 },
+  { span: 2 * MINUTE, name: "2 minutes", step: 30_000, minor: 12 },
+  { span: 5 * MINUTE, name: "5 minutes", step: MINUTE, minor: 10 },
+  { span: 10 * MINUTE, name: "10 minutes", step: 2 * MINUTE, minor: 10 },
+];
+
+/** This function gives the zoom for the first burst of the hour. */
+const zoomOf = (rows: readonly VisitRow[]): (typeof ZOOMS)[number] => {
+  let end = 0;
+  for (const row of rows) {
+    if (row.at - end >= IDLE_MS) break;
+    const done = row.end ?? row.at;
+    const rest = row.wait === null || row.wait.kind === "stop" ? 0 : row.wait.ms;
+    end = Math.max(end, done + rest);
+  }
+  return ZOOMS.find((zoom) => zoom.span >= end) ?? ZOOMS[ZOOMS.length - 1]!;
+};
+
+/** This function gives the label of a time on the axis of the zoom. */
+const tickText = (ms: number): string =>
+  ms === 0 ? "0:00" : ms % MINUTE === 0 ? `${String(ms / MINUTE)} min` : `${String(ms / 1000)} s`;
 const pct = (ms: number): string =>
   `${((Math.max(0, Math.min(VISIT_SPAN, ms)) / VISIT_SPAN) * 100).toFixed(3)}%`;
 
@@ -219,6 +248,10 @@ export default function SiteVisit(): ReactElement {
   const stop = visit?.stop ?? null;
   const stopShown = stop !== null && stop.at <= now;
   const about = SCENARIOS.find((one) => one.id === scenario)!;
+  const zoom = zoomOf(visit?.rows ?? []);
+  const ZOOM = zoom.span;
+  const zpct = (ms: number): string =>
+    `${((Math.max(0, Math.min(ZOOM, ms)) / ZOOM) * 100).toFixed(3)}%`;
 
   const summary =
     visit === null || whole === undefined
@@ -230,7 +263,7 @@ export default function SiteVisit(): ReactElement {
             : "",
           whole.shortestGapMs === null
             ? ""
-            : `The shortest gap between two requests is ${durationText(whole.shortestGapMs)}.`,
+            : `The shortest gap between two pages is ${durationText(whole.shortestGapMs)}.`,
           stop === null
             ? ""
             : `After ${stop.cause}, it sends no request until ${clockText(stop.until)}.`,
@@ -417,24 +450,24 @@ export default function SiteVisit(): ReactElement {
           {visit !== null ? <span className="pc-visit-now" style={{ left: pct(now) }} /> : null}
         </div>
         <p className="pc-visit-part pc-visit-zoomhead">
-          The first 3 minutes, to scale <span>each request, and the wait after it</span>
+          The first {zoom.name}, to scale <span>each request, and the wait after it</span>
         </p>
         <div className="pc-axis-track pc-visit-axis">
-          {[0, 30, 60, 90, 120, 150, 180].map((second) => (
-            <span
-              key={second}
-              style={{ left: zpct(second * 1000) }}
-              className={second % 60 === 0 ? undefined : "pc-tick-minor"}
-            >
-              {second === 0
-                ? "0:00"
-                : second % 60 === 0
-                  ? `${String(second / 60)} min`
-                  : `${String(second)} s`}
+          {Array.from(
+            { length: Math.round(ZOOM / zoom.step) + 1 },
+            (_, index) => index * zoom.step,
+          ).map((ms) => (
+            <span key={ms} style={{ left: zpct(ms) }}>
+              {tickText(ms)}
             </span>
           ))}
         </div>
-        <div className="pc-visit-zoom">
+        <div
+          className="pc-visit-zoom"
+          style={{
+            backgroundSize: `calc(100% / ${String(Math.round(ZOOM / zoom.step))}) 100%, calc(100% / ${String(zoom.minor)}) 100%`,
+          }}
+        >
           {stopShown && stop !== null && stop.at < ZOOM ? (
             <span
               className="pc-visit-stopband"

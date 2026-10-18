@@ -551,7 +551,7 @@ export interface VisitStats {
   readonly answeredLocally: number;
   /** This value is the most requests that started in one minute. */
   readonly peakPerMinute: number;
-  /** This value is the shortest time from the end of one request to the start of the next, or null. */
+  /** This value is the shortest time from the end of one page to the start of the next page, or null. */
   readonly shortestGapMs: number | null;
   /** This value is the most requests in progress at one time. */
   readonly mostAtOnce: number;
@@ -569,8 +569,11 @@ export const statsOf = (rows: readonly VisitRow[]): VisitStats => {
   let mostAtOnce = requests.length > 0 ? 1 : 0;
   for (let index = 1; index < requests.length; index += 1) {
     const before = requests[index - 1]!;
-    const gap = requests[index]!.at - (before.end ?? before.at);
+    const after = requests[index]!;
+    const gap = after.at - (before.end ?? before.at);
     if (gap < 0) mostAtOnce = 2;
+    // the rest after robots.txt is the rest after a small request, not the pace of the pages
+    if (before.path === "/robots.txt" || after.path === "/robots.txt") continue;
     shortestGapMs = shortestGapMs === null ? gap : Math.min(shortestGapMs, gap);
   }
   return {

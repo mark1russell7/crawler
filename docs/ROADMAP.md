@@ -4,6 +4,24 @@ This file is the roadmap of polite-crawler, its site, and the jarvis side that u
 The tracker page https://claude.ai/artifact/Tby9J8r39c3fz4ggXoi1QZ shows the same items, with a dependency map and a timeline.
 Change this file and the tracker together. Each item has an id, a status, an area, the items it waits for, dates and links.
 
+## In progress
+
+### `site-visuals`: Visuals for the 0.1.3 features on the site
+
+Interactive pieces for what 0.1.3 added: how hybrid search fuses the word ranking and the vector ranking, a recipe reader that runs the venue and product readers in the browser, the daemon tick by tick, and a diagram of the recipe SDK. Real package code and real model data, checked in screenshots on phone and desktop.
+
+- Area: Site and growth
+- Waits for: `rel013`
+- Started: 2026-10-18
+
+### `cli-recipes`: venue and product commands
+
+polite-crawler venue <url> prints a venue's hours with each source and quote, and compares them with kept hours. polite-crawler product <url> prints a product's price, variants and availability. Both have --json.
+
+- Area: Package
+- Waits for: `rel013`
+- Started: 2026-10-18
+
 ## Blocked
 
 ### `mcp-host`: The MCP server moves onto the shared MCP host
@@ -44,6 +62,34 @@ Run the same 30 claims through Claude Code with polite-crawler's MCP tools and w
 Score a local open-weight decision model (for example Laya) on labelled data from the surveys. Adopt it for a choice only where it beats the current rule, and never for robots.txt or privacy decisions.
 
 - Area: jarvis
+
+### `site-review`: A full screenshot review of the site
+
+Every page on phone and desktop, in light and dark mode, from CI screenshots. Fix what looks wrong, then look again.
+
+- Area: Site and growth
+- Waits for: `site-visuals`
+
+### `rel014`: Release 0.1.4
+
+A patch release with the venue and product commands. The site changes go live from main without a release.
+
+- Area: Release and CI
+- Waits for: `cli-recipes`
+
+### `api-review`: API review before 1.0
+
+Decide which exports are stable for 1.0, move the rest out of the stable tier or remove them, and record the public API in a report that CI compares, so a change to it is always deliberate.
+
+- Area: Package
+- Waits for: `mcp-host`
+
+### `v1`: Version 1.0
+
+1.0 promises that the API does not break. It comes after the MCP move ships as 0.2.0, the API review, the real Claude Code eval, and some weeks of use by people outside this project.
+
+- Area: Release and CI
+- Waits for: `mcp-host`, `api-review`, `eval-b`, `showhn`
 
 ## Shipped
 

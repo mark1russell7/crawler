@@ -201,8 +201,9 @@
   display: block;
 }
 /* The three values stay on one line where there is room, and wrap on a phone. */
+/* The column of the values has a fixed width, so each row and the axis get the same track. */
 .pc-rbar.pc-dots-row {
-  grid-template-columns: 13rem minmax(0, 1fr) max-content;
+  grid-template-columns: 13rem minmax(0, 1fr) 9rem;
 }
 .pc-dots-row .pc-rbar-value {
   font-size: var(--text-xs);
@@ -226,7 +227,9 @@
   border-radius: 50%;
   background: var(--verdict-name);
 }
+/* The diamond is small: it stays on top of a ring at almost the same share. */
 .pc-mark-search {
+  z-index: 1;
   background: var(--series-4);
   clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
   box-shadow: none;
@@ -548,7 +551,7 @@ th.pc-vth-on span {
     grid-template-columns: minmax(0, 1fr) 3.2rem;
   }
   .pc-rbar.pc-dots-row {
-    grid-template-columns: minmax(0, 1fr) fit-content(6.5rem);
+    grid-template-columns: minmax(0, 1fr) 6.5rem;
   }
   .pc-dots-row .pc-rbar-value {
     white-space: normal;

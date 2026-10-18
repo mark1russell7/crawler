@@ -90,7 +90,7 @@
       "source": "wikipedia",
       "url": "https://en.wikipedia.org/wiki/Robots.txt",
       "question": "What is the file robots.txt for?",
-      "quote": "the filename used for implementing the Robots Exclusion Protocol"
+      "quote": "is a standard used by websites to indicate to visiting web crawlers and other web robots which portions of the website they are allowed to visit"
     },
     {
       "id": "wikipedia-turing-born",

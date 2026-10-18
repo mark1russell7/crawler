@@ -1217,3 +1217,68 @@ export const toHoursWeek = (
 /** This function gives the days where two readings disagree, from the days that the two readings state. */
 export const disagreements = (a: Week, b: Week): Day[] =>
   DAYS.filter((day) => a[day] !== undefined && b[day] !== undefined && !sameDay(a[day], b[day]));
+
+/** The result of `compareHours`. */
+export interface HoursComparison {
+  /**
+   * The value `new` tells that the stored week states no day. The value `changed` tells that a day
+   * of the two weeks is different. Else the value is `same`.
+   */
+  readonly status: "same" | "changed" | "new";
+  /** These days changed. For `new`, these are the days that the reading states. */
+  readonly days: readonly Day[];
+  /** The reading states these days, and the stored week does not. They do not make a change. */
+  readonly added: readonly Day[];
+  /** The comparison left out these days, because a side has two or more intervals (`skipSplit`). */
+  readonly skipped: readonly Day[];
+}
+
+/** This function writes a time in one form: `9:00` is `09:00`, and `24:00` is midnight, `00:00`. */
+const clockForm = (time: string): string => {
+  const text = time.trim();
+  if (text === "24:00") return "00:00";
+  return /^\d:\d{2}$/.test(text) ? `0${text}` : text;
+};
+
+const dayForm = (intervals: readonly Interval[]): string =>
+  intervals
+    .map(([open, close]) => `${clockForm(open)}-${clockForm(close)}`)
+    .sort((a, b) => (a < b ? -1 : a > b ? 1 : 0))
+    .join(",");
+
+/**
+ * This function compares a reading with a stored week, day by day. It compares only the days that
+ * the two weeks state. A day that only the reading states is in `added`, and it is not a change.
+ * The times `24:00` and `00:00` are the same. With `skipSplit`, a day with two or more intervals on
+ * a side is not compared, for a store that keeps one interval for each day.
+ *
+ * The function is pure. It does not decide if a change is true: an application confirms a change
+ * with a second reading, as a watch does.
+ */
+export const compareHours = (
+  stored: Week | undefined,
+  reading: Week,
+  options: { readonly skipSplit?: boolean | undefined } = {},
+): HoursComparison => {
+  const stated = DAYS.filter((day) => reading[day] !== undefined);
+  if (stored === undefined || DAYS.every((day) => stored[day] === undefined)) {
+    return { status: "new", days: stated, added: [], skipped: [] };
+  }
+  const days: Day[] = [];
+  const added: Day[] = [];
+  const skipped: Day[] = [];
+  for (const day of stated) {
+    const kept = stored[day];
+    const said = reading[day]!;
+    if (kept === undefined) {
+      added.push(day);
+      continue;
+    }
+    if (options.skipSplit === true && (kept.length > 1 || said.length > 1)) {
+      skipped.push(day);
+      continue;
+    }
+    if (dayForm(kept) !== dayForm(said)) days.push(day);
+  }
+  return { status: days.length > 0 ? "changed" : "same", days, added, skipped };
+};

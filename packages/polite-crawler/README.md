@@ -18,6 +18,7 @@ The site has interactive demos with the real code: <https://mark1russell7.github
 - **Watch and compare.** `watch` checks pages again on a schedule and tells what changed. `diff` compares two versions, and `read` takes `at`: the page as it was at a time.
 - **Archived copies, on request.** When a site refuses a page or is down, `fallback: "archive"` gives a copy from the Wayback Machine or Common Crawl. The result marks the copy as archived, with its date.
 - **Signed requests.** With an Ed25519 key, the crawler signs each request (Web Bot Auth). A site can then verify that a request comes from your crawler.
+- **Recipes.** `readVenue` reads the opening hours of a venue from its site, and `readProduct` reads a product page. `defineRecipe` makes a recipe of your own.
 
 ## Install
 
@@ -302,7 +303,7 @@ The root entry point also exports the parts of the runtime, for an application t
 - `extractDocument` and `checkFields`: the check of field values over a runtime, and over a text and its metadata with no store.
 - `extractPage`, `typesOf`, `decodeBody` and `bodyEncoding`: the page reader and the decoder of a body in its declared encoding.
 - `readPdf` and `isPdf`: the PDF reader. `PdfOptions` sets limits on the pages, the characters, the time and the inflated bytes.
-- `fromText`, `fromSchemaOrg`, `fromCompact` and `describeWeek`: the opening-hours reader.
+- `fromText`, `fromSchemaOrg`, `fromCompact` and `describeWeek`: the opening-hours reader. `compareHours` compares a reading with a week that you keep.
 - `parseRobots` and `decide`: the robots.txt parser and matcher.
 - `RenderRefused`: the error of a renderer that did not render a page, with the reason `refused`, `download`, `scheme` or `browser`. A crawler does not count it as a failure of the host. After the reason `browser`, the crawler renders no more pages.
 
@@ -325,7 +326,7 @@ The readers give more facts than before:
 - `signer`: the signer of each request (Web Bot Auth). [Signed requests](#signed-requests-web-bot-auth) tells its options.
 - `scope`, `labels` and `scopeRank`: the labels of each record. One fetch of a robots.txt can serve requests of different scopes. Its record takes the labels of each request and the scope with the highest `scopeRank`, the most private one.
 
-`openCrawler` takes `egress`, `politeness` and `hostState` too, and also `clock`, `scope`, `onEvent` and `extractors`. Its default `hostState` is the file `hosts.sqlite` in the store. Thus the processes on one store share the pace, the stops and the validator memo of each host.
+`openCrawler` takes `egress`, `politeness` and `hostState` too, and also `clock`, `scope`, `onEvent`, `extractors` and `recipes` ([the recipes of an application](#writing-a-recipe)). Its default `hostState` is the file `hosts.sqlite` in the store. Thus the processes on one store share the pace, the stops and the validator memo of each host.
 
 `FetchRequest.maxAgeMs` can be `"auto"`: the crawler then uses the freshness that the server gave (`Cache-Control`, `Expires`, or 10 percent of the age of `Last-Modified`). `crawler.resetHosts(host?)` removes the stops and the failure counts of one host or of each host, for a process that runs for a long time.
 
@@ -355,6 +356,9 @@ These parts are the stable API:
 - Also stable: `HybridCrawler` (the result of `openCrawler`), `rank: "hybrid"` (`SearchRank`, `SearchOptions`), `embed`, `rankWithin` with `RankOptions` and `Ranked`, and `hybrid` (`HybridSearch`). The three members are optional in `PoliteCrawler`, and `OpenedCrawler` does not change.
 - The options and the results of hybrid search are stable too: `HybridOptions`, `HybridFindOptions`, `EmbedOptions`, `EmbedResult`, `EmbedStop`, `Passage` and `Found.passage`. So are `HYBRID_DEFAULTS`, `OLLAMA_MODELS`, `TRANSFORMERS_MODELS`, `NO_EMBEDDER`, `NO_OLLAMA` and `NO_TRANSFORMERS`.
 
+- The recipe SDK: `defineRecipe`, `runRecipe`, `registerRecipe`, `readJson`, the option `recipes` of `openCrawler` and `createRuntime`, and `RESERVED_RECIPES`. Its types are `Recipe`, `RecipeDefinition`, `RecipeExtract`, `RecipeCapture`, `RecipeRequest`, `RecipeRequestOptions`, `RecipeRunOptions`, `RecipeResult`, `RecipeDoc` and `RecipeTarget`.
+- The recipes: `readVenue`, `venueReadingsOf`, `compareHours`, `readProduct` and `productOf`. Their options and results are stable too: `VenueOptions`, `VenueResult`, `VenueReading`, `VenuePage`, `VenueLink`, `VenueLocation`, `VenueOsm`, `VenueSource`, `VenueRead`, `HoursComparison`, `ProductOptions`, `ProductResult`, `ProductRead`, `ProductVariant` and `Money`.
+
 The other exports of the root entry point are the engine. Examples are `createRuntime`, `catchUpIndex`, `Crawler`, `CaptureLog`, `DocIndex`, `FileBlobStore`, `SqliteHostStateStore`, `Extractors`, `fetchAndIndex` and `makeRecord`. An application can build on them. A minor version before 1.0.0 can change them, and its section in `CHANGELOG.md` says so.
 
 The engine of the check of fields is `checkFields`, `extractDocument`, `FIELD_KINDS`, `FieldCheck`, `ExtractSource` and `FieldsChecked`.
@@ -364,6 +368,8 @@ The engine of discovery and of the crawl is `discoverSite`, `crawlSite`, `readSi
 The engine of the time travel and of the watch list is the optional method `ReadingIndex.versionAt`, `DocIndex.versionAt` and `Crawler.hostStop`.
 
 The engine of hybrid search is `createHybridSearch`, `HybridSearchOptions`, `VectorStore`, `VECTORS_SCHEMA` and the types of the vector store. It also includes `chunkText`, `chunkTokensOf`, `estimateTokens`, `CHUNK_LIMITS`, `fuseRanks`, `unitVector`, `isLoopback`, `FeatureExtractor`, `TransformersModule`, the optional method `ReadingIndex.digests` and `DocIndex.digests`. The file `vectors.sqlite` is a projection, as the index is: it is not part of the stable store.
+
+The engine of the recipes is `rankHoursLinks`, `namesVenue`, `locationMatches`, `pickProduct`, `pickVariant`, `readAmount`, `VENUE_LIMITS`, `PRODUCT_LIMITS`, `RECIPE_LIMITS` and the `steps` of `VenueRead` and `ProductRead`. The words that rank a link or a label are the engine too, so a version can improve them.
 
 The engine of the archived fallback and of the signatures is `archiveExtractor`, `archivedDocId`, and the `fallback` and `archiveDespiteRobots` of `PageOptions`. It also includes `range`, `signalLines` and `originalHeaderPrefix` of `FetchRequest`, `ai_input` of `ExtractedDoc`, `sign` of `RenderOptions` and `signer` of `CrawlerOptions`.
 
@@ -861,6 +867,206 @@ A page that asked not to be AI input gives `held-back` for each field, with no p
 The time of the check is linear in the length of the text, for a fixed set of fields. The tests count the steps of the readers on texts of different lengths.
 
 The MCP tool `crawl_extract` gives the statuses and the positions in its JSON. The stored text, the readings and the excerpts come in the `<untrusted-web-content>` envelope. The command line has `polite-crawler extract`.
+
+## Read the hours of a venue
+
+`readVenue` reads the opening hours of a venue (a restaurant, a shop or a museum) from its own site. It fetches a few pages, and it gives each reading with its source.
+
+```ts
+import { compareHours, openCrawler, readVenue } from "polite-crawler";
+
+const crawler = openCrawler({ dir: "./crawl" });
+const venue = await readVenue(crawler, "https://forno-esempio.example/", {
+  name: "Forno Esempio",
+  osm: "Mo-Fr 07:00-15:00; Sa 08:00-13:00; Su off", // a value that you got from OpenStreetMap
+});
+console.log(venue.best?.hours, venue.best?.capture, venue.disagree);
+for (const reading of venue.readings) console.log(reading.from, reading.label, reading.hours, reading.url);
+
+const change = compareHours(keptWeek, venue.from_site!.week);
+console.log(change.status, change.days); // changed [ 'sat' ]
+```
+
+The recipe reads these sources:
+
+1. The home page: its JSON-LD (`openingHoursSpecification` and `openingHours`) and its text.
+2. The pages that most likely hold hours or a menu. `rankHoursLinks` ranks the links of the home page by their words, for example "hours", "menu" and "visit". `pages` sets the number of these pages: 3 by default, and 8 at most.
+3. An OpenStreetMap `opening_hours` value, when you give `osm`. The recipe sends no request to OpenStreetMap.
+
+- Each page is a fetch of the crawler. Thus robots.txt, the pace, the stops, the egress policy and the capture log apply. A page that needs JavaScript gets the browser, as for `fetch`.
+- Each reading has `from`, `label`, `week`, `hours` (the week as words), `inferred`, `partial`, `season` and `raw`. It names its `url`, `doc` and `capture`, and a reading of JSON-LD names its `path`.
+- The `raw` of a reading of the text is a quote: `verify(reading.doc, reading.raw, { capture: reading.capture })` finds it.
+- `rank` orders the readings. JSON-LD is 0, a text under an hours heading is 1, OpenStreetMap is 2, and a text with no other label is 3. A different schedule (a brunch, a kitchen, a happy hour or an office) is 4.
+- `best` is the first reading of the opening hours. `from_site` is the best reading of the site itself, with no guessed am or pm. A check for a change compares `from_site`.
+- `disagree` names the days where two readings of the whole schedule (a rank of 2 or less) disagree.
+- The result also gives `menus` (the menu links that are not on a review or social site), `phone` (from the JSON-LD) and `captures`.
+
+| Option | What it does |
+| --- | --- |
+| `name` | The name of the venue. `names_venue` tells if the home page names it. A domain that a venue let go can show a different business. |
+| `requireName` | With `true`, a home page that does not name the venue gives no reading, and the recipe fetches no more pages. |
+| `location` | The `address`, or `lat` and `lon`, of the venue. On a page that lists more than one location, the recipe reads only this location. With no `location`, it reads none of them. |
+| `osm` | An OpenStreetMap `opening_hours` value, or `{ value, url, doc, capture }` with its source. |
+| `pages` | The pages after the home page, from 0 to 8. The default is 3. |
+| `render`, `maxAge`, `onBehalfOf`, `signal`, `scope`, `labels`, `job` | As for `fetch`. |
+| `budget` | No request starts after this time, for example `"2m"`. |
+| `userProvided` | Read a page that asked not to be AI input. Use it only for a URL that a person gave. The crawler logs it. |
+| `fallback`, `archiveDespiteRobots` | Read an archived copy of a page that the site refuses. The reading then has `archived`. |
+
+- A location of a page matches when it has the same street number and a word of the street, or when it is within 150 m.
+- `moved` names the new site when the home page landed on a different host.
+- A page that asked not to be AI input gives no reading, and `held_back` is true.
+- The recipe writes nothing but the capture log. It does not decide which reading is true. That decision belongs to your application.
+
+`venueReadingsOf(doc, { location })` reads one stored document with no request. Thus it also reads an earlier version:
+
+```ts
+import { venueReadingsOf, versionAtTime } from "polite-crawler";
+
+const { version } = versionAtTime(crawler.runtime, "url:https://forno-esempio.example/", "2026-10-01T00:00:00Z");
+const then = venueReadingsOf(version!);
+```
+
+`compareHours(kept, reading, { skipSplit })` compares a reading with the week that your application keeps. It is in `polite-crawler/hours` too.
+
+- It gives `status` (`same`, `changed` or `new`), the changed `days`, the `added` days and the `skipped` days.
+- It compares only the days that the two weeks state. A day that only the reading states is `added`, not a change.
+- `24:00` and `00:00` are the same time, and `9:00` is `09:00`. The sequence of the intervals of a day does not matter.
+- With `skipSplit`, it does not compare a day with two or more intervals, for a store that keeps one interval for each day.
+- One reading can be an error of the site. Confirm a change with a second reading, as a watch does.
+
+## Read a product page
+
+`readProduct` reads the schema.org Product data of a product page. Most shop systems write this data on each product page.
+
+```ts
+import { readProduct } from "polite-crawler";
+
+const product = await readProduct(crawler, "https://bottega-campione.example/products/olio-esempio?variant=222");
+if (product.wall) console.log("the shop refused the crawler:", product.note);
+else console.log(product.name, product.price, product.price_to, product.availability, product.variant);
+// Olio Esempio { amount: 9.9, currency: 'EUR', raw: '9.90' } { amount: 18, ... } InStock { sku: 'OE-500', ... }
+```
+
+- The result gives `name`, `brand`, `sku`, `gtin`, `price`, `price_to`, `availability`, `availabilities`, `variant`, `seller` and `image`. It names the `doc` and the `capture` of the page.
+- A price is `{ amount, currency, raw }`, and the currency is an ISO 4217 code. `€` and `£` count too, because each one names one currency. A price with no currency, or with `$`, is not money, and a note says so.
+- `price` is the lowest price. `price_to` is the highest price, when the offers give a range (sizes, colors, variants). The prices are in the first currency of the offers.
+- A list price and a struck-through price (`priceType` `ListPrice` or `StrikethroughPrice`) are not the price.
+- `variant` is the variant that the URL names with the parameter `variant`, `sku` or `gtin`. The recipe reads its price alone.
+- `availability` is a schema.org name, for example `InStock`. When the offers do not agree, it is `InStock` if one offer is in stock.
+- The options are `render`, `maxAge`, `onBehalfOf`, `signal`, `budget`, `scope`, `labels`, `job`, `userProvided`, `fallback` and `archiveDespiteRobots`, as for `readVenue`.
+
+A page often has more than one Product record: the related products, and the products that others bought. The recipe picks the product of the page:
+
+1. The product whose `url` or `@id` is the page. An `@id` that is only a fragment (`#product`) does not count, because a related product can have one too.
+2. Else the largest product with offers or variants.
+3. Else the largest product. The recipe also reads the `mainEntity` of a `WebPage` or an `ItemPage`.
+
+- The index keeps 30,000 characters of the JSON-LD of each page. A product with many variants can be larger, so the recipe reads the stored body again.
+- When the plain page has no Product data, the recipe renders the page once, because some shops write that data with JavaScript. `render: "never"` stops this.
+- A shop that refuses the crawler gives `wall: true`, with a note. The causes are a 401, a 402 or a 403, a challenge, a bot check, a stop of the host or robots.txt. The recipe does not try a different identity.
+- A page with no Product data gives `found: false`. It is often a list of products.
+
+`readAmount` reads an amount as a shop writes it. The last separator is the decimal point. One kind of separator before groups of three digits separates thousands, so `1.299` is 1299. A currency with three decimal digits (`KWD`) reads `1.299` as 1.299. A range, a negative amount and zero give no amount.
+
+`productOf(records, url)` reads the JSON-LD records of a page with no request, so it also reads an earlier version. `extract` checks each value against the stored page:
+
+```ts
+const check = await crawler.extract(product.doc!, {
+  price: { value: product.variant!.price!.raw, kind: "json-ld:Product.offers.price" },
+});
+```
+
+## Writing a recipe
+
+A recipe tells the crawler what to fetch and how to read it into documents. The venue and product recipes read pages with the page reader of the package. A recipe of your own reads a source that the page reader does not know, for example an API.
+
+```ts
+import { defineRecipe, openCrawler, readJson, runRecipe } from "polite-crawler";
+
+interface Item {
+  readonly id: string;
+  readonly name: string;
+  readonly price: string;
+}
+
+const menu = defineRecipe({
+  name: "forno-menu", // it goes into each capture record: do not change it
+  mode: "api", // a documented API: robots.txt does not apply, and the pace does
+  minInterval: "2s", // the documented pace of the API
+  maxAge: "6h",
+  fetch: (day: string) => `https://api.forno-esempio.example/menu?day=${encodeURIComponent(day)}`,
+  extract: (body, capture) => {
+    const { items } = readJson(body, capture) as { items: Item[] }; // a body that is not JSON throws
+    return items.map((item) => ({
+      doc: `menu:forno-esempio/${item.id}`,
+      kind: "menu-item",
+      title: item.name,
+      text: `${item.name}: ${item.price}`,
+      url: capture.url,
+      meta: { price: item.price },
+    }));
+  },
+});
+
+const crawler = openCrawler({ dir: "./crawl", recipes: [menu] });
+const run = await runRecipe(crawler, menu, "mon");
+console.log(run.outcome, run.capture, run.docs.map((doc) => doc.doc));
+
+await crawler.find("focaccia"); // the documents of the recipe are in the index
+await crawler.read("menu:forno-esempio/focaccia", { at: "2026-10-01T00:00:00Z" }); // each version stays
+```
+
+`defineRecipe` takes these values:
+
+| Value | Default | What it does |
+| --- | --- | --- |
+| `name` | (necessary) | The name of the recipe: 1 to 64 letters, digits and `. _ : -`. The names of the crawler (`RESERVED_RECIPES`) are not permitted. |
+| `extract` | (necessary) | The function that reads a body into documents. |
+| `fetch` | the input is the URL | The function that gives the request for an input: a URL, or `{ url, accept, headers, secretParams }`. |
+| `mode` | `page` | `page` is a web page, and robots.txt applies. `api` is a documented API with terms of its own. |
+| `accept` | HTML for a page, JSON for an API | The `Accept` header. |
+| `minInterval` | the policy of the host | The shortest time between two requests to the source. |
+| `maxAge` | `24h` | A stored copy younger than this age answers with no request. `auto` uses the freshness that the server gave. |
+| `maxBytes` | 5 MiB | The most bytes of a body that the crawler keeps. |
+| `description` | none | A text that tells what the recipe reads. |
+
+`runRecipe(crawler, recipe, input, options)` fetches the request of an input through the crawler, and reads its capture with the extractor.
+
+- The result gives `outcome`, `status`, `url`, `docs`, `capture`, `fetched_at`, `from_cache`, `held_back`, `error` and `note`. The `url` shows each secret parameter as `REDACTED`.
+- Each document gives `doc`, `kind`, `title`, `url`, `meta`, `chars`, `capture` and `fetched_at`. `read` gives its text. A held-back document shows no title and only its structural metadata.
+- The options are `maxAge`, `onBehalfOf`, `signal`, `scope`, `labels`, `job`, `budget`, `userProvided`, `fallback` and `archiveDespiteRobots`.
+- Give each recipe to `openCrawler` (or `createRuntime`) with `recipes`. Then `reindex` reads its captures from the start. `runRecipe` also registers a recipe the first time that it gets it.
+- `registerRecipe(runtime.extractors, recipe)` registers a recipe in a runtime of your own. A different extractor with the same name throws an error.
+- `recipe.request(input, options)` gives the request of the crawler, for `fetchAndIndex` in an application that builds its own steps.
+- `readJson(body, capture)` reads a body as JSON, in the encoding that the response declares. A body that is not JSON throws an error that names the URL and the content type.
+- `runRecipe`, `readVenue` and `readProduct` take a crawler or a runtime (`createRuntime`). The option `onBehalfOf` of `openCrawler` does not apply to them, so give `onBehalfOf` to each call.
+
+### The rules of an extractor
+
+1. **An extractor is pure.** The same body and capture always give the same documents. Do not read the clock, a random number or a state from an earlier call.
+2. **An extractor sends no request.** It gets the body of the capture. To read a second source, start a second recipe. Its fetch is then polite, and it has its capture.
+3. **The runtime reports an error, and the work continues.** An extractor that throws gives no document. `runRecipe` gives the error in `error`, and `reindex` counts it in `failed` and `errors`. The fetch and the rebuild continue.
+4. **The SDK checks each document.** Each document needs `doc`, `kind`, `title`, `text`, `url` and `meta`, and `meta` must be JSON. Two documents with one id, the prefix `archive:` and the kind `archived` throw an error. The archived fallback uses that prefix and that kind.
+5. **A held-back body stays held back.** Set `ai_input: "no"` when the body asks not to be AI input. An extractor cannot lift a `no` of the capture.
+
+### The rules of the capture ids
+
+- The crawler makes the capture id, not the extractor. The id is a hash of the source, the kind, the external id and the payload of the capture record.
+- The payload holds the URL, the name of the recipe, the outcome, the hash of the body and the time of the fetch.
+- Thus the name of a recipe is part of each capture id. Do not change the name after the first capture. With a new name, `reindex` finds no extractor for the old captures, and it keeps their documents as they are.
+- Each version of a document names its capture. A citation names that capture, and `read`, `verify` and `extract` take `capture` to use that version.
+- `reindex` reads each capture again with the extractor. A pure extractor thus gives the same versions with the same capture ids.
+- A new version of an extractor changes the documents at the next `reindex`, not the capture ids. Keep it able to read the old captures.
+- The scope and the labels of a fetch are not part of the capture id.
+
+### The documents, the time travel and the archived fallback
+
+- Give each document an id with a prefix of your own, for example `menu:`. The page reader uses `url:`. A recipe that gives a `url:` id adds versions to the document of that page, and `merge` chooses the current version.
+- Each capture of a recipe adds a version of each of its documents. `read`, `verify` and `extract` take `at`, and `diff` compares two versions.
+- With `fallback: "archive"`, a recipe of the mode `page` gets an archived copy after a refusal. The page reader reads the copy as the document `archive:<url>`, with `archived`.
+- The extractor of a recipe reads only the live captures. Thus its documents do not mix a live answer and an old copy of a third party. A recipe of the mode `api` takes no `fallback`.
+- When the extractor cannot read a stored copy, `runRecipe` asks the source one more time. Thus a bad answer (a page about maintenance) does not stay until `maxAge` ends.
 
 ## Find the pages of a site
 

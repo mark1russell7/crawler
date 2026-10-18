@@ -54,6 +54,8 @@ import {
   reindex,
   verifyQuote,
 } from "./runtime.ts";
+import type { Recipe } from "./recipe.ts";
+import { registerRecipe } from "./recipe.ts";
 import { VectorStore } from "./vectors.ts";
 import { BOT_PAGE, DEFAULT_TOKEN, VERSION } from "./version.ts";
 import type { WatchList } from "./watch.ts";
@@ -143,6 +145,11 @@ export interface RuntimeOptions {
   /** These extractors read the captures of the recipes of an application. The recipes `page` and `archive-copy` are built in. */
   readonly extractors?: Readonly<Record<string, Extractor>> | undefined;
   /**
+   * These recipes of `defineRecipe` get their extractors at open. Thus `reindex` reads their
+   * captures before the first fetch. A recipe with the name of an entry of `extractors` throws an error.
+   */
+  readonly recipes?: ReadonlyArray<Recipe<never>> | undefined;
+  /**
    * This signer signs each request with Web Bot Auth (`CrawlerOptions.signer`). Give the options of
    * `createWebBotAuthSigner`, or a `RequestSigner`. Without it, the crawler signs nothing.
    */
@@ -216,6 +223,12 @@ export const createRuntime = (options: RuntimeOptions): StoreRuntime => {
       `contact "${contact}" has a character that an HTTP header cannot hold: use printable ASCII`,
     );
   }
+  // the extractors first: a recipe that is not valid throws before a file of the store opens
+  const extractors = new Extractors();
+  for (const [recipe, extractor] of Object.entries(options.extractors ?? {})) {
+    extractors.register(recipe, extractor);
+  }
+  for (const recipe of options.recipes ?? []) registerRecipe(extractors, recipe);
   if (dir !== undefined) guardStore(dir);
   const owned: Array<() => Promise<void> | void> = [];
   const log = options.log ?? new CaptureLog(join(dir!, "captures"));
@@ -263,10 +276,6 @@ export const createRuntime = (options: RuntimeOptions): StoreRuntime => {
     onEvent: options.onEvent,
     signer: options.signer,
   });
-  const extractors = new Extractors();
-  for (const [recipe, extractor] of Object.entries(options.extractors ?? {})) {
-    extractors.register(recipe, extractor);
-  }
   let closing: Promise<void> | undefined;
   return {
     crawler,

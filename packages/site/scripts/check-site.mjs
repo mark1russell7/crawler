@@ -4,7 +4,8 @@
 // - no page logs an error in the console;
 // - no page loads the search UI before a reader uses the search, and the search finds pages;
 // - with each island hydrated, no page loads more than JS_BUDGET bytes of JavaScript (gzip);
-// - one sitemap lists each page, with the date of its last change.
+// - one sitemap lists each page, with the date of its last change;
+// - the feed of the study is RSS 2.0 that a parser reads, with one item for each run and full addresses.
 // With --shots <dir>, it also saves a screenshot of each page: desktop and phone, light and dark.
 //   pnpm --filter @crawler/site check [--shots <dir>]
 import { existsSync, mkdirSync, readFileSync, readdirSync, statSync } from "node:fs";
@@ -201,6 +202,62 @@ for (const path of pages) {
     );
   }
   await page.close();
+}
+
+// the feed of the monthly runs: XML that a parser reads, one item for each CSV of a run, and each
+// address of an item goes to a file of the build. The study page names the feed in its head.
+{
+  const SITE = "https://mark1russell7.github.io/crawler/";
+  const feed = join(dist, "study", "feed.xml");
+  const runs = readdirSync(join(dist, "data")).filter((name) =>
+    /^robots-study-\d{4}-\d{2}-\d{2}\.csv$/.test(name),
+  );
+  if (!existsSync(feed)) problems.push("the build has no study/feed.xml");
+  else {
+    const page = await context.newPage();
+    await page.goto(`${origin}${BASE}/`, { waitUntil: "networkidle" });
+    const read = await page.evaluate(
+      (xml) => {
+        const doc = new DOMParser().parseFromString(xml, "application/xml");
+        const error = doc.querySelector("parsererror");
+        return {
+          error: error === null ? undefined : (error.textContent ?? "a parser error"),
+          root: doc.documentElement.nodeName,
+          version: doc.documentElement.getAttribute("version"),
+          items: [...doc.querySelectorAll("channel > item")].map((item) => ({
+            link: item.querySelector("link")?.textContent ?? "",
+            enclosure: item.querySelector("enclosure")?.getAttribute("url") ?? "",
+            length: Number(item.querySelector("enclosure")?.getAttribute("length")),
+            html: item.querySelector("description")?.textContent ?? "",
+          })),
+        };
+      },
+      readFileSync(feed, "utf8"),
+    );
+    await page.close();
+    if (read.error !== undefined) problems.push(`study/feed.xml: ${read.error.split("\n")[0]}`);
+    if (read.root !== "rss" || read.version !== "2.0")
+      problems.push("study/feed.xml is not RSS 2.0");
+    if (read.items.length !== runs.length)
+      problems.push(
+        `study/feed.xml has ${String(read.items.length)} items for ${String(runs.length)} runs`,
+      );
+    for (const item of read.items) {
+      const hrefs = [...item.html.matchAll(/href="([^"]+)"/g)].map((match) => match[1] ?? "");
+      for (const link of [item.link, item.enclosure, ...hrefs]) {
+        if (!link.startsWith("https://")) problems.push(`study/feed.xml: ${link} is not absolute`);
+        else if (link.startsWith(SITE)) {
+          const path = `${BASE}/${new URL(link).pathname.slice(new URL(SITE).pathname.length)}`;
+          if (fileOf(path) === undefined) problems.push(`study/feed.xml: ${link} goes to no file`);
+        }
+      }
+      const csv = fileOf(`${BASE}/${item.enclosure.slice(SITE.length)}`);
+      if (csv !== undefined && statSync(csv).size !== item.length)
+        problems.push(`study/feed.xml: the length of ${item.enclosure} is not its size`);
+    }
+  }
+  if (!/<link[^>]+rel="alternate"[^>]+type="application\/rss\+xml"/.test(study))
+    problems.push("the study page has no <link rel=alternate> to the feed");
 }
 
 if (shots !== undefined) {

@@ -1,0 +1,67 @@
+---
+/**
+ * The table of the runs of the study, the newest first: the date, the Tranco list, the sites that
+ * answered, the share that refuses GPTBot, the data files and the DOI of each run. The build reads the
+ * history of the runs, so the table needs no script.
+ */
+import { doiUrl } from "../lib/cite.ts";
+import { runAnchor } from "../lib/feed.ts";
+import type { StudyHistory } from "../lib/runs.ts";
+import { runCsvPath, runJsonPath } from "../lib/runs.ts";
+import { formatDay } from "../lib/study.ts";
+
+interface Props {
+  readonly history: StudyHistory;
+}
+
+const base = import.meta.env.BASE_URL.replace(/\/$/, "");
+const runs = [...Astro.props.history.runs].reverse();
+const gptOf = (run: StudyHistory["runs"][number]): string => {
+  const agent = run.agents.find((entry) => entry.token === "GPTBot");
+  return agent === undefined ? "–" : `${agent.share.toFixed(1)}%`;
+};
+---
+
+<div class="pc-table-wrap not-content" tabindex="0" role="region" aria-label="The runs of the study">
+  <table class="pc-table pc-runs">
+    <thead>
+      <tr>
+        <th scope="col">Run</th>
+        <th scope="col">Tranco list</th>
+        <th scope="col">Sites that answered</th>
+        <th scope="col">Refuse <code>GPTBot</code></th>
+        <th scope="col">Data</th>
+        <th scope="col">DOI of the run</th>
+      </tr>
+    </thead>
+    <tbody>
+      {
+        runs.map((run) => (
+          <tr id={runAnchor(run.version)}>
+            <th scope="row">
+              <time datetime={run.version}>{formatDay(run.fetched.from)}</time>
+            </th>
+            <td>
+              <code>{run.list.id}</code>
+            </td>
+            <td>
+              {run.answered} of {run.list.size.toLocaleString("en-US")}
+            </td>
+            <td>{gptOf(run)}</td>
+            <td>
+              <a href={`${base}/${runCsvPath(run.version)}`}>CSV</a>,{" "}
+              <a href={`${base}/${runJsonPath(run.version)}`}>JSON</a>
+            </td>
+            <td>
+              {run.doi === null ? (
+                <span class="pc-runs-later">After the owner publishes it</span>
+              ) : (
+                <a href={doiUrl(run.doi)}>{run.doi}</a>
+              )}
+            </td>
+          </tr>
+        ))
+      }
+    </tbody>
+  </table>
+</div>

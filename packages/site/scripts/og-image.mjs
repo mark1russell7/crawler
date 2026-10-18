@@ -1,6 +1,7 @@
 // This script renders the share cards (1200 by 630): scripts/og-card.html to public/og.png, and
 // scripts/og-study.html to public/og-robots-study.png with the verdicts of the robots.txt study.
 // Start it after a change of a card or of the study: pnpm --filter @crawler/site og
+// With --study, it renders only the card of the study. The monthly run of the study uses it.
 // The numbers come from src/lib/study.ts, the module that gives the numbers of the page (Node.js 23.6
 // or later reads the TypeScript of that module).
 import { readFileSync } from "node:fs";
@@ -23,7 +24,7 @@ const facts = {
 const cards = [
   ["./og-card.html", "../public/og.png"],
   ["./og-study.html", "../public/og-robots-study.png"],
-];
+].filter(([card]) => !process.argv.includes("--study") || card === "./og-study.html");
 const browser = await chromium.launch();
 for (const [card, png] of cards) {
   const page = await browser.newPage({

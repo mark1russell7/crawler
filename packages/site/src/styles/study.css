@@ -638,3 +638,249 @@ th.pc-vth-on span {
 .pc-differences > li + li {
   margin-top: var(--space-3);
 }
+
+/* ---------------------------------------------------------------- the trend of the monthly runs */
+
+/*
+ * One line and one mark for each agent, in the fixed sequence of the series colors. Each mark has its
+ * own shape (solid for a training crawler, an outline for an agent for a person), so the series differ
+ * without color. The legend and the table give each value.
+ */
+.pc-trend-s1 {
+  --c: var(--series-1);
+}
+.pc-trend-s2 {
+  --c: var(--series-2);
+}
+.pc-trend-s3 {
+  --c: var(--series-3);
+}
+.pc-trend-s4 {
+  --c: var(--series-4);
+}
+.pc-trend-s5 {
+  --c: var(--series-5);
+}
+.pc-trend-s6 {
+  --c: var(--series-6);
+}
+.pc-trend-legend strong {
+  font-variant-numeric: tabular-nums;
+}
+.pc-trend-legend code {
+  font-size: var(--text-xs);
+}
+.pc-trend-key {
+  position: relative;
+  display: inline-block;
+  flex: none;
+  width: 24px;
+  height: 14px;
+}
+.pc-trend-key::before {
+  content: "";
+  position: absolute;
+  top: 6px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  border-radius: 1px;
+  background: var(--c);
+}
+.pc-trend-key .pc-trend-mark {
+  left: 50%;
+  top: 50%;
+}
+.pc-trend-frame {
+  display: grid;
+  grid-template-columns: 2.6rem minmax(0, 1fr);
+  grid-template-rows: auto auto;
+  column-gap: var(--space-2);
+  padding-top: var(--space-3);
+}
+.pc-trend-y {
+  position: relative;
+  height: 220px;
+  font-size: var(--text-xs);
+  color: var(--color-ink-muted);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+.pc-trend-y span {
+  position: absolute;
+  right: 0;
+  transform: translateY(50%);
+}
+.pc-trend-plot {
+  position: relative;
+  height: 220px;
+  margin-inline: 12px;
+  touch-action: pan-y;
+}
+.pc-trend-plot:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 10px;
+  border-radius: 2px;
+}
+.pc-trend-grid span {
+  position: absolute;
+  left: -12px;
+  right: -12px;
+  height: 1px;
+  background: var(--chart-grid);
+}
+.pc-trend-grid .pc-trend-base {
+  background: var(--chart-axis);
+}
+.pc-trend-lines {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+.pc-trend-line {
+  fill: none;
+  stroke: var(--c);
+  stroke-width: 2px;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+.pc-trend-cross {
+  position: absolute;
+  top: -8px;
+  bottom: 0;
+  width: 1px;
+  background: var(--color-rule-strong);
+  pointer-events: none;
+}
+.pc-trend-mark {
+  position: absolute;
+  box-sizing: border-box;
+  width: 10px;
+  height: 10px;
+  margin-left: var(--dodge, 0px);
+  background: var(--c);
+  transform: translate(-50%, -50%);
+  box-shadow: 0 0 0 2px var(--color-surface);
+  pointer-events: none;
+}
+.pc-trend-circle {
+  border-radius: 50%;
+}
+.pc-trend-square {
+  border-radius: 1px;
+}
+.pc-trend-diamond {
+  width: 12px;
+  height: 12px;
+  clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
+  box-shadow: none;
+}
+.pc-trend-triangle {
+  width: 12px;
+  height: 11px;
+  clip-path: polygon(50% 0, 100% 100%, 0 100%);
+  box-shadow: none;
+}
+.pc-trend-ring {
+  border: 2.5px solid var(--c);
+  border-radius: 50%;
+  background: var(--color-surface);
+}
+.pc-trend-box {
+  border: 2.5px solid var(--c);
+  border-radius: 1px;
+  background: var(--color-surface);
+}
+.pc-trend-mark.pc-hover {
+  z-index: 2;
+  width: 13px;
+  height: 13px;
+}
+.pc-trend-diamond.pc-hover,
+.pc-trend-triangle.pc-hover {
+  width: 15px;
+  height: 15px;
+}
+.pc-trend-tip {
+  top: -8px;
+  transform: translate(-50%, -100%);
+  min-width: 11rem;
+}
+.pc-trend-tip-start {
+  transform: translate(-12px, -100%);
+}
+.pc-trend-tip-end {
+  transform: translate(calc(-100% + 12px), -100%);
+}
+.pc-trend-tip-day {
+  color: var(--color-ink-muted);
+}
+.pc-trend-tip-row {
+  display: grid;
+  grid-template-columns: 14px 3.2rem minmax(0, 1fr);
+  gap: 0.4rem;
+  align-items: center;
+}
+.pc-trend-tip-row strong {
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+.pc-trend-tip-row code {
+  font-size: var(--text-xs);
+  color: var(--color-ink-secondary);
+}
+.pc-trend-tip-key {
+  display: block;
+  height: 2px;
+  border-radius: 1px;
+  background: var(--c);
+}
+.pc-trend-x {
+  grid-column: 2;
+  position: relative;
+  height: 1.6rem;
+  margin-inline: 12px;
+  font-size: var(--text-xs);
+  color: var(--color-ink-muted);
+}
+.pc-trend-x span {
+  position: absolute;
+  top: 0.35rem;
+  white-space: nowrap;
+  transform: translateX(-50%);
+}
+.pc-trend-x .pc-trend-x-start {
+  transform: translateX(-12px);
+}
+.pc-trend-x .pc-trend-x-end {
+  transform: translateX(calc(-100% + 12px));
+}
+.pc-trend-note {
+  margin: 0;
+  font-size: var(--text-sm);
+}
+@media (max-width: 44rem) {
+  .pc-trend-y,
+  .pc-trend-plot {
+    height: 180px;
+  }
+  .pc-trend-frame {
+    grid-template-columns: 2.2rem minmax(0, 1fr);
+  }
+}
+
+/* ---------------------------------------------------------------- the table of the runs */
+
+.pc-runs td,
+.pc-runs th {
+  font-variant-numeric: tabular-nums;
+}
+.pc-runs tr:target th,
+.pc-runs tr:target td {
+  background: var(--color-accent-wash);
+}
+.pc-runs .pc-runs-later {
+  color: var(--color-ink-muted);
+}

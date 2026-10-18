@@ -31,7 +31,7 @@ Mark's decision D12 in the server-stack plan (OTH-3): the polite-crawler MCP ent
 
 - Area: Package
 - Waits for: `rel013`
-- Blocked: It waits for the client's host factory, stdio under run() and MCP elicitation (CLI-10, CLI-11, CLI-12).
+- Blocked: It waits for the client's host factory, stdio under run(), MCP elicitation, and MCP tasks with a guarded HTTP server in the shared host (CLI-10, CLI-11, CLI-12, CLI-35).
 - Owner: markt-02 (the client session), since 2026-10-18
 - [Server-stack tracker](https://claude.ai/artifact/QbZd2i5apzg3ip5yiE57Pb)
 

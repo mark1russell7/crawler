@@ -9,6 +9,7 @@
     "SECURITY.md",
     "CODE_OF_CONDUCT.md",
     "packages/*/README.md",
+    "packages/*/eval/README.md",
     "packages/polite-crawler/test/corpus/*/README.md",
     "packages/*/src/**/*.{ts,tsx}",
     "packages/*/*.config.{ts,mts}",

@@ -1,0 +1,110 @@
+# The eval "tokens per verified claim", part A (packages/polite-crawler/eval/README.md tells the method).
+# It fetches the pages of the question set with the default identity of the crawler, exports the
+# store as a WACZ file and counts the text that an agent reads for each claim. It calls no model.
+# Then it measures again from the WACZ file with no network, and fails when the numbers differ.
+#   gh workflow run eval.yml -R mark1russell7/crawler --ref <branch>
+# The artifact "eval" holds the JSON result, the Markdown summary and the WACZ file. The job
+# summary has the tables.
+#
+# It runs only when a person starts it, and at each release. It never runs on a push of a branch.
+# release.yml makes each GitHub release with the token of GitHub Actions, and an event of that
+# token starts no workflow. Thus the end of a Release run also starts this workflow (workflow_run).
+# The job "gate" then lets the eval run only when that Release run made a GitHub release.
+name: Eval
+
+on:
+  workflow_dispatch:
+    inputs:
+      window:
+        description: The characters of the read window around each quote
+        default: "2000"
+  release:
+    types: [published]
+  workflow_run:
+    workflows: [Release]
+    types: [completed]
+
+permissions:
+  contents: read
+
+# One eval at a time, so two runs never fetch from the same sites at the same time.
+concurrency:
+  group: eval
+  cancel-in-progress: false
+
+jobs:
+  gate:
+    name: Is there a new release
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      run: ${{ steps.gate.outputs.run }}
+    steps:
+      - name: The decision
+        id: gate
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT: ${{ github.event_name }}
+          CONCLUSION: ${{ github.event.workflow_run.conclusion }}
+          STARTED: ${{ github.event.workflow_run.run_started_at }}
+          REPO: ${{ github.repository }}
+        run: |
+          if [ "$EVENT" != workflow_run ]; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          made=0
+          if [ "$CONCLUSION" = success ]; then
+            made=$(gh release list --repo "$REPO" --limit 10 --json tagName,createdAt \
+              --jq "[.[] | select(.createdAt >= \"$STARTED\")] | length")
+          fi
+          echo "The Release run ended with $CONCLUSION and made $made GitHub releases."
+          if [ "$made" -gt 0 ]; then echo "run=true" >> "$GITHUB_OUTPUT"; else echo "run=false" >> "$GITHUB_OUTPUT"; fi
+
+  eval:
+    name: Tokens per verified claim
+    needs: gate
+    if: needs.gate.outputs.run == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      WINDOW: ${{ inputs.window || '2000' }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          # after a Release run, the commit of that run
+          ref: ${{ github.event.workflow_run.head_sha || '' }}
+      # The pnpm version comes from "packageManager" in package.json
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+
+      # The live fetch, the WACZ export and the count. A claim that is not verified fails this step.
+      - name: Measure
+        run: >-
+          pnpm exec tsx packages/polite-crawler/eval/run.mts
+          --wacz eval.wacz --out eval-result.json --markdown eval-summary.md
+          --summary "$GITHUB_STEP_SUMMARY" --window "$WINDOW"
+
+      # The same count from the WACZ file alone. The step fails when a number is different.
+      - name: Measure again from the WACZ file, with no network
+        if: ${{ !cancelled() && hashFiles('eval-result.json') != '' }}
+        run: >-
+          pnpm exec tsx packages/polite-crawler/eval/run.mts
+          --from eval.wacz --out eval-offline.json --expect eval-result.json --window "$WINDOW"
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: ${{ !cancelled() }}
+        with:
+          name: eval
+          path: |
+            eval-result.json
+            eval-offline.json
+            eval-summary.md
+            eval.wacz
+          if-no-files-found: warn
+          retention-days: 90

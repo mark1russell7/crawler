@@ -6,7 +6,8 @@ const limit = process.env["CI"] === undefined ? 15_000 : 30_000;
 
 export default defineConfig({
   test: {
-    include: ["src/**/*.{test,spec}.{ts,tsx}"],
+    // The test of the eval (`eval/measure.test.ts`) makes its own WACZ file. It uses no network.
+    include: ["src/**/*.{test,spec}.{ts,tsx}", "eval/**/*.test.ts"],
     passWithNoTests: true,
     testTimeout: limit,
     hookTimeout: limit,

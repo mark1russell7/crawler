@@ -75,7 +75,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "typecheck": "tsc -p tsconfig.json --noEmit --emitDeclarationOnly false && tsc -p tsconfig.test.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit --emitDeclarationOnly false && tsc -p tsconfig.test.json && tsc -p eval/tsconfig.json",
     "prepublishOnly": "node ../../scripts/publish-guard.mjs && pnpm build"
   },
   "dependencies": {
@@ -97,10 +97,13 @@
   "devDependencies": {
     "@mark1russell7/cue": "github:mark1russell7/cue",
     "@types/node": "^22.19.0",
+    "@types/turndown": "^5.0.6",
     "@vitest/coverage-v8": "5.0.3",
     "fast-check": "^4.10.2",
+    "gpt-tokenizer": "^4.0.3",
     "playwright-core": "^1.64.0",
     "tsdown": "^0.23.1",
+    "turndown": "^7.2.4",
     "typescript": "^7.0.2",
     "vitest": "^5.0.3"
   },

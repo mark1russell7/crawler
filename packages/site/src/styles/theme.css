@@ -1107,6 +1107,10 @@ header.header {
   .pc-dumbbell-axis {
     grid-template-columns: minmax(0, 1fr) 7.5rem;
   }
+  /* the track is narrow on a phone: 0%, 50% and 100% only, so "75%" and "100%" do not touch */
+  .pc-dumbbell-axis > div span:nth-child(even) {
+    display: none;
+  }
   .pc-dumbbell-name {
     grid-column: 1 / -1;
   }
@@ -1207,7 +1211,7 @@ header.header {
 }
 /*
  * On a wide screen, a short code name in a sentence stays on one line: no lone "-" at the end of a
- * line. The rehype plugin of astro.config.mjs marks these names. A long code span can still wrap.
+ * line. The plugin proseCode of astro.config.mjs marks these names. A long code span can still wrap.
  */
 @media (min-width: 50rem) {
   .sl-markdown-content :is(p, li) > code.pc-name {
@@ -1230,5 +1234,47 @@ header.header {
   }
   .sl-markdown-content :is(th:first-child, td:first-child):not(:where(.not-content *)) {
     padding-inline-start: 0;
+  }
+  /*
+   * A table of three or more columns (the class pc-stack of astro.config.mjs) shows each row as a
+   * block on a phone: one line for each cell, with the name of its column on the left.
+   */
+  .sl-markdown-content table.pc-stack {
+    display: block;
+    overflow: visible;
+  }
+  .sl-markdown-content table.pc-stack thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .sl-markdown-content table.pc-stack :is(tbody, tr) {
+    display: block;
+  }
+  .sl-markdown-content table.pc-stack tr {
+    padding-block: var(--space-3);
+    border-bottom: 1px solid var(--color-rule);
+  }
+  .sl-markdown-content table.pc-stack tr:first-child {
+    border-top: 1px solid var(--color-rule);
+  }
+  .sl-markdown-content table.pc-stack td:not(:where(.not-content *)) {
+    display: grid;
+    grid-template-columns: 6.5rem minmax(0, 1fr);
+    gap: var(--space-3);
+    padding: 0.15rem 0;
+    border: 0;
+  }
+  .sl-markdown-content table.pc-stack td::before {
+    content: attr(data-label);
+    color: var(--color-ink-muted);
+    font-size: var(--text-xs);
+    line-height: 1.9;
+  }
+  .sl-markdown-content table.pc-stack td:empty {
+    display: none;
   }
 }

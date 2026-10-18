@@ -38,66 +38,114 @@ const lastmodOf = (url) => {
   return undefined;
 };
 
-/** The text of a node of the HTML tree (hast). */
-const textOf = (node) =>
-  node.type === "text" ? node.value : (node.children ?? []).map((child) => textOf(child)).join("");
+/** The element children of a node of the HTML tree (hast), with no text between them. */
+const elementsOf = (node, tagName) =>
+  (node?.children ?? []).filter(
+    (child) => child.type === "element" && (tagName === undefined || child.tagName === tagName),
+  );
 
-/** This function adds a class to an element of the HTML tree (hast). */
-const addClass = (node, name) => {
-  const names = node.properties.className;
-  node.properties.className = [...(Array.isArray(names) ? names : []), name];
-};
-
-/** A break is good after these characters of a long name: `$POLITE_CRAWLER_DIR`, a path, `A=1`. */
-const BREAK_AFTER = /(?<=[_/=])/;
-
-/** The element <wbr>: a place where a line can break, with no character. */
-const wbr = () => ({ type: "element", tagName: "wbr", properties: {}, children: [] });
-
-/** This function puts a <wbr> after each "_", "/" and "=" of the text of a code element. */
-const addBreaks = (node) => {
-  const children = [];
-  for (const child of node.children) {
-    if (child.type !== "text") {
-      children.push(child);
-      continue;
-    }
-    for (const [index, part] of child.value.split(BREAK_AFTER).entries()) {
-      if (index > 0) children.push(wbr());
-      children.push({ type: "text", value: part });
-    }
+/** This function tells if a node of the HTML tree is in an element of one of these names. */
+const isIn = (node, names, ctx) => {
+  for (let parent = ctx.parent(node); parent !== undefined; parent = ctx.parent(parent)) {
+    if (parent.type === "element" && names.includes(parent.tagName)) return true;
   }
-  node.children = children;
+  return false;
 };
 
 /**
- * This rehype plugin sets where the inline code of the prose can break:
+ * A break is good after these characters of a long name: `$POLITE_CRAWLER_DIR`, a path, `A=1`, and
+ * a "-" inside a word (`--allow-user-provided`), but not between the two "-" at the start.
+ */
+const BREAK_AFTER = /(?<=[_/=]|[^-]-)/;
+
+/** The names of the columns of a table, from its head. */
+const columnsOf = (table, ctx) => {
+  const head = elementsOf(elementsOf(table, "thead")[0], "tr")[0];
+  return elementsOf(head, "th").map((th) => ctx.textContent(th).trim());
+};
+
+/** The children of a code element: the parts of its text, with a <wbr> between two parts. */
+const withBreaks = (parts) => {
+  const children = [];
+  for (const [index, part] of parts.entries()) {
+    if (index > 0) children.push({ type: "element", tagName: "wbr", properties: {}, children: [] });
+    children.push({ type: "text", value: part });
+  }
+  return children;
+};
+
+/**
+ * This Sätteri plugin sets how the code and the tables of the prose break:
  * - A short code name with no space, for example `--allow-user-provided`, gets the class `pc-name`.
  *   The CSS keeps it on one line on a wide screen, so a line does not end with a lone "-".
  * - An option in a table cell (it starts with "-") gets the class `pc-option`, and it stays whole.
- * - In a table cell, a long name gets a <wbr> after each "_", "/" and "=", so it breaks there and
- *   not in the middle of a word.
+ * - In a table cell, a long name gets a <wbr> after each "_", "/", "=" and inner "-", so it breaks
+ *   there and not in the middle of a word.
+ * - A table of three or more columns gets the class `pc-stack`, and each cell the name of its
+ *   column in `data-label`. A phone shows each row of such a table as a block.
  */
-const shortCode = () => (tree) => {
-  const visit = (node, parent, inCell) => {
-    if (node.type === "element" && node.tagName === "code" && parent?.tagName !== "pre") {
-      const text = textOf(node);
-      if (text.length <= 40 && !/\s/.test(text)) addClass(node, "pc-name");
-      if (inCell && text.startsWith("-") && text.length <= 28) addClass(node, "pc-option");
-      if (inCell) addBreaks(node);
-      return;
-    }
-    const cell = inCell || ["td", "th"].includes(node.tagName);
-    for (const child of node.children ?? []) visit(child, node, cell);
-  };
-  visit(tree, undefined, false);
+const proseCode = {
+  name: "polite-crawler-prose-code",
+  element: [
+    {
+      filter: ["code"],
+      visit(node, ctx) {
+        if (isIn(node, ["pre"], ctx)) return undefined;
+        const text = ctx.textContent(node);
+        const inCell = isIn(node, ["td", "th"], ctx);
+        const classes = [];
+        if (text.length <= 40 && !/\s/.test(text)) classes.push("pc-name");
+        if (inCell && text.startsWith("-") && text.length <= 28) classes.push("pc-option");
+        if (classes.length === 0 && !inCell) return undefined;
+        const parts = inCell ? text.split(BREAK_AFTER) : [text];
+        return {
+          type: "element",
+          tagName: "code",
+          properties: { ...node.properties, class: classes.join(" ") },
+          children: withBreaks(parts),
+        };
+      },
+    },
+    {
+      filter: ["table"],
+      visit(node, ctx) {
+        if (columnsOf(node, ctx).length >= 3) ctx.setProperty(node, "class", "pc-stack");
+      },
+    },
+    {
+      filter: ["td"],
+      visit(node, ctx) {
+        const row = ctx.parent(node);
+        const table = ctx.parent(ctx.parent(row));
+        const columns = columnsOf(table, ctx);
+        if (columns.length < 3) return;
+        const before = (row.children ?? []).slice(0, ctx.indexOf(node) ?? 0);
+        const column = before.filter((child) => child.type === "element").length;
+        ctx.setProperty(node, "data-label", columns[column] ?? "");
+      },
+    },
+  ],
+};
+
+const NO_PLUGINS =
+  "the Markdown processor has no hastPlugins: the code of the prose wraps as before";
+
+/** This integration adds `proseCode` to the Markdown processor (Sätteri), as Starlight does. */
+const proseCodeIntegration = {
+  name: "polite-crawler-prose-code",
+  hooks: {
+    "astro:config:setup": ({ config, logger }) => {
+      const plugins = config.markdown?.processor?.options?.hastPlugins;
+      if (Array.isArray(plugins)) plugins.push(proseCode);
+      else logger.warn(NO_PLUGINS);
+    },
+  },
 };
 
 export default defineConfig({
   site,
   base,
   trailingSlash: "ignore",
-  markdown: { rehypePlugins: [shortCode] },
   // the islands and their workers use the pure parts of polite-crawler, with no Node.js part (pure-crawler.mjs)
   // the workers are ES modules ({ type: "module" }), so a worker can have chunks of its own
   vite: { plugins: [pureCrawler()], worker: { format: "es", plugins: () => [pureCrawler()] } },
@@ -194,5 +242,7 @@ export default defineConfig({
     }),
     // the islands are React code that runs on Preact (preact/compat): 9 KB of runtime in place of 69 KB (gzip)
     preact({ compat: true }),
+    // after Starlight, which sets the Markdown processor
+    proseCodeIntegration,
   ],
 });

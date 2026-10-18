@@ -43,7 +43,7 @@ interface Layout {
 /** This function gives the columns for a width. A narrow figure shows only the ranks at the sides. */
 const layoutOf = (width: number): Layout => {
   if (width >= 560) {
-    const side = Math.min(210, Math.floor((width - 110) / 3));
+    const side = Math.min(214, Math.floor((width - 96) / 3));
     const gap = Math.floor((width - 3 * side) / 2);
     return { wide: true, width, side, midX: side + gap, midW: side, rightX: 2 * side + 2 * gap };
   }
@@ -66,7 +66,7 @@ const fixed = (value: number, digits: number): string => value.toFixed(digits);
 const sliderOf = (count: number): number => Math.min(count, PAGES + 1);
 const countOf = (slider: number, fallback: number): number => (slider > PAGES ? fallback : slider);
 const countText = (count: number): string =>
-  count > PAGES ? `${String(count)}, the default` : String(count);
+  count > PAGES ? `${String(count)} (default)` : String(count);
 
 /** This hook moves each value to its new target in a short time, or at once with reduced motion. */
 const useTween = (target: ReadonlyMap<string, number>, still: boolean): Map<string, number> => {
@@ -151,6 +151,8 @@ export default function HybridRanks(): ReactElement {
   const [neighbors, setNeighbors] = useState<number>(DEFAULTS.neighbors);
   const [selected, setSelected] = useState(QUESTIONS[0]!.target);
   const [hover, setHover] = useState<string | null>(null);
+  /** A page that the reader selected stays in focus, and the other pages fade. */
+  const [pinned, setPinned] = useState(false);
   const [width, setWidth] = useState(720);
   const [still, setStill] = useState(true);
   const box = useRef<HTMLDivElement | null>(null);
@@ -193,15 +195,20 @@ export default function HybridRanks(): ReactElement {
   const y = useTween(target, still);
   const yOf = (key: string): number => y.get(key) ?? target.get(key) ?? 0;
 
-  const focus = hover ?? selected;
+  const focus = hover ?? (pinned ? selected : null);
   const dim = (doc: string): string => (focus !== null && focus !== doc ? " pc-hy-faded" : "");
-  const pick = (doc: string): void => setSelected(doc);
-  const readout = readoutOf(focus ?? meta.target, question, fused, k, candidates, neighbors);
-  const shownDoc = focus ?? meta.target;
+  const pick = (doc: string): void => {
+    // a second selection of the same page shows each page again
+    setPinned(!(pinned && doc === selected));
+    setSelected(doc);
+  };
+  const shownDoc = hover ?? selected;
+  const readout = readoutOf(shownDoc, question, fused, k, candidates, neighbors);
 
   const chooseQuestion = (id: string): void => {
     setQuestionId(id);
     setSelected(QUESTIONS.find((one) => one.id === id)?.target ?? "");
+    setPinned(false);
     setHover(null);
   };
 
@@ -213,6 +220,7 @@ export default function HybridRanks(): ReactElement {
     const row = fused[Math.max(0, Math.min(fused.length - 1, next))];
     if (row === undefined) return;
     setSelected(row.doc);
+    setPinned(true);
     const element = rows.current?.querySelector<SVGGElement>(`[data-doc="${row.doc}"]`);
     element?.focus();
   };
@@ -244,15 +252,15 @@ export default function HybridRanks(): ReactElement {
         <rect x={x} y={top} width={layout.side} height={PILL} rx={5} />
         <text
           className="pc-hy-rank"
-          x={x + (layout.wide ? 8 : layout.side / 2)}
+          x={x + (layout.wide ? 22 : layout.side / 2)}
           y={top + 16.5}
-          textAnchor={layout.wide ? "start" : "middle"}
+          textAnchor={layout.wide ? "end" : "middle"}
         >
           {at + 1}
         </text>
         {layout.wide ? (
           <>
-            <text className="pc-hy-label" x={x + 28} y={top + 16.5}>
+            <text className="pc-hy-label" x={x + 30} y={top + 16.5}>
               {labelOf(doc)}
             </text>
             <text className="pc-hy-value" x={x + layout.side - 7} y={top + 16.5} textAnchor="end">
@@ -490,14 +498,17 @@ export default function HybridRanks(): ReactElement {
                   onPointerEnter={() => setHover(row.doc)}
                   onPointerLeave={() => setHover(null)}
                   onClick={() => pick(row.doc)}
-                  onFocus={() => pick(row.doc)}
+                  onFocus={() => {
+                    setSelected(row.doc);
+                    setPinned(true);
+                  }}
                   onKeyDown={(event) => onRowKey(event, at)}
                 >
                   <rect x={layout.midX} y={top} width={layout.midW} height={PILL} rx={5} />
-                  <text className="pc-hy-rank" x={layout.midX + 8} y={top + 16.5}>
+                  <text className="pc-hy-rank" x={layout.midX + 22} y={top + 16.5} textAnchor="end">
                     {at + 1}
                   </text>
-                  <text className="pc-hy-label" x={layout.midX + 28} y={top + 16.5}>
+                  <text className="pc-hy-label" x={layout.midX + 30} y={top + 16.5}>
                     {labelOf(row.doc)}
                   </text>
                   <text

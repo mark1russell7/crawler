@@ -15,16 +15,17 @@ The monthly study workflow opens a pull request with the month's data. The repos
 - What Mark does: In github.com/mark1russell7/crawler: Settings > Actions > General > Workflow permissions, turn on "Allow GitHub Actions to create and approve pull requests". Before 2 November 2026, when the first monthly run starts.
 - [Actions settings](https://github.com/mark1russell7/crawler/settings/actions)
 
-## In progress
-
 ### `rel013`: Release 0.1.3
 
-A patch release: hybrid search, the daemon with MCP tasks, the recipe SDK with the venue and product recipes, and the consent fix. compat tests prove that 0.1.1 and 0.1.2 code still compiles. markt-54 merges pull request #8, and CI publishes and tags it.
+A patch release: hybrid search, the daemon with MCP tasks, the recipe SDK with the venue and product recipes, and the consent fix. Compat tests prove that 0.1.1 and 0.1.2 code still compiles. Pull request #8 is ready. The npm session (markt-54) merges it, and CI publishes and tags it. Low memory stopped that session's merge watcher, and it restarts stopped work only on Mark's go.
 
 - Area: Release and CI
 - Waits for: `hybrid`, `daemon`, `consent-fix`, `recipes-up`, `sdk`
+- What Mark does: Tell the npm session (markt-54) "go". It then merges pull request #8, and the release workflow publishes 0.1.3 to npm. The same go also starts its client 0.8.0 publish.
 - Started: 2026-10-18
 - [Pull request #8](https://github.com/mark1russell7/crawler/pull/8)
+
+## In progress
 
 ### `daemon`: A daemon mode, with MCP tasks for long jobs
 

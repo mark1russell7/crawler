@@ -88,6 +88,8 @@ Usage:
   polite-crawler extract <doc> --field name=value[:kind]...
                                        check proposed field values against a stored page
   polite-crawler embed --embedder <name>  give vectors to the stored pages, for find --rank hybrid
+  polite-crawler venue <url>           read the opening hours of a venue from its own site
+  polite-crawler product <url>         read the schema.org Product data of a product page
 
 Options:
   --dir <path>       the store (default $POLITE_CRAWLER_DIR, or ~/.polite-crawler)
@@ -182,6 +184,20 @@ Options:
   embed    --budget <time>   the longest time (default 10m); no embedding starts after it
            --max-docs <n>    how many texts get vectors at most
            --kind <kind>     only this kind of document
+  venue    --name <text>     the name of the venue: the result tells if the home page names it
+           --require-name    with --name: read no hours from a site that does not name the venue
+           --address <text>  the street address, for a page that lists more than one location
+           --lat <n> --lon <n>  the position of the venue, for the same use (within 150 m);
+                             write a value below 0 after =, such as --lon=-20.5
+           --osm <value>     an OpenStreetMap opening_hours value, read as one more reading;
+                             no request goes to OpenStreetMap
+           --pages <n>       the pages after the home page: 0 to 8 (default 3)
+           --compare <file>  compare the week of the site with a kept week (JSON), day by day
+  venue, product  --render, --max-age, --archive-fallback, --archive-despite-robots  as for fetch
+           --budget <time>   no request starts after this time, such as 2m (default: no limit)
+           --on-behalf-of <agent>  the robots.txt rules of this agent apply too, such as
+                             Claude-User (repeat it)
+           --user-provided   as for read
 
 Exit codes:
   0  done
@@ -191,6 +207,11 @@ Exit codes:
      or an error
      (fetch: a page with an archived copy counts as done)
   2  the command line is wrong
+  3  venue, product: nothing read: no opening hours of the site or no Product data, a page
+     held back, or a page that did not come
+  4  venue, product: the site refused the crawler (a wall): a 401, a 402 or a 403, a
+     challenge, a bot check, robots.txt or a stopped host. The crawler does not try a
+     different identity
 `;
 
 // ---- The command `export`: the options, the checks and the work of the WARC and WACZ export ----
@@ -549,11 +570,24 @@ const main = async (args: readonly string[]): Promise<number> => {
   if (line.exportPlan !== undefined)
     return exportCommand(line.exportPlan, dir, values.json === true);
 
+  // ── recipes: the file of --compare and the value of --osm are checked before the store opens ──
+  const recipeLine = line.recipeLine;
+  const recipes = recipeLine === undefined ? undefined : await import("./cli-recipes.ts");
+  const recipeInput =
+    recipes === undefined || recipeLine === undefined
+      ? undefined
+      : recipes.prepareRecipe(recipeLine);
+  // ── end of recipes ──
+
   const { openCrawler } = await import("./open.ts");
-  // only fetch, crawl and watch run render; a missing browser turns rendering off one time, before the first page
+  // only fetch, crawl, watch run and the recipes render; a missing browser turns rendering off one time, before the first page
   let renderOff: string | undefined;
   let renderer = options.renderer;
-  const renders = command === "fetch" || command === "crawl" || watchLine?.action === "run";
+  const renders =
+    command === "fetch" ||
+    command === "crawl" ||
+    recipeLine !== undefined ||
+    watchLine?.action === "run";
   if (!renders || render === "never") renderer = false;
   else if (renderer === undefined) {
     const { browserMissing } = await import("./browser.ts");
@@ -665,6 +699,15 @@ const main = async (args: readonly string[]): Promise<number> => {
           values.json === true,
           out,
         );
+      // ── recipes ──
+      case "venue":
+      case "product": {
+        const io = { json: values.json === true, out, renderOff };
+        return command === "venue"
+          ? await recipes!.venueCommand(crawler, recipeLine!, recipeInput!, io)
+          : await recipes!.productCommand(crawler, recipeLine!, io);
+      }
+      // ── end of recipes ──
       default: {
         // the documents of a recipe that this command cannot read stay, from the old index
         const counts = await crawler.reindex();

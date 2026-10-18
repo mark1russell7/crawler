@@ -15,6 +15,15 @@ A prerelease version (`0.2.0-beta.1`) goes to the npm tag `next`. Each other ver
 
 ## Unreleased
 
+- **The recipes on the command line.** `polite-crawler venue <url>` and `polite-crawler product <url>` read a venue or a product page with `readVenue` and `readProduct`. The MCP server does not change.
+  - `venue` prints the week of the site and each reading with its source URL, its rank and its quote. It also prints the days where the readings disagree, the menus, the phone, the pages and the notes.
+  - `venue` takes `--name`, `--require-name`, `--address`, `--lat` and `--lon`, `--osm` and `--pages`. `--compare <file>` compares the week of the site with a kept week (JSON) through `compareHours`, day by day.
+  - `product` prints the name, the brand, the codes, and the price as money with the range of the offers. It also prints the availability, the variant, the seller, and a wall or a held-back page.
+  - The two commands take `--render`, `--max-age`, `--budget`, `--user-provided`, `--archive-fallback`, `--archive-despite-robots` and the options of the signed requests. The new option `--on-behalf-of <agent>` applies the robots.txt rules of an agent too.
+  - `--json` prints the `VenueResult` or the `ProductResult`. With `--compare`, the JSON also has the field `compare`.
+  - The new exit code 3 tells that the command read nothing, and 4 tells that the site refused the crawler (a wall). The other commands keep their exit codes.
+  - This change only adds to the command line. The API of the library, the capture log, the bodies and the capture ids do not change.
+
 ## 0.1.3 - 2026-10-18
 
 - **The recipes only add to the API.** Code that compiled against 0.1.1 or 0.1.2 compiles against this version, and `compat.test.ts` and `compat-012.test.ts` stay green. The capture log, the bodies and the capture ids do not change.

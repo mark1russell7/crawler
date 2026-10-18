@@ -103,6 +103,22 @@ npx polite-crawler watch list
 - `watch run` takes `--budget` (default `10m`) and `--max-pages` (default 100). It prints each check, then a summary. A scheduler of the operator starts it.
 - `daemon` checks the watch list on a schedule, until you stop it. With `--mcp-http`, it also serves the MCP tools over local HTTP. [The daemon](#the-daemon) tells how.
 
+To read the hours of a venue or a product page, use `venue` and `product`. They use the recipes of the package:
+
+```sh
+npx polite-crawler venue https://forno-esempio.example/ --name "Forno Esempio" --pages 2
+npx polite-crawler venue https://forno-esempio.example/ --compare kept-week.json
+npx polite-crawler product "https://bottega-campione.example/products/olio-esempio?variant=222"
+```
+
+- `venue` prints the week of the site and each reading with its URL, its rank and its quote. It also prints the days where the readings disagree, the menus, the phone, the pages and the notes.
+- `venue` takes `--name`, `--require-name`, `--address`, `--lat` and `--lon`, `--osm <value>` and `--pages <0-8>`. [Read the hours of a venue](#read-the-hours-of-a-venue) tells what each one does.
+- Write a number below zero after `=`, for example `--lon=-20.5`. Else the command line reads it as an option.
+- `venue --compare <file>` compares the week of the site with a week that you keep, as JSON. It prints `same`, `changed`, `new` or `not read` for each day. The file is a week, for example `{"mon": [["07:00", "15:00"]], "sun": []}`, or the `from_site` of `venue --json`.
+- `product` prints the name, the brand, the SKU and the GTIN, and the price as money with the range of the offers. It also prints the availability, the variant, the seller, and a wall or a held-back page.
+- The two commands take `--render`, `--max-age`, `--budget`, `--user-provided`, `--archive-fallback` and `--archive-despite-robots`. `--on-behalf-of <agent>` applies the robots.txt rules of an agent too, for example `Claude-User`.
+- `--json` prints the `VenueResult` or the `ProductResult` of the library.
+
 The command gives these exit codes:
 
 | Code | Meaning |
@@ -110,6 +126,8 @@ The command gives these exit codes:
 | `0` | The command did its work. |
 | `1` | The command did not do its work: a page that the crawler did not fetch, no search result, a quote that is not in the document, a document that is not stored or that is held back, or an error. `discover` gives 1 when it finds no URL, and `crawl` when it gets no page. `read --at` and `verify --at` give 1 for a time before the first capture. `watch run` gives 1 when a check is `refused` or an `error`, or when entries stay due. `watch remove` gives 1 for a URL that is not on the list. With `--archive-fallback`, a page with an archived copy counts as done. `extract` gives 1 when a field is not `verified` or `normalized`. `embed` gives 1 when its budget stops it before each page has vectors. |
 | `2` | The command line is wrong. The command opens no store. |
+| `3` | `venue` and `product` read nothing: no opening hours of the site or no Product data, a page that is held back, or a page that did not come. |
+| `4` | `venue` and `product`: the site refused the crawler (a wall). The causes are a 401, a 402 or a 403, a challenge, a bot check, robots.txt or a stop of the host. The crawler does not try a different identity. |
 
 ## Use it from Claude (MCP)
 
@@ -935,6 +953,8 @@ const then = venueReadingsOf(version!);
 - With `skipSplit`, it does not compare a day with two or more intervals, for a store that keeps one interval for each day.
 - One reading can be an error of the site. Confirm a change with a second reading, as a watch does.
 
+The command line has `polite-crawler venue`, and `venue --compare <file>` does this comparison. [Use it from the command line](#use-it-from-the-command-line) gives the options.
+
 ## Read a product page
 
 `readProduct` reads the schema.org Product data of a product page. Most shop systems write this data on each product page.
@@ -976,6 +996,8 @@ const check = await crawler.extract(product.doc!, {
   price: { value: product.variant!.price!.raw, kind: "json-ld:Product.offers.price" },
 });
 ```
+
+The command line has `polite-crawler product`. It exits with 4 at a wall, and with 3 when it reads no Product data.
 
 ## Writing a recipe
 

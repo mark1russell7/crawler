@@ -15,8 +15,11 @@ import type { DaemonState } from "./daemon.ts";
 import { durationMs } from "./duration.ts";
 import type { ExtractResult } from "./extract.ts";
 import type { CrawlSummary } from "./frontier.ts";
+import type { Day, HoursComparison, Interval, Week } from "./hours.ts";
 import type { EmbedResult } from "./hybrid.ts";
 import { isLoopbackHost } from "./loopback.ts";
+import type { Money, ProductResult } from "./recipe-product.ts";
+import type { VenuePage, VenueReading, VenueResult } from "./recipe-venue.ts";
 import type { PageResult, ReadResult, ReindexResult, VerifyResult } from "./runtime.ts";
 import type { WaczResult } from "./wacz.ts";
 import type { WarcResult } from "./warc.ts";
@@ -120,6 +123,17 @@ const COMMAND_OPTIONS = {
   "allow-remote-ollama": { type: "boolean" },
   "max-docs": { type: "string" },
   // ── end of hybrid search ──
+  // ── recipes ──
+  name: { type: "string" },
+  "require-name": { type: "boolean" },
+  address: { type: "string" },
+  lat: { type: "string" },
+  lon: { type: "string" },
+  osm: { type: "string" },
+  pages: { type: "string" },
+  compare: { type: "string" },
+  "on-behalf-of": { type: "string", multiple: true },
+  // ── end of recipes ──
 } as const;
 
 /** These are the options of the command line: the options of the commands and of `export`. */
@@ -155,16 +169,28 @@ export const DAEMON_RUN_OPTIONS: readonly string[] = [
   "allow-remote",
 ];
 
+/** These options belong to `venue` only. */
+export const VENUE_OPTIONS: readonly string[] = [
+  "name",
+  "require-name",
+  "address",
+  "lat",
+  "lon",
+  "osm",
+  "pages",
+  "compare",
+];
+
 /** These options belong to one command, or to the commands that the text names. */
 export const OWNER: Readonly<Record<string, string>> = {
-  render: "fetch crawl watch",
-  "max-age": "fetch crawl discover",
+  render: "fetch crawl watch venue product",
+  "max-age": "fetch crawl discover venue product",
   limit: "find",
   kind: "find embed",
   rank: "find",
   from: "read diff",
   length: "read",
-  "user-provided": "read extract",
+  "user-provided": "read extract venue product",
   "allow-user-provided": "mcp daemon",
   ...Object.fromEntries(Object.keys(EXPORT_OPTIONS).map((option) => [option, "export"])),
   // ── discover and crawl ──
@@ -172,7 +198,7 @@ export const OWNER: Readonly<Record<string, string>> = {
   feed: "discover",
   "max-pages": "crawl watch",
   "max-depth": "crawl",
-  budget: "crawl watch embed",
+  budget: "crawl watch embed venue product",
   include: "crawl",
   exclude: "crawl",
   sitemaps: "crawl",
@@ -187,10 +213,10 @@ export const OWNER: Readonly<Record<string, string>> = {
   label: "watch",
   // ── end of time travel, diff and watch ──
   // ── archived fallback and signed requests ──
-  "archive-fallback": "fetch",
-  "archive-despite-robots": "fetch",
-  "sign-key": "fetch discover crawl watch mcp key-directory daemon",
-  "signature-agent": "fetch discover crawl watch mcp key-directory daemon",
+  "archive-fallback": "fetch venue product",
+  "archive-despite-robots": "fetch venue product",
+  "sign-key": "fetch discover crawl watch mcp key-directory daemon venue product",
+  "signature-agent": "fetch discover crawl watch mcp key-directory daemon venue product",
   // ── end of archived fallback and signed requests ──
   // ── daemon ──
   ...Object.fromEntries(DAEMON_RUN_OPTIONS.map((option) => [option, "daemon"])),
@@ -206,6 +232,10 @@ export const OWNER: Readonly<Record<string, string>> = {
   "allow-remote-ollama": "find embed mcp",
   "max-docs": "embed",
   // ── end of hybrid search ──
+  // ── recipes ──
+  ...Object.fromEntries(VENUE_OPTIONS.map((option) => [option, "venue"])),
+  "on-behalf-of": "venue product",
+  // ── end of recipes ──
 };
 
 /** These are the commands, with the smallest and the largest count of arguments. */
@@ -243,6 +273,10 @@ export const COMMANDS: Readonly<
   // ── hybrid search ──
   embed: { min: 0, max: 0, wants: "embed takes no argument: give the model with --embedder" },
   // ── end of hybrid search ──
+  // ── recipes ──
+  venue: { min: 1, max: 1, wants: "venue wants the URL of the site of one venue" },
+  product: { min: 1, max: 1, wants: "product wants the URL of one product page" },
+  // ── end of recipes ──
 };
 
 const parse = (args: readonly string[]): ParsedArgs => {
@@ -966,6 +1000,526 @@ export const extractCode = (result: ExtractResult): number => {
   return done === result.summary.fields && done > 0 ? 0 : 1;
 };
 
+// ── recipes ─────────────────────────────────────────────────────────────────
+
+/** This value is the most pages of `venue` after the home page. It is `VENUE_LIMITS.maxPages` of `recipe-venue.ts`. */
+export const VENUE_MAX_PAGES = 8;
+
+/** This exit code of `venue` and `product` tells that the command read nothing. */
+export const NOTHING_READ = 3;
+
+/** This exit code of `venue` and `product` tells that the site refused the crawler (a wall). */
+export const WALL = 4;
+
+/** The place of a venue, as `VenueLocation` of `recipe-venue.ts` gives it. */
+export interface CliLocation {
+  readonly address?: string | undefined;
+  readonly lat?: number | undefined;
+  readonly lon?: number | undefined;
+}
+
+/** These are the options of `venue` and `product`, read from the command line before the store opens. */
+export interface RecipeLine {
+  readonly recipe: "venue" | "product";
+  readonly url: string;
+  readonly render: "auto" | "never" | "always";
+  /** This value is `--max-age` in milliseconds. */
+  readonly maxAge: number;
+  /** This value is `--budget` in milliseconds, or undefined with no `--budget`. */
+  readonly budget: number | undefined;
+  /** These tokens name the agents of `--on-behalf-of`. Their robots.txt rules apply too. */
+  readonly onBehalfOf: readonly string[] | undefined;
+  readonly userProvided: boolean;
+  readonly fallback: "archive" | undefined;
+  readonly archiveDespiteRobots: boolean;
+  /** This text is `--name` of `venue`. */
+  readonly name: string | undefined;
+  readonly requireName: boolean;
+  /** This value is the place of `--address`, `--lat` and `--lon`. */
+  readonly location: CliLocation | undefined;
+  /** This text is the OpenStreetMap value of `--osm`. */
+  readonly osm: string | undefined;
+  readonly pages: number | undefined;
+  /** This text is the file of `--compare`. The command reads it before the store opens. */
+  readonly compare: string | undefined;
+}
+
+/** This function reads a latitude or a longitude of the command line. */
+const coordinateOf = (name: "lat" | "lon", text: string, limit: number): number => {
+  const value = /^\s*-?\d+(?:\.\d+)?\s*$/.test(text) ? Number(text) : Number.NaN;
+  if (!Number.isFinite(value) || Math.abs(value) > limit) {
+    throw new UsageError(
+      `--${name} wants a number from -${String(limit)} to ${String(limit)}, not "${text}"`,
+    );
+  }
+  return value;
+};
+
+/** This function checks the options of `venue` and `product`, and gives the options of the recipe. */
+export const recipeLineOf = (
+  recipe: "venue" | "product",
+  values: Values,
+  rest: readonly string[],
+  page: {
+    readonly render: "auto" | "never" | "always";
+    readonly maxAge: number;
+    readonly budget: number | undefined;
+  },
+): RecipeLine => {
+  const url = rest[0] ?? "";
+  if (!/^https?:\/\//i.test(url) || !URL.canParse(url))
+    throw new UsageError(`${recipe} wants an http or https URL, not "${url}"`);
+  for (const agent of values["on-behalf-of"] ?? []) {
+    if (!/^[A-Za-z0-9_-]+$/.test(agent)) {
+      throw new UsageError(
+        `--on-behalf-of wants the robots.txt token of an agent, such as Claude-User, not "${agent}"`,
+      );
+    }
+  }
+  const name = values.name;
+  if (name !== undefined && name.trim() === "")
+    throw new UsageError("--name wants the name of the venue");
+  if (values["require-name"] === true && name === undefined)
+    throw new UsageError("--require-name goes with --name");
+  const address = values.address;
+  if (address !== undefined && address.trim() === "")
+    throw new UsageError("--address wants a street address");
+  if ((values.lat === undefined) !== (values.lon === undefined))
+    throw new UsageError("--lat and --lon go together");
+  const lat = values.lat === undefined ? undefined : coordinateOf("lat", values.lat, 90);
+  const lon = values.lon === undefined ? undefined : coordinateOf("lon", values.lon, 180);
+  const osm = values.osm;
+  if (osm !== undefined && osm.trim() === "")
+    throw new UsageError('--osm wants an opening_hours value, such as "Mo-Fr 08:00-18:00"');
+  const pages = values.pages === undefined ? undefined : whole("pages", values.pages, 0, 0);
+  if (pages !== undefined && pages > VENUE_MAX_PAGES)
+    throw new UsageError(`--pages wants a whole number from 0 to ${String(VENUE_MAX_PAGES)}`);
+  const compare = values.compare;
+  if (compare !== undefined && compare.trim() === "")
+    throw new UsageError("--compare wants a file");
+  return {
+    recipe,
+    url,
+    render: page.render,
+    maxAge: page.maxAge,
+    budget: page.budget,
+    onBehalfOf: values["on-behalf-of"],
+    userProvided: values["user-provided"] === true,
+    fallback: values["archive-fallback"] === true ? "archive" : undefined,
+    archiveDespiteRobots: values["archive-despite-robots"] === true,
+    name,
+    requireName: values["require-name"] === true,
+    location:
+      address === undefined && lat === undefined
+        ? undefined
+        : {
+            ...(address === undefined ? {} : { address }),
+            ...(lat === undefined ? {} : { lat, lon }),
+          },
+    osm,
+    pages,
+    compare,
+  };
+};
+
+/** The days of a week in their order, as `DAYS` of `hours.ts`. */
+const WEEK_DAYS: readonly Day[] = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
+
+const DAY_LABELS: Readonly<Record<Day, string>> = {
+  mon: "Mon",
+  tue: "Tue",
+  wed: "Wed",
+  thu: "Thu",
+  fri: "Fri",
+  sat: "Sat",
+  sun: "Sun",
+};
+
+const isRecord = (value: unknown): value is Readonly<Record<string, unknown>> =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+
+/** This function tells if a value is a time of a kept week: `HH:MM` or `H:MM`, to `24:00`. */
+const isClock = (value: unknown): value is string => {
+  if (typeof value !== "string") return false;
+  const match = /^(\d{1,2}):(\d{2})$/.exec(value);
+  return match !== null && Number(match[1]) <= 24 && Number(match[2]) < 60;
+};
+
+const intervalOf = (value: unknown): Interval | undefined =>
+  Array.isArray(value) && value.length === 2 && isClock(value[0]) && isClock(value[1])
+    ? [value[0], value[1]]
+    : undefined;
+
+/** The kept week of `--compare`, and the file that it came from. */
+export interface KeptWeek {
+  readonly file: string;
+  readonly week: Week;
+}
+
+/**
+ * This function reads the kept week of `--compare`, a JSON file. The file is a week, or an object
+ * with the field `week` (a reading of `venue --json`) or `hours_week`. Each day gives a list of
+ * intervals (`[]` for closed), one interval, or null for closed. An error names the file.
+ */
+export const keptWeekOf = (path: string): KeptWeek => {
+  const file = fileOf(path);
+  let text: string;
+  try {
+    text = readFileSync(file, "utf8");
+  } catch (error) {
+    const code = (error as { code?: unknown }).code;
+    throw new UsageError(
+      `--compare: the file ${file} does not open (${typeof code === "string" ? code : "error"})`,
+      { cause: error },
+    );
+  }
+  let data: unknown;
+  try {
+    // a byte order mark at the start is not JSON, and some editors of Windows write one
+    data = JSON.parse(text.charCodeAt(0) === 0xfeff ? text.slice(1) : text);
+  } catch (error) {
+    throw new UsageError(`--compare: the file ${file} is not JSON`, { cause: error });
+  }
+  if (isRecord(data) && (isRecord(data["week"]) || isRecord(data["hours_week"])))
+    data = isRecord(data["week"]) ? data["week"] : data["hours_week"];
+  const wants = `--compare: the file ${file} is not a week. Write a list of intervals, one interval or null for each day, such as {"mon": [["09:00", "17:00"]], "sun": []}`;
+  if (!isRecord(data)) throw new UsageError(wants);
+  const week: Partial<Record<Day, readonly Interval[]>> = {};
+  for (const [key, value] of Object.entries(data)) {
+    const day = WEEK_DAYS.find((one) => one === key);
+    if (day === undefined) {
+      throw new UsageError(
+        `--compare: the file ${file} names "${key}", not a day: use mon, tue, wed, thu, fri, sat or sun`,
+      );
+    }
+    const one = intervalOf(value);
+    const intervals =
+      value === null
+        ? []
+        : one !== undefined
+          ? [one]
+          : Array.isArray(value)
+            ? value.map(intervalOf)
+            : [undefined];
+    if (intervals.some((interval) => interval === undefined))
+      throw new UsageError(`${wants} (the value of ${key} is not)`);
+    week[day] = intervals as Interval[];
+  }
+  return { file, week };
+};
+
+/** This function writes the intervals of one day, as `describeWeek` of `hours.ts` does. */
+export const dayText = (intervals: readonly Interval[] | undefined): string =>
+  intervals === undefined
+    ? "not stated"
+    : intervals.length === 0
+      ? "closed"
+      : intervals
+          .map(([open, close]) =>
+            open === "00:00" && close === "00:00" ? "open 24 hours" : `${open}–${close}`,
+          )
+          .join(", ");
+
+/** The result of `--compare`: the kept week and its comparison with the week of the site. */
+export interface VenueCompare {
+  readonly file: string;
+  readonly kept: Week;
+  /** This value is null when the result has no reading of the site with no guess (`from_site`). */
+  readonly comparison: HoursComparison | null;
+}
+
+/** One day of `--compare`. */
+export interface CompareDay {
+  readonly day: Day;
+  /** The value `not read` tells that only the kept week states the day. */
+  readonly status: "same" | "changed" | "new" | "skipped" | "not read";
+  readonly kept: readonly Interval[] | undefined;
+  readonly read: readonly Interval[] | undefined;
+}
+
+/** This function gives the days of a comparison in their order. A day that no week states is not there. */
+export const compareDays = (kept: Week, read: Week, comparison: HoursComparison): CompareDay[] => {
+  const days: CompareDay[] = [];
+  for (const day of WEEK_DAYS) {
+    const one = { day, kept: kept[day], read: read[day] };
+    if (one.kept === undefined && one.read === undefined) continue;
+    const status: CompareDay["status"] =
+      comparison.status === "new" || comparison.added.includes(day)
+        ? "new"
+        : comparison.days.includes(day)
+          ? "changed"
+          : comparison.skipped.includes(day)
+            ? "skipped"
+            : one.read === undefined
+              ? "not read"
+              : "same";
+    if (comparison.status === "new" && one.read === undefined) continue;
+    days.push({ ...one, status });
+  }
+  return days;
+};
+
+const QUOTE_CHARS = 200;
+
+const shortText = (text: string): string =>
+  text.length > QUOTE_CHARS ? `${text.slice(0, QUOTE_CHARS)}…` : text;
+
+/** This function gives the lines of one reading: its rank, its source, its week and its quote. */
+const readingLines = (one: VenueReading): string[] => {
+  const marks = [
+    one.schedule === "other" ? "not the opening hours" : null,
+    one.inferred ? "am or pm guessed" : null,
+    one.partial ? "a rule left out" : null,
+    one.season === null ? null : `season ${one.season}`,
+  ].filter((mark) => mark !== null);
+  const where = [
+    one.url,
+    one.path,
+    one.capture === null ? null : `capture ${one.capture}`,
+    one.archived === undefined
+      ? null
+      : `archived copy (${one.archived.source}, captured ${one.archived.timestamp})`,
+  ].filter((part) => part !== null);
+  return [
+    `  rank ${String(one.rank)}  ${one.from}${one.label === null ? "" : ` "${one.label}"`}  ${one.hours === "" ? "no day" : one.hours}${marks.length > 0 ? ` (${marks.join(", ")})` : ""}`,
+    ...(where.length > 0 ? [`    ${where.join(" · ")}`] : []),
+    one.from === "text"
+      ? `    quote: ${JSON.stringify(shortText(one.raw))}`
+      : `    value: ${shortText(one.raw.replace(/\s+/g, " "))}`,
+  ];
+};
+
+const pageLine = (page: VenuePage): string => {
+  const facts = [
+    `${page.outcome} ${String(page.status)}`,
+    page.from_cache ? "from the store" : null,
+    page.rendered ? "rendered" : null,
+    page.held_back ? "held back" : null,
+    page.archived === undefined ? null : `archived copy (${page.archived.source})`,
+  ].filter((fact) => fact !== null);
+  const read = page.outcome === "ok" || page.outcome === "not-modified";
+  return `  ${read || page.archived !== undefined ? "✓" : "✗"} ${page.url}  ${facts.join(" · ")}`;
+};
+
+const WALL_OUTCOMES: ReadonlySet<string> = new Set(["blocked", "challenge", "payment-required"]);
+
+/**
+ * This function tells if a site refused the crawler, with the rule of `wall` of `readProduct`. The
+ * causes are a 401, a 402 or a 403, a challenge, a bot check, robots.txt or a stop of the host.
+ */
+export const refusedPage = (page: {
+  readonly outcome: string;
+  readonly doc: string | null;
+  readonly note: string | null;
+}): boolean =>
+  WALL_OUTCOMES.has(page.outcome) ||
+  (page.outcome === "skipped" && /^(?:robots\.txt disallows|host stopped)/.test(page.note ?? "")) ||
+  (page.doc === null && /\bbot check\b/.test(page.note ?? ""));
+
+/**
+ * This function gives the exit code of `venue`. It is 0 when the site gave a reading of the opening
+ * hours. It is `WALL` when the home page refused the crawler, and `NOTHING_READ` for a different
+ * result. An OpenStreetMap value alone does not count.
+ */
+export const venueCode = (result: VenueResult): number => {
+  if (result.readings.some((one) => one.from !== "osm" && one.schedule === "opening")) return 0;
+  const home = result.pages[0];
+  return home !== undefined && refusedPage(home) ? WALL : NOTHING_READ;
+};
+
+/** This function gives the exit code of `product`: 0 for Product data, `WALL` for a refusal, else `NOTHING_READ`. */
+export const productCode = (result: ProductResult): number =>
+  result.found ? 0 : result.wall ? WALL : NOTHING_READ;
+
+/** This line tells how to read a held-back page. */
+const HELD_BACK_LINE =
+  "Add --user-provided if you gave this URL yourself. The crawler logs that read.";
+
+/** This function gives the line of a page that needs a browser, when rendering is off. */
+const renderLine = (
+  notes: ReadonlyArray<string | null>,
+  renderOff: string | undefined,
+): string[] =>
+  renderOff !== undefined && notes.some((note) => note !== null && /no browser/i.test(note))
+    ? [`rendering is off: ${renderOff}`]
+    : [];
+
+/**
+ * This function gives the lines of `venue`: the week of the site, and each reading with its source.
+ * Then come the days where the readings disagree, the menus, the phone, the pages and the notes.
+ * With `--compare`, the lines give each day of the comparison.
+ */
+export const describeVenue = (
+  result: VenueResult,
+  compare?: VenueCompare,
+  renderOff?: string,
+): string[] => {
+  const code = venueCode(result);
+  const lines = [`${code === 0 ? "✓" : "✗"} ${result.home ?? result.url}`];
+  const site = result.from_site;
+  const home = result.pages[0];
+  if (site !== null) {
+    const source = [
+      `${site.from}, rank ${String(site.rank)}`,
+      site.url,
+      site.capture === null ? null : `capture ${site.capture}`,
+    ].filter((part) => part !== null);
+    lines.push(`  the site: ${site.hours}`, `  from ${source.join(", ")}`);
+  } else if (result.best !== null) {
+    lines.push(
+      `  no reading of the site with no guess. The best reading (${result.best.from}, rank ${String(result.best.rank)}): ${result.best.hours}`,
+    );
+  } else if (code === WALL && home !== undefined) {
+    lines.push(
+      `  wall: the site refused the crawler (${home.outcome} ${String(home.status)}). The crawler does not try a different identity.`,
+    );
+  } else lines.push("  no opening hours found");
+  if (result.readings.length > 0) {
+    lines.push("readings, the best first:");
+    for (const one of result.readings) lines.push(...readingLines(one));
+  }
+  for (const day of result.disagree) {
+    const said = result.readings
+      .filter((one) => one.rank <= 2 && one.week[day] !== undefined)
+      .map((one) => `${dayText(one.week[day])} (rank ${String(one.rank)} ${one.from})`);
+    lines.push(`the readings disagree on ${DAY_LABELS[day]}: ${said.join(" · ")}`);
+  }
+  if (result.menus.length > 0) {
+    lines.push(
+      "menus:",
+      ...result.menus.map((menu) => `  ${menu.url}${menu.text === "" ? "" : `  ${menu.text}`}`),
+    );
+  }
+  if (result.phone !== null) lines.push(`phone: ${result.phone}`);
+  if (result.moved !== null) lines.push(`moved: the site now goes to ${result.moved}`);
+  if (result.names_venue !== null) {
+    lines.push(
+      result.names_venue
+        ? "names the venue: yes"
+        : "names the venue: no. The domain can belong to a different business now.",
+    );
+  }
+  if (result.held_back) {
+    lines.push(
+      `held back: a page asked not to be AI input, so the recipe read nothing from it. ${HELD_BACK_LINE}`,
+    );
+  }
+  if (result.pages.length > 0)
+    lines.push(`pages (${String(result.pages.length)}):`, ...result.pages.map(pageLine));
+  if (compare !== undefined) {
+    const comparison = compare.comparison;
+    if (comparison === null || site === null) {
+      lines.push(
+        `compare with ${compare.file}: no reading of the site with no guess, so nothing to compare`,
+      );
+    } else {
+      const changed =
+        comparison.days.length > 0
+          ? ` (${comparison.days.map((day) => DAY_LABELS[day]).join(", ")})`
+          : "";
+      lines.push(`compare with ${compare.file}: ${comparison.status}${changed}`);
+      for (const one of compareDays(compare.kept, site.week, comparison)) {
+        const text =
+          one.status === "changed" || one.status === "skipped"
+            ? `${dayText(one.kept)} → ${dayText(one.read)}`
+            : one.status === "not read"
+              ? `kept ${dayText(one.kept)}`
+              : dayText(one.read);
+        lines.push(`  ${DAY_LABELS[one.day]}  ${one.status.padEnd(8)}  ${text}`);
+      }
+    }
+  }
+  if (result.note !== null) lines.push(`note: ${result.note}`);
+  lines.push(...renderLine([result.note], renderOff));
+  return lines;
+};
+
+/** This function gives the number of digits after the decimal point of a currency: 2 for EUR, 0 for JPY. */
+const fractionOf = (currency: string): number => {
+  try {
+    return (
+      new Intl.NumberFormat("en", { style: "currency", currency }).resolvedOptions()
+        .maximumFractionDigits ?? 2
+    );
+  } catch {
+    return 2;
+  }
+};
+
+/** This function writes an amount of money with its ISO 4217 code: `1,299.00 EUR`, `980 JPY`. */
+export const moneyText = (money: Money): string => {
+  const digits = fractionOf(money.currency);
+  const amount = new Intl.NumberFormat("en", {
+    minimumFractionDigits: digits,
+    maximumFractionDigits: Math.max(digits, 4),
+  }).format(money.amount);
+  return `${amount} ${money.currency}`;
+};
+
+/**
+ * This function gives the lines of `product`. They are the name, the brand and the codes, the price
+ * as money, the availability, the variant, the seller, the page and the notes. A wall and a
+ * held-back page say so.
+ */
+export const describeProduct = (result: ProductResult, renderOff?: string): string[] => {
+  const code = productCode(result);
+  const lines = [`${code === 0 ? "✓" : "✗"} ${result.name ?? result.url}`];
+  if (result.name !== null) lines.push(`  ${result.url}`);
+  if (code === WALL) {
+    lines.push(
+      `  wall: the shop refused the crawler (${result.outcome} ${String(result.status)}). The crawler does not try a different identity.`,
+    );
+  }
+  if (result.held_back)
+    lines.push(`  held back: the page asked not to be AI input. ${HELD_BACK_LINE}`);
+  const codes = [
+    result.brand === null ? null : `brand ${result.brand}`,
+    result.sku === null ? null : `sku ${result.sku}`,
+    result.gtin === null ? null : `gtin ${result.gtin}`,
+  ].filter((part) => part !== null);
+  if (codes.length > 0) lines.push(`  ${codes.join(" · ")}`);
+  if (result.price !== null) {
+    lines.push(
+      result.price_to === null
+        ? `  price ${moneyText(result.price)}`
+        : `  price ${moneyText(result.price)} to ${moneyText(result.price_to)}, the range of the offers`,
+    );
+  }
+  if (result.availability !== null) {
+    lines.push(
+      `  availability ${result.availability}${result.availabilities.length > 1 ? ` (the offers: ${result.availabilities.join(", ")})` : ""}`,
+    );
+  }
+  const variant = result.variant;
+  if (variant !== null) {
+    const parts = [
+      variant.name,
+      variant.sku === null ? null : `sku ${variant.sku}`,
+      variant.price === null ? null : moneyText(variant.price),
+      variant.availability,
+    ].filter((part) => part !== null);
+    lines.push(`  variant ${parts.length > 0 ? parts.join(" · ") : "with no data"}`);
+  }
+  if (result.seller !== null) lines.push(`  seller ${result.seller}`);
+  if (result.image !== null) lines.push(`  image ${result.image}`);
+  if (result.archived !== undefined) {
+    lines.push(
+      `  archived copy (${result.archived.source}, captured ${result.archived.timestamp}): ${result.archived.url}`,
+    );
+  }
+  const facts = [
+    `${result.outcome} ${String(result.status)}`,
+    result.doc === null ? null : `doc ${result.doc}`,
+    result.capture === null ? null : `capture ${result.capture}`,
+    result.rendered ? "rendered" : null,
+    result.from_cache ? "from the store" : null,
+  ].filter((fact) => fact !== null);
+  lines.push(`  ${facts.join(" · ")}`);
+  if (result.note !== null) lines.push(`  note: ${result.note}`);
+  lines.push(...renderLine([result.note], renderOff).map((line) => `  ${line}`));
+  return lines;
+};
+
 // ── the command `export` ────────────────────────────────────────────────────
 
 /** These are the format and the options of an export, read from the command line before the export starts. */
@@ -1080,6 +1634,8 @@ export interface Line {
   readonly embedder: EmbedderChoice | undefined;
   /** This value is `--max-docs` of `embed`. */
   readonly maxDocs: number | undefined;
+  /** These are the options of `venue` and `product`, or undefined for a different command. */
+  readonly recipeLine: RecipeLine | undefined;
 }
 
 /** This is the result of `readLine`: the version, the help, or a command to do. */
@@ -1159,6 +1715,14 @@ export const readLine = (args: readonly string[], env: Env): Parsed => {
   } catch (error) {
     throw new UsageError(`--max-age: ${(error as Error).message}`, { cause: error });
   }
+  const recipeLine =
+    command === "venue" || command === "product"
+      ? recipeLineOf(command, values, rest, {
+          render,
+          maxAge,
+          budget: values.budget === undefined ? undefined : crawlLimits.budgetMs,
+        })
+      : undefined;
   return {
     kind: "command",
     command,
@@ -1186,5 +1750,6 @@ export const readLine = (args: readonly string[], env: Env): Parsed => {
     signatureAgent,
     embedder,
     maxDocs,
+    recipeLine,
   };
 };

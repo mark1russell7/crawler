@@ -12,14 +12,24 @@ import type { DiffOptions, DiffResult } from "./diff.ts";
 import { diffDocument } from "./diff.ts";
 import type { DiscoverOptions, DiscoverResult } from "./discover.ts";
 import { discoverSite } from "./discover.ts";
-import type { DocVersion, Found, RankMode, ReadingIndex } from "./docs.ts";
-import { DocIndex } from "./docs.ts";
+import type { DocVersion, Found, RankMode, ReadingIndex, SearchRank } from "./docs.ts";
+import { DocIndex, NO_EMBEDDER } from "./docs.ts";
+import type { Embedder } from "./embed.ts";
 import type { EgressOptions } from "./egress.ts";
 import type { ExtractOptions, ExtractResult, FieldClaim } from "./extract.ts";
 import { extractDocument } from "./extract.ts";
 import type { CrawlOptions, CrawlRun } from "./frontier.ts";
 import { crawlSite } from "./frontier.ts";
 import { SqliteHostStateStore } from "./hoststate.ts";
+import type {
+  EmbedOptions,
+  EmbedResult,
+  HybridFindOptions,
+  HybridOptions,
+  HybridSearch,
+  Ranked,
+} from "./hybrid.ts";
+import { createHybridSearch } from "./hybrid.ts";
 import { CaptureLog } from "./log.ts";
 import type { Clock, HostStateStore, PolicyOptions } from "./politeness.ts";
 import { MemoryHostStateStore, realClock } from "./politeness.ts";
@@ -44,6 +54,7 @@ import {
   reindex,
   verifyQuote,
 } from "./runtime.ts";
+import { VectorStore } from "./vectors.ts";
 import { BOT_PAGE, DEFAULT_TOKEN, VERSION } from "./version.ts";
 import type { WatchList } from "./watch.ts";
 import { WATCH_LIMITS, WatchStore, runWatch } from "./watch.ts";
@@ -146,7 +157,14 @@ export interface StoreRuntime extends CrawlRuntime {
 }
 
 /** The parts of a store that can be a symbolic link to a different place only by mistake or by attack. */
-const STORE_PARTS = ["captures", "blobs", "index.sqlite", "hosts.sqlite", "watch.sqlite"];
+const STORE_PARTS = [
+  "captures",
+  "blobs",
+  "index.sqlite",
+  "hosts.sqlite",
+  "watch.sqlite",
+  "vectors.sqlite",
+];
 
 /**
  * This function makes the folder of a store for the owner only, where the system has modes. It
@@ -278,6 +296,12 @@ export interface OpenOptions extends Omit<RuntimeOptions, "dir" | "log" | "blobs
   readonly onBehalfOf?: readonly string[] | undefined;
   /** This value is the shortest `every` of a watch. The default is `1h`, so a watch cannot hammer a site. */
   readonly watchFloor?: Duration | undefined;
+  /**
+   * This embedder makes the vectors of hybrid search (`rank: "hybrid"`): `transformersEmbedder`,
+   * `ollamaEmbedder` or an embedder of your own. The vectors go into `vectors.sqlite` in the store.
+   * Without it, `rank: "hybrid"` throws an error. `close` also closes the embedder.
+   */
+  readonly embedder?: Embedder | undefined;
 }
 
 /** These options control one fetch. */
@@ -320,6 +344,21 @@ export interface FindOptions {
    * the common words out of the second part of the search, so a long question is faster (`RankMode`).
    */
   readonly rank?: RankMode | undefined;
+}
+
+/**
+ * These options control a search of `openCrawler`: the options of `find`, and `rank: "hybrid"`
+ * with the options of a hybrid search. The mode `hybrid` needs `OpenOptions.embedder`.
+ */
+export interface SearchOptions extends Omit<FindOptions, "rank">, HybridFindOptions {
+  /** This value chooses the ranking. `hybrid` fuses BM25 with the ranking of the vectors (`SearchRank`). */
+  readonly rank?: SearchRank | undefined;
+}
+
+/** These options control `rankWithin` of a crawler. */
+export interface RankOptions extends HybridOptions {
+  /** This value chooses the ranking. The default is `exact`. */
+  readonly rank?: SearchRank | undefined;
 }
 
 /** A polite crawler fetches each source one time, keeps it, and answers the next questions from the disk. */
@@ -382,9 +421,17 @@ export interface PoliteCrawler {
     options?: ExtractOptions,
   ): Promise<ExtractResult>;
   // ── end of extract ──
+  // ── hybrid search ──
+  /** This optional search ranks with the vectors of an embedder. `openCrawler` gives it when it has an embedder. */
+  readonly hybrid?: HybridSearch | undefined;
+  /** This optional method gives vectors to the stored documents that have none, within a budget. */
+  embed?(options?: EmbedOptions): Promise<EmbedResult>;
+  /** This optional method ranks a set of stored documents against a query, the best first. */
+  rankWithin?(q: string, docs: readonly string[], options?: RankOptions): Promise<Ranked[]>;
+  // ── end of hybrid search ──
 }
 
-/** This crawler is the result of `openCrawler`: a `PoliteCrawler` with `discover`, `crawl`, `diff`, `watch` and `extract`. */
+/** This crawler is the result of `openCrawler` in version 0.1.2: a `PoliteCrawler` with `discover`, `crawl`, `diff`, `watch` and `extract`. */
 export interface OpenedCrawler extends PoliteCrawler {
   /** This method finds the pages of a site from its sitemaps and its feeds. */
   discover(site: string, options?: DiscoverOptions): Promise<DiscoverResult>;
@@ -406,6 +453,25 @@ export interface OpenedCrawler extends PoliteCrawler {
 }
 
 /**
+ * This crawler is the result of `openCrawler`: an `OpenedCrawler` with hybrid search. Its `find`
+ * takes `rank: "hybrid"`, and it has `hybrid`, `embed` and `rankWithin`. `OpenedCrawler` does not
+ * change, so an object of your own that implements the `OpenedCrawler` of 0.1.2 stays correct.
+ */
+export interface HybridCrawler extends OpenedCrawler {
+  /** This method searches the stored documents. It also takes `rank: "hybrid"`, when the crawler has an embedder. */
+  find(q: string, options?: SearchOptions): Promise<Found[]>;
+  /** This search ranks with the vectors of the embedder, or it is undefined when the crawler has no embedder. */
+  readonly hybrid: HybridSearch | undefined;
+  /** This method gives vectors to the stored documents that have none, within a budget. It rejects when the crawler has no embedder. */
+  embed(options?: EmbedOptions): Promise<EmbedResult>;
+  /**
+   * This method ranks a set of stored documents against a query, the best first. The modes
+   * `exact` and `fast` are `DocIndex.rankWithin`. The mode `hybrid` needs an embedder.
+   */
+  rankWithin(q: string, docs: readonly string[], options?: RankOptions): Promise<Ranked[]>;
+}
+
+/**
  * This function opens a crawler on a folder. The folder keeps the capture log (`captures/`), the
  * response bodies (`blobs/`), the search index (`index.sqlite`) and the state of each host
  * (`hosts.sqlite`). The index is a projection: `reindex` makes it again from the log and the bodies.
@@ -415,7 +481,7 @@ export interface OpenedCrawler extends PoliteCrawler {
  * Each method gives a promise, and none throws before its promise. After `close`, each method
  * rejects.
  */
-export const openCrawler = (options: OpenOptions): OpenedCrawler => {
+export const openCrawler = (options: OpenOptions): HybridCrawler => {
   const floorMs =
     options.watchFloor === undefined ? WATCH_LIMITS.floorMs : durationMs(options.watchFloor);
   const runtime = createRuntime(options);
@@ -446,6 +512,29 @@ export const openCrawler = (options: OpenOptions): OpenedCrawler => {
     return watches;
   };
   const clockNow = (): number => Date.parse(runtime.now());
+  // ── hybrid search: vectors.sqlite opens at the first hybrid search, as watch.sqlite does ──
+  const embedder = options.embedder;
+  let vectors: VectorStore | undefined;
+  let search: HybridSearch | undefined;
+  const hybridSearch = async (): Promise<HybridSearch> => {
+    await live();
+    if (embedder === undefined) throw new Error(NO_EMBEDDER);
+    vectors ??= new VectorStore(join(options.dir, "vectors.sqlite"));
+    search ??= createHybridSearch(runtime, { embedder, store: vectors });
+    return search;
+  };
+  const hybrid: HybridSearch | undefined =
+    embedder === undefined
+      ? undefined
+      : {
+          embedder,
+          find: async (q, findOptions) => (await hybridSearch()).find(q, findOptions),
+          rankWithin: async (q, docs, rankOptions) =>
+            (await hybridSearch()).rankWithin(q, docs, rankOptions),
+          embed: async (embedOptions) => (await hybridSearch()).embed(embedOptions),
+        };
+  // ── end of hybrid search ──
+  let closing: Promise<void> | undefined;
   const watch: WatchList = {
     async add(url, watchOptions = {}) {
       return (await watchStore()).add(url, watchOptions, clockNow());
@@ -486,7 +575,19 @@ export const openCrawler = (options: OpenOptions): OpenedCrawler => {
     },
     async find(q, findOptions = {}) {
       await live();
-      return findDocuments(runtime, q, findOptions);
+      const { rank, ...rest } = findOptions;
+      if (rank === "hybrid") return (await hybridSearch()).find(q, rest);
+      return findDocuments(runtime, q, { ...rest, ...(rank === undefined ? {} : { rank }) });
+    },
+    hybrid,
+    async embed(embedOptions = {}) {
+      return (await hybridSearch()).embed(embedOptions);
+    },
+    async rankWithin(q, docs, rankOptions = {}) {
+      await live();
+      const { rank, ...rest } = rankOptions;
+      if (rank === "hybrid") return (await hybridSearch()).rankWithin(q, docs, rest);
+      return runtime.index.rankWithin(q, docs, rank === undefined ? {} : { rank });
     },
     async read(id, readOptions = {}) {
       await live();
@@ -542,11 +643,17 @@ export const openCrawler = (options: OpenOptions): OpenedCrawler => {
       return diffDocument(runtime, id, diffOptions);
     },
     watch,
-    async close() {
+    close() {
       closed = true;
-      await ready;
-      await runtime.close();
-      watches?.close();
+      // a second close gives the first one: the embedder closes one time
+      closing ??= (async () => {
+        await ready;
+        await runtime.close();
+        watches?.close();
+        vectors?.close();
+        await embedder?.close?.();
+      })();
+      return closing;
     },
   };
 };

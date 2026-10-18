@@ -9,7 +9,12 @@
  *
  * Options: --docs (30000), --words (900 a document), --runs (5 timed runs a question), --modes
  * (a comma list, default each mode), --corpus (zipf or dense), --out (the JSON results), --summary
- * (a file that gets a Markdown table, for example $GITHUB_STEP_SUMMARY).
+ * (a file that gets a Markdown table, for example $GITHUB_STEP_SUMMARY), --hybrid (also time
+ * hybrid search) and --dims (384, the dimensions of the vectors of --hybrid).
+ *
+ * The mode --hybrid measures time only. A fake embedder of almost no cost gives the vectors, so
+ * the times are the times of the chunks, the vector store, the brute-force cosine and the fusion.
+ * The time of a real model comes on top: it depends on the model and the computer.
  *
  * The corpus `zipf` (the default): a Zipf spread (s = 1) over 60,000 words with the English stop
  * words at the top, and 400 topics that give each document bursts of its own words. The corpus
@@ -22,7 +27,7 @@
  * overlap@10 is the share of the exact top 10 that the mode also gives, and Kendall tau is the
  * agreement of the order of the documents that the two lists share (1 is the same order).
  */
-import { appendFileSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { appendFileSync, existsSync, mkdtempSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { cpus, tmpdir } from "node:os";
 import { join } from "node:path";
 import type { DatabaseSync, StatementSync } from "node:sqlite";
@@ -30,6 +35,11 @@ import { parseArgs } from "node:util";
 import { DocIndex, parseQuery } from "../src/docs.ts";
 import type { DocInput } from "../src/docs.ts";
 import { snippetOf } from "../src/fold.ts";
+import type { Embedder } from "../src/embed.ts";
+import { unitVector } from "../src/embed.ts";
+import { createHybridSearch } from "../src/hybrid.ts";
+import type { CrawlRuntime } from "../src/runtime.ts";
+import { VectorStore } from "../src/vectors.ts";
 
 const { values: args } = parseArgs({
   options: {
@@ -40,6 +50,8 @@ const { values: args } = parseArgs({
     corpus: { type: "string", default: "zipf" },
     out: { type: "string", default: "bench-find.json" },
     summary: { type: "string" },
+    hybrid: { type: "boolean", default: false },
+    dims: { type: "string", default: "384" },
   },
 });
 // an empty value (a workflow input that a person cleared, or a push event) takes the default
@@ -767,6 +779,126 @@ for (const [key, group] of groups) {
   }
 }
 
+// ── the mode --hybrid: the time of hybrid search, with a fake embedder ──
+interface HybridRow {
+  readonly task: string;
+  readonly set: string;
+  readonly medianMs: number;
+  readonly p90Ms: number;
+  readonly maxMs: number;
+}
+interface HybridReport {
+  readonly dims: number;
+  readonly embed: Record<string, unknown>;
+  readonly embedMs: number;
+  readonly chunks: number;
+  readonly vectorBytes: number;
+  readonly fileBytes: number;
+  /** The first search reads each vector into memory. */
+  readonly firstSearchMs: number;
+  readonly rows: HybridRow[];
+}
+let hybrid: HybridReport | undefined;
+if (args.hybrid === true) {
+  const DIMS = Number(args.dims) || 384;
+  /** Each word adds 1 or -1 to 8 dimensions that a hash of the word chooses. */
+  const embedder: Embedder = {
+    id: `bench:hash-${String(DIMS)}`,
+    dimensions: DIMS,
+    maxInputTokens: 512,
+    embed: (texts) =>
+      Promise.resolve(
+        texts.map((text) => {
+          const vector = new Float32Array(DIMS);
+          for (const word of text.split(/\s+/)) {
+            let hash = 2_166_136_261;
+            for (let at = 0; at < word.length; at += 1)
+              hash = Math.imul(hash ^ word.charCodeAt(at), 16_777_619);
+            for (let k = 0; k < 8; k += 1) {
+              hash = Math.imul(hash ^ (hash >>> 15), 2_246_822_507) >>> 0;
+              vector[hash % DIMS] = vector[hash % DIMS]! + ((hash & 1) === 0 ? 1 : -1);
+            }
+          }
+          return vector;
+        }),
+      ),
+  };
+  const store = new VectorStore(join(dir, "vectors.sqlite"));
+  // the hybrid search reads only the index and the clock of a runtime
+  const runtime = { index, now: () => new Date().toISOString() } as unknown as CrawlRuntime;
+  const search = createHybridSearch(runtime, { embedder, store });
+  const embedStart = performance.now();
+  const embedded = await search.embed({ budget: "3h" });
+  const embedMs = Math.round(performance.now() - embedStart);
+  const counts = store.counts(embedder.id);
+  console.error(
+    `hybrid: embed ${String(embedMs)} ms, ${String(counts.chunks)} chunks (${JSON.stringify(embedded)})`,
+  );
+  const firstStart = performance.now();
+  await search.find(questions[0]!.q);
+  const firstSearchMs = round(performance.now() - firstStart);
+  const timeAsync = async (work: () => Promise<unknown>): Promise<number> => {
+    await work();
+    const times: number[] = [];
+    for (let run = 0; run < RUNS; run += 1) {
+      const start = performance.now();
+      await work();
+      times.push(performance.now() - start);
+    }
+    return median(times);
+  };
+  const hybridRows: HybridRow[] = [];
+  const addRows = (task: string, perSet: Map<string, number[]>): void => {
+    for (const [set, times] of perSet) {
+      hybridRows.push({
+        task,
+        set,
+        medianMs: round(median(times)),
+        p90Ms: round(quantile(times, 0.9)),
+        maxMs: round(Math.max(...times)),
+      });
+    }
+  };
+  const findTimes = new Map<string, number[]>();
+  const withinTimes = new Map<string, number[]>();
+  for (const question of questions) {
+    const set = `${question.set}${question.kind === undefined ? "" : ` kind=${question.kind}`}`;
+    const ms = await timeAsync(() =>
+      search.find(question.q, { limit: LIMIT, kind: question.kind ?? null }),
+    );
+    findTimes.set(set, [...(findTimes.get(set) ?? []), ms]);
+    if (question.kind === undefined) {
+      const within = await timeAsync(() => search.rankWithin(question.q, ids.list));
+      withinTimes.set(set, [...(withinTimes.get(set) ?? []), within]);
+    }
+    console.error(`hybrid find ${set}: ${String(round(ms))} ms`);
+  }
+  addRows("find hybrid", findTimes);
+  addRows("rankWithin hybrid 40k ids", withinTimes);
+  // the brute-force cosine alone: a question against each stored vector
+  const scanRandom = random(71);
+  const scans: number[] = [];
+  for (let at = 0; at < 12; at += 1) {
+    const query = unitVector(Array.from({ length: DIMS }, () => scanRandom() - 0.5));
+    scans.push(await timeAsync(() => Promise.resolve(store.search(embedder.id, query))));
+  }
+  addRows("cosine of each vector", new Map([["12 random questions", scans]]));
+  const file = join(dir, "vectors.sqlite");
+  const fileBytes =
+    statSync(file).size + (existsSync(`${file}-wal`) ? statSync(`${file}-wal`).size : 0);
+  hybrid = {
+    dims: DIMS,
+    embed: { ...embedded },
+    embedMs,
+    chunks: counts.chunks,
+    vectorBytes: counts.bytes,
+    fileBytes,
+    firstSearchMs,
+    rows: hybridRows,
+  };
+  store.close();
+}
+
 const sqlite = (db.prepare("SELECT sqlite_version() AS version").get() as { version: string })
   .version;
 const environment = {
@@ -784,7 +916,7 @@ const environment = {
 };
 writeFileSync(
   args.out,
-  `${JSON.stringify({ environment, modes: modes.map(({ name, about }) => ({ name, about })), summary, rows }, null, 2)}\n`,
+  `${JSON.stringify({ environment, modes: modes.map(({ name, about }) => ({ name, about })), summary, rows, ...(hybrid === undefined ? {} : { hybrid }) }, null, 2)}\n`,
 );
 
 const table = [
@@ -801,6 +933,21 @@ const table = [
   "",
   ...modes.map((mode) => `- \`${mode.name}\`: ${mode.about}`),
   "",
+  ...(hybrid === undefined
+    ? []
+    : [
+        `### hybrid search: ${String(hybrid.chunks)} chunks of ${String(hybrid.dims)} dimensions (a fake embedder, time only)`,
+        "",
+        `embed took ${String(hybrid.embedMs)} ms (${String(Math.round((hybrid.chunks * 1000) / Math.max(1, hybrid.embedMs)))} chunks a second, with no model). The vectors are ${String(Math.round(hybrid.vectorBytes / 1_048_576))} MiB, and vectors.sqlite is ${String(Math.round(hybrid.fileBytes / 1_048_576))} MiB. The first search read the vectors into memory in ${String(hybrid.firstSearchMs)} ms.`,
+        "",
+        "| task | set | median ms | p90 ms | max ms |",
+        "| --- | --- | ---: | ---: | ---: |",
+        ...hybrid.rows.map(
+          (one) =>
+            `| ${one.task} | ${one.set} | ${String(one.medianMs)} | ${String(one.p90Ms)} | ${String(one.maxMs)} |`,
+        ),
+        "",
+      ]),
 ].join("\n");
 console.log(table);
 if (args.summary !== undefined) appendFileSync(args.summary, table);

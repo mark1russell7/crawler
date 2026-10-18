@@ -18,6 +18,8 @@
  * - The archived fallback: the types of an archived copy, `archivedDocId` and `archiveExtractor`.
  * - Signed requests (Web Bot Auth): `createWebBotAuthSigner`, `keyDirectory` and `verifySignature`.
  * - The check of proposed field values against a stored page: `checkFields` and `extractDocument`.
+ * - Hybrid search: the `Embedder` interface, the adapters `transformersEmbedder` and
+ *   `ollamaEmbedder`, and the engine `createHybridSearch`, `VectorStore`, `chunkText` and `fuseRanks`.
  *
  * The other entry points give the rest:
  *
@@ -71,21 +73,65 @@ export type {
 } from "./discover.ts";
 export { DISCOVER_LIMITS, discoverSite } from "./discover.ts";
 export type {
+  DigestOptions,
   Doc,
+  DocDigest,
   DocInput,
   DocVersion,
   ExtractedDoc,
   FindIndexOptions,
   Found,
   Latest,
+  Passage,
   RankMode,
   ReadingIndex,
+  SearchRank,
   Variant,
   Verified,
   VersionAt,
   VersionText,
 } from "./docs.ts";
-export { DocIndex, FAST_RANK_SHARE, locate } from "./docs.ts";
+export { DocIndex, FAST_RANK_SHARE, NO_EMBEDDER, locate } from "./docs.ts";
+// ── hybrid search ──
+export type { ChunkOptions, EmbedCallOptions, Embedder, FusedRank, TextChunk } from "./embed.ts";
+export {
+  CHUNK_LIMITS,
+  HYBRID_DEFAULTS,
+  chunkText,
+  chunkTokensOf,
+  estimateTokens,
+  fuseRanks,
+  unitVector,
+} from "./embed.ts";
+export type {
+  EmbedOptions,
+  EmbedResult,
+  EmbedStop,
+  HybridFindOptions,
+  HybridOptions,
+  HybridSearch,
+  HybridSearchOptions,
+  Ranked,
+} from "./hybrid.ts";
+export { createHybridSearch } from "./hybrid.ts";
+export type { EmbeddingModel, OllamaEmbedderOptions } from "./ollama.ts";
+export { NO_OLLAMA, OLLAMA_MODELS, isLoopback, ollamaEmbedder } from "./ollama.ts";
+export type {
+  FeatureExtractor,
+  Pooling,
+  TransformersEmbedderOptions,
+  TransformersModule,
+} from "./transformers.ts";
+export { NO_TRANSFORMERS, TRANSFORMERS_MODELS, transformersEmbedder } from "./transformers.ts";
+export type {
+  StoredChunk,
+  VectorCounts,
+  VectorHit,
+  VectorStoreOptions,
+  VectorWrite,
+} from "./vectors.ts";
+export { VECTORS_SCHEMA, VectorStore } from "./vectors.ts";
+// ── end of hybrid search ──
 export type { EgressOptions } from "./egress.ts";
 export type { Archived, WebArchive } from "./fallback.ts";
 export { archiveExtractor, archivedDocId } from "./fallback.ts";
@@ -136,12 +182,15 @@ export type {
   Duration,
   FetchOptions,
   FindOptions,
+  HybridCrawler,
   OpenOptions,
   OpenedCrawler,
   PoliteCrawler,
+  RankOptions,
   ReadOptions,
   ReadResult,
   RuntimeOptions,
+  SearchOptions,
   StoreRuntime,
   VerifyOptions,
   VerifyResult,

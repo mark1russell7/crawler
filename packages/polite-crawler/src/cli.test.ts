@@ -91,7 +91,7 @@ describe("the command line: help and usage errors", () => {
         [["find", "x", "--limit", "-1"], "--limit"],
         [["find", "x", "--frobnicate"], "Unknown option '--frobnicate'"],
         [["read", "url:x", "--limit", "5"], "--limit is an option of find"],
-        [["find", "x", "--rank", "best"], '--rank is exact or fast, not "best"'],
+        [["find", "x", "--rank", "best"], '--rank is exact, fast or hybrid, not "best"'],
         [["read", "url:x", "--rank", "fast"], "--rank is an option of find"],
         [
           ["fetch", "https://example.com/", "--render", "bogus"],

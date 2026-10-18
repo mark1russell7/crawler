@@ -34,6 +34,8 @@ npx playwright-core install chromium-headless-shell
 
 Without the browser, the crawler reads each page as plain HTML. It checks for the browser one time, so a page that needs JavaScript gets a note at once, with no wait.
 
+Hybrid search (search by meaning and by words) is optional too. It uses a local model: transformers.js in the process (`npm install @huggingface/transformers`), or a local Ollama server. [Hybrid search](#hybrid-search) tells how.
+
 The package is ESM only, and it includes its TypeScript declarations. It has these entry points:
 
 | Entry point | What it gives | In a browser |
@@ -67,6 +69,7 @@ The store is in `~/.polite-crawler`. Use `--dir` or `POLITE_CRAWLER_DIR` for a d
 - `fetch --archive-fallback` gives an archived copy when a site refuses a page or is down. [Archived copies after a refusal](#archived-copies-after-a-refusal) tells the rules.
 - `--sign-key <file>` and `--signature-agent <url>` sign each request. `key-directory --sign-key <file>` prints the key directory to host. [Signed requests](#signed-requests-web-bot-auth) tells how.
 - `find --rank fast` makes a long question faster, and its results can be different. [Fast ranking](#fast-ranking) gives the measured difference.
+- `find --rank hybrid --embedder transformers` (or `--embedder ollama`) also finds the pages with a similar meaning. `embed --embedder <name>` gives vectors to each stored page first. [Hybrid search](#hybrid-search) tells the options.
 - `reindex` builds the index again. The documents of a recipe that the command cannot read (the recipes of another application) stay. The output counts them, and the captures that it skipped.
 - `export --out <file>` writes the stored captures as a WARC or a WACZ file. [Export to a web archive](#export-to-a-web-archive) tells what goes into the file.
 - `extract <doc> --field name=value[:kind]` checks the values that you propose for the fields of a stored page. Repeat `--field` for each field. `--capture` checks the text of one capture, and `--at` the version that was current at a time. [Check field values against a page](#check-field-values-against-a-page) tells the statuses.
@@ -103,7 +106,7 @@ The command gives these exit codes:
 | Code | Meaning |
 | --- | --- |
 | `0` | The command did its work. |
-| `1` | The command did not do its work: a page that the crawler did not fetch, no search result, a quote that is not in the document, a document that is not stored or that is held back, or an error. `discover` gives 1 when it finds no URL, and `crawl` when it gets no page. `read --at` and `verify --at` give 1 for a time before the first capture. `watch run` gives 1 when a check is `refused` or an `error`, or when entries stay due. `watch remove` gives 1 for a URL that is not on the list. With `--archive-fallback`, a page with an archived copy counts as done. `extract` gives 1 when a field is not `verified` or `normalized`. |
+| `1` | The command did not do its work: a page that the crawler did not fetch, no search result, a quote that is not in the document, a document that is not stored or that is held back, or an error. `discover` gives 1 when it finds no URL, and `crawl` when it gets no page. `read --at` and `verify --at` give 1 for a time before the first capture. `watch run` gives 1 when a check is `refused` or an `error`, or when entries stay due. `watch remove` gives 1 for a URL that is not on the list. With `--archive-fallback`, a page with an archived copy counts as done. `extract` gives 1 when a field is not `verified` or `normalized`. `embed` gives 1 when its budget stops it before each page has vectors. |
 | `2` | The command line is wrong. The command opens no store. |
 
 ## Use it from Claude (MCP)
@@ -149,7 +152,7 @@ The server gives nine tools:
 | Tool | What it does |
 | --- | --- |
 | `crawl_fetch` | It fetches pages into the store, and a page in the store answers with no request. It gives the age of each copy. With `archive_fallback`, a page that the site refuses gets an archived copy, marked `archived`. |
-| `crawl_find` | It searches the stored pages and gives ranked passages. |
+| `crawl_find` | It searches the stored pages and gives ranked passages. When the server has an embedder (`--embedder`), it also takes `rank: "hybrid"`, and each hit gives its `passage`. |
 | `crawl_read` | It gives a range of a stored document, with the capture ids to cite and the position of the next range. With `at`, it reads the version that was current at that time. |
 | `crawl_verify` | It finds a quote in a stored document and gives the exact span. It takes `at` too. |
 | `crawl_extract` | It checks the values that the assistant proposes for the fields of a stored page, and gives a status and a span for each field. It does not make values. With `at`, it checks the version that was current at that time. |
@@ -201,6 +204,16 @@ The crawler records each release in the capture log.
 | `--no-browser` | | Do not open a headless browser. |
 | `--sign-key <file>` | `POLITE_CRAWLER_SIGN_KEY` | Sign each request with this Ed25519 key (PKCS#8 PEM or JWK). [Signed requests](#signed-requests-web-bot-auth) tells how. |
 | `--signature-agent <url>` | `POLITE_CRAWLER_SIGNATURE_AGENT` | Where a site finds the public key of `--sign-key`: an https origin, or the URL of a JSON Web Key Set. |
+| `--embedder <name>` | `POLITE_CRAWLER_EMBEDDER` | The local model of hybrid search: `transformers` or `ollama`. `crawl_find` then takes `rank: "hybrid"`. |
+| `--embed-model <name>` | `POLITE_CRAWLER_EMBED_MODEL` | The model. The defaults are `Xenova/bge-small-en-v1.5` (transformers) and `nomic-embed-text` (Ollama). |
+| `--ollama-url <url>` | `POLITE_CRAWLER_OLLAMA_URL` | The Ollama server. The default is `http://127.0.0.1:11434`. |
+| `--allow-remote-ollama` | `POLITE_CRAWLER_ALLOW_REMOTE_OLLAMA=1` | Permit an Ollama server on a different computer. The page text goes to that server. |
+
+For hybrid search with transformers.js, add the package to the `npx` command, as for the browser:
+
+```sh
+claude mcp add polite-crawler -- npx -y -p polite-crawler -p @huggingface/transformers polite-crawler mcp --embedder transformers
+```
 
 ## Use it as a library
 
@@ -235,7 +248,7 @@ await crawler.close();
 - `diff(doc, { from, to })` compares two versions. [Compare two versions](#compare-two-versions) tells what it gives.
 - `watch` is the watch list: `add`, `remove`, `list` and `run`. [Watch pages](#watch-pages) tells the rules.
 - `find` reads a query syntax. Text in double quotes is a phrase, and `bake*` is a prefix. The documents that hold each word come first. Case, accents and Unicode forms do not change a match, and Chinese, Japanese and Thai words match too.
-- `find` takes `rank`. The default is `exact`, and `fast` makes a long question faster. [Fast ranking](#fast-ranking) tells the difference.
+- `find` takes `rank`. The default is `exact`, and `fast` makes a long question faster. [Fast ranking](#fast-ranking) tells the difference. `hybrid` also finds by meaning, with the option `embedder` of `openCrawler`. [Hybrid search](#hybrid-search) tells how.
 - A page that asks not to be AI input is held back in each result. `fetch` gives no title, and `read` gives no title, no text and only the structural metadata. `verify` gives `found: false`, and `find` leaves the page out. Only `userProvided` lifts the hold, and the crawler logs it.
 - The hold applies to each version too. When a later capture does not ask it, the current text is not held back, but the earlier versions that asked it stay held back. `verify` with no `capture` does not examine them, `read` and `verify` of their capture hold them back, and `versions` shows no title for them.
 
@@ -333,6 +346,9 @@ These parts are the stable API:
 - The archived fallback: `fallback` and `archiveDespiteRobots` of `FetchOptions`, the field `archived` of the results, and the types `Archived` and `WebArchive`.
 - Signed requests: `createWebBotAuthSigner`, `keyDirectory`, `verifySignature`, `KEY_DIRECTORY_PATH`, `KEY_DIRECTORY_TYPE`, the option `signer`, and the types `WebBotAuthOptions`, `WebBotAuthSigner`, `RequestSigner`, `KeyDirectory`, `DirectoryKey`, `KeyInput`, `SignatureAgentType`, `SignedRequest` and `SignatureCheck`.
 - The headers of a signature follow the draft. When the draft changes, the headers change with it, and `CHANGELOG.md` says so.
+- Hybrid search: the option `embedder` of `OpenOptions`, the interface `Embedder` (the extension point) with `EmbedCallOptions`, and the adapters `transformersEmbedder` and `ollamaEmbedder` with their options (`TransformersEmbedderOptions`, `OllamaEmbedderOptions`, `Pooling`, `EmbeddingModel`).
+- Also stable: `HybridCrawler` (the result of `openCrawler`), `rank: "hybrid"` (`SearchRank`, `SearchOptions`), `embed`, `rankWithin` with `RankOptions` and `Ranked`, and `hybrid` (`HybridSearch`). The three members are optional in `PoliteCrawler`, and `OpenedCrawler` does not change.
+- The options and the results of hybrid search are stable too: `HybridOptions`, `HybridFindOptions`, `EmbedOptions`, `EmbedResult`, `EmbedStop`, `Passage` and `Found.passage`. So are `HYBRID_DEFAULTS`, `OLLAMA_MODELS`, `TRANSFORMERS_MODELS`, `NO_EMBEDDER`, `NO_OLLAMA` and `NO_TRANSFORMERS`.
 
 The other exports of the root entry point are the engine. Examples are `createRuntime`, `catchUpIndex`, `Crawler`, `CaptureLog`, `DocIndex`, `FileBlobStore`, `SqliteHostStateStore`, `Extractors`, `fetchAndIndex` and `makeRecord`. An application can build on them. A minor version before 1.0.0 can change them, and its section in `CHANGELOG.md` says so.
 
@@ -342,7 +358,134 @@ The engine of discovery and of the crawl is `discoverSite`, `crawlSite`, `readSi
 
 The engine of the time travel and of the watch list is the optional method `ReadingIndex.versionAt`, `DocIndex.versionAt` and `Crawler.hostStop`.
 
+The engine of hybrid search is `createHybridSearch`, `HybridSearchOptions`, `VectorStore`, `VECTORS_SCHEMA` and the types of the vector store. It also includes `chunkText`, `chunkTokensOf`, `estimateTokens`, `CHUNK_LIMITS`, `fuseRanks`, `unitVector`, `isLoopback`, `FeatureExtractor`, `TransformersModule`, the optional method `ReadingIndex.digests` and `DocIndex.digests`. The file `vectors.sqlite` is a projection, as the index is: it is not part of the stable store.
+
 The engine of the archived fallback and of the signatures is `archiveExtractor`, `archivedDocId`, and the `fallback` and `archiveDespiteRobots` of `PageOptions`. It also includes `range`, `signalLines` and `originalHeaderPrefix` of `FetchRequest`, `ai_input` of `ExtractedDoc`, `sign` of `RenderOptions` and `signer` of `CrawlerOptions`.
+
+## Hybrid search
+
+Hybrid search finds the pages that hold the words of a question, and also the pages with a similar meaning. It is opt-in: the default ranking stays exact BM25.
+
+```ts
+import { openCrawler, transformersEmbedder } from "polite-crawler";
+
+const crawler = openCrawler({ dir: "./crawl", embedder: transformersEmbedder() });
+await crawler.embed({ budget: "10m" }); // vectors for each stored page
+
+for (const hit of await crawler.find("a loaf with a dark crust", { rank: "hybrid" })) {
+  console.log(hit.doc, hit.score, hit.passage, hit.snippet);
+}
+```
+
+- `rank: "hybrid"` needs an embedder. Without one, the search rejects with `NO_EMBEDDER`. It does not change to BM25 in silence.
+- `crawler.rankWithin(q, docs, { rank: "hybrid" })` ranks a set of stored documents in the same way.
+- `openCrawler` gives a `HybridCrawler`: an `OpenedCrawler` with `hybrid`, `embed` and `rankWithin`, and a `find` that takes `rank: "hybrid"`.
+- The command line has `--embedder`, `find --rank hybrid` and `embed`. The MCP tool `crawl_find` takes `rank: "hybrid"` when the server has an embedder.
+
+```sh
+npx polite-crawler embed --embedder ollama --budget 30m
+npx polite-crawler find "a loaf with a dark crust" --rank hybrid --embedder ollama
+```
+
+### transformers.js
+
+This embedder uses the model in the process of the crawler. The package `@huggingface/transformers` is an optional peer, and the embedder loads it at its first text.
+
+```sh
+npm install @huggingface/transformers
+```
+
+```ts
+import { transformersEmbedder } from "polite-crawler";
+
+const embedder = transformersEmbedder({ model: "Xenova/bge-small-en-v1.5", quantized: true });
+```
+
+- The default model is `Xenova/bge-small-en-v1.5`: 384 dimensions and an input of 512 tokens. The 8-bit model (`quantized: true`, the default) is approximately 34 MB.
+- The first use downloads the model from the Hugging Face Hub (`huggingface.co`). This download does not go through the polite crawler, so robots.txt, the pace and the capture log do not apply to it.
+- transformers.js keeps the files in `cacheDir`. Its default is `node_modules/@huggingface/transformers/.cache/`. The command line uses `<store>/models`. With `localOnly: true`, the embedder uses only the cache and downloads nothing.
+- The embedder pools the vectors of the tokens as the model expects: `cls` for BGE and `mean` for the other models. The option `pooling` changes it.
+
+### Ollama
+
+This embedder sends the texts to a local Ollama server (`POST /api/embed`). The package has no dependency for it.
+
+1. Install Ollama from <https://ollama.com>, and start it with `ollama serve`.
+2. Pull a model: `ollama pull nomic-embed-text`.
+
+```ts
+import { ollamaEmbedder } from "polite-crawler";
+
+const embedder = ollamaEmbedder({ model: "nomic-embed-text", baseUrl: "http://127.0.0.1:11434" });
+```
+
+| Model | Size | Dimensions | Input in tokens |
+| --- | ---: | ---: | ---: |
+| `nomic-embed-text` (the default) | approximately 274 MB | 768 | 8,192 |
+| `all-minilm` | approximately 46 MB | 384 | 256 |
+| `mxbai-embed-large` | approximately 670 MB | 1,024 | 512 |
+
+- The embedder sends 32 texts in each request (`batch`). It adds the prefixes that `nomic-embed-text` and `mxbai-embed-large` expect.
+- An error tells what to do: `ollama serve` when no server answers, and `ollama pull <model>` when the model is not there.
+- The embedder accepts only a server on this computer (a loopback address). `allowRemote: true` (`--allow-remote-ollama`) permits a different computer.
+
+### An embedder of your own
+
+An application can give an embedder of its own, as it can give a renderer:
+
+```ts
+import type { Embedder } from "polite-crawler";
+
+const embedder: Embedder = {
+  id: "my-model-v1", // the model and its version: the store keeps it with each vector
+  dimensions: 384,
+  maxInputTokens: 512,
+  embed: async (texts, { signal, purpose }) => myModel.embed(texts, { signal, purpose }),
+};
+```
+
+`purpose` is `"document"` for the chunks of a page and `"query"` for a question. Give a new `id` when the vectors of the model change.
+
+### What goes where
+
+- The embedder gets the text of the stored pages and the words of each question. With transformers.js, the text stays in the process. With Ollama, the text goes to the Ollama server.
+- A page that asks not to be AI input does not go to the embedder, and no hybrid result gives it. The rule applies to each version, as for `find`.
+- Only the download of a transformers.js model goes to the internet, to the Hugging Face Hub.
+
+### How a hybrid search ranks
+
+1. Full-text search gives the BM25 candidates (`candidates`, 50 by default). A candidate whose text has no vectors gets them first.
+2. The vector search gives the documents with the closest chunks (`neighbors`, 50 by default). It compares the vector of the question with each stored vector (a brute-force cosine).
+3. Reciprocal rank fusion makes one list. Each document gets the sum of 1 / (k + rank) over the two lists, with the rank from 1. The constant k is `fusionK`, 60 by default.
+
+- The snippet and the `passage` of each hit come from its best chunk. `passage.start` and `passage.end` are positions in the text of the capture of the hit, for `read`.
+- A search gives vectors only to its candidates. Thus a page with the meaning and none of the words comes back only after `embed` gave it vectors.
+- `embed` takes `budget` (`10m` by default), `maxDocs` and `kind`. Start it again to continue: it does not send a text with vectors again.
+- `find` and `rankWithin` take `candidates`, `neighbors`, `fusionK` and `signal`. `HYBRID_DEFAULTS` has the defaults.
+
+### Chunks and storage
+
+- A chunk is a window of whole sentences. It ends at the end of a paragraph when it can, and a longer sentence is cut at its spaces.
+- A chunk has the input limit of the model in tokens with a margin of 10 percent, and 512 tokens at most. Two chunks next to each other share approximately 10 percent of their tokens. A text gives 64 chunks at most.
+- The vectors go into `vectors.sqlite` in the store. The key of a row is the SHA-256 of the text, the number of the chunk and the `id` of the embedder. Thus a reindex keeps each vector, and the same text gets its vectors one time for each model.
+- The file is a projection, as `index.sqlite` is. Delete it, and `embed` makes the vectors again.
+- A vector takes 4 bytes for each dimension: 1.5 KiB for 384 dimensions and 3 KiB for 768. With the keys and the indexes of SQLite, a chunk of 384 dimensions took 2.4 KiB of the file in the benchmark.
+- The first hybrid search reads the vectors of the embedder into memory. Thus the memory is approximately the size of the vectors.
+
+The benchmark `bench/find.mts --hybrid` measured the time in CI ([the results](https://github.com/mark1russell7/crawler/actions/runs/39082851222)). A fake embedder of almost no cost gave the vectors, so the time of a real model comes on top. The index had 30,000 documents of 900 words, which gave 89,100 chunks of 384 dimensions. Each time is the median of 12 questions on Node.js 24:
+
+| Step | Time |
+| --- | ---: |
+| The cosine of a question and each of the 89,100 vectors | 82 ms |
+| `find`, `rank: "hybrid"`, 1 word | 88 ms |
+| `find`, `rank: "hybrid"`, 16 words | 122 ms |
+| `rankWithin` of 40,000 ids, `rank: "hybrid"`, 16 words | 528 ms |
+| The first search: it reads 131 MiB of vectors into memory | 714 ms |
+| `embed` of the 30,000 documents, with no time for a model | 17 s |
+
+- The brute-force cosine is linear in the number of chunks. It is a good fit up to approximately 100,000 chunks (approximately 30,000 pages of this size). A search then takes approximately 0.1 s, and the vectors take approximately 150 MiB of memory at 384 dimensions.
+- One million chunks take approximately 1 s for each search and 1.5 GiB of memory. A larger store needs an index of the vectors, and the package does not have one.
+- `vectors.sqlite` was 210 MiB for the 89,100 chunks.
 
 ## Read a page as it was at a time
 

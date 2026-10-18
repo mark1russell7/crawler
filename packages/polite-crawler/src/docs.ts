@@ -168,10 +168,26 @@ export type RankMode = "exact" | "fast";
 /** In the mode `fast`, a part is common when more than this share of the documents hold it. */
 export const FAST_RANK_SHARE = 0.2;
 
+/**
+ * This value chooses the ranking of a search of the crawler: a `RankMode` of the index, or
+ * `hybrid`. The mode `hybrid` fuses the BM25 ranking with the ranking of the vectors of an
+ * embedder (`OpenOptions.embedder`). Without an embedder, it throws an error.
+ */
+export type SearchRank = RankMode | "hybrid";
+
+/** The text of the error of hybrid search with no embedder. */
+export const NO_EMBEDDER =
+  "hybrid search needs an embedder: open the crawler with the option embedder (transformersEmbedder or ollamaEmbedder), or give --embedder transformers or ollama to the command line";
+
 /** This function gives the rank mode of an option. A value that is not a rank mode throws a `RangeError`. */
 const rankModeOf = (value: unknown): RankMode => {
   if (value === undefined || value === "exact") return "exact";
   if (value === "fast") return "fast";
+  // the index has no vectors: the crawler ranks with an embedder, and the index never falls back
+  if (value === "hybrid")
+    throw new RangeError(
+      'the index ranks with "exact" and "fast" only: rank "hybrid" needs the vectors of an embedder, so use find or rankWithin of a crawler with the option embedder',
+    );
   throw new RangeError(
     `rank must be "exact" or "fast", not ${JSON.stringify(value) ?? "undefined"}`,
   );
@@ -185,6 +201,15 @@ export interface FindIndexOptions {
   readonly kind?: string | null | undefined;
   /** This value chooses the ranking. The default is `exact`. */
   readonly rank?: RankMode | undefined;
+}
+
+/** This is the passage of a hit of a hybrid search: the chunk of the text that is closest to the question. */
+export interface Passage {
+  /** These values are the positions of the chunk in the text of the capture of the hit, in UTF-16 units. */
+  readonly start: number;
+  readonly end: number;
+  /** This value is the cosine of the vectors of the chunk and the question, from -1 to 1. */
+  readonly similarity: number;
 }
 
 export interface Found {
@@ -201,6 +226,27 @@ export interface Found {
   readonly capture: string;
   /** This value tells that the document is an archived copy (the kind `archived`), with the archive and the date of the copy. */
   readonly archived?: Archived | undefined;
+  /** This value is the passage that a hybrid search found. A search of the other modes does not give it. */
+  readonly passage?: Passage | undefined;
+}
+
+/** This is the current text of a document in short: its hash, with no text. */
+export interface DocDigest {
+  readonly doc: string;
+  readonly kind: string;
+  readonly ai_input: AiInput;
+  /** This value is the SHA-256 of the current text of the document, in hex. */
+  readonly text_sha: string;
+}
+
+/** These options choose the documents of `ReadingIndex.digests`. */
+export interface DigestOptions {
+  /** These documents, in place of a list of each document. A document that is not in the index gives nothing. */
+  readonly docs?: readonly string[] | undefined;
+  /** In a list of each document, the documents with an id after this id, in the sequence of the ids. */
+  readonly after?: string | undefined;
+  /** In a list of each document, this number of documents at most. The default is 500. */
+  readonly limit?: number | undefined;
 }
 
 /** The variant of a cache entry: the plain response, or the page that the browser rendered. */
@@ -512,6 +558,12 @@ export interface ReadingIndex {
   docsOfCapture(capture: string): Doc[];
   /** This method tells if a capture gave a version of a document. */
   hasVersion(capture: string): boolean;
+  /**
+   * This optional method gives the hash of the current text of documents, with no text. Hybrid
+   * search uses it to find the documents whose text has no vectors. An index without it gives the
+   * same facts from `get`, more slowly.
+   */
+  digests?(options: DigestOptions): DocDigest[];
   find(q: string, options: FindIndexOptions): Found[];
   rankWithin(
     q: string,
@@ -1080,6 +1132,25 @@ export class DocIndex implements ReadingIndex {
         this.stmt(`SELECT 1 AS found FROM ${n.versions} WHERE capture = ? LIMIT 1`).get(capture) !==
         undefined,
     );
+  }
+
+  /**
+   * This method gives the hash of the current text of documents, with no text. It gives the
+   * documents of `docs`, or each document after `after` in the sequence of the ids, to `limit`.
+   */
+  digests(options: DigestOptions = {}): DocDigest[] {
+    return this.live((n) => {
+      if (options.docs !== undefined) {
+        if (options.docs.length === 0) return [];
+        return this.stmt(
+          `SELECT doc, kind, ai_input, text_sha FROM ${n.docs} WHERE doc IN (SELECT value FROM json_each(?))`,
+        ).all(JSON.stringify(options.docs)) as unknown as DocDigest[];
+      }
+      const limit = Math.max(1, Math.floor(options.limit ?? 500));
+      return this.stmt(
+        `SELECT doc, kind, ai_input, text_sha FROM ${n.docs} WHERE doc > ? ORDER BY doc LIMIT ?`,
+      ).all(options.after ?? "", limit) as unknown as DocDigest[];
+    });
   }
 
   /** This method gives the newest fetch time of the cache entries, or undefined for an empty index. */

@@ -153,13 +153,31 @@ Add an option after `mcp`, for example `npx -y polite-crawler mcp --dir ~/resear
 | `--no-browser` | | The crawler does not open a headless browser. |
 | `--sign-key <file>` | `POLITE_CRAWLER_SIGN_KEY` | The crawler signs each request with this Ed25519 key (Web Bot Auth). It needs `--signature-agent`. |
 | `--signature-agent <url>` | `POLITE_CRAWLER_SIGNATURE_AGENT` | Where a site finds the public key of `--sign-key`. |
+| `--embedder <name>` | `POLITE_CRAWLER_EMBEDDER` | The local model of hybrid search: `transformers` or `ollama`. `crawl_find` then takes `rank: "hybrid"`. |
+| `--embed-model <name>` | `POLITE_CRAWLER_EMBED_MODEL` | The model. The defaults are `Xenova/bge-small-en-v1.5` (transformers) and `nomic-embed-text` (Ollama). |
+| `--ollama-url <url>` | `POLITE_CRAWLER_OLLAMA_URL` | The Ollama server. The default is `http://127.0.0.1:11434`. |
+| `--allow-remote-ollama` | `POLITE_CRAWLER_ALLOW_REMOTE_OLLAMA=1` | Permit an Ollama server on a different computer. The page text goes to that server. |
+
+### Search by meaning
+
+With `--embedder`, the tool `crawl_find` takes `rank: "hybrid"`. It then also finds the pages with a similar meaning, and each hit gives its `passage`. The model is local, so no page text goes to a cloud service.
+
+```sh
+claude mcp add polite-crawler -- npx -y -p polite-crawler -p @huggingface/transformers polite-crawler mcp --embedder transformers
+claude mcp add polite-crawler -- npx -y polite-crawler mcp --embedder ollama
+```
+
+- With `transformers`, the first search downloads the model (approximately 34 MB) from the Hugging Face Hub into `<store>/models`. This download does not go through the polite crawler.
+- With `ollama`, install Ollama and pull the model first: `ollama pull nomic-embed-text`.
+- Start `npx polite-crawler embed --embedder <name>` to give vectors to each stored page. A search gives vectors only to its BM25 candidates.
+- A page that asks not to be AI input does not go to the model.
 
 ## The tools
 
 | Tool | Input | What it gives |
 | --- | --- | --- |
 | `crawl_fetch` | `urls` (1 to 20), `render` (`auto`, `never` or `always`), `max_age` (for example `24h`, or `0` for a new copy), `archive_fallback` (false by default) | For each page: the outcome, the status, the document id, the capture ids and the age of the copy. The title and the schema.org types come in an envelope. With `archive_fallback`, a page that the site refuses gets an archived copy, marked `archived` with its date. |
-| `crawl_find` | `q`, `limit`, `kind`, `rank` | Ranked passages from the stored pages, with their document ids. Each word of `q` is a term, and a page matches when it holds any term. `rank: "fast"` makes a long question faster, and its results can be different. |
+| `crawl_find` | `q`, `limit`, `kind`, `rank` | Ranked passages from the stored pages, with their document ids. Each word of `q` is a term, and a page matches when it holds any term. `rank: "fast"` makes a long question faster, and its results can be different. With `--embedder`, `rank: "hybrid"` also finds by meaning, and each hit gives `passage`. |
 | `crawl_read` | `doc`, `from`, `length`, `include_meta`, `include_jsonld`, `capture`, `at`, `user_provided` | A range of the text of a document, with its captures and `next_from`, the start of the next range. The metadata of the page comes with the first range. With `at`, the version that was current at that time. |
 | `crawl_verify` | `doc`, `quote`, `capture`, `at` | The exact span of the quote and its position, or `found: false`. |
 | `crawl_extract` | `doc`, `fields` (50 or fewer, each a `value` and a `kind`), `capture`, `at`, `user_provided` | A status for each field: `verified`, `normalized`, `ambiguous`, `not-found`, `held-back` or `invalid`, with its span or JSON-LD path. The stored text comes in an envelope. |

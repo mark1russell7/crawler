@@ -1,6 +1,6 @@
 ---
 title: Library API
-description: "The library API of polite-crawler: openCrawler and its options, fetch, find, read, verify, extract, discover, crawl, diff, watch and reindex, and the parts that you can import alone."
+description: "The library API of polite-crawler: openCrawler and its options, fetch, find, read, verify, extract, discover, crawl, diff, watch, hybrid search and reindex, and the parts that you can import alone."
 ---
 
 ```ts title="The import"
@@ -11,7 +11,7 @@ The package is ESM only, and it includes its TypeScript declarations.
 
 ## `openCrawler(options)`
 
-The function opens a crawler on a folder and gives an `OpenedCrawler`: a `PoliteCrawler` that has `discover`, `crawl`, `diff`, `watch` and `extract`. The five are optional in `PoliteCrawler`, so an object of your own that implements the interface of 0.1.1 stays correct.
+The function opens a crawler on a folder and gives a `HybridCrawler`. It is an `OpenedCrawler` (a `PoliteCrawler` that has `discover`, `crawl`, `diff`, `watch` and `extract`) with [hybrid search](#hybrid-search): `hybrid`, `embed` and `rankWithin`. These members are optional in `PoliteCrawler`, so an object of your own that implements the interface of 0.1.1 or 0.1.2 stays correct.
 
 | Option | Type | Default | What it does |
 | --- | --- | --- | --- |
@@ -31,6 +31,7 @@ The function opens a crawler on a folder and gives an `OpenedCrawler`: a `Polite
 | `onEvent` | `(event) => void` | none | A function that gets each request, response, wait, stop and skip. |
 | `extractors` | `Record<string, Extractor>` | the recipe `page` | The readers of the recipes of an application. |
 | `watchFloor` | a duration, for example `"1h"` | `"1h"` | The shortest `every` of a watch. |
+| `embedder` | `Embedder` | none | The local model of [hybrid search](#hybrid-search): `transformersEmbedder`, `ollamaEmbedder` or your own. |
 
 `createRuntime(options)` takes the same options, and your own `log`, `blobs` and `index` in place of `dir`. It gives the parts of the runtime that `openCrawler` uses. Then use `catchUpIndex(runtime)`, as `openCrawler` does at open. It rebuilds a stale index. It also gives an index that is behind the log the captures that it missed.
 
@@ -78,7 +79,9 @@ interface PageResult {
 
 ### `find(q, options?)`
 
-The method searches the stored documents with SQLite FTS5 and BM25, and gives a promise. It sends no request. The options are `limit` (default 10) and `kind` (for example `"page"` or `"pdf"`). Each result has `doc`, `kind`, `title`, `url`, `snippet`, `score`, `ai_input`, `capture` and `fetched_at`.
+The method searches the stored documents with SQLite FTS5 and BM25, and gives a promise. It sends no request. The options are `limit` (default 10), `kind` (for example `"page"` or `"pdf"`) and `rank`. Each result has `doc`, `kind`, `title`, `url`, `snippet`, `score`, `ai_input`, `capture` and `fetched_at`.
+
+- `rank` is `"exact"` (the default), `"fast"` or `"hybrid"`. `"fast"` makes a long question faster. `"hybrid"` also finds by meaning, and each hit then has `passage`. [Hybrid search](#hybrid-search) tells how.
 
 - Text in double quotes is a phrase, and `bake*` is a prefix.
 - The documents that hold each word come first, then the documents that hold one word.
@@ -224,6 +227,38 @@ The method builds the index again from the capture log and the blobs, with no re
 
 The method closes the browser, the log files and the index. A second close does nothing, and a method after the close rejects.
 
+## Hybrid search
+
+Hybrid search fuses the BM25 ranking with the ranking of the vectors of a local model. It is opt-in, and it needs the option `embedder`.
+
+```ts title="Hybrid search with transformers.js or Ollama"
+import { ollamaEmbedder, openCrawler, transformersEmbedder } from "polite-crawler";
+
+const crawler = openCrawler({ dir: "./crawl", embedder: transformersEmbedder() });
+// or: embedder: ollamaEmbedder({ model: "nomic-embed-text" })
+
+await crawler.embed({ budget: "10m" });
+const hits = await crawler.find("a loaf with a dark crust", { rank: "hybrid" });
+const ranked = await crawler.rankWithin("rye", ["url:https://example.com/a"], { rank: "hybrid" });
+```
+
+- `transformersEmbedder(options)` uses transformers.js in the process. Install the optional peer `@huggingface/transformers`. The options are `model` (`Xenova/bge-small-en-v1.5`), `quantized` (`true`), `cacheDir`, `localOnly`, `pooling`, `queryPrefix`, `documentPrefix` and `batch`.
+- The first use of a transformers.js model downloads it from the Hugging Face Hub, not through the polite crawler.
+- `ollamaEmbedder(options)` sends the texts to a local Ollama server. The options are `model` (`nomic-embed-text`), `baseUrl` (`http://127.0.0.1:11434`), `batch` (32), `allowRemote` (`false`), `timeoutMs` and the prefixes.
+- An `Embedder` of your own has `id` (the model and its version), `dimensions`, `maxInputTokens` and `embed(texts, { signal, purpose })`.
+
+| Option of `find` and `rankWithin` | Default | What it does |
+| --- | --- | --- |
+| `candidates` | `50` | The BM25 candidates. A candidate with no vectors gets them first. |
+| `neighbors` | `50` | The documents with the closest chunks, from a brute-force cosine. |
+| `fusionK` | `60` | The constant k of reciprocal rank fusion: 1 / (k + rank) for each list. |
+| `signal` | none | An `AbortSignal` that stops the embedder. |
+
+- `embed(options)` gives vectors to each stored page that has none. The options are `budget` (`"10m"`), `maxDocs`, `kind` and `signal`. The result counts the documents, the new texts, the reused vectors and the held-back pages, and gives `stopped`.
+- The vectors go into `vectors.sqlite`, a projection beside the index. The key of a row is the hash of the text, the chunk and the `id` of the embedder, so a reindex keeps each vector.
+- A held-back page does not go to the embedder, and no result gives it.
+- Without an embedder, `rank: "hybrid"`, `embed` and `rankWithin` with `rank: "hybrid"` reject with `NO_EMBEDDER`.
+
 ## Signed requests
 
 The option `signer` of `openCrawler` signs each request with HTTP Message Signatures, as the Web Bot Auth draft tells (`draft-ietf-webbotauth-httpsig-protocol-00`).
@@ -285,7 +320,7 @@ The server has no tool that adds a watch or writes an export. These are actions 
 | `allowUserProvided` | `false` | The opt-in of the operator: `user_provided` works when the client cannot ask the user. |
 | `renderOff` | none | The reason for a server with no browser. A page that needs JavaScript shows it in its note. |
 
-`startMcpServer` takes the options of `openCrawler` and these options. It turns rendering off at start when no browser is installed.
+`startMcpServer` takes the options of `openCrawler` and these options. It turns rendering off at start when no browser is installed. With the option `embedder`, the tool `crawl_find` takes `rank: "hybrid"`.
 
 ## The entry points
 

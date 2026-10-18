@@ -1,6 +1,6 @@
 /**
- * A replay of an assistant that uses the four MCP tools. The inputs and the outputs are a real session
- * of polite-crawler 0.1.0 (the outputs are shorter here). The replay marks each step in turn and counts
+ * A replay of an assistant that uses four of the nine MCP tools. The inputs and the outputs are a real
+ * session of polite-crawler 0.1.0 (the outputs are shorter here). The replay marks each step in turn and counts
  * the requests: the fetch sends two, and the next three steps read the store.
  */
 import { useEffect, useRef, useState, type ReactElement } from "react";
@@ -151,7 +151,7 @@ export default function AgentReplay(): ReactElement {
       <div className="pc-crawl-head">
         <div className="pc-crawl-title">
           <strong>An assistant cites what it read</strong>
-          <span>A real session of the four MCP tools of polite-crawler 0.1.0.</span>
+          <span>A real session with four of the nine MCP tools.</span>
         </div>
         <div className="pc-replay-counts" aria-live="polite">
           <span>

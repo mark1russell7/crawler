@@ -10,7 +10,7 @@ import { formatDay } from "../../../lib/study.ts";
 export const day = formatDay(`${survey.date}T12:00:00Z`);
 export const dataUrl = `${import.meta.env.BASE_URL.replace(/\/$/, "")}/data/restaurant-survey.json`;
 
-<p class="pc-byline">The crawler read the sites on <time datetime={survey.date}>{day}</time>. The counts are under CC BY 4.0.</p>
+<p class="pc-byline">The crawler read the sites on <time datetime={survey.date}>{day}</time>. The counts are under <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>.</p>
 
 A restaurant website answers one question for most visitors: is it open? We measured how well a polite crawler answers that question. We took {survey.sample} of the {survey.population.toLocaleString("en-US")} restaurant, cafe and bar websites that OpenStreetMap lists in the Boston area, and we used polite-crawler on each one.
 

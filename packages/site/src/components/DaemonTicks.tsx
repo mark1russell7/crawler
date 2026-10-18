@@ -328,7 +328,10 @@ export default function DaemonTicks(): ReactElement {
                 ) : null,
               )}
               {view.stoppedAt !== null ? (
-                <span className="pc-dm-stop" style={{ left: at(view.stoppedAt) }}>
+                <span
+                  className={`pc-dm-stop${(view.stoppedAt - DAEMON_START) / WINDOW > 0.85 ? " pc-dm-stop-end" : ""}`}
+                  style={{ left: at(view.stoppedAt) }}
+                >
                   stop
                 </span>
               ) : null}

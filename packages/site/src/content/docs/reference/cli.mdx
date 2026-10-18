@@ -1,6 +1,6 @@
 ---
 title: Command line
-description: The polite-crawler command line - fetch, find, read, verify, extract, reindex, mcp, discover, crawl, export, diff, watch, embed, venue and product, with each option.
+description: The polite-crawler command line - fetch, find, read, verify, extract, reindex, mcp, discover, crawl, export, diff, watch, daemon, embed, venue, product and key-directory, with each option.
 ---
 
 ```sh
@@ -192,7 +192,7 @@ npx polite-crawler product "https://bottega-campione.example/products/olio-esemp
 | Code | Meaning |
 | --- | --- |
 | `0` | The command did its work. |
-| `1` | The command did not do its work: a page that the crawler did not fetch, no search result, a quote that is not in the document, a document that is not stored or that is held back, or an error. `discover` gives `1` when it finds no URL, and `crawl` when it gets no page. `read --at` and `verify --at` give `1` for a time before the first capture. `watch run` gives `1` when a check is `refused` or an `error`, or when entries stay due. With `--archive-fallback`, a page with an archived copy counts as done. `extract` gives `1` when a field is not `verified` or `normalized`. `embed` gives `1` when its budget stops it before each page has vectors. |
+| `1` | The command did not do its work. The causes are a page that the crawler did not fetch, no search result or a quote that is not in the document. A document that is not stored or that is held back, and an error, are causes too. `discover` gives `1` when it finds no URL, and `crawl` when it gets no page. `read --at` and `verify --at` give `1` for a time before the first capture. `watch run` gives `1` when a check is `refused` or an `error`, or when entries stay due. With `--archive-fallback`, a page with an archived copy counts as done. `extract` gives `1` when a field is not `verified` or `normalized`. `embed` gives `1` when its budget stops it before each page has vectors. |
 | `2` | The command line is wrong. The command opens no store. |
 | `3` | `venue` and `product` read nothing: no opening hours of the site or no Product data, a page that is held back, or a page that did not come. |
 | `4` | `venue` and `product`: the site refused the crawler (a wall). The causes are a 401, a 402 or a 403, a challenge, a bot check, robots.txt or a stop of the host. The crawler does not try a different identity. |

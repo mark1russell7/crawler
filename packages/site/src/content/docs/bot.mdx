@@ -4,16 +4,17 @@ seoTitle: "PoliteCrawler bot: what it is, and how to slow it down or block it"
 description: PoliteCrawler visited your site. What it is, what it fetches, how fast it goes, and how to slow it down or block it with robots.txt.
 ---
 
+import { Code } from "@astrojs/starlight/components";
+import crawlerPackage from "polite-crawler/package.json";
 import study from "../../data/robots-study.json";
 import { formatDay } from "../../lib/study.ts";
 
 export const day = formatDay(study.fetched.from);
+export const header = `User-Agent: PoliteCrawler/${crawlerPackage.version} (+https://mark1russell7.github.io/crawler/bot/)`;
 
 You found this page because a request to your site had this header:
 
-```text
-User-Agent: PoliteCrawler/0.1.0 (+https://mark1russell7.github.io/crawler/bot/)
-```
+<Code code={header} lang="text" />
 
 ## What PoliteCrawler is
 
@@ -25,7 +26,8 @@ Many people can use the software. When the operator gave a contact, the `User-Ag
 
 - **It reads robots.txt first** and obeys it, as RFC 9309 specifies.
 - **It sends one request at a time** to your site, with a rest of 3 seconds or more between two requests.
-- **It fetches the pages that it was asked for.** It does not follow every link of your site.
+- **It fetches the pages that a person or an assistant asks for.** A small crawl or a recipe can follow a few links of your site, within a limit of pages and time. It does not follow every link of your site.
+- **It checks a watched page on a schedule.** An operator can add a page to a watch list. The crawler then checks it again, at most one time in each hour by default.
 - **It obeys `Retry-After`** on a 429 or a 503.
 - **It stops at a refusal.** After a 401 or a 403, it sends no more requests to your site for 1 hour. After a challenge or a 402, it stops for 24 hours. The stop stays when the crawler starts again.
 - **It sends conditional requests.** With an `ETag` or a `Last-Modified` date, your server can answer `304 Not Modified` and send no body. When your `ETag` changes at each response and your `Last-Modified` date does not, the crawler learns it. It then sends only the date, so a `304` comes back.

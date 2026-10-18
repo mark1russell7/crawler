@@ -3,7 +3,11 @@ title: How the crawler is polite
 description: "The rules that polite-crawler keeps: robots.txt, one request at a time for each host, Retry-After, refusals that stop a host, and an honest User-Agent."
 ---
 
+import { Code } from "@astrojs/starlight/components";
+import crawlerPackage from "polite-crawler/package.json";
 import ResponseClassifier from "../../../components/ResponseClassifier.tsx";
+
+export const header = `PoliteCrawler/${crawlerPackage.version} (+https://mark1russell7.github.io/crawler/bot/)`;
 
 A polite crawler costs a site almost nothing, and it stops when the site says no. The package keeps these rules in its code. You cannot turn them off with an option.
 
@@ -32,9 +36,7 @@ Test what each response means:
 
 The default header is:
 
-```text
-PoliteCrawler/0.1.0 (+https://mark1russell7.github.io/crawler/bot/)
-```
+<Code code={header} lang="text" />
 
 The link goes to [a page for site owners](../../bot/). The `contact` option adds an address to the header. An email address also goes into the `From` header, and a URL does not, because `From` holds only a mailbox. The crawler sends no contact without it.
 

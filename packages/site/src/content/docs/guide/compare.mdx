@@ -17,7 +17,7 @@ The facts come from the documentation of each project in October 2026. The [sour
 
 | Tool | Language, license | robots.txt | Keeps the pages | MCP |
 | --- | --- | --- | --- | --- |
-| **polite-crawler** | TypeScript, MIT | Always, and the rules for `Claude-User` | Captures, bodies, a search index | Fetch, find, read, verify |
+| **polite-crawler** | TypeScript, MIT | Always, and the rules for `Claude-User` | Captures, bodies, a search index, optional vectors | Nine tools, from a fetch to a diff |
 | **Crawlee** | TypeScript and Python, Apache-2.0 | An option | Datasets and queues | Not in the library |
 | **Scrapy** | Python, BSD-3-Clause | On in a new project | Pipelines, an HTTP cache | Not in the framework |
 | **Firecrawl** | A service, AGPL-3.0 | On by default | In the service | A separate server |
@@ -42,6 +42,8 @@ A crawl is polite when each site gets a small load. The tools set the pace in di
 ### polite-crawler
 
 Use it when an assistant or a research script reads the same sources many times. The crawler fetches a page one time, and the next questions read the store with no request. Each answer can cite the capture that holds the text, and `verify` finds the exact span of a quote.
+
+Its recipes read the opening hours of a venue and the price of a product (`venue` and `product`). Hybrid search with a local model finds pages by the sense of a question. The daemon watches pages on a schedule.
 
 It does not hide what it is. It sends its name in the `User-Agent`, and it has no proxies and no browser fingerprints. When a site refuses it, it stops. Thus it is not a tool to get past a bot wall.
 
@@ -77,7 +79,7 @@ The fetch server and polite-crawler both give an assistant the text of a page. T
 }
 ```
 
-The assistant then gets `crawl_fetch` in place of `fetch`. It also gets `crawl_find`, `crawl_read` and `crawl_verify`, which read the store with no request. [Set up the MCP server](../mcp/).
+The assistant then gets `crawl_fetch` in place of `fetch`. It also gets eight more tools, for example `crawl_find`, `crawl_read` and `crawl_verify`, which read the store with no request. [Set up the MCP server](../mcp/).
 
 ## Sources
 

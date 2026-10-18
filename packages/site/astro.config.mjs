@@ -38,6 +38,78 @@ const lastmodOf = (url) => {
   return undefined;
 };
 
+/** This function tells if a node of the HTML tree is in an element of one of these names. */
+const isIn = (node, names, ctx) => {
+  for (let parent = ctx.parent(node); parent !== undefined; parent = ctx.parent(parent)) {
+    if (parent.type === "element" && names.includes(parent.tagName)) return true;
+  }
+  return false;
+};
+
+/**
+ * A break is good after these characters of a long name: `$POLITE_CRAWLER_DIR`, a path, `A=1`, and
+ * a "-" inside a word (`--allow-user-provided`), but not between the two "-" at the start.
+ */
+const BREAK_AFTER = /(?<=[_/=]|[^-]-)/;
+
+/** The children of a code element: the parts of its text, with a <wbr> between two parts. */
+const withBreaks = (parts) => {
+  const children = [];
+  for (const [index, part] of parts.entries()) {
+    if (index > 0) children.push({ type: "element", tagName: "wbr", properties: {}, children: [] });
+    children.push({ type: "text", value: part });
+  }
+  return children;
+};
+
+/**
+ * This Sätteri plugin sets how the code and the tables of the prose break:
+ * - A short code name with no space, for example `--allow-user-provided`, gets the class `pc-name`.
+ *   The CSS keeps it on one line on a wide screen, so a line does not end with a lone "-".
+ * - An option in a table cell (it starts with "-") gets the class `pc-option`, and it stays whole.
+ * - In a table cell, a long name gets a <wbr> after each "_", "/", "=" and inner "-", so it breaks
+ *   there and not in the middle of a word.
+ */
+const proseCode = {
+  name: "polite-crawler-prose-code",
+  element: [
+    {
+      filter: ["code"],
+      visit(node, ctx) {
+        if (isIn(node, ["pre"], ctx)) return undefined;
+        const text = ctx.textContent(node);
+        const inCell = isIn(node, ["td", "th"], ctx);
+        const classes = [];
+        if (text.length <= 40 && !/\s/.test(text)) classes.push("pc-name");
+        if (inCell && text.startsWith("-") && text.length <= 28) classes.push("pc-option");
+        if (classes.length === 0 && !inCell) return undefined;
+        const parts = inCell ? text.split(BREAK_AFTER) : [text];
+        return {
+          type: "element",
+          tagName: "code",
+          properties: { ...node.properties, class: classes.join(" ") },
+          children: withBreaks(parts),
+        };
+      },
+    },
+  ],
+};
+
+const NO_PLUGINS =
+  "the Markdown processor has no hastPlugins: the code of the prose wraps as before";
+
+/** This integration adds `proseCode` to the Markdown processor (Sätteri), as Starlight does. */
+const proseCodeIntegration = {
+  name: "polite-crawler-prose-code",
+  hooks: {
+    "astro:config:setup": ({ config, logger }) => {
+      const plugins = config.markdown?.processor?.options?.hastPlugins;
+      if (Array.isArray(plugins)) plugins.push(proseCode);
+      else logger.warn(NO_PLUGINS);
+    },
+  },
+};
+
 export default defineConfig({
   site,
   base,
@@ -138,5 +210,7 @@ export default defineConfig({
     }),
     // the islands are React code that runs on Preact (preact/compat): 9 KB of runtime in place of 69 KB (gzip)
     preact({ compat: true }),
+    // after Starlight, which sets the Markdown processor
+    proseCodeIntegration,
   ],
 });

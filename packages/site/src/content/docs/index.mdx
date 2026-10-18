@@ -29,10 +29,16 @@ Research reads the same sources again and again. A plain web fetch goes back to 
     The crawler reads the JSON-LD, the visible text and the links with no browser. It opens a headless browser only for a page that needs JavaScript. [See what it reads](tools/page-reader/).
   </Card>
   <Card title="It answers from the disk" icon="seti:db">
-    Each response goes into a capture log. A full-text index finds passages, and a quote check finds the exact text to cite. [How it works](guide/how-it-works/).
+    Each response goes into a capture log. A full-text index finds passages, and a local model can also find them by meaning. A quote check finds the exact text to cite. [How hybrid search ranks](guide/search/).
   </Card>
   <Card title="It tells its name" icon="information">
     Each request sends the User-Agent `PoliteCrawler` with a link to [a page for site owners](bot/). A site can refuse it by name, and the crawler obeys.
+  </Card>
+  <Card title="It reads hours and prices" icon="puzzle">
+    The recipes read the opening hours of a venue and the price of a product, with the source of each value. `polite-crawler venue` and `polite-crawler product` start them. [Write a recipe](guide/recipes/) for a source of your own.
+  </Card>
+  <Card title="It watches pages" icon="clock">
+    The daemon checks a watch list on a schedule. A change needs a second check, and then the daemon writes it as one JSON line. [The daemon, tick by tick](guide/daemon/).
   </Card>
 </CardGrid>
 
@@ -63,6 +69,11 @@ crawler.verify(page.doc!, "robots.txt protocol"); // the exact span and the capt
 ## How it works, in figures
 
 <CardGrid>
+  <LinkCard
+    title="The path of a request"
+    description="Eleven stages from the question to the stored page: the store, robots.txt, the host queue, the capture and the detour through a browser."
+    href="guide/how-it-works/"
+  />
   <LinkCard
     title="How hybrid search ranks"
     description="Full-text ranks, vector ranks and their fusion, side by side. Move k and the counts, and see each page move."
@@ -98,6 +109,11 @@ crawler.verify(page.doc!, "robots.txt protocol"); // the exact span and the capt
     description="How many sites a polite crawler can read, which site builders hide their opening hours, and how many pages need JavaScript."
     href="notes/restaurant-websites/"
   />
+  <LinkCard
+    title="Compare the crawlers"
+    description="polite-crawler, Crawlee, Scrapy, Firecrawl, Crawl4AI and the fetch server of MCP: what each one does best."
+    href="guide/compare/"
+  />
 </CardGrid>
 
 ## Tools to try
@@ -124,10 +140,5 @@ These tools start the code of the package in your browser. Nothing goes to a ser
     title="Recipe reader"
     description="Paste a venue page or a product page, and get the hours with their quotes, or the price, the variants and the product of the page."
     href="tools/recipe-reader/"
-  />
-  <LinkCard
-    title="Compare the crawlers"
-    description="polite-crawler, Crawlee, Scrapy, Firecrawl, Crawl4AI and the fetch server of MCP: what each one does best."
-    href="guide/compare/"
   />
 </CardGrid>

@@ -57,6 +57,9 @@ export interface Deposition {
 }
 
 /** An error of the API, with the method, the path and the status. */
+/** The User-Agent of the requests to Zenodo. Zenodo refuses the default User-Agent of Node.js. */
+export const ZENODO_USER_AGENT = "polite-crawler-study (+https://mark1russell7.github.io/crawler/)";
+
 export class ZenodoError extends Error {
   readonly status: number;
   constructor(message: string, status: number) {
@@ -98,6 +101,8 @@ export const deposit = async (options: DepositOptions): Promise<DepositResult> =
       headers: {
         Authorization: `Bearer ${options.token}`,
         Accept: "application/json",
+        // Zenodo refuses the default User-Agent of Node.js ("node") with a 403
+        "User-Agent": ZENODO_USER_AGENT,
         ...(body === undefined ? {} : { "Content-Type": body.type }),
       },
       // a copy of the bytes has its own ArrayBuffer, which the type of a body asks for

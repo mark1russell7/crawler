@@ -7,7 +7,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import type { DatasetFile } from "./dataset.ts";
 import { datasetFiles, zenodoMetadata } from "./dataset.ts";
 import type { Study } from "./study.ts";
-import { ZenodoError, deposit } from "./zenodo.ts";
+import { ZENODO_USER_AGENT, ZenodoError, deposit } from "./zenodo.ts";
 
 // A local copy of the deposit API of Zenodo. No test sends a request to Zenodo.
 
@@ -25,6 +25,7 @@ interface Call {
   readonly method: string;
   readonly path: string;
   readonly auth: string | undefined;
+  readonly agent: string | undefined;
   readonly type: string | undefined;
   readonly body: Buffer;
 }
@@ -77,6 +78,7 @@ const zenodo = async (behavior: Behavior = {}) => {
         method,
         path,
         auth: request.headers.authorization,
+        agent: request.headers["user-agent"],
         type: request.headers["content-type"],
         body,
       });
@@ -181,6 +183,8 @@ describe("the Zenodo client", () => {
       "PUT /api/files/bucket-101/robots-study.json",
     ]);
     for (const call of server.calls) expect(call.auth).toBe(`Bearer ${TOKEN}`);
+    // Zenodo refuses the default User-Agent of Node.js, so each request names the study
+    for (const call of server.calls) expect(call.agent).toBe(ZENODO_USER_AGENT);
     // the metadata asks Zenodo to reserve the DOI
     const put = JSON.parse(server.calls[1]!.body.toString("utf8")) as {
       metadata: Record<string, unknown>;

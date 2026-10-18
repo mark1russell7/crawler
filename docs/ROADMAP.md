@@ -8,116 +8,33 @@ Change this file and the tracker together. Each item has an id, a status, an are
 
 ### `w12`: A DOI for the study, and a press contact (W-12)
 
-Built, and CI passes on all 6 jobs. The study becomes a CC BY 4.0 dataset, a workflow makes a Zenodo draft with a reserved DOI, and the study page cites it with a press contact. It merges after 0.1.1 is on npm.
+The Zenodo draft exists, and its DOI 10.5281/zenodo.23443375 is reserved. Zenodo had refused Node's default User-Agent, and the workflow sends its own now. After Mark publishes, the DOI goes on the study page.
 
 - Area: Site and growth
-- What Mark does: 1) Sign in at zenodo.org with GitHub. 2) Account > Applications: create a personal access token with the scopes deposit:write and deposit:actions. 3) Run: gh secret set ZENODO_TOKEN -R mark1russell7/crawler, and paste the token. 4) After the merge, Claude runs the workflow, and you click Publish on the Zenodo draft.
+- What Mark does: Open https://zenodo.org/deposit/23443375, check the record, and click Publish. Then tell Claude.
 - Started: 2026-10-17
-- [Branch feat/doi](https://github.com/mark1russell7/crawler/tree/feat/doi)
-- [Zenodo](https://zenodo.org)
+- [The Zenodo draft](https://zenodo.org/deposit/23443375)
+- [The study](https://mark1russell7.github.io/crawler/)
 
 ### `tag-rule`: Let CI create release tags
 
-The release tags ruleset lets only admins create v* tags, so the release workflow could not make the v0.1.1 tag. markt-54 made it by hand and asked you.
+markt-54 added SemVer checks to the release workflow (template #8, crawler #7): a version must be greater than npm's latest, a prerelease goes to the next tag, and no version is reused. Until the ruleset changes, markt-54 makes each tag by hand, as it did for v0.1.2.
 
 - Area: Release and CI
 - Waits for: `rel011`
-- What Mark does: Say whether GitHub Actions may create v* tags in the crawler repository (markt-54 asked). Until then, markt-54 makes each release's tag by hand.
+- What Mark does: Tell markt-54 yourself, in its own session, that GitHub Actions may create v* tags in the crawler repository, or change the release tags ruleset yourself. Its permission check does not act on a yes relayed by another session.
+- Owner: Session markt-54
 - [Rulesets](https://github.com/mark1russell7/crawler/settings/rules)
-
-### `hybrid`: Hybrid search: full text plus a local vector index
-
-Meaning-based search beside full-text search, as an opt-in rank "hybrid". Exact full-text ranking stays the default. It needs a local embedding model, and that is your choice of toolchain. Options: (A) transformers.js as an optional peer with a small model (bge-small, about 30 MB, downloaded on first use), vectors in SQLite. (B) Ollama, which you would run yourself: no new dependency in the package. (C) A cloud embedding API, which costs money per call and sends text out. Recommendation: A, behind a pluggable embedder like the renderer, so B also works.
-
-- Area: Package
-- Waits for: `s30`
-- What Mark does: Choose the embedding toolchain for hybrid search: A (recommended), B or C.
-
-### `eval`: Published eval: tokens per verified claim
-
-Measure how many tokens a verified claim costs with polite-crawler against WebFetch. Options: (A) a reproducible count in CI of the text an agent must read to check each claim, with no model calls. (B) Real agent runs through Claude Code on a fixed question set, which use your subscription. (C) Both: A for every release, B once for the published number. Recommendation: C.
-
-- Area: Site and growth
-- Waits for: `rel011`
-- What Mark does: Choose the eval method: C (recommended), A or B.
 
 ## In progress
 
-### `sitemaps`: Find pages from sitemaps and feeds
+### `hybrid`: Hybrid search: full text plus a local vector index
 
-On main since 2026-10-17, in the next release. crawler.discover finds a site's pages from its sitemaps and feeds, robots.txt first, with a strict sitemap reader that stays bounded on hostile files.
-
-- Area: Package
-- Waits for: `pub010`
-- Started: 2026-10-17
-- [Main at 3c3a800](https://github.com/mark1russell7/crawler/commit/3c3a800)
-
-### `frontier`: A small crawl frontier with a budget
-
-On main since 2026-10-17, in the next release. crawler.crawl follows a site's links within page, depth and time budgets, one request per host at a time, with a summary of why it stopped.
+Mark chose both: transformers.js as an optional peer (A) and Ollama over its local API (B), behind one pluggable Embedder interface. Opt-in rank "hybrid" fuses full-text and vector results. Exact full-text ranking stays the default.
 
 - Area: Package
-- Waits for: `sitemaps`
+- Waits for: `s30`
 - Started: 2026-10-17
-- [Main at 3c3a800](https://github.com/mark1russell7/crawler/commit/3c3a800)
-
-### `fallback`: An archived copy after a refusal
-
-Built, and CI passes on all 6 jobs. Opt-in: after a refusal, a copy from the Wayback Machine or Common Crawl, kept as its own document and labelled archived with its date in read, verify and MCP results. By default it never gives a copy of a page that the site's current robots.txt disallows. It merges after 0.1.1 is on npm.
-
-- Area: Package
-- Waits for: `pub010`
-- Started: 2026-10-17
-- [Branch feat/fetchpath](https://github.com/mark1russell7/crawler/tree/feat/fetchpath)
-- [CI run](https://github.com/mark1russell7/crawler/actions/runs/39070835447)
-
-### `watch`: Watch pages for changes, with diffs
-
-Built, and CI passes on all 6 jobs. A watch list kept in its own watch.sqlite, a check at most each hour by default, and a change confirmed only when the next check sees it too. Line and word diffs, and structured-data diffs. It merges after 0.1.1 is on npm.
-
-- Area: Package
-- Waits for: `sitemaps`
-- Started: 2026-10-17
-- [Branch feat/watch](https://github.com/mark1russell7/crawler/tree/feat/watch)
-- [CI run](https://github.com/mark1russell7/crawler/actions/runs/39070737621)
-
-### `warc`: Export the store as WARC or WACZ
-
-On main since 2026-10-17, in the next release. WARC/1.1 and WACZ 1.1.1 export, checked by warcio and wacz validate in CI, with no new dependency.
-
-- Area: Package
-- Waits for: `pub010`
-- Started: 2026-10-17
-- [Main at 3c3a800](https://github.com/mark1russell7/crawler/commit/3c3a800)
-
-### `botauth`: Signed requests (Web Bot Auth)
-
-Built, and CI passes on all 6 jobs. Requests can carry an Ed25519 HTTP message signature (RFC 9421, Web Bot Auth draft 00 of September 2026), matched against the RFC and draft test vectors. A signature only adds headers, never replacing the honest User-Agent. A key-directory command prints the keys to host. It merges after 0.1.1 is on npm.
-
-- Area: Package
-- Waits for: `pub010`
-- Started: 2026-10-17
-- [Branch feat/fetchpath](https://github.com/mark1russell7/crawler/tree/feat/fetchpath)
-- [CI run](https://github.com/mark1russell7/crawler/actions/runs/39070835447)
-
-### `extraction`: Verified structured extraction
-
-Built, and CI passes on all 6 jobs. A caller proposes field values, and extract checks each against the stored capture: verified, normalized (with the named rule), ambiguous (both readings, never a guess), not found or invalid. It never invents a value. A held-back page reveals nothing. It merges after 0.1.1 is on npm.
-
-- Area: Package
-- Waits for: `pub010`
-- Started: 2026-10-17
-- [Branch feat/extract](https://github.com/mark1russell7/crawler/tree/feat/extract)
-- [CI run](https://github.com/mark1russell7/crawler/actions/runs/39073476914)
-
-### `timetravel`: Read a page as it was on a date
-
-Built, and CI passes. read and verify take `at` and use the version that was current then. A time before the first capture says so. Held-back rules apply at every time. Search at a past time is left out, because the index keeps one current text per page.
-
-- Area: Package
-- Waits for: `pub010`
-- Started: 2026-10-17
-- [Branch feat/watch](https://github.com/mark1russell7/crawler/tree/feat/watch)
 
 ## Blocked
 
@@ -129,13 +46,15 @@ The NDJSON writer, the keep-alive and the 'as they finish' helper move into the 
 - Blocked: The client repository is frozen for its 0.6.0 release. These changes land after it, as 0.7.0.
 - Owner: The client-repo sessions
 
-### `rel012`: Release 0.1.2
+### `mcp-host`: The MCP server moves onto the shared MCP host
 
-A patch release that only adds to the API: discovery and the site crawl, WARC export, watch and diff, reading at a time, the archived fallback, signed requests and verified extraction. A type test proves that code written for 0.1.1 still compiles.
+Mark's decision D12 in the server-stack plan (OTH-3): the polite-crawler MCP entry moves onto @procedures/mcp-server, and the library stays a leaf. The MCP entry becomes its own package, so polite-crawler itself depends on no package of Mark's. Moving the export and the npx command is breaking, so it is a minor version (0.2.0), with a deprecation path, a new MCP registry entry and the same MCP features.
 
-- Area: Release and CI
-- Waits for: `sitemaps`, `frontier`, `warc`, `watch`, `timetravel`, `fallback`, `botauth`, `extraction`
-- Blocked: It waits for the wave-2 branches to pass CI together. Then a pull request changes the version, and markt-54 merges it.
+- Area: Package
+- Waits for: `rel012`
+- Blocked: It waits for the client's host factory, stdio under run() and MCP elicitation (CLI-10, CLI-11, CLI-12).
+- Owner: markt-02 and the crawler session
+- [Server-stack tracker](https://claude.ai/artifact/QbZd2i5apzg3ip5yiE57Pb)
 
 ## Later
 
@@ -174,6 +93,13 @@ Re-run the study monthly and publish it with an RSS feed and a CSV.
 - Area: Site and growth
 - Waits for: `w12`
 
+### `eval`: Published eval: tokens per verified claim
+
+Mark chose C: a reproducible count in CI for every release (A), and real Claude Code runs once for the published number (B). A is next after hybrid search.
+
+- Area: Site and growth
+- Waits for: `rel011`
+
 ### `showhn`: Directories and Show HN
 
 List the package in the MCP and tool directories, then post it to Show HN.
@@ -189,6 +115,26 @@ Score a local open-weight decision model (for example Laya) on labelled data fro
 
 ## Shipped
 
+### `timetravel`: Read a page as it was on a date
+
+On main since 2026-10-17, in 0.1.2. read, verify and extract take `at` and use the version that was current then. Search at a past time is left out, because the index keeps one current text per page.
+
+- Area: Package
+- Waits for: `pub010`
+- Started: 2026-10-17
+- Shipped: 2026-10-17
+- [Main at 52b5bd5](https://github.com/mark1russell7/crawler/commit/52b5bd5)
+
+### `extraction`: Verified structured extraction
+
+On main since 2026-10-17, in 0.1.2. extract checks the field values a caller proposes against the stored capture: verified, normalized (with the named rule), ambiguous (both readings, never a guess), not found or invalid. It never invents a value.
+
+- Area: Package
+- Waits for: `pub010`
+- Started: 2026-10-17
+- Shipped: 2026-10-17
+- [Main at 52b5bd5](https://github.com/mark1russell7/crawler/commit/52b5bd5)
+
 ### `conformance`: A conformance page for the standards
 
 The site's Standards page shows, rule by rule, how the crawler follows RFC 9309, RFC 9111, RFC 9110 and the AI preference signals. Each rule links to its test, and a test keeps the page and the tests in step. 172 of Google's 201 robots.txt cases agree, and 12 differ on purpose, each with its reason.
@@ -198,6 +144,78 @@ The site's Standards page shows, rule by rule, how the crawler follows RFC 9309,
 - Started: 2026-10-17
 - Shipped: 2026-10-17
 - [Standards page](https://mark1russell7.github.io/crawler/reference/standards/)
+
+### `botauth`: Signed requests (Web Bot Auth)
+
+On main since 2026-10-17, in 0.1.2. Ed25519 HTTP message signatures (RFC 9421, Web Bot Auth draft 00), matched against the test vectors. A signature only adds headers. A key-directory command prints the keys to host.
+
+- Area: Package
+- Waits for: `pub010`
+- Started: 2026-10-17
+- Shipped: 2026-10-17
+- [Main at 52b5bd5](https://github.com/mark1russell7/crawler/commit/52b5bd5)
+
+### `warc`: Export the store as WARC or WACZ
+
+On main since 2026-10-17, in the next release. WARC/1.1 and WACZ 1.1.1 export, checked by warcio and wacz validate in CI, with no new dependency.
+
+- Area: Package
+- Waits for: `pub010`
+- Started: 2026-10-17
+- Shipped: 2026-10-17
+- [Main at 3c3a800](https://github.com/mark1russell7/crawler/commit/3c3a800)
+
+### `watch`: Watch pages for changes, with diffs
+
+On main since 2026-10-17, in 0.1.2. A watch list kept in its own watch.sqlite, a check at most each hour by default, and a change confirmed only when the next check sees it too. Line and word diffs, and structured-data diffs.
+
+- Area: Package
+- Waits for: `sitemaps`
+- Started: 2026-10-17
+- Shipped: 2026-10-17
+- [Main at 52b5bd5](https://github.com/mark1russell7/crawler/commit/52b5bd5)
+
+### `fallback`: An archived copy after a refusal
+
+On main since 2026-10-17, in 0.1.2. Opt-in archived copies from the Wayback Machine or Common Crawl after a refusal, labelled archived with their date everywhere. By default never for a page that the site's current robots.txt disallows.
+
+- Area: Package
+- Waits for: `pub010`
+- Started: 2026-10-17
+- Shipped: 2026-10-17
+- [Main at 52b5bd5](https://github.com/mark1russell7/crawler/commit/52b5bd5)
+
+### `frontier`: A small crawl frontier with a budget
+
+On main since 2026-10-17, in the next release. crawler.crawl follows a site's links within page, depth and time budgets, one request per host at a time, with a summary of why it stopped.
+
+- Area: Package
+- Waits for: `sitemaps`
+- Started: 2026-10-17
+- Shipped: 2026-10-17
+- [Main at 3c3a800](https://github.com/mark1russell7/crawler/commit/3c3a800)
+
+### `sitemaps`: Find pages from sitemaps and feeds
+
+On main since 2026-10-17, in the next release. crawler.discover finds a site's pages from its sitemaps and feeds, robots.txt first, with a strict sitemap reader that stays bounded on hostile files.
+
+- Area: Package
+- Waits for: `pub010`
+- Started: 2026-10-17
+- Shipped: 2026-10-17
+- [Main at 3c3a800](https://github.com/mark1russell7/crawler/commit/3c3a800)
+
+### `rel012`: Release 0.1.2
+
+polite-crawler 0.1.2 is on npm, published by CI with provenance: discovery and the site crawl, WARC export, watch and diff, reading at a time, the archived fallback, signed requests and verified extraction. It only adds to the API, and compat.test.ts proves that 0.1.1 code still compiles.
+
+- Area: Release and CI
+- Waits for: `sitemaps`, `frontier`, `warc`, `watch`, `timetravel`, `fallback`, `botauth`, `extraction`
+- Started: 2026-10-17
+- Shipped: 2026-10-17
+- [npm package](https://www.npmjs.com/package/polite-crawler)
+- [GitHub release v0.1.2](https://github.com/mark1russell7/crawler/releases/tag/v0.1.2)
+- [Pull request #6](https://github.com/mark1russell7/crawler/pull/6)
 
 ### `j7swap`: jarvis uses the @procedures 0.7.0 helpers
 

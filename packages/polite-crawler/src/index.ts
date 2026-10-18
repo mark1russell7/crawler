@@ -22,7 +22,7 @@
  * - The check of proposed field values against a stored page: `checkFields` and `extractDocument`.
  * - Hybrid search: the `Embedder` interface, the adapters `transformersEmbedder` and
  *   `ollamaEmbedder`, and the engine `createHybridSearch`, `VectorStore`, `chunkText` and `fuseRanks`.
- * - The recipe SDK: `defineRecipe`, `runRecipe` and `registerRecipe`. The recipes of the package
+ * - The recipe SDK: `defineRecipe`, `runRecipe`, `registerRecipe` and `readJson`. The recipes of the package
  *   read the hours of a venue (`readVenue`) and a product page (`readProduct`).
  *
  * The other entry points give the rest:
@@ -279,6 +279,7 @@ export {
   RECIPE_LIMITS,
   RESERVED_RECIPES,
   defineRecipe,
+  readJson,
   registerRecipe,
   runRecipe,
 } from "./recipe.ts";

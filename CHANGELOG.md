@@ -21,6 +21,7 @@ A prerelease version (`0.2.0-beta.1`) goes to the npm tag `next`. Each other ver
   - In this version, `createRuntime` registers the extractors before it opens a file of the store. Thus an extractor that it refuses leaves no open file.
 - **The recipe SDK.** `defineRecipe({ name, fetch, extract })` declares what a recipe fetches and how it reads a body into documents. The README section "Writing a recipe" gives a full example and the rules.
   - `runRecipe(crawler, recipe, input)` fetches the request of an input through the crawler and gives the documents of its capture. `registerRecipe` registers a recipe in a runtime of your own.
+  - `readJson(body, capture)` reads a body as JSON in its declared encoding. A body that is not JSON throws an error that names the URL and the content type.
   - `mode: "page"` obeys robots.txt. `mode: "api"` is a documented API: robots.txt does not apply, and the pace (`minInterval`) does.
   - `reindex` reads the captures of each recipe again, and the time travel (`at`, `versions`, `diff`) works on its documents. A runtime with no recipe keeps the documents.
   - The extractor of a recipe checks each document. A document that is not valid, a document id with the prefix `archive:` and the kind `archived` make the extractor throw. The runtime reports the error.

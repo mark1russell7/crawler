@@ -320,6 +320,7 @@ const run = await runRecipe(crawler, menu, "mon");
 
 - `runRecipe(crawler, recipe, input, options?)` gives `outcome`, `docs`, `capture`, `from_cache`, `held_back`, `error` and `note`. `reindex` reads the captures of the recipe again.
 - An extractor is pure and sends no request. When it throws, the runtime reports the error, and the fetch continues.
+- `readJson(body, capture)` reads a body as JSON in its declared encoding, and names a body that is not JSON.
 - The name of a recipe is part of each capture id. The [README of the package](https://github.com/mark1russell7/crawler/tree/main/packages/polite-crawler#writing-a-recipe) gives each rule.
 
 ## Hybrid search

@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from "vitest";
 import type { ExtractedDoc } from "./docs.ts";
 import { Extractors } from "./runtime.ts";
-import { defineRecipe, registerRecipe, runRecipe } from "./recipe.ts";
+import { defineRecipe, readJson, registerRecipe, runRecipe } from "./recipe.ts";
 import type { Reply } from "./test-recipes.ts";
 import { FILLER, HTML, JSON_TYPE, htmlPage, openWith, pagesOf, world } from "./test-recipes.ts";
 
@@ -40,7 +40,7 @@ const menuRecipe = defineRecipe({
   maxAge: "6h",
   fetch: (day: string) => `${API}/menu?day=${encodeURIComponent(day)}`,
   extract: (body, capture): ExtractedDoc[] => {
-    const data = JSON.parse(new TextDecoder().decode(body)) as { items: Item[] };
+    const data = readJson(body, capture) as { items: Item[] };
     return data.items.map((item) => ({
       doc: `menu:forno-esempio/${item.id}`,
       kind: "menu-item",
@@ -145,6 +145,22 @@ describe("defineRecipe", () => {
     // a recipe of your own cannot take the place of a built-in reader
     const page = { ...other, name: "page" };
     expect(() => registerRecipe(extractors, page)).toThrow(/different extractor/);
+  });
+
+  it("reads a body as JSON in its declared encoding, and names a body that is not JSON", () => {
+    const latin1 = new Uint8Array([
+      0x7b, 0x22, 0x6e, 0x22, 0x3a, 0x22, 0x43, 0x61, 0x66, 0x66, 0xe8, 0x22, 0x7d,
+    ]);
+    expect(
+      readJson(latin1, { url: `${API}/a`, contentType: "application/json; charset=iso-8859-1" }),
+    ).toEqual({ n: "Caffè" });
+    const page = new TextEncoder().encode("<!doctype html><p>closed for maintenance</p>");
+    expect(() => readJson(page, { url: `${API}/b`, contentType: "text/html" })).toThrow(
+      `${API}/b answered text/html, not JSON`,
+    );
+    expect(() => readJson(page, { url: `${API}/c`, contentType: null })).toThrow(
+      /a body of no stated type, not JSON/,
+    );
   });
 
   it("checks each document of the extractor, and names the first fault", async () => {
@@ -311,7 +327,7 @@ describe("runRecipe", () => {
     // reindex counts the capture that the extractor cannot read
     const counts = await crawler.reindex();
     expect(counts.failed).toBe(1);
-    expect(counts.errors[0]?.error).toMatch(/JSON/);
+    expect(counts.errors[0]?.error).toMatch(/answered application\/json, not JSON/);
   });
 
   it("obeys robots.txt for a page recipe, and holds back a page that refuses AI input", async () => {

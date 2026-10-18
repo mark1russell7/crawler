@@ -356,7 +356,7 @@ These parts are the stable API:
 - Also stable: `HybridCrawler` (the result of `openCrawler`), `rank: "hybrid"` (`SearchRank`, `SearchOptions`), `embed`, `rankWithin` with `RankOptions` and `Ranked`, and `hybrid` (`HybridSearch`). The three members are optional in `PoliteCrawler`, and `OpenedCrawler` does not change.
 - The options and the results of hybrid search are stable too: `HybridOptions`, `HybridFindOptions`, `EmbedOptions`, `EmbedResult`, `EmbedStop`, `Passage` and `Found.passage`. So are `HYBRID_DEFAULTS`, `OLLAMA_MODELS`, `TRANSFORMERS_MODELS`, `NO_EMBEDDER`, `NO_OLLAMA` and `NO_TRANSFORMERS`.
 
-- The recipe SDK: `defineRecipe`, `runRecipe`, `registerRecipe`, the option `recipes` of `openCrawler` and `createRuntime`, and `RESERVED_RECIPES`. Its types are `Recipe`, `RecipeDefinition`, `RecipeExtract`, `RecipeCapture`, `RecipeRequest`, `RecipeRequestOptions`, `RecipeRunOptions`, `RecipeResult`, `RecipeDoc` and `RecipeTarget`.
+- The recipe SDK: `defineRecipe`, `runRecipe`, `registerRecipe`, `readJson`, the option `recipes` of `openCrawler` and `createRuntime`, and `RESERVED_RECIPES`. Its types are `Recipe`, `RecipeDefinition`, `RecipeExtract`, `RecipeCapture`, `RecipeRequest`, `RecipeRequestOptions`, `RecipeRunOptions`, `RecipeResult`, `RecipeDoc` and `RecipeTarget`.
 - The recipes: `readVenue`, `venueReadingsOf`, `compareHours`, `readProduct` and `productOf`. Their options and results are stable too: `VenueOptions`, `VenueResult`, `VenueReading`, `VenuePage`, `VenueLink`, `VenueLocation`, `VenueOsm`, `VenueSource`, `VenueRead`, `HoursComparison`, `ProductOptions`, `ProductResult`, `ProductRead`, `ProductVariant` and `Money`.
 
 The other exports of the root entry point are the engine. Examples are `createRuntime`, `catchUpIndex`, `Crawler`, `CaptureLog`, `DocIndex`, `FileBlobStore`, `SqliteHostStateStore`, `Extractors`, `fetchAndIndex` and `makeRecord`. An application can build on them. A minor version before 1.0.0 can change them, and its section in `CHANGELOG.md` says so.
@@ -982,7 +982,7 @@ const check = await crawler.extract(product.doc!, {
 A recipe tells the crawler what to fetch and how to read it into documents. The venue and product recipes read pages with the page reader of the package. A recipe of your own reads a source that the page reader does not know, for example an API.
 
 ```ts
-import { defineRecipe, openCrawler, runRecipe } from "polite-crawler";
+import { defineRecipe, openCrawler, readJson, runRecipe } from "polite-crawler";
 
 interface Item {
   readonly id: string;
@@ -997,7 +997,7 @@ const menu = defineRecipe({
   maxAge: "6h",
   fetch: (day: string) => `https://api.forno-esempio.example/menu?day=${encodeURIComponent(day)}`,
   extract: (body, capture) => {
-    const { items } = JSON.parse(new TextDecoder().decode(body)) as { items: Item[] };
+    const { items } = readJson(body, capture) as { items: Item[] }; // a body that is not JSON throws
     return items.map((item) => ({
       doc: `menu:forno-esempio/${item.id}`,
       kind: "menu-item",
@@ -1039,6 +1039,7 @@ await crawler.read("menu:forno-esempio/focaccia", { at: "2026-10-01T00:00:00Z" }
 - Give each recipe to `openCrawler` (or `createRuntime`) with `recipes`. Then `reindex` reads its captures from the start. `runRecipe` also registers a recipe the first time that it gets it.
 - `registerRecipe(runtime.extractors, recipe)` registers a recipe in a runtime of your own. A different extractor with the same name throws an error.
 - `recipe.request(input, options)` gives the request of the crawler, for `fetchAndIndex` in an application that builds its own steps.
+- `readJson(body, capture)` reads a body as JSON, in the encoding that the response declares. A body that is not JSON throws an error that names the URL and the content type.
 - `runRecipe`, `readVenue` and `readProduct` take a crawler or a runtime (`createRuntime`). The option `onBehalfOf` of `openCrawler` does not apply to them, so give `onBehalfOf` to each call.
 
 ### The rules of an extractor

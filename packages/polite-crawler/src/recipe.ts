@@ -19,6 +19,7 @@ import { archivedCopy, archivedOf, fallbackReason } from "./fallback.ts";
 import type { CrawlRuntime, Extractor, Extractors, Indexed, PageOptions } from "./runtime.ts";
 import { HELD_BACK, fetchAndIndex, heldBackMeta, isHeldBack, recordOverride } from "./runtime.ts";
 import type { AiInput } from "./signals.ts";
+import { decodeBody } from "./text.ts";
 
 /** The capture that an extractor reads: the final URL of the response and its content type. */
 export interface RecipeCapture {
@@ -103,6 +104,22 @@ export interface Recipe<Input = string> {
   /** This method gives the request of the crawler for one input. A value that is not a URL throws a `TypeError`. */
   request(input: Input, options?: RecipeRequestOptions): FetchRequest;
 }
+
+/**
+ * This function reads a body as JSON, in the encoding that the response declares. A body that is
+ * not JSON (a page about maintenance, or a login page) throws an error that names the URL and the
+ * content type. In an extractor, the runtime then reports that error.
+ */
+export const readJson = (body: Uint8Array, capture: RecipeCapture): unknown => {
+  const text = decodeBody(body, capture.contentType);
+  try {
+    return JSON.parse(text) as unknown;
+  } catch {
+    throw new Error(
+      `${capture.url} answered ${capture.contentType ?? "a body of no stated type"}, not JSON`,
+    );
+  }
+};
 
 /**
  * These recipe names belong to the crawler: the page reader, the archived fallback, robots.txt,

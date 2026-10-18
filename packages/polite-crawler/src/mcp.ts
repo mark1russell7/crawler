@@ -178,6 +178,10 @@ const hitShape = z.object({
   ai_input: z.string(),
   ...stamp,
   archived: archivedShape.optional(),
+  passage: z
+    .object({ start: z.number(), end: z.number(), similarity: z.number() })
+    .optional()
+    .describe("rank hybrid: the closest chunk of the text, with its positions for crawl_read"),
 });
 
 // ── discover and crawl ──────────────────────────────────────────────────────
@@ -543,12 +547,15 @@ export const createMcpServer = (
     },
   );
 
+  // rank "hybrid" is in the tool only when the crawler has an embedder
+  const hybrid = crawler.hybrid;
+  const ranks =
+    hybrid === undefined ? (["exact", "fast"] as const) : (["exact", "fast", "hybrid"] as const);
   server.registerTool(
     "crawl_find",
     {
       title: "Search stored pages",
-      description:
-        'Search every stored document with SQLite FTS5 and BM25 ranking. It sends no request. Each word of q is a term. The documents that hold each term come first, then the documents that hold one term. Case, accents and Unicode forms do not matter, English words match their stems, and Chinese, Japanese and Thai words match as text. "two words" in quotes is a phrase, and bake* is a prefix. The JSON gives the document ids: read one with crawl_read. Titles and snippets come in <untrusted-web-content> blocks, and [ and ] mark the first match in a snippet. A page that asked not to be AI input is not in the results.',
+      description: `Search every stored document with SQLite FTS5 and BM25 ranking. It sends no request. Each word of q is a term. The documents that hold each term come first, then the documents that hold one term. Case, accents and Unicode forms do not matter, English words match their stems, and Chinese, Japanese and Thai words match as text. "two words" in quotes is a phrase, and bake* is a prefix. The JSON gives the document ids: read one with crawl_read. Titles and snippets come in <untrusted-web-content> blocks, and [ and ] mark the first match in a snippet. A page that asked not to be AI input is not in the results.${hybrid === undefined ? "" : ` rank hybrid also finds the pages with a similar meaning, with the local embedder ${hybrid.embedder.id}: each hit gives passage, the positions of its closest chunk.`}`,
       inputSchema: {
         q: z
           .string()
@@ -561,17 +568,20 @@ export const createMcpServer = (
           .default(null)
           .describe("only this kind of document, for example page or pdf"),
         rank: z
-          .enum(["exact", "fast"])
+          .enum(ranks)
           .default("exact")
           .describe(
-            "exact (the default) ranks each match with BM25; fast leaves the common words out of the documents that hold one term, and is faster for a long question",
+            `exact (the default) ranks each match with BM25; fast leaves the common words out of the documents that hold one term, and is faster for a long question${hybrid === undefined ? "" : "; hybrid fuses BM25 with the meaning of the text (vectors of a local model)"}`,
           ),
       },
       outputSchema: { hits: z.array(hitShape), web_content: WEB_CONTENT },
       annotations: { readOnlyHint: true, openWorldHint: false },
     },
-    async ({ q, limit, kind, rank }) => {
-      const found = await crawler.find(q, { limit, kind, rank });
+    async ({ q, limit, kind, rank }, extra) => {
+      const found =
+        rank === "hybrid" && hybrid !== undefined
+          ? await hybrid.find(q, { limit, kind, signal: extra.signal })
+          : await crawler.find(q, { limit, kind, rank: rank === "hybrid" ? "exact" : rank });
       const now = Date.now();
       const web = new WebContent();
       const hits = found.map((hit) => {
@@ -594,6 +604,7 @@ export const createMcpServer = (
           fetched_at: hit.fetched_at,
           age: copyAge(hit.fetched_at, hit.archived, now),
           ...(hit.archived === undefined ? {} : { archived: { ...hit.archived } }),
+          ...(hit.passage === undefined ? {} : { passage: { ...hit.passage } }),
         };
       });
       return answer(hits, { hits }, web);
@@ -1394,6 +1405,8 @@ export const startMcpServer = async (options: StartMcpOptions): Promise<void> =>
   const server = createMcpServer(crawler, { onBehalfOf, allowUserProvided, renderOff });
   log(`polite-crawler ${VERSION}: MCP server on standard input and output, store ${open.dir}`);
   if (renderOff !== undefined) log(`polite-crawler: rendering is off: ${renderOff}`);
+  if (open.embedder !== undefined)
+    log(`polite-crawler: crawl_find takes rank hybrid, with the embedder ${open.embedder.id}`);
   let stopping: Promise<void> | undefined;
   const stop = (): Promise<void> => {
     stopping ??= (async () => {

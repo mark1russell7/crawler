@@ -14,6 +14,7 @@ import type { Found } from "./docs.ts";
 import { durationMs } from "./duration.ts";
 import type { ExtractResult } from "./extract.ts";
 import type { CrawlSummary } from "./frontier.ts";
+import type { EmbedResult } from "./hybrid.ts";
 import type { PageResult, ReadResult, ReindexResult, VerifyResult } from "./runtime.ts";
 import type { WaczResult } from "./wacz.ts";
 import type { WarcResult } from "./warc.ts";
@@ -96,6 +97,13 @@ const COMMAND_OPTIONS = {
   field: { type: "string", multiple: true },
   capture: { type: "string" },
   // ── end of extract ──
+  // ── hybrid search ──
+  embedder: { type: "string" },
+  "embed-model": { type: "string" },
+  "ollama-url": { type: "string" },
+  "allow-remote-ollama": { type: "boolean" },
+  "max-docs": { type: "string" },
+  // ── end of hybrid search ──
 } as const;
 
 /** These are the options of the command line: the options of the commands and of `export`. */
@@ -120,7 +128,7 @@ export const OWNER: Readonly<Record<string, string>> = {
   render: "fetch crawl watch",
   "max-age": "fetch crawl discover",
   limit: "find",
-  kind: "find",
+  kind: "find embed",
   rank: "find",
   from: "read diff",
   length: "read",
@@ -132,7 +140,7 @@ export const OWNER: Readonly<Record<string, string>> = {
   feed: "discover",
   "max-pages": "crawl watch",
   "max-depth": "crawl",
-  budget: "crawl watch",
+  budget: "crawl watch embed",
   include: "crawl",
   exclude: "crawl",
   sitemaps: "crawl",
@@ -156,6 +164,13 @@ export const OWNER: Readonly<Record<string, string>> = {
   field: "extract",
   capture: "extract",
   // ── end of extract ──
+  // ── hybrid search ──
+  embedder: "find embed mcp",
+  "embed-model": "find embed mcp",
+  "ollama-url": "find embed mcp",
+  "allow-remote-ollama": "find embed mcp",
+  "max-docs": "embed",
+  // ── end of hybrid search ──
 };
 
 /** These are the commands, with the smallest and the largest count of arguments. */
@@ -187,6 +202,9 @@ export const COMMANDS: Readonly<
   // ── extract ──
   extract: { min: 1, max: 1, wants: "extract wants one document id and --field name=value" },
   // ── end of extract ──
+  // ── hybrid search ──
+  embed: { min: 0, max: 0, wants: "embed takes no argument: give the model with --embedder" },
+  // ── end of hybrid search ──
 };
 
 const parse = (args: readonly string[]): ParsedArgs => {
@@ -559,6 +577,61 @@ export const fieldsOf = (given: readonly string[] | undefined): Record<string, C
   return fields;
 };
 
+// ── hybrid search ───────────────────────────────────────────────────────────
+
+/** This is the embedder of the command line: its adapter, its model and the URL of Ollama. */
+export interface EmbedderChoice {
+  readonly kind: "transformers" | "ollama";
+  readonly model: string | undefined;
+  readonly url: string | undefined;
+  readonly allowRemote: boolean;
+}
+
+/**
+ * This function reads the embedder of the command line, or of the environment for the commands
+ * that use one. `--embed-model` and `--ollama-url` need `--embedder`.
+ */
+export const embedderOf = (
+  values: Values,
+  env: Readonly<Record<string, string | undefined>>,
+  command: string,
+): EmbedderChoice | undefined => {
+  const uses = OWNER["embedder"]!.split(" ").includes(command);
+  const fromEnv = (name: string): string | undefined => (uses ? env[name] || undefined : undefined);
+  const name = values.embedder ?? fromEnv("POLITE_CRAWLER_EMBEDDER");
+  const model = values["embed-model"] ?? fromEnv("POLITE_CRAWLER_EMBED_MODEL");
+  const url = values["ollama-url"] ?? fromEnv("POLITE_CRAWLER_OLLAMA_URL");
+  const allowRemote =
+    values["allow-remote-ollama"] === true ||
+    (uses && envFlag(env, "POLITE_CRAWLER_ALLOW_REMOTE_OLLAMA"));
+  if (name === undefined) {
+    if (values["embed-model"] !== undefined || values["ollama-url"] !== undefined)
+      throw new UsageError(
+        "--embed-model and --ollama-url go with --embedder transformers or ollama",
+      );
+    return undefined;
+  }
+  if (name !== "transformers" && name !== "ollama")
+    throw new UsageError(`--embedder is transformers or ollama, not "${name}"`);
+  if (model !== undefined && model.trim() === "")
+    throw new UsageError("--embed-model wants a model");
+  if (values["ollama-url"] !== undefined && name !== "ollama")
+    throw new UsageError("--ollama-url goes with --embedder ollama");
+  return {
+    kind: name,
+    model,
+    url: name === "ollama" ? url : undefined,
+    allowRemote,
+  };
+};
+
+/** This function gives the text of `embed`: the counts and the reason of the stop. */
+export const describeEmbed = (result: EmbedResult): string =>
+  [
+    `${String(result.embedded)} texts got vectors (${String(result.chunks)} chunks); ${String(result.reused)} documents had vectors; ${String(result.held_back)} held back, so not sent to the model`,
+    `${String(result.docs)} documents examined in ${String(result.ms)} ms with ${result.embedder}. Stopped (${result.stopped})${result.stopped === "done" ? "" : ": start embed again for the rest"}.`,
+  ].join("\n");
+
 // ── the texts of the results ────────────────────────────────────────────────
 
 /** This function gives the pages of `fetch`: a rejected fetch is an error of its URL only. A page that needs a browser names the reason when rendering is off. */
@@ -589,7 +662,7 @@ export const describeFound = (found: readonly Found[]): string =>
     : found
         .map(
           (hit) =>
-            `${hit.doc}  ${hit.title}${hit.archived === undefined ? "" : `  [archived copy, captured ${hit.archived.timestamp}]`}\n  ${hit.snippet.replace(/\s+/g, " ")}`,
+            `${hit.doc}  ${hit.title}${hit.archived === undefined ? "" : `  [archived copy, captured ${hit.archived.timestamp}]`}${hit.passage === undefined ? "" : `  [passage ${String(hit.passage.start)}–${String(hit.passage.end)}]`}\n  ${hit.snippet.replace(/\s+/g, " ")}`,
         )
         .join("\n");
 
@@ -766,7 +839,7 @@ export interface Line {
   readonly rest: readonly string[];
   readonly values: Values;
   readonly render: "auto" | "never" | "always";
-  readonly rank: "exact" | "fast";
+  readonly rank: "exact" | "fast" | "hybrid";
   readonly limit: number;
   /** This value is the start of `read`. `diff` reads `--from` as a version (`diffFrom`). */
   readonly from: number;
@@ -786,6 +859,10 @@ export interface Line {
   /** This file is the key of `--sign-key` or `POLITE_CRAWLER_SIGN_KEY`. The command reads it after the checks. */
   readonly signKey: string | undefined;
   readonly signatureAgent: string | undefined;
+  /** This value is the embedder of hybrid search, from `--embedder` or `POLITE_CRAWLER_EMBEDDER`. */
+  readonly embedder: EmbedderChoice | undefined;
+  /** This value is `--max-docs` of `embed`. */
+  readonly maxDocs: number | undefined;
 }
 
 /** This is the result of `readLine`: the version, the help, or a command to do. */
@@ -813,8 +890,15 @@ export const readLine = (args: readonly string[], env: Env): Parsed => {
   if (render !== "auto" && render !== "never" && render !== "always")
     throw new UsageError(`--render is auto, never or always, not "${render}"`);
   const rank = values.rank ?? "exact";
-  if (rank !== "exact" && rank !== "fast")
-    throw new UsageError(`--rank is exact or fast, not "${rank}"`);
+  if (rank !== "exact" && rank !== "fast" && rank !== "hybrid")
+    throw new UsageError(`--rank is exact, fast or hybrid, not "${rank}"`);
+  const embedder = embedderOf(values, env, command);
+  if (rank === "hybrid" && embedder === undefined)
+    throw new UsageError("--rank hybrid wants --embedder transformers or ollama");
+  if (command === "embed" && embedder === undefined)
+    throw new UsageError("embed wants --embedder transformers or ollama");
+  const maxDocs =
+    values["max-docs"] === undefined ? undefined : whole("max-docs", values["max-docs"], 1, 1);
   const limit = whole("limit", values.limit, 10, 1);
   // diff reads --from as a version, and read as a position
   const from = command === "read" ? whole("from", values.from, 0, 0) : 0;
@@ -879,5 +963,7 @@ export const readLine = (args: readonly string[], env: Env): Parsed => {
     allowUserProvided,
     signKey,
     signatureAgent,
+    embedder,
+    maxDocs,
   };
 };

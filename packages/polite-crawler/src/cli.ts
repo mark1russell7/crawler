@@ -1,10 +1,19 @@
 #!/usr/bin/env node
-import type { CliField, CrawlLimits, ExportPlan, Values, WatchLine } from "./cli-line.ts";
+import { join } from "node:path";
+import type {
+  CliField,
+  CrawlLimits,
+  EmbedderChoice,
+  ExportPlan,
+  Values,
+  WatchLine,
+} from "./cli-line.ts";
 import {
   FS_CODES,
   UsageError,
   agentTypeOf,
   describeDiscover,
+  describeEmbed,
   describeEntry,
   describeEvent,
   describeExport,
@@ -23,6 +32,7 @@ import {
   readLine,
 } from "./cli-line.ts";
 import type { DiffResult } from "./diff.ts";
+import type { Embedder } from "./embed.ts";
 import type { CrawlPage } from "./frontier.ts";
 import type { OpenOptions, OpenedCrawler, PoliteCrawler } from "./open.ts";
 import { VERSION } from "./version.ts";
@@ -73,6 +83,7 @@ Usage:
   polite-crawler key-directory         print the key directory (JWKS) of --sign-key, to host
   polite-crawler extract <doc> --field name=value[:kind]...
                                        check proposed field values against a stored page
+  polite-crawler embed --embedder <name>  give vectors to the stored pages, for find --rank hybrid
 
 Options:
   --dir <path>       the store (default $POLITE_CRAWLER_DIR, or ~/.polite-crawler)
@@ -84,6 +95,13 @@ Options:
                      ($POLITE_CRAWLER_SIGN_KEY)
   --signature-agent <url>  the https origin of your key directory, or the URL of a
                      JSON Web Key Set on a path, for --sign-key ($POLITE_CRAWLER_SIGNATURE_AGENT)
+  --embedder <name>  the local model of hybrid search, for find, embed and mcp: transformers
+                     (transformers.js in this process) or ollama ($POLITE_CRAWLER_EMBEDDER)
+  --embed-model <m>  the model: Xenova/bge-small-en-v1.5 (transformers) or nomic-embed-text
+                     (ollama) by default ($POLITE_CRAWLER_EMBED_MODEL)
+  --ollama-url <url> the Ollama server, http://127.0.0.1:11434 by default ($POLITE_CRAWLER_OLLAMA_URL)
+  --allow-remote-ollama  permit an Ollama server on a different computer: the page text goes
+                     to it ($POLITE_CRAWLER_ALLOW_REMOTE_OLLAMA=1)
   --json             print JSON
   -v, --version      print the version
   -h, --help         print this help
@@ -97,7 +115,8 @@ Options:
   find     --limit <n>       how many results (default 10)
            --kind <kind>     only this kind of document, such as page or pdf
            --rank <mode>     exact (default): BM25 over each match; fast: leave common words
-                             out of the one-word part, faster for a long question
+                             out of the one-word part, faster for a long question; hybrid: BM25
+                             and the meaning of the text, fused (needs --embedder)
   read     --from <n>        where the range starts (default 0)
            --length <n>      how many characters (default 4000)
            --user-provided   you gave this URL yourself: read a page that refuses AI input (logged)
@@ -139,12 +158,16 @@ Options:
                              or json-ld:<path> such as json-ld:Product.offers.price
            --capture <id>    check the text of this capture, not the current text
            --user-provided   as for read
+  embed    --budget <time>   the longest time (default 10m); no embedding starts after it
+           --max-docs <n>    how many texts get vectors at most
+           --kind <kind>     only this kind of document
 
 Exit codes:
   0  done
   1  not done: a page not fetched, no match, a quote not found, a document unknown or
      held back, a watch check that failed or that is still due, a field value that extract
-     did not find or that is not clear, or an error
+     did not find or that is not clear, embed that stopped before each page had vectors,
+     or an error
      (fetch: a page with an archived copy counts as done)
   2  the command line is wrong
 `;
@@ -367,6 +390,61 @@ const runExtract = async (
 };
 
 // ── end of extract ──────────────────────────────────────────────────────────
+// ── hybrid search ───────────────────────────────────────────────────────────
+
+/**
+ * This function makes the embedder of the command line. It loads no model: the model loads at the
+ * first text. The transformers embedder keeps the files of its model in `<store>/models`.
+ */
+const embedderFor = async (choice: EmbedderChoice, dir: string): Promise<Embedder> => {
+  try {
+    if (choice.kind === "ollama") {
+      const { ollamaEmbedder } = await import("./ollama.ts");
+      return ollamaEmbedder({
+        ...(choice.model === undefined ? {} : { model: choice.model }),
+        ...(choice.url === undefined ? {} : { baseUrl: choice.url }),
+        allowRemote: choice.allowRemote,
+      });
+    }
+    const { transformersEmbedder } = await import("./transformers.ts");
+    return transformersEmbedder({
+      ...(choice.model === undefined ? {} : { model: choice.model }),
+      cacheDir: join(dir, "models"),
+    });
+  } catch (error) {
+    throw new UsageError(`--embedder ${choice.kind}: ${(error as Error).message}`, {
+      cause: error,
+    });
+  }
+};
+
+/** This function gives vectors to the stored pages within the budget. The exit code is 0 when each page has vectors. */
+const runEmbed = async (
+  crawler: OpenedCrawler,
+  limits: CrawlLimits,
+  options: { readonly maxDocs: number | undefined; readonly kind: string | undefined },
+  json: boolean,
+  out: (text: string) => void,
+): Promise<number> => {
+  // the first Ctrl+C stops the work cleanly, and the counts print
+  const controller = new AbortController();
+  const stop = (): void => controller.abort(new Error("interrupted"));
+  process.once("SIGINT", stop);
+  try {
+    const result = await crawler.embed({
+      budget: limits.budgetMs,
+      signal: controller.signal,
+      ...(options.maxDocs === undefined ? {} : { maxDocs: options.maxDocs }),
+      ...(options.kind === undefined ? {} : { kind: options.kind }),
+    });
+    out(json ? JSON.stringify(result, null, 2) : describeEmbed(result));
+    return result.stopped === "done" ? 0 : 1;
+  } finally {
+    process.removeListener("SIGINT", stop);
+  }
+};
+
+// ── end of hybrid search ────────────────────────────────────────────────────
 
 /** This function does the command of the command line, and gives the exit code. */
 const main = async (args: readonly string[]): Promise<number> => {
@@ -401,6 +479,8 @@ const main = async (args: readonly string[]): Promise<number> => {
     signKey,
     signatureAgent,
   } = line;
+  // ── hybrid search: the embedder loads no model before its first text ──
+  const embedder = line.embedder === undefined ? undefined : await embedderFor(line.embedder, dir);
   // ── signed requests: the key file opens after the checks of the command line ──
   if (command === "key-directory") return keyDirectoryCommand(keyFile(signKey!), signatureAgent);
   let signer;
@@ -424,6 +504,7 @@ const main = async (args: readonly string[]): Promise<number> => {
     ...(values["no-browser"] === true ? { renderer: false as const } : {}),
     ...(line.allowPrivate ? { egress: { allowPrivate: true } } : {}),
     ...(signer === undefined ? {} : { signer }),
+    ...(embedder === undefined ? {} : { embedder }),
   };
 
   if (command === "mcp") {
@@ -544,6 +625,14 @@ const main = async (args: readonly string[]): Promise<number> => {
           out,
         );
       // ── end of extract ──
+      case "embed":
+        return await runEmbed(
+          crawler,
+          crawlLimits,
+          { maxDocs: line.maxDocs, kind: values.kind },
+          values.json === true,
+          out,
+        );
       default: {
         // the documents of a recipe that this command cannot read stay, from the old index
         const counts = await crawler.reindex();

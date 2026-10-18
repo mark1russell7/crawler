@@ -174,6 +174,11 @@ try {
     graph.size > 1 && !packages.has("@modelcontextprotocol/sdk") && !packages.has("zod"),
     `the root entry point loads ${String(graph.size)} files and no MCP SDK or zod (${[...packages].sort((a, b) => a.localeCompare(b)).join(", ")})`,
   );
+  // the optional peers load only when a page needs a browser, or a hybrid search needs a model
+  check(
+    !packages.has("@huggingface/transformers") && !packages.has("playwright-core"),
+    "the root entry point loads no optional peer at start",
+  );
 
   const registry = JSON.parse(readFileSync(join(root, "server.json"), "utf8"));
   const entry = registry.packages?.find((item) => item.registryType === "npm");

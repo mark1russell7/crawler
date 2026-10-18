@@ -7,6 +7,7 @@ import {
   UsageError,
   agentTypeOf,
   describeDiscover,
+  describeEmbed,
   describeEntry,
   describeEvent,
   describeExport,
@@ -214,7 +215,9 @@ describe("readLine: the whole command line before the store opens", () => {
     expect(usage(["fetch", "x", "--render", "sometimes"])).toBe(
       '--render is auto, never or always, not "sometimes"',
     );
-    expect(usage(["find", "x", "--rank", "best"])).toBe('--rank is exact or fast, not "best"');
+    expect(usage(["find", "x", "--rank", "best"])).toBe(
+      '--rank is exact, fast or hybrid, not "best"',
+    );
     expect(usage(["find", "x", "--limit", "many"])).toBe(
       '--limit wants a whole number, not "many"',
     );
@@ -947,5 +950,112 @@ describe("the texts of the results", () => {
     expect(describeExport({ ...left, format: "warc", out: "/x", bytes: 1 }, true)).not.toContain(
       "include-refusals",
     );
+  });
+});
+
+describe("readLine: hybrid search", () => {
+  it("reads --embedder, --embed-model, --ollama-url and --allow-remote-ollama", () => {
+    expect(command(["find", "x"]).embedder).toBeUndefined();
+    expect(command(["find", "x", "--rank", "hybrid", "--embedder", "transformers"])).toMatchObject({
+      rank: "hybrid",
+      embedder: { kind: "transformers", model: undefined, url: undefined, allowRemote: false },
+    });
+    expect(
+      command([
+        "embed",
+        "--embedder",
+        "ollama",
+        "--embed-model",
+        "all-minilm",
+        "--ollama-url",
+        "http://127.0.0.1:1",
+        "--allow-remote-ollama",
+        "--budget",
+        "2m",
+        "--max-docs",
+        "5",
+        "--kind",
+        "pdf",
+      ]),
+    ).toMatchObject({
+      command: "embed",
+      embedder: {
+        kind: "ollama",
+        model: "all-minilm",
+        url: "http://127.0.0.1:1",
+        allowRemote: true,
+      },
+      maxDocs: 5,
+      crawlLimits: { budgetMs: 120_000 },
+    });
+    expect(command(["mcp", "--embedder", "ollama"]).embedder?.kind).toBe("ollama");
+  });
+
+  it("reads the embedder of the environment for find, embed and mcp only", () => {
+    const env: Env = {
+      POLITE_CRAWLER_EMBEDDER: "ollama",
+      POLITE_CRAWLER_EMBED_MODEL: "mxbai-embed-large",
+      POLITE_CRAWLER_OLLAMA_URL: "http://localhost:11434",
+      POLITE_CRAWLER_ALLOW_REMOTE_OLLAMA: "1",
+    };
+    expect(command(["find", "x", "--rank", "hybrid"], env).embedder).toEqual({
+      kind: "ollama",
+      model: "mxbai-embed-large",
+      url: "http://localhost:11434",
+      allowRemote: true,
+    });
+    expect(command(["read", "url:x"], env).embedder).toBeUndefined();
+    expect(
+      command(["embed"], {
+        POLITE_CRAWLER_EMBEDDER: "transformers",
+        POLITE_CRAWLER_OLLAMA_URL: "x",
+      }).embedder,
+    ).toEqual({ kind: "transformers", model: undefined, url: undefined, allowRemote: false });
+    expect(usage(["find", "x"], { POLITE_CRAWLER_EMBEDDER: "openai" })).toBe(
+      '--embedder is transformers or ollama, not "openai"',
+    );
+  });
+
+  it("refuses hybrid with no embedder, and the options that do not go together", () => {
+    expect(usage(["find", "x", "--rank", "hybrid"])).toBe(
+      "--rank hybrid wants --embedder transformers or ollama",
+    );
+    expect(usage(["embed"])).toBe("embed wants --embedder transformers or ollama");
+    expect(usage(["embed", "x", "--embedder", "ollama"])).toBe(
+      "embed takes no argument: give the model with --embedder",
+    );
+    expect(usage(["find", "x", "--embed-model", "m"])).toBe(
+      "--embed-model and --ollama-url go with --embedder transformers or ollama",
+    );
+    expect(usage(["find", "x", "--embedder", "transformers", "--ollama-url", "http://x"])).toBe(
+      "--ollama-url goes with --embedder ollama",
+    );
+    expect(usage(["find", "x", "--embedder", "ollama", "--embed-model", " "])).toBe(
+      "--embed-model wants a model",
+    );
+    expect(usage(["read", "url:x", "--embedder", "ollama"])).toBe(
+      "--embedder is an option of find or embed or mcp",
+    );
+    expect(usage(["find", "x", "--max-docs", "3"])).toBe("--max-docs is an option of embed");
+    expect(usage(["embed", "--embedder", "ollama", "--max-docs", "0"])).toBe(
+      "--max-docs wants 1 or more",
+    );
+  });
+
+  it("describes the counts of embed", () => {
+    const result = {
+      embedder: "ollama:nomic-embed-text",
+      docs: 9,
+      embedded: 4,
+      reused: 3,
+      held_back: 2,
+      chunks: 11,
+      stopped: "budget" as const,
+      ms: 1200,
+    };
+    expect(describeEmbed(result)).toBe(
+      "4 texts got vectors (11 chunks); 3 documents had vectors; 2 held back, so not sent to the model\n9 documents examined in 1200 ms with ollama:nomic-embed-text. Stopped (budget): start embed again for the rest.",
+    );
+    expect(describeEmbed({ ...result, stopped: "done" })).toMatch(/Stopped \(done\)\.$/);
   });
 });

@@ -6,6 +6,10 @@ packages:
 allowBuilds:
   "@mark1russell7/cue@git+https://github.com/mark1russell7/cue.git": true
   esbuild: true
+  # The optional peer @huggingface/transformers (a devDependency for its CI test) needs no script:
+  # onnxruntime-node holds the CPU binaries, and its script only gets the CUDA binaries.
+  onnxruntime-node: false
+  protobufjs: false
 
 minimumReleaseAgeExclude:
   - zod@4.6.6

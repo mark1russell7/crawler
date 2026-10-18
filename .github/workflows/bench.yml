@@ -3,6 +3,8 @@
 # It runs only when a person starts it, because a shared runner gives numbers for a comparison, not a gate.
 #   gh workflow run bench.yml -R mark1russell7/crawler --ref <branch>
 # The JSON results are the artifact bench-find-node<version>. The job summary has the table.
+# With hybrid, it also times hybrid search over the same index: a fake embedder gives the vectors,
+# so the times are those of the chunks, the vector store, the cosine and the fusion (time only).
 name: Bench
 
 on:
@@ -20,6 +22,13 @@ on:
       corpus:
         description: zipf (a Zipf spread with topics) or dense (the corpus of the review)
         default: zipf
+      hybrid:
+        description: Also time hybrid search (rank hybrid) with a fake embedder
+        type: boolean
+        default: false
+      dims:
+        description: The dimensions of the vectors of the hybrid mode
+        default: "384"
 
 permissions:
   contents: read
@@ -51,9 +60,12 @@ jobs:
           RUNS: ${{ inputs.runs }}
           MODES: ${{ inputs.modes }}
           CORPUS: ${{ inputs.corpus }}
+          HYBRID: ${{ inputs.hybrid && '--hybrid' || '' }}
+          DIMS: ${{ inputs.dims }}
         run: >-
           pnpm exec tsx packages/polite-crawler/bench/find.mts
           --docs "$DOCS" --runs "$RUNS" --modes "$MODES" --corpus "$CORPUS"
+          --dims "$DIMS" $HYBRID
           --out bench-find.json --summary "$GITHUB_STEP_SUMMARY"
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:

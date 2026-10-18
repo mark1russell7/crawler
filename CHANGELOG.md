@@ -15,6 +15,8 @@ A prerelease version (`0.2.0-beta.1`) goes to the npm tag `next`. Each other ver
 
 ## Unreleased
 
+## 0.1.4 - 2026-10-18
+
 - **The recipes on the command line.** `polite-crawler venue <url>` and `polite-crawler product <url>` read a venue or a product page with `readVenue` and `readProduct`. The MCP server does not change.
   - `venue` prints the week of the site and each reading with its source URL, its rank and its quote. It also prints the days where the readings disagree, the menus, the phone, the pages and the notes.
   - `venue` takes `--name`, `--require-name`, `--address`, `--lat` and `--lon`, `--osm` and `--pages`. `--compare <file>` compares the week of the site with a kept week (JSON) through `compareHours`, day by day.

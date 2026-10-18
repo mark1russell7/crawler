@@ -17,6 +17,7 @@
     "format:check": "prettier --check .",
     "lint": "oxlint --type-aware",
     "lint:ste": "ste-lint",
+    "roadmap": "node scripts/roadmap.mjs",
     "smoke": "node scripts/smoke.mjs",
     "test": "pnpm -r run test",
     "typecheck": "pnpm -r run typecheck"

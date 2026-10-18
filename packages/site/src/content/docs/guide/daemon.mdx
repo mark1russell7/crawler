@@ -1,0 +1,42 @@
+---
+title: The daemon, tick by tick
+seoTitle: "A polite page-watch daemon: ticks, jitter, budgets and confirmed changes"
+description: "Watch the daemon of polite-crawler check a watch list: the due times, the jitter, the budget and the page limit of each tick, the drain at a stop, and the JSON line of a confirmed change."
+---
+
+import DaemonTicks from "../../../components/DaemonTicks.tsx";
+
+The daemon is a process that runs for a long time. It checks the [watch list](../../reference/cli/#diff-and-watch) on a schedule, and it writes each confirmed change as one JSON line. Each check is a normal fetch of the crawler, so robots.txt, the pace of each host and the stops apply.
+
+```sh
+npx polite-crawler watch add https://forno-esempio.example/hours --every 1h
+npx polite-crawler daemon --tick 20m --jitter 2m --tick-budget 30s --tick-pages 3
+```
+
+The figure starts the real `scheduleWatches` of polite-crawler on a simulated clock. Use Play, Pause and Step. Select a tick to see its checks. With reduced motion, the figure shows the whole schedule at once.
+
+<DaemonTicks client:visible />
+
+## What the figure shows
+
+The watch list of the figure is a model, because the real list keeps its state in SQLite. The model follows the rules of `watch.run`, with made-up pages that send no request. The schedule, the jitter, the budget and the drain come from the real code.
+
+1. **Each page is due at its time.** A new entry is due at once. After a check, the entry is due again after `every` (1 hour or 2 hours here). The circle is the due time, and the line is the wait for the next tick.
+2. **A tick comes at the first due time, or after `--tick`.** After each tick, the daemon waits until the first entry is due. It does not wait longer than `--tick`.
+3. **Jitter comes after the wait.** The daemon adds a random time from 0 to `--jitter`, so a check does not come before its time. Many daemons with the same list then do not ask a site at the same second.
+4. **Each tick has a budget.** No request starts after `--tick-budget`. In the second tick, the host `bottega-campione.example` rests 30 seconds after a slow page, past the budget. The entry stays due for the next tick.
+5. **Each tick has a page limit.** The first tick checks `--tick-pages` entries (3), and the other entries wait for the next tick.
+6. **A change needs a second check.** The first check that sees a new version marks it as suspected. The next check confirms it when it sees the same version. Only then does the daemon write a JSON line. A page in maintenance for one check is a glitch, and the next check clears it.
+7. **A stop drains the run.** At `SIGINT` or `SIGTERM`, the run starts no new check. The checks in progress end and write their state. After `--grace` (10 seconds), the checks that are still in progress abort.
+
+In the figure, the stop gives the checks in progress one hour instead of 10 seconds, because the clock of the figure is not the real clock.
+
+## The JSON line of a change
+
+The daemon writes each confirmed change to the standard output, or to the file of `--events`. A line is a `WatchEvent`:
+
+- `kind` is `changed`, `gone` or `new`, and `confirmed` is `true`.
+- `capture` names the capture of the new version, and `previous` names the capture of the old version. `diff` counts the changed lines and words.
+- `next_at` is the time when the page is due again.
+
+`--on-change` starts your command for each change, with the line on its standard input. The [command line](../../reference/cli/#daemon) gives each option, and the [library API](../../reference/api/#the-daemon) gives `startDaemon` and `scheduleWatches`.

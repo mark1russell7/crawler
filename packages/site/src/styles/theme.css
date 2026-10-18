@@ -1199,9 +1199,12 @@ header.header {
 .sl-markdown-content td code {
   overflow-wrap: anywhere;
 }
-/* On a wide screen, code in a sentence stays on one line: no lone "-" at the end of a line. */
+/*
+ * On a wide screen, a short code name in a sentence stays on one line: no lone "-" at the end of a
+ * line. The rehype plugin of astro.config.mjs marks these names. A long code span can still wrap.
+ */
 @media (min-width: 50rem) {
-  .sl-markdown-content :is(p, li) > code {
+  .sl-markdown-content :is(p, li) > code.pc-name {
     white-space: nowrap;
   }
 }

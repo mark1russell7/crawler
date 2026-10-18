@@ -38,10 +38,34 @@ const lastmodOf = (url) => {
   return undefined;
 };
 
+/** The text of a node of the HTML tree (hast). */
+const textOf = (node) =>
+  node.type === "text" ? node.value : (node.children ?? []).map((child) => textOf(child)).join("");
+
+/**
+ * This rehype plugin marks the short code names of the prose, for example `--allow-user-provided`.
+ * The CSS keeps such a name on one line on a wide screen, so a line does not end with a lone "-".
+ * A long code span (a test name with spaces) gets no mark, and it can still wrap.
+ */
+const shortCode = () => (tree) => {
+  const visit = (node, parent) => {
+    if (node.type === "element" && node.tagName === "code" && parent?.tagName !== "pre") {
+      const text = textOf(node);
+      if (text.length <= 40 && !/\s/.test(text)) {
+        const names = node.properties.className;
+        node.properties.className = [...(Array.isArray(names) ? names : []), "pc-name"];
+      }
+    }
+    for (const child of node.children ?? []) visit(child, node);
+  };
+  visit(tree, undefined);
+};
+
 export default defineConfig({
   site,
   base,
   trailingSlash: "ignore",
+  markdown: { rehypePlugins: [shortCode] },
   // the islands and their workers use the pure parts of polite-crawler, with no Node.js part (pure-crawler.mjs)
   // the workers are ES modules ({ type: "module" }), so a worker can have chunks of its own
   vite: { plugins: [pureCrawler()], worker: { format: "es", plugins: () => [pureCrawler()] } },

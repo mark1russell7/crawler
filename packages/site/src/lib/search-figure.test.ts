@@ -41,6 +41,38 @@ describe("the data of the search figure", () => {
       expect(question.vector.map((hit) => hit.doc).sort(), question.q).toEqual(ids);
   });
 
+  // the notes of the figure (HybridRanks.tsx) tell these facts: a new run of the model must keep them
+  it("keeps the facts that the notes of the figure tell", () => {
+    const question = (id: string) => figure.questions.find((one) => one.id === id)!;
+    const lexical = (id: string) => question(id).lexical.map((hit) => hit.doc);
+    const vector = (id: string) => question(id).vector.map((hit) => hit.doc);
+    const fusedRank = (id: string, doc: string, k: number) =>
+      fuseQuestion(question(id), { k, candidates: 50, neighbors: 50 }).findIndex(
+        (row) => row.doc === doc,
+      ) + 1;
+
+    expect(lexical("pizza")).not.toContain("forno");
+    expect(lexical("pizza")).toContain("fx-2207");
+    expect(vector("pizza")[0]).toBe("forno");
+
+    expect(lexical("entrance")).toEqual([]);
+    expect(vector("entrance").indexOf("museum-visit")).toBe(1);
+
+    expect(vector("gtin")[0]).toMatch(/^fx-/);
+    expect(lexical("gtin")[0]).toBe("olio");
+    expect(fusedRank("gtin", "olio", 60)).toBe(1);
+
+    expect(lexical("access")[0]).toBe("archive");
+    expect(lexical("access")).not.toContain("museum-visit");
+    expect(vector("access")[0]).toBe("museum-visit");
+    expect(fusedRank("access", "museum-visit", 60)).toBe(4);
+    expect(fusedRank("access", "museum-visit", 0)).toBe(2);
+
+    expect(new Set(lexical("rye").slice(0, 3))).toEqual(new Set(vector("rye").slice(0, 3)));
+    const top = fuseQuestion(question("rye"), { k: 60, candidates: 50, neighbors: 50 }).slice(0, 3);
+    expect(top[0]!.score - top[2]!.score).toBeLessThan(0.0001);
+  });
+
   it("fuses the two lists as the real hybrid search does", () => {
     const settings = {
       k: HYBRID_DEFAULTS.fusionK,

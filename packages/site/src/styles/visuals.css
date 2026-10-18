@@ -1,0 +1,268 @@
+/*
+ * The figures of 0.1.3: hybrid search, the recipe reader, the recipe SDK and the daemon. They use the
+ * tokens of tokens.css and the look of the other tools: ink on graph paper, hairlines, blue ink.
+ */
+
+/* ---------------------------------------------------------------- how hybrid search ranks */
+
+.pc-hy {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-4);
+  margin: var(--space-5) 0;
+  padding: var(--space-4);
+  border: 1px solid var(--color-rule-strong);
+  border-top: 3px solid var(--color-ink);
+  border-radius: 0 0 var(--radius) var(--radius);
+  background: var(--color-surface);
+}
+.pc-hy-controls {
+  display: grid;
+  gap: var(--space-3);
+}
+.pc-hy-sliders {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  gap: var(--space-3) var(--space-5);
+  align-items: end;
+}
+.pc-hy-slider {
+  display: grid;
+  gap: var(--space-1);
+  font-size: var(--text-sm);
+  color: var(--color-ink-secondary);
+}
+.pc-hy-slider strong {
+  color: var(--color-ink);
+  font-variant-numeric: tabular-nums;
+}
+.pc-hy-slider input {
+  width: 100%;
+  accent-color: var(--color-accent);
+}
+.pc-hy-slider input:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+.pc-hy-sliders .pc-button {
+  justify-self: start;
+}
+.pc-hy-question {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2) var(--space-3);
+  margin: 0;
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--color-rule);
+}
+.pc-hy-question span {
+  font-size: var(--text-sm);
+  color: var(--color-ink-muted);
+}
+.pc-hy-question q {
+  font: 600 var(--text-xl) / 1.25 var(--font-sans);
+  color: var(--color-ink);
+  overflow-wrap: anywhere;
+}
+.pc-hy-heads {
+  position: relative;
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-2);
+  min-height: 2.6rem;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-ink);
+}
+.pc-hy-heads-wide .pc-hy-head {
+  position: absolute;
+  top: 0;
+}
+.pc-hy-head {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  column-gap: 0.4rem;
+  align-items: center;
+  align-content: start;
+}
+.pc-hy-head small {
+  grid-column: 1 / -1;
+  font-weight: 400;
+  font-size: var(--text-xs);
+  color: var(--color-ink-muted);
+  font-variant-numeric: tabular-nums;
+}
+.pc-hy-head-mid {
+  grid-template-columns: 1fr;
+  text-align: center;
+}
+.pc-hy-heads:not(.pc-hy-heads-wide) .pc-hy-head-vec {
+  text-align: end;
+}
+.pc-hy-heads-wide .pc-hy-head-vec {
+  justify-content: end;
+  text-align: end;
+}
+.pc-hy-key {
+  display: inline-block;
+  width: 18px;
+  height: 2px;
+  border-radius: 1px;
+}
+.pc-hy-key-text {
+  background: var(--series-1);
+}
+.pc-hy-key-vec {
+  background: var(--series-2);
+}
+.pc-hy-key-target {
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--color-ink);
+  border-radius: 4px;
+}
+.pc-hy-plot svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+.pc-hy-pill rect,
+.pc-hy-row rect {
+  fill: var(--color-surface-sunken);
+  stroke: var(--color-rule-strong);
+  stroke-width: 1;
+  transition: opacity 0.15s;
+}
+.pc-hy-pill,
+.pc-hy-row {
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+.pc-hy-row rect {
+  fill: var(--color-surface);
+  stroke: var(--color-ink-muted);
+}
+.pc-hy-target rect {
+  stroke: var(--color-ink);
+  stroke-width: 2;
+}
+.pc-hy-on rect {
+  fill: var(--color-accent-wash);
+  stroke: var(--color-accent);
+  stroke-width: 2;
+}
+.pc-hy-row:focus {
+  outline: none;
+}
+.pc-hy-row:focus-visible rect {
+  stroke: var(--color-accent);
+  stroke-width: 3;
+}
+.pc-hy-cut {
+  opacity: 0.4;
+}
+.pc-hy-faded {
+  opacity: 0.22;
+}
+.pc-hy-cut.pc-hy-faded {
+  opacity: 0.12;
+}
+.pc-hy-rank,
+.pc-hy-value {
+  font: 12px var(--font-mono);
+  fill: var(--color-ink-muted);
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+}
+.pc-hy-label {
+  font: 600 13px var(--font-sans);
+  fill: var(--color-ink);
+  pointer-events: none;
+}
+.pc-hy-link {
+  fill: none;
+  stroke-width: 2;
+  stroke-linecap: round;
+  transition: opacity 0.2s;
+}
+.pc-hy-link-text {
+  stroke: var(--series-1);
+}
+.pc-hy-link-vec {
+  stroke: var(--series-2);
+}
+.pc-hy-links .pc-hy-faded {
+  opacity: 0.12;
+}
+.pc-hy-cutline line {
+  stroke: var(--color-mark);
+  stroke-width: 1.5;
+}
+.pc-hy-cutline text {
+  font: 11px var(--font-sans);
+  fill: var(--color-mark);
+}
+.pc-hy-none {
+  font: 12px var(--font-sans);
+  fill: var(--color-ink-muted);
+}
+.pc-hy-readout {
+  display: grid;
+  gap: 0.15rem;
+  padding: var(--space-3);
+  border-left: 3px solid var(--color-accent);
+  border-radius: var(--radius-small);
+  background: var(--color-surface-sunken);
+  font-size: var(--text-sm);
+}
+.pc-hy-readout p {
+  margin: 0;
+}
+.pc-hy-readout code {
+  overflow-wrap: anywhere;
+}
+.pc-hy-readout-name {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  font-weight: 600;
+  color: var(--color-ink);
+}
+.pc-hy-note {
+  margin: 0;
+  font-size: var(--text-base);
+  color: var(--color-ink);
+}
+.pc-hy-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-5);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--text-sm);
+  color: var(--color-ink-secondary);
+}
+.pc-hy-legend li {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin: 0;
+}
+.pc-hy-source {
+  margin: 0;
+  font-size: var(--text-xs);
+  color: var(--color-ink-muted);
+}
+@media (prefers-reduced-motion: reduce) {
+  .pc-hy-pill,
+  .pc-hy-row,
+  .pc-hy-link,
+  .pc-hy-pill rect,
+  .pc-hy-row rect {
+    transition: none;
+  }
+}

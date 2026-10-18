@@ -7,6 +7,7 @@ import preact from "@astrojs/preact";
 import sitemap from "@astrojs/sitemap";
 import starlight from "@astrojs/starlight";
 import { defineConfig } from "astro/config";
+import { pureCrawler } from "./pure-crawler.mjs";
 
 const base = process.env.SITE_BASE ?? "/crawler";
 const site = "https://mark1russell7.github.io";
@@ -41,6 +42,8 @@ export default defineConfig({
   site,
   base,
   trailingSlash: "ignore",
+  // the islands and their workers use the pure parts of polite-crawler, with no Node.js part (pure-crawler.mjs)
+  vite: { plugins: [pureCrawler()], worker: { plugins: () => [pureCrawler()] } },
   integrations: [
     // the sitemap of the site, with the date of each page: Starlight adds no second one when this one is here
     sitemap({
@@ -91,6 +94,7 @@ export default defineConfig({
         "./src/styles/theme.css",
         "./src/styles/study.css",
         "./src/styles/home.css",
+        "./src/styles/visuals.css",
       ],
       // the search loads the Pagefind UI at the first use (src/components/Search.astro)
       components: { Hero: "./src/components/Hero.astro", Search: "./src/components/Search.astro" },
@@ -107,6 +111,7 @@ export default defineConfig({
             "guide/quick-start",
             "guide/mcp",
             "guide/how-it-works",
+            "guide/search",
             "guide/politeness",
             "guide/compare",
           ],

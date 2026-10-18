@@ -1,0 +1,71 @@
+---
+title: How hybrid search ranks
+seoTitle: "Hybrid search: BM25, vectors and reciprocal rank fusion"
+description: "See how polite-crawler ranks the stored pages two times, by the words with BM25 and by the meaning with a local model, and fuses the two lists with reciprocal rank fusion."
+---
+
+import HybridRanks from "../../../components/HybridRanks.tsx";
+
+Hybrid search ranks the stored pages two times, and it fuses the two lists into one list:
+
+1. **The words.** The full-text index (SQLite FTS5) ranks the pages by BM25. These pages are the candidates, 50 by default.
+2. **The meaning.** A local model changes the question and each page into vectors. The vector store ranks the pages by the cosine of the vectors. The fusion takes the 50 nearest pages, by default.
+3. **The fusion.** Reciprocal rank fusion gives each page the sum of `1 / (k + rank)` over the lists that hold it. The constant `k` is 60 by default.
+
+Select a question. Then move `k` and the two counts, and look at the lines. A blue line is a rank of the full text, and an orange line is a rank of the vectors. Select a page to see its fused score.
+
+<HybridRanks client:visible />
+
+## Where the numbers come from
+
+The fourteen pages are made up, on `.example` hosts. The numbers are not made up:
+
+- **The full-text ranks** come from the real index of polite-crawler. A test of the site builds the index again and compares the ranks.
+- **The vector ranks** come from a run of the real model, `Xenova/bge-small-en-v1.5` through transformers.js, in CI. The workflow `search-figure.yml` writes the data with the model, the versions, the date and the commit.
+- **The fusion** is `fuseRanks` from polite-crawler, compiled into this page. A test makes sure that it gives the same list as the real `find` with `rank: "hybrid"`.
+
+## Why two lists
+
+Each list finds pages that the other list misses:
+
+- **The words find the exact text.** A barcode, a product code, a name or a rare word has little meaning for a model. BM25 finds the exact text. Select "8001234567896" in the figure.
+- **The vectors find the meaning.** A question can use different words than the page, for example "pizza" for a page about "pies". BM25 then misses the page, and the model finds it. Select "pizza after midnight".
+- **The vectors always give a ranking.** A list of vectors has each page, also when no page matches well. Thus a page with a low similarity still gets a rank. The full text gives nothing when no word matches.
+
+## What k does
+
+Each list gives a page `1 / (k + rank)`. The constant `k` sets how much the top of a list counts:
+
+| `k` | Rank 1 | Rank 2 | Rank 10 | The effect |
+| --- | --- | --- | --- | --- |
+| 0 | 1.000 | 0.500 | 0.100 | The first place of one list decides. |
+| 60 | 0.0164 | 0.0161 | 0.0143 | A page in the two lists wins over a page in one list. |
+
+The value 60 comes from the paper that described reciprocal rank fusion (Cormack, Clarke and Büttcher, SIGIR 2009). Select "wheelchair access", and move `k` from 60 to 0. The page with the ramp goes from the fourth place to the second place.
+
+## The two counts
+
+The fusion takes only the first `candidates` pages of the full text and the first `neighbors` pages of the vectors. A page after the cut gets nothing from that list. The counts keep the work small in a large store:
+
+- Each candidate of the full text that has no vectors gets them before the fusion. Thus `candidates` limits the work of the embedder in a search.
+- The vector search compares the question with each stored chunk. `neighbors` limits the pages that it gives to the fusion.
+
+## Use it
+
+Hybrid search is opt-in. It needs an embedder, and `embed` gives vectors to the stored pages:
+
+```ts
+import { openCrawler, transformersEmbedder } from "polite-crawler";
+
+const crawler = openCrawler({ dir: "./crawl", embedder: transformersEmbedder() });
+await crawler.embed({ budget: "10m" });
+
+const hits = await crawler.find("pizza after midnight", {
+  rank: "hybrid",
+  fusionK: 60,
+  candidates: 50,
+  neighbors: 50,
+});
+```
+
+Each hit has the fused `score` and the `passage`: the chunk of the page that is nearest to the question. The model stays on your computer, and its first use downloads it from the Hugging Face Hub. The [library API](../../reference/api/#hybrid-search) gives each option, and the [command line](../../reference/cli/) has `embed` and `find --rank hybrid`.

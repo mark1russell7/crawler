@@ -19,9 +19,9 @@ The NDJSON writer, the keep-alive and the 'as they finish' helper move into the 
 Mark's decision D12 in the server-stack plan (OTH-3): the polite-crawler MCP entry moves onto @procedures/mcp-server, and the library stays a leaf. The MCP entry becomes its own package, so polite-crawler itself depends on no package of Mark's. Moving the export and the npx command is breaking, so it is a minor version (0.2.0), with a deprecation path, a new MCP registry entry and the same MCP features.
 
 - Area: Package
-- Waits for: `rel012`
+- Waits for: `rel013`
 - Blocked: It waits for the client's host factory, stdio under run() and MCP elicitation (CLI-10, CLI-11, CLI-12).
-- Owner: markt-02 and the crawler session
+- Owner: markt-02 (the client session), since 2026-10-18
 - [Server-stack tracker](https://claude.ai/artifact/QbZd2i5apzg3ip5yiE57Pb)
 
 ## Later

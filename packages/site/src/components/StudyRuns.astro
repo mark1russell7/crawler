@@ -2,7 +2,9 @@
 /**
  * The table of the runs of the study, the newest first: the date, the Tranco list, the sites that
  * answered, the share that refuses GPTBot, the data files and the DOI of each run. The build reads the
- * history of the runs, so the table needs no script.
+ * history of the runs, so the table needs no script. It is a card table (theme.css): on a phone, each
+ * run is a card, and each cell shows the name of its column (data-label). The roles keep the table for
+ * a screen reader when the cards change the display of the table.
  */
 import { doiUrl } from "../lib/cite.ts";
 import { runAnchor } from "../lib/feed.ts";
@@ -23,36 +25,36 @@ const gptOf = (run: StudyHistory["runs"][number]): string => {
 ---
 
 <div class="pc-table-wrap not-content" tabindex="0" role="region" aria-label="The runs of the study">
-  <table class="pc-table pc-runs">
-    <thead>
-      <tr>
-        <th scope="col">Run</th>
-        <th scope="col">Tranco list</th>
-        <th scope="col">Sites that answered</th>
-        <th scope="col">Refuse <code>GPTBot</code></th>
-        <th scope="col">Data</th>
-        <th scope="col">DOI of the run</th>
+  <table class="pc-table pc-runs pc-cards" role="table">
+    <thead role="rowgroup">
+      <tr role="row">
+        <th scope="col" role="columnheader">Run</th>
+        <th scope="col" role="columnheader">Tranco list</th>
+        <th scope="col" role="columnheader">Sites that answered</th>
+        <th scope="col" role="columnheader">Refuse <code>GPTBot</code></th>
+        <th scope="col" role="columnheader">Data</th>
+        <th scope="col" role="columnheader">DOI of the run</th>
       </tr>
     </thead>
-    <tbody>
+    <tbody role="rowgroup">
       {
         runs.map((run) => (
-          <tr id={runAnchor(run.version)}>
-            <th scope="row">
+          <tr id={runAnchor(run.version)} role="row">
+            <th scope="row" role="rowheader">
               <time datetime={run.version}>{formatDay(run.fetched.from)}</time>
             </th>
-            <td>
+            <td role="cell" data-label="Tranco list">
               <code>{run.list.id}</code>
             </td>
-            <td>
+            <td role="cell" data-label="Sites that answered">
               {run.answered} of {run.list.size.toLocaleString("en-US")}
             </td>
-            <td>{gptOf(run)}</td>
-            <td>
+            <td role="cell" data-label="Refuse GPTBot">{gptOf(run)}</td>
+            <td role="cell" data-label="Data">
               <a href={`${base}/${runCsvPath(run.version)}`}>CSV</a>,{" "}
               <a href={`${base}/${runJsonPath(run.version)}`}>JSON</a>
             </td>
-            <td>
+            <td role="cell" data-label="DOI of the run">
               {run.doi === null ? (
                 <span class="pc-runs-later">After the owner publishes it</span>
               ) : (

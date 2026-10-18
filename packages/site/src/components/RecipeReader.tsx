@@ -467,7 +467,9 @@ export default function RecipeReader({ initial }: { readonly initial: RecipeView
 
                     {product.variants.length > 0 ? (
                       <section className="pc-out" aria-label="The variants">
-                        <p className="pc-out-title">The variants, each read alone with productOf</p>
+                        <p className="pc-out-title">
+                          The variants, each read alone with <code>productOf</code>
+                        </p>
                         <ul className="pc-rr-variants">
                           {product.variants.map((variant) => (
                             <li

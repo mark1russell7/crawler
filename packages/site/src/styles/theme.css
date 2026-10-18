@@ -1235,46 +1235,4 @@ header.header {
   .sl-markdown-content :is(th:first-child, td:first-child):not(:where(.not-content *)) {
     padding-inline-start: 0;
   }
-  /*
-   * A table of three or more columns (the class pc-stack of astro.config.mjs) shows each row as a
-   * block on a phone: one line for each cell, with the name of its column on the left.
-   */
-  .sl-markdown-content table.pc-stack {
-    display: block;
-    overflow: visible;
-  }
-  .sl-markdown-content table.pc-stack thead {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    clip-path: inset(50%);
-    white-space: nowrap;
-  }
-  .sl-markdown-content table.pc-stack :is(tbody, tr) {
-    display: block;
-  }
-  .sl-markdown-content table.pc-stack tr {
-    padding-block: var(--space-3);
-    border-bottom: 1px solid var(--color-rule);
-  }
-  .sl-markdown-content table.pc-stack tr:first-child {
-    border-top: 1px solid var(--color-rule);
-  }
-  .sl-markdown-content table.pc-stack td:not(:where(.not-content *)) {
-    display: grid;
-    grid-template-columns: 6.5rem minmax(0, 1fr);
-    gap: var(--space-3);
-    padding: 0.15rem 0;
-    border: 0;
-  }
-  .sl-markdown-content table.pc-stack td::before {
-    content: attr(data-label);
-    color: var(--color-ink-muted);
-    font-size: var(--text-xs);
-    line-height: 1.9;
-  }
-  .sl-markdown-content table.pc-stack td:empty {
-    display: none;
-  }
 }

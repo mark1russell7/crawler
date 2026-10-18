@@ -38,12 +38,6 @@ const lastmodOf = (url) => {
   return undefined;
 };
 
-/** The element children of a node of the HTML tree (hast), with no text between them. */
-const elementsOf = (node, tagName) =>
-  (node?.children ?? []).filter(
-    (child) => child.type === "element" && (tagName === undefined || child.tagName === tagName),
-  );
-
 /** This function tells if a node of the HTML tree is in an element of one of these names. */
 const isIn = (node, names, ctx) => {
   for (let parent = ctx.parent(node); parent !== undefined; parent = ctx.parent(parent)) {
@@ -57,12 +51,6 @@ const isIn = (node, names, ctx) => {
  * a "-" inside a word (`--allow-user-provided`), but not between the two "-" at the start.
  */
 const BREAK_AFTER = /(?<=[_/=]|[^-]-)/;
-
-/** The names of the columns of a table, from its head. */
-const columnsOf = (table, ctx) => {
-  const head = elementsOf(elementsOf(table, "thead")[0], "tr")[0];
-  return elementsOf(head, "th").map((th) => ctx.textContent(th).trim());
-};
 
 /** The children of a code element: the parts of its text, with a <wbr> between two parts. */
 const withBreaks = (parts) => {
@@ -81,8 +69,6 @@ const withBreaks = (parts) => {
  * - An option in a table cell (it starts with "-") gets the class `pc-option`, and it stays whole.
  * - In a table cell, a long name gets a <wbr> after each "_", "/", "=" and inner "-", so it breaks
  *   there and not in the middle of a word.
- * - A table of three or more columns gets the class `pc-stack`, and each cell the name of its
- *   column in `data-label`. A phone shows each row of such a table as a block.
  */
 const proseCode = {
   name: "polite-crawler-prose-code",
@@ -104,24 +90,6 @@ const proseCode = {
           properties: { ...node.properties, class: classes.join(" ") },
           children: withBreaks(parts),
         };
-      },
-    },
-    {
-      filter: ["table"],
-      visit(node, ctx) {
-        if (columnsOf(node, ctx).length >= 3) ctx.setProperty(node, "class", "pc-stack");
-      },
-    },
-    {
-      filter: ["td"],
-      visit(node, ctx) {
-        const row = ctx.parent(node);
-        const table = ctx.parent(ctx.parent(row));
-        const columns = columnsOf(table, ctx);
-        if (columns.length < 3) return;
-        const before = (row.children ?? []).slice(0, ctx.indexOf(node) ?? 0);
-        const column = before.filter((child) => child.type === "element").length;
-        ctx.setProperty(node, "data-label", columns[column] ?? "");
       },
     },
   ],

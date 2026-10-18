@@ -248,7 +248,10 @@
     font-size: var(--text-sm);
   }
   .pc-rbuild-table thead th:first-child {
-    width: 37%;
+    width: 38%;
+  }
+  .pc-rbuild-table th[scope="row"] code {
+    font-size: 0.6875rem;
   }
   .pc-rbuild-table thead th code {
     font-size: 0.625rem;

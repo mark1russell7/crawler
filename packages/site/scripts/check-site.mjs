@@ -335,6 +335,47 @@ const INTERACTIONS = [
         .waitFor({ timeout: 10_000 });
     },
   },
+  // DEBUG: more states of the new figures for the screenshot review (removed before the merge)
+  {
+    path: `${BASE}/bot/`,
+    name: "debug-visit-watch",
+    figure: ".pc-visit",
+    act: async (page) => {
+      await page.getByRole("button", { name: "Watched pages" }).click();
+      await page.locator(".pc-visit select").first().selectOption("429");
+      await page.getByText("In this hour").first().waitFor({ timeout: 10_000 });
+    },
+  },
+  {
+    path: `${BASE}/bot/`,
+    name: "debug-visit-slow",
+    figure: ".pc-visit",
+    act: async (page) => {
+      await page.locator(".pc-visit select").first().selectOption("503");
+      await page.locator(".pc-visit select").nth(1).selectOption("4000");
+      await page.getByText("In this hour").first().waitFor({ timeout: 10_000 });
+    },
+  },
+  {
+    path: `${BASE}/bot/`,
+    name: "debug-visit-crawl",
+    figure: ".pc-visit",
+    act: async (page) => {
+      await page.getByRole("button", { name: "Crawl-delay: 30" }).click();
+      await page.getByRole("button", { name: "A small crawl" }).click();
+      await page.locator(".pc-visit select").first().selectOption("429-long");
+      await page.getByText("In this hour").first().waitFor({ timeout: 10_000 });
+    },
+  },
+  {
+    path: `${BASE}/block-ai-training-crawlers/`,
+    name: "debug-builder-leak",
+    figure: ".pc-rbuild",
+    act: async (page) => {
+      await page.getByText("Repeat the private paths in each group").click();
+      await page.getByText("A named group replaces").waitFor({ timeout: 10_000 });
+    },
+  },
   {
     path: `${BASE}/guide/compare/`,
     name: "figure-pace",

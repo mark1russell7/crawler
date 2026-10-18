@@ -1,4 +1,4 @@
-import type { JsonWebKey, KeyObject } from "node:crypto";
+import type { JsonWebKeyInput, KeyObject } from "node:crypto";
 import {
   createHash,
   createPrivateKey,
@@ -41,6 +41,12 @@ export const WEB_BOT_AUTH_TAG = "web-bot-auth";
 export type SignatureAgentType = "directory" | "jwks_uri";
 
 /** A key in one of the forms that `node:crypto` reads: a `KeyObject`, PEM text, DER bytes (PKCS#8 or SPKI) or a JWK. */
+/**
+ * This type is a JSON Web Key, as `createPrivateKey` of `node:crypto` reads it. The type comes from `JsonWebKeyInput`, which
+ * `@types/node` 22 and 26 both have: version 26 has no `JsonWebKey` export in `node:crypto`.
+ */
+type JsonWebKey = JsonWebKeyInput["key"];
+
 export type KeyInput = KeyObject | string | Uint8Array | JsonWebKey;
 
 /** These options make a signer for Web Bot Auth. */

@@ -281,35 +281,55 @@ export const check = async (): Promise<string> => {
 };
 `,
   );
-  const typeRoots = [join(packageDir, "node_modules", "@types")];
+  // The check uses the oldest and the newest @types/node of the workspace: the types of the lowest
+  // Node.js in engines, and the types that a new project gets. A declaration file of the package can
+  // name a type that only one of them has (0.1.3 imported JsonWebKey, which @types/node 26 removed).
+  const versionOf = (dir) =>
+    JSON.parse(readFileSync(join(dir, "node", "package.json"), "utf8")).version;
+  const newer = (a, b) => {
+    const [x, y] = [a, b].map((version) => version.split(".").map(Number));
+    return x[0] - y[0] || x[1] - y[1] || x[2] - y[2];
+  };
+  const nodeTypes = readdirSync(join(root, "packages"))
+    .map((name) => join(root, "packages", name, "node_modules", "@types"))
+    .filter((dir) => existsSync(join(dir, "node", "package.json")))
+    .sort((a, b) => newer(versionOf(a), versionOf(b)));
+  if (nodeTypes.length === 0) nodeTypes.push(join(packageDir, "node_modules", "@types"));
+  const typeSets = [...new Set([nodeTypes[0], nodeTypes.at(-1)])];
   const tsc = join(root, "node_modules", "typescript", "bin", "tsc");
-  for (const [label, module, moduleResolution] of [
-    ["module nodenext", "nodenext", "nodenext"],
-    ["module preserve, resolution bundler", "preserve", "bundler"],
-  ]) {
-    const config = `tsconfig.${moduleResolution}.json`;
-    writeFileSync(
-      join(consumer, config),
-      `${JSON.stringify(
-        {
-          compilerOptions: {
-            strict: true,
-            noEmit: true,
-            skipLibCheck: false,
-            target: "es2022",
-            module,
-            moduleResolution,
-            resolveJsonModule: true,
-            types: ["node"],
-            typeRoots,
+  for (const types of typeSets) {
+    const version = versionOf(types);
+    for (const [label, module, moduleResolution] of [
+      ["module nodenext", "nodenext", "nodenext"],
+      ["module preserve, resolution bundler", "preserve", "bundler"],
+    ]) {
+      const config = `tsconfig.${moduleResolution}.node-${version}.json`;
+      writeFileSync(
+        join(consumer, config),
+        `${JSON.stringify(
+          {
+            compilerOptions: {
+              strict: true,
+              noEmit: true,
+              skipLibCheck: false,
+              target: "es2022",
+              module,
+              moduleResolution,
+              resolveJsonModule: true,
+              types: ["node"],
+              typeRoots: [types],
+            },
+            files: ["types.ts"],
           },
-          files: ["types.ts"],
-        },
-        null,
-        2,
-      )}\n`,
-    );
-    must(`tsc --noEmit, ${label}`, run("node", [tsc, "-p", config], { cwd: consumer }));
+          null,
+          2,
+        )}\n`,
+      );
+      must(
+        `tsc --noEmit, ${label}, @types/node ${version}`,
+        run("node", [tsc, "-p", config], { cwd: consumer }),
+      );
+    }
   }
 
   // 3c. The entry points that a browser uses stay small: the gzip size of each one, bundled and minified

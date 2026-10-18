@@ -23,6 +23,9 @@ A prerelease version (`0.2.0-beta.1`) goes to the npm tag `next`. Each other ver
   - `--json` prints the `VenueResult` or the `ProductResult`. With `--compare`, the JSON also has the field `compare`.
   - The new exit code 3 tells that the command read nothing, and 4 tells that the site refused the crawler (a wall). The other commands keep their exit codes.
   - This change only adds to the command line. The API of the library, the capture log, the bodies and the capture ids do not change.
+- **The declaration files type-check with `@types/node` 26.** The declaration files of 0.1.3 import `JsonWebKey` from `node:crypto`. `@types/node` 26 has no such export. Thus a project with `skipLibCheck: false` gets the error TS2305.
+  - The type comes from `JsonWebKeyInput`, which `@types/node` 22 and 26 both have. The type of a key does not change.
+  - The smoke test type-checks the tarball with the oldest and the newest `@types/node` of the workspace.
 
 ## 0.1.3 - 2026-10-18
 

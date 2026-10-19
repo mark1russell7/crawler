@@ -254,14 +254,19 @@ export const egressRefusal = (policy: EgressOptions, host: string): string | und
   return undefined;
 };
 
-/** This is the form of `dns.lookup` that the egress hook uses. Tests give a resolver of their own. */
-export type Resolve = (
+/**
+ * This is the form of `dns.lookup` that the egress hook uses. Tests give a resolver of their own.
+ *
+ * @beta
+ */
+export type EgressResolve = (
   host: string,
   options: LookupAllOptions,
   callback: (error: NodeJS.ErrnoException | null, addresses: LookupAddress[]) => void,
 ) => void;
 
-const resolveAll: Resolve = (host, options, callback) => systemLookup(host, options, callback);
+const resolveAll: EgressResolve = (host, options, callback) =>
+  systemLookup(host, options, callback);
 
 /** This function keeps the addresses that the policy permits. When it keeps none, it gives the refusal. */
 const screen = (
@@ -290,7 +295,7 @@ const screen = (
  * @beta
  */
 export const egressLookup =
-  (policy: EgressOptions, resolve: Resolve = resolveAll): LookupFunction =>
+  (policy: EgressOptions, resolve: EgressResolve = resolveAll): LookupFunction =>
   (host: string, options: LookupOptions, callback) => {
     resolve(host, { ...options, all: true }, (error, addresses) => {
       if (error !== null) {
@@ -322,7 +327,7 @@ export const egressLookup =
 export const checkEgress = async (
   policy: EgressOptions,
   url: URL,
-  resolve: Resolve = resolveAll,
+  resolve: EgressResolve = resolveAll,
 ): Promise<string | undefined> => {
   if (policy.allowPrivate === true) return undefined;
   const before = egressRefusal(policy, url.hostname);

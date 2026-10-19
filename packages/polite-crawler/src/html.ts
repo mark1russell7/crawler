@@ -225,7 +225,7 @@ const READABILITY_MAX_DEPTH = 150;
 const MAX_DEPTH = 1000;
 
 /** This is the small part of the DOM that this file uses. Node has no DOM types, and linkedom supplies the DOM. */
-interface DomNode {
+export interface DomNode {
   readonly nodeType: number;
   readonly nodeName: string;
   readonly textContent: string | null;

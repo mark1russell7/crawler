@@ -41,6 +41,8 @@ export interface CrawlMcpServer {
  * This function gives the options of the MCP host of the tools. They are the nine procedures in
  * the namespace `crawl`, the tool names `crawl_<name>` and the instructions. They also have the
  * content hook of the envelopes and the task store.
+ *
+ * @beta
  */
 export const crawlHostOptions = (
   crawler: PoliteCrawler,

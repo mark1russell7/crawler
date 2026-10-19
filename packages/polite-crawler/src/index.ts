@@ -108,6 +108,8 @@ export type {
   ExtractedDoc,
   FindIndexOptions,
   Found,
+  IndexBuild,
+  IndexCounts,
   Latest,
   Passage,
   RankMode,
@@ -159,7 +161,7 @@ export type {
 } from "./vectors.ts";
 export { VECTORS_SCHEMA, VectorStore } from "./vectors.ts";
 // ── end of hybrid search ──
-export type { EgressOptions } from "./egress.ts";
+export type { EgressOptions, EgressResolve } from "./egress.ts";
 export type { Archived, WebArchive } from "./fallback.ts";
 export { archiveExtractor, archivedDocId } from "./fallback.ts";
 export { EgressRefused, egressLookup } from "./egress.ts";
@@ -305,6 +307,7 @@ export {
   venueReadingsOf,
 } from "./recipe-venue.ts";
 export type {
+  JsonRecord,
   Money,
   ProductOptions,
   ProductRead,
@@ -371,6 +374,7 @@ export { VERSION } from "./version.ts";
 export type { WaczResult } from "./wacz.ts";
 export type {
   DirectoryKey,
+  JwkInput,
   KeyDirectory,
   KeyInput,
   RequestSigner,
@@ -406,8 +410,11 @@ export type {
   WatchRun,
   WatchRunOptions,
   WatchRunnerOptions,
+  WatchRow,
+  WatchState,
   WatchStop,
   WatchStoreOptions,
   WatchSummary,
+  WatchUpdate,
 } from "./watch.ts";
 export { WATCH_LIMITS, WATCH_SCHEMA, WatchStore, runWatch } from "./watch.ts";

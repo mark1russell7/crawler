@@ -13,6 +13,25 @@ export const canonicalUrl: (value: string) => string;
 // @public
 export const decodeBody: (bytes: Uint8Array, contentType: string | null) => string;
 
+// @public
+export interface DomNode {
+    // (undocumented)
+    readonly childNodes: ArrayLike<DomNode>;
+    // (undocumented)
+    readonly firstChild?: DomNode | null | undefined;
+    // (undocumented)
+    readonly nextSibling?: DomNode | null | undefined;
+    // (undocumented)
+    readonly nodeName: string;
+    // (undocumented)
+    readonly nodeType: number;
+    // (undocumented)
+    readonly parentNode?: DomNode | null | undefined;
+    readonly remove?: (() => void) | undefined;
+    // (undocumented)
+    readonly textContent: string | null;
+}
+
 // @public (undocumented)
 export const extractPage: (html: string, pageUrl: string) => PageExtract;
 
@@ -57,8 +76,6 @@ export const readJsonLd: (sources: readonly string[]) => Record<string, unknown>
 // @public
 export const typesOf: (record: Record<string, unknown>) => string[];
 
-// Warning: (ae-forgotten-export) The symbol "DomNode" needs to be exported by the entry point html.d.mts
-//
 // @public
 export const visibleText: (root: DomNode) => string;
 

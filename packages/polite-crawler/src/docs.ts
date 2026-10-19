@@ -302,13 +302,21 @@ export interface Latest {
   readonly variant?: Variant | undefined;
 }
 
-/** These are the counts of the index. */
-export interface Counts {
+/**
+ * These are the counts of the index.
+ *
+ * @beta
+ */
+export interface IndexCounts {
   readonly docs: number;
   readonly urls: number;
 }
 
-/** A rebuild of the index writes a new generation of the tables. The old generation answers until the commit. */
+/**
+ * A rebuild of the index writes a new generation of the tables. The old generation answers until the commit.
+ *
+ * @beta
+ */
 export interface IndexBuild {
   /** This method adds a version to the new generation. The build writes the versions in batches. */
   upsert(input: DocInput, now: string): void;
@@ -328,7 +336,7 @@ export interface IndexBuild {
    * This method makes the new generation current. It first copies the rows that a different writer
    * added to the current generation since `since`. Then it removes the old generation.
    */
-  commit(since: string): Counts;
+  commit(since: string): IndexCounts;
   /** This method removes the new generation. The current generation stays. */
   abort(): void;
 }
@@ -603,7 +611,7 @@ export interface ReadingIndex {
   setLatest(entry: Latest): void;
   /** This method gives the newest fetch time of the cache entries, or undefined for an empty index. */
   newestFetch(): string | undefined;
-  counts(): Counts;
+  counts(): IndexCounts;
   beginRebuild(options?: { readonly batch?: number }): IndexBuild;
 }
 
@@ -1356,7 +1364,7 @@ export class DocIndex implements ReadingIndex {
     this.live((n) => this.write(() => this.putLatest(n, entry)));
   }
 
-  counts(): Counts {
+  counts(): IndexCounts {
     return this.live((n) => ({
       docs: (this.stmt(`SELECT count(*) AS n FROM ${n.docs}`).get() as { n: number }).n,
       urls: (this.stmt(`SELECT count(*) AS n FROM ${n.latest}`).get() as { n: number }).n,

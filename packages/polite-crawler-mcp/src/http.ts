@@ -147,6 +147,8 @@ const sessionsOf = (face: McpServerTransport): number => {
 /**
  * This function serves an MCP host over HTTP. `makeHost` makes the host with its HTTP face mounted
  * at `/mcp`, with the task store of the server. Each request needs `Authorization: Bearer <token>`.
+ *
+ * @beta
  */
 export const serveMcpHttp = async (
   makeHost: (face: { readonly token: string; readonly tasks: McpTaskStore }) => McpHost,

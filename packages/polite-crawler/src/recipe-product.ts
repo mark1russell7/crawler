@@ -19,7 +19,8 @@ import type { CrawlRuntime, PageOptions, PageResult } from "./runtime.ts";
 import { HELD_BACK, fetchPage, isHeldBack, recordOverride } from "./runtime.ts";
 import { decodeBody } from "./text.ts";
 
-type Json = Readonly<Record<string, unknown>>;
+/** This is a JSON object, for example a schema.org record of a page. */
+export type JsonRecord = Readonly<Record<string, unknown>>;
 
 /**
  * These are the limits of the product reader. A page with more is hostile or broken, and the reader stops there.
@@ -160,9 +161,9 @@ const list = (value: unknown, limit: number): unknown[] =>
     limit,
   );
 
-const objects = (value: unknown, limit: number): Json[] =>
+const objects = (value: unknown, limit: number): JsonRecord[] =>
   list(value, limit).filter(
-    (item): item is Json => typeof item === "object" && item !== null && !Array.isArray(item),
+    (item): item is JsonRecord => typeof item === "object" && item !== null && !Array.isArray(item),
   );
 
 /** This function gives a name, written as a text or as an object that has one. */
@@ -170,7 +171,7 @@ const nameOf = (value: unknown): string | null => {
   for (const item of list(value, 20)) {
     if (typeof item === "string" && item.trim().length > 0) return item.trim().slice(0, 500);
     if (typeof item === "object" && item !== null) {
-      const named = (item as Json)["name"];
+      const named = (item as JsonRecord)["name"];
       if (typeof named === "string" && named.trim().length > 0) return named.trim().slice(0, 500);
     }
   }
@@ -187,7 +188,7 @@ const textOf = (value: unknown): string | null =>
 const imageOf = (value: unknown): string | null => {
   for (const item of list(value, 20)) {
     if (typeof item === "string" && /^https?:/i.test(item)) return item;
-    const url = typeof item === "object" && item !== null ? (item as Json)["url"] : undefined;
+    const url = typeof item === "object" && item !== null ? (item as JsonRecord)["url"] : undefined;
     if (typeof url === "string" && /^https?:/i.test(url)) return url;
   }
   return null;
@@ -213,7 +214,7 @@ const emptyOffers = (): Offers => ({
 });
 
 /** This function reads the offers of a product into `read`, and the offers of its variants to `depth` levels. */
-const readOffers = (product: Json, read: Offers, depth: number): void => {
+const readOffers = (product: JsonRecord, read: Offers, depth: number): void => {
   const money = (value: unknown, currency: unknown): void => {
     const written = typeof currency === "string" ? currency.trim() : "";
     const code = SYMBOLS[written] ?? written.toUpperCase();
@@ -233,7 +234,7 @@ const readOffers = (product: Json, read: Offers, depth: number): void => {
       raw: String(value).slice(0, PRODUCT_LIMITS.priceChars),
     });
   };
-  const offer = (o: Json, level: number): void => {
+  const offer = (o: JsonRecord, level: number): void => {
     read.steps += 1;
     const spec = objects(o["priceSpecification"], PRODUCT_LIMITS.offers).find((entry) => {
       const kind = entry["priceType"];
@@ -285,7 +286,7 @@ const pathKey = (value: string, page: string): string | undefined => {
 };
 
 /** This function gives the size of a record as JSON, or 0 for a record that JSON cannot write (a nesting too deep). */
-const sizeOf = (record: Json): number => {
+const sizeOf = (record: JsonRecord): number => {
   try {
     return JSON.stringify(record).length;
   } catch {
@@ -306,11 +307,11 @@ const sizeOf = (record: Json): number => {
  * @beta
  */
 export const pickProduct = (
-  records: readonly Json[],
+  records: readonly JsonRecord[],
   page: string,
-): { readonly product: Json | undefined; readonly steps: number } => {
+): { readonly product: JsonRecord | undefined; readonly steps: number } => {
   let steps = 0;
-  const products: Json[] = [];
+  const products: JsonRecord[] = [];
   for (const record of records.slice(0, PRODUCT_LIMITS.records)) {
     steps += 1;
     if (typesOf(record as Record<string, unknown>).some((type) => PRODUCT_TYPES.test(type)))
@@ -332,7 +333,7 @@ export const pickProduct = (
     (product) => list(product["offers"], 1).length > 0 || list(product["hasVariant"], 1).length > 0,
   );
   const pool = selling.length > 0 ? selling : products;
-  let best: Json | undefined;
+  let best: JsonRecord | undefined;
   let size = -1;
   for (const product of pool) {
     const length = sizeOf(product);
@@ -350,7 +351,7 @@ export const pickProduct = (
  *
  * @beta
  */
-export const pickVariant = (product: Json, page: string): Json | undefined => {
+export const pickVariant = (product: JsonRecord, page: string): JsonRecord | undefined => {
   let params: URLSearchParams;
   try {
     params = new URL(page).searchParams;
@@ -400,7 +401,7 @@ const byAmount = (a: Money, b: Money): number => a.amount - b.amount;
  * - A list price or a struck-through price is not the price.
  * - A currency must be an ISO 4217 code (`€` and `£` count too). The notes name each other one.
  */
-export const productOf = (records: readonly Json[], page: string): ProductRead => {
+export const productOf = (records: readonly JsonRecord[], page: string): ProductRead => {
   const picked = pickProduct(records, page);
   const product = picked.product;
   if (product === undefined) {
@@ -547,8 +548,8 @@ const answered = (page: PageResult): boolean =>
  * part of the JSON-LD of a large page only, and a product with many variants can be larger. An
  * archived copy gives the JSON-LD that the index keeps.
  */
-const recordsOfDoc = async (runtime: CrawlRuntime, doc: Doc): Promise<readonly Json[]> => {
-  const kept = Array.isArray(doc.meta["jsonld"]) ? (doc.meta["jsonld"] as Json[]) : [];
+const recordsOfDoc = async (runtime: CrawlRuntime, doc: Doc): Promise<readonly JsonRecord[]> => {
+  const kept = Array.isArray(doc.meta["jsonld"]) ? (doc.meta["jsonld"] as JsonRecord[]) : [];
   if (doc.blob === null || archivedOf(doc.meta) !== undefined) return kept;
   const body = await runtime.blobs.get(doc.blob);
   if (body === undefined) return kept;

@@ -935,15 +935,12 @@ export interface DocDigest {
 // @beta (undocumented)
 export class DocIndex implements ReadingIndex {
     constructor(path: string, options?: DocIndexOptions);
-    // Warning: (ae-forgotten-export) The symbol "IndexBuild" needs to be exported by the entry point index.d.mts
     beginRebuild(options?: {
         readonly batch?: number;
     }): IndexBuild;
     close(): void;
-    // Warning: (ae-forgotten-export) The symbol "Counts" needs to be exported by the entry point index.d.mts
-    //
     // (undocumented)
-    counts(): Counts;
+    counts(): IndexCounts;
     digests(options?: DigestOptions): DocDigest[];
     docsOfCapture(capture: string): Doc[];
     earlierTexts(doc: string, options?: {
@@ -1026,10 +1023,8 @@ export type Duration = number | string;
 // @beta
 export const durationMs: (duration: Duration) => number;
 
-// Warning: (ae-forgotten-export) The symbol "Resolve" needs to be exported by the entry point index.d.mts
-//
 // @beta
-export const egressLookup: (policy: EgressOptions, resolve?: Resolve) => LookupFunction;
+export const egressLookup: (policy: EgressOptions, resolve?: EgressResolve) => LookupFunction;
 
 // @public
 export interface EgressOptions {
@@ -1047,6 +1042,9 @@ export class EgressRefused extends Error {
     // (undocumented)
     readonly kind: string;
 }
+
+// @beta
+export type EgressResolve = (host: string, options: LookupAllOptions, callback: (error: NodeJS.ErrnoException | null, addresses: LookupAddress[]) => void) => void;
 
 // @public
 export interface EmbedCallOptions {
@@ -1557,6 +1555,25 @@ export interface HybridSearchOptions {
 }
 
 // @beta
+export interface IndexBuild {
+    abort(): void;
+    carry(recipes: ReadonlySet<string>): number;
+    commit(since: string): IndexCounts;
+    flush(): void;
+    latest(url: string, variant?: Variant): Latest | undefined;
+    setLatest(entry: Latest): void;
+    upsert(input: DocInput, now: string): void;
+}
+
+// @beta
+export interface IndexCounts {
+    // (undocumented)
+    readonly docs: number;
+    // (undocumented)
+    readonly urls: number;
+}
+
+// @beta
 export interface Indexed {
     readonly blocked?: string | undefined;
     // (undocumented)
@@ -1587,6 +1604,12 @@ export const isoTime: (name: string, value: string | Date) => string;
 export const isPdf: (body: Uint8Array, contentType: string | null) => boolean;
 
 // @public
+export type JsonRecord = Readonly<Record<string, unknown>>;
+
+// @public
+export type JwkInput = JsonWebKeyInput["key"];
+
+// @public
 export const KEY_DIRECTORY_PATH = "/.well-known/http-message-signatures-directory";
 
 // @public
@@ -1601,10 +1624,8 @@ export interface KeyDirectory {
 // @public
 export const keyDirectory: (publicKeys: readonly KeyInput[]) => KeyDirectory;
 
-// Warning: (ae-forgotten-export) The symbol "JsonWebKey" needs to be exported by the entry point index.d.mts
-//
 // @public (undocumented)
-export type KeyInput = KeyObject | string | Uint8Array | JsonWebKey;
+export type KeyInput = KeyObject | string | Uint8Array | JwkInput;
 
 // @beta (undocumented)
 export interface Latest {
@@ -1859,16 +1880,14 @@ export interface PdfText {
     readonly truncated: boolean;
 }
 
-// Warning: (ae-forgotten-export) The symbol "Json" needs to be exported by the entry point index.d.mts
-//
 // @beta
-export const pickProduct: (records: readonly Json[], page: string) => {
-    readonly product: Json | undefined;
+export const pickProduct: (records: readonly JsonRecord[], page: string) => {
+    readonly product: JsonRecord | undefined;
     readonly steps: number;
 };
 
 // @beta
-export const pickVariant: (product: Json, page: string) => Json | undefined;
+export const pickVariant: (product: JsonRecord, page: string) => JsonRecord | undefined;
 
 // @beta (undocumented)
 export interface PlaywrightRenderer extends Renderer {
@@ -1950,7 +1969,7 @@ export const PRODUCT_LIMITS: {
 };
 
 // @public
-export const productOf: (records: readonly Json[], page: string) => ProductRead;
+export const productOf: (records: readonly JsonRecord[], page: string) => ProductRead;
 
 // @public
 export interface ProductOptions {
@@ -2072,7 +2091,7 @@ export interface ReadingIndex {
         readonly batch?: number;
     }): IndexBuild;
     // (undocumented)
-    counts(): Counts;
+    counts(): IndexCounts;
     digests?(options: DigestOptions): DocDigest[];
     // (undocumented)
     docsOfCapture(capture: string): Doc[];
@@ -3208,6 +3227,66 @@ export interface WatchPending {
     readonly since: string;
 }
 
+// @beta
+export interface WatchRow {
+    // (undocumented)
+    added_at: number;
+    // (undocumented)
+    base_capture: string | null;
+    // (undocumented)
+    base_fetched_at: string | null;
+    // (undocumented)
+    base_sha: string | null;
+    // (undocumented)
+    base_state: string | null;
+    // (undocumented)
+    changes: number;
+    // (undocumented)
+    checks: number;
+    // (undocumented)
+    confirm: number;
+    // (undocumented)
+    doc: string | null;
+    // (undocumented)
+    every_ms: number;
+    // (undocumented)
+    host: string;
+    // (undocumented)
+    labels: string | null;
+    // (undocumented)
+    last_at: number | null;
+    // (undocumented)
+    last_kind: string | null;
+    // (undocumented)
+    last_note: string | null;
+    // (undocumented)
+    lease_owner: string | null;
+    // (undocumented)
+    lease_until: number;
+    // (undocumented)
+    next_at: number;
+    // (undocumented)
+    on_behalf_of: string | null;
+    // (undocumented)
+    pend_capture: string | null;
+    // (undocumented)
+    pend_fetched_at: string | null;
+    // (undocumented)
+    pend_sha: string | null;
+    // (undocumented)
+    pend_since: number | null;
+    // (undocumented)
+    pend_state: string | null;
+    // (undocumented)
+    render: string;
+    // (undocumented)
+    scope: string | null;
+    // (undocumented)
+    target: string;
+    // (undocumented)
+    url: string;
+}
+
 // @public
 export interface WatchRun extends AsyncIterable<WatchEvent> {
     // (undocumented)
@@ -3235,6 +3314,18 @@ export interface WatchSchedule {
     stop(grace?: Duration): Promise<ScheduleResult>;
 }
 
+// @beta
+export interface WatchState {
+    // (undocumented)
+    readonly capture: string | null;
+    // (undocumented)
+    readonly fetched_at: string | null;
+    // (undocumented)
+    readonly sha: string | null;
+    // (undocumented)
+    readonly state: "present" | "gone";
+}
+
 // @public
 export type WatchStop = "done" | "max-pages" | "budget" | "cancelled" | "closed" | "error";
 
@@ -3242,8 +3333,7 @@ export type WatchStop = "done" | "max-pages" | "budget" | "cancelled" | "closed"
 export class WatchStore {
     constructor(path: string, options?: WatchStoreOptions);
     add(url: string, options: WatchOptions, now: number): WatchEntry;
-    // Warning: (ae-forgotten-export) The symbol "Row" needs to be exported by the entry point index.d.mts
-    claim(now: number, owner: string, until: number, busy: readonly string[]): Row | undefined;
+    claim(now: number, owner: string, until: number, busy: readonly string[]): WatchRow | undefined;
     close(): void;
     due(now: number): number;
     readonly floorMs: number;
@@ -3253,8 +3343,7 @@ export class WatchStore {
     readonly path: string;
     release(key: string, owner: string): void;
     remove(url: string): boolean;
-    // Warning: (ae-forgotten-export) The symbol "Update" needs to be exported by the entry point index.d.mts
-    settle(key: string, owner: string, update: Update): boolean;
+    settle(key: string, owner: string, update: WatchUpdate): boolean;
 }
 
 // @beta
@@ -3287,6 +3376,26 @@ export interface WatchSummary {
     readonly unchanged: number;
 }
 
+// @beta
+export interface WatchUpdate {
+    readonly base?: WatchState | undefined;
+    // (undocumented)
+    readonly changed: boolean;
+    // (undocumented)
+    readonly doc: string | null;
+    // (undocumented)
+    readonly last_at: number;
+    // (undocumented)
+    readonly last_kind: WatchKind;
+    // (undocumented)
+    readonly last_note: string | null;
+    // (undocumented)
+    readonly next_at: number;
+    readonly pending?: (WatchState & {
+        readonly since: number;
+    }) | null | undefined;
+}
+
 // @public
 export type WebArchive = "wayback" | "commoncrawl";
 
@@ -3302,7 +3411,7 @@ export interface WebBotAuthOptions {
 
 // @public
 export interface WebBotAuthSigner extends RequestSigner {
-    readonly publicKey: JsonWebKey;
+    readonly publicKey: JwkInput;
 }
 
 // @public

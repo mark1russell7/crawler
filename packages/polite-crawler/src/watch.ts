@@ -229,7 +229,12 @@ export interface WatchStoreOptions {
   readonly floorMs?: number | undefined;
 }
 
-interface Row {
+/**
+ * This is a row of the table of the watch list, as `WatchStore` reads it.
+ *
+ * @beta
+ */
+export interface WatchRow {
   url: string;
   target: string;
   host: string;
@@ -260,16 +265,24 @@ interface Row {
   pend_since: number | null;
 }
 
-/** The state of a page after a check: what a later check compares. */
-interface State {
+/**
+ * The state of a page after a check: what a later check compares.
+ *
+ * @beta
+ */
+export interface WatchState {
   readonly state: "present" | "gone";
   readonly sha: string | null;
   readonly capture: string | null;
   readonly fetched_at: string | null;
 }
 
-/** This is the change of an entry after a check. */
-interface Update {
+/**
+ * This is the change of an entry after a check.
+ *
+ * @beta
+ */
+export interface WatchUpdate {
   readonly next_at: number;
   readonly last_at: number;
   readonly last_kind: WatchKind;
@@ -277,9 +290,9 @@ interface Update {
   readonly changed: boolean;
   readonly doc: string | null;
   /** The new confirmed state, or undefined when it stays. */
-  readonly base?: State | undefined;
+  readonly base?: WatchState | undefined;
   /** The new suspected state, null to clear it, or undefined when it stays. */
-  readonly pending?: (State & { readonly since: number }) | null | undefined;
+  readonly pending?: (WatchState & { readonly since: number }) | null | undefined;
 }
 
 const iso = (ms: number): string => new Date(ms).toISOString();
@@ -295,7 +308,7 @@ const parseJson = <T>(text: string | null, fallback: T): T => {
 
 const RENDERS: ReadonlySet<string> = new Set(["auto", "never", "always"]);
 
-const entryOf = (row: Row, now: number): WatchEntry => ({
+const entryOf = (row: WatchRow, now: number): WatchEntry => ({
   url: row.target,
   every_ms: row.every_ms,
   render: row.render as WatchEntry["render"],
@@ -436,8 +449,8 @@ export class WatchStore {
     }
   }
 
-  private row(key: string): Row | undefined {
-    return this.stmt("SELECT * FROM watches WHERE url = ?").get(key) as Row | undefined;
+  private row(key: string): WatchRow | undefined {
+    return this.stmt("SELECT * FROM watches WHERE url = ?").get(key) as WatchRow | undefined;
   }
 
   /**
@@ -511,9 +524,9 @@ export class WatchStore {
   /** This method gives the entries, the first due first. */
   list(now: number): WatchEntry[] {
     if (this.closed) throw new Error("the watch store is closed");
-    return (this.stmt("SELECT * FROM watches ORDER BY next_at, url").all() as unknown as Row[]).map(
-      (row) => entryOf(row, now),
-    );
+    return (
+      this.stmt("SELECT * FROM watches ORDER BY next_at, url").all() as unknown as WatchRow[]
+    ).map((row) => entryOf(row, now));
   }
 
   /** This method counts the entries that are due at a time. */
@@ -528,12 +541,12 @@ export class WatchStore {
    * This method claims the first due entry with no lease, on a host that is not in `busy`. The
    * lease of `owner` holds until `until`. Thus two processes do not get one entry at one time.
    */
-  claim(now: number, owner: string, until: number, busy: readonly string[]): Row | undefined {
+  claim(now: number, owner: string, until: number, busy: readonly string[]): WatchRow | undefined {
     return this.step(() => {
       const row = this.stmt(
         `SELECT * FROM watches WHERE next_at <= ? AND lease_until <= ?
            AND host NOT IN (SELECT value FROM json_each(?)) ORDER BY next_at, url LIMIT 1`,
-      ).get(now, now, JSON.stringify(busy)) as Row | undefined;
+      ).get(now, now, JSON.stringify(busy)) as WatchRow | undefined;
       if (row === undefined) return undefined;
       this.stmt("UPDATE watches SET lease_until = ?, lease_owner = ? WHERE url = ?").run(
         until,
@@ -558,7 +571,7 @@ export class WatchStore {
    * This method writes the result of a check and ends the lease. It gives false when `owner` does
    * not hold the lease, or when the store is closed.
    */
-  settle(key: string, owner: string, update: Update): boolean {
+  settle(key: string, owner: string, update: WatchUpdate): boolean {
     if (this.closed) return false;
     return this.step(() => {
       const row = this.row(key);
@@ -614,7 +627,7 @@ const REFUSALS: ReadonlySet<string> = new Set([
 export const watchFingerprint = (version: VersionText): string =>
   sha256(stableStringify([version.title, version.text, version.meta["jsonld"] ?? null]));
 
-const sameState = (a: State | undefined, b: State): boolean =>
+const sameState = (a: WatchState | undefined, b: WatchState): boolean =>
   a !== undefined && a.state === b.state && (a.state === "gone" || a.sha === b.sha);
 
 /** One check that ended: an event, or an entry that stays due because the run stopped first. */
@@ -671,7 +684,7 @@ export const runWatch = (
     let opened: WatchStore | undefined;
 
     /** This function fetches one entry, compares it with its state, and writes the new state. */
-    const check = async (store: WatchStore, row: Row, deadline: number): Promise<Done> => {
+    const check = async (store: WatchStore, row: WatchRow, deadline: number): Promise<Done> => {
       const agents = [...(options.onBehalfOf ?? []), ...parseJson<string[]>(row.on_behalf_of, [])];
       const labels = parseJson<Record<string, string> | undefined>(row.labels, undefined);
       let page: PageResult | undefined;
@@ -697,25 +710,25 @@ export const runWatch = (
       if (page !== undefined && pastDeadline(page.note)) return deferred("budget");
       if (page?.outcome === "skipped" && page.note === "crawler closed") return deferred("closed");
       const at = now();
-      const base: State | undefined =
+      const base: WatchState | undefined =
         row.base_state === null
           ? undefined
           : {
-              state: row.base_state as State["state"],
+              state: row.base_state as WatchState["state"],
               sha: row.base_sha,
               capture: row.base_capture,
               fetched_at: row.base_fetched_at,
             };
-      const pending: State | undefined =
+      const pending: WatchState | undefined =
         row.pend_state === null
           ? undefined
           : {
-              state: row.pend_state as State["state"],
+              state: row.pend_state as WatchState["state"],
               sha: row.pend_sha,
               capture: row.pend_capture,
               fetched_at: row.pend_fetched_at,
             };
-      let seen: State | undefined;
+      let seen: WatchState | undefined;
       let version: VersionText | undefined;
       let held = false;
       let kind: WatchKind;
@@ -737,7 +750,7 @@ export const runWatch = (
       } else if (page?.outcome === "not-found") {
         seen = { state: "gone", sha: null, capture: null, fetched_at: page.fetched_at };
       }
-      let update: Omit<Update, "next_at" | "last_at" | "last_kind" | "last_note" | "doc">;
+      let update: Omit<WatchUpdate, "next_at" | "last_at" | "last_kind" | "last_note" | "doc">;
       let suspected = false;
       let confirmed = false;
       if (seen === undefined) {

@@ -1,6 +1,6 @@
 # API review before 1.0
 
-This file records which exports of `polite-crawler` are stable for version 1.0.0, which are beta, and which leave the root entry point in 0.2.0. It is the review of the roadmap item `api-review`. Since 0.2.0, the MCP server is the package `polite-crawler-mcp`, on the shared MCP host (the item `mcp-host`). polite-crawler has no MCP entry point. The review of `polite-crawler-mcp` comes next.
+This file records which exports of `polite-crawler` are stable for version 1.0.0, which are beta, and which leave the root entry point in 0.2.0. It is the review of the roadmap item `api-review`. Since 0.2.0, the MCP server is the package `polite-crawler-mcp`, on the shared MCP host (the item `mcp-host`). polite-crawler has no MCP entry point. The section "polite-crawler-mcp" gives the tiers of that package.
 
 ## What 1.0 promises
 
@@ -103,14 +103,40 @@ Version 0.2.0 removes these exports from the root entry point. `durationMs` stay
 Version 0.2.0 is a minor version, so it can break the API. It comes with the move of the MCP server to the shared MCP host. It does these things:
 
 - It removes the deprecated exports above from the root entry point.
-- It gives a name to each type that a signature uses but no entry point exports, or it changes the signature. These are `DomNode` (`visibleText` of `/html`), `IndexBuild` and `Counts` (`DocIndex`), `Resolve` (`egressLookup`), `JsonWebKey` (`KeyInput`), `Json` (`pickProduct`), and `Row` and `Update` (`WatchStore`). A short name, for example `Row`, needs a longer name before it goes into the root entry point.
 - The MCP server leaves for the package `polite-crawler-mcp`, with the entry point `polite-crawler/mcp` and its report. The MCP seam of the daemon (`DaemonMcpHooks`, `DaemonMcpHost`, `DaemonMcpOptions` and `DaemonMcpService`) stays: its default host is `mcpHttpHost` of `polite-crawler-mcp`.
-- A later change reviews `polite-crawler-mcp` with the same tiers.
+
+## What 0.2.1 changes
+
+Version 0.2.1 is a patch version: it adds exports and changes nothing that a program uses.
+
+- Each type that a signature uses gets an export, with a name that tells what it is. Before, these types had no export, so no program could name them. The report has no `ae-forgotten-export` message.
+
+| Type | Entry point | Tier | The signature that uses it |
+| --- | --- | --- | --- |
+| `DomNode` | `/html` | stable | `visibleText` |
+| `JwkInput` (before: `JsonWebKey`, inside the package) | root | stable | `KeyInput` |
+| `JsonRecord` (before: `Json`) | root | stable | `productOf`, `pickProduct`, `pickVariant` |
+| `IndexBuild`, `IndexCounts` (before: `Counts`) | root | beta | `DocIndex` |
+| `EgressResolve` (before: `Resolve`) | root | beta | `egressLookup` |
+| `WatchRow`, `WatchState`, `WatchUpdate` (before: `Row`, `State`, `Update`) | root | beta | `WatchStore` |
+
+- `polite-crawler-mcp` gets its own report in `packages/polite-crawler-mcp/api/`, and the tiers below.
+
+## polite-crawler-mcp
+
+The package is the MCP server of polite-crawler since 0.2.0. Its tiers follow the same rules. A program that starts the server uses the stable tier. The parts that put the tools on an MCP host of your own follow `@procedures/mcp-server`, which is before its 1.0, so they are beta.
+
+| Exports | Tier | Reason |
+| --- | --- | --- |
+| `createMcpServer`, `CrawlMcpServer`, `CrawlServerOptions`, `CrawlToolOptions`, `startMcpServer`, `StartMcpOptions`, `startMcpHttpServer`, `StartMcpHttpOptions`, `McpHttpServer`, `McpHttpOptions`, `mcpHttpHost`, `MCP_HTTP_DEFAULTS`, `makeToken`, `sameToken`, `checkToken`, `SERVER_NAME`, `VERSION` | stable | The server over stdio and over HTTP, its options, the host of the daemon, and the rules of the token. The README and the site document them. |
+| `crawlHostOptions`, `crawlTools`, `crawlContent`, `serveMcpHttp` | beta | The parts of the server on the shared MCP host. Their types come from `@procedures/mcp-server`, which can change before its 1.0. |
+| `INSTRUCTIONS` | beta | The text that the MCP client gives to the model. A version can change the text. |
+| `McpTaskStore`, `McpTaskInfo`, `McpTaskStoreOptions` | the tier of `@procedures/mcp-server` | Exports of the shared host, which the package gives again so that a program needs no second import. |
 
 ## Counts
 
 | Entry point | Stable | Beta | Deprecated |
 | --- | --- | --- | --- |
-| root | 233 (47 of them are readers) | 125 | 6 |
-| `/robots`, `/hours`, `/html`, `/classify`, `/politeness`, `/signals` | 86 | 0 | 0 |
-| `/mcp` | not reviewed | not reviewed | not reviewed |
+| polite-crawler root | 235 | 134 | 0 |
+| `/robots`, `/hours`, `/html`, `/classify`, `/politeness`, `/signals` | 87 | 0 | 0 |
+| polite-crawler-mcp | 17 | 5 | 0 |

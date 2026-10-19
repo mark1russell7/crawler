@@ -6,6 +6,7 @@ This file records the changes to `polite-crawler-mcp` in each version. The chang
 
 ## Unreleased
 
+- **The tiers of the API.** The package has a report of its API that CI compares (`api/index.api.md`). `crawlHostOptions`, `crawlTools`, `crawlContent`, `serveMcpHttp` and `INSTRUCTIONS` have the tag `@beta`: a minor version can change them. The server, its options and the rules of the token are stable. [`docs/API-REVIEW.md`](https://github.com/mark1russell7/crawler/blob/main/docs/API-REVIEW.md) gives the reasons.
 - **The loopback Host rule also on a remote bind.** With `allowRemote`, the HTTP server accepted any `Host` header. A request that comes to a loopback address (127.0.0.1 or ::1) needs a loopback name in `Host`, also when the server listens on other addresses too. Thus a web page cannot reach the server through 127.0.0.1 by DNS rebinding. A request to another address of the server does not change.
 
 ## 0.2.0 - 2026-10-19

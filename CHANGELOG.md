@@ -15,6 +15,12 @@ A prerelease version (`0.2.0-beta.1`) goes to the npm tag `next`. Each other ver
 
 ## Unreleased
 
+- **The types of the signatures have exports.** Before, some signatures used a type that no entry point exported, so a program could not name it. No program changes.
+  - The root entry point exports `JwkInput` (the key of `KeyInput`) and `JsonRecord` (the records of `productOf`), which are stable.
+  - It also exports `IndexBuild` and `IndexCounts` (`DocIndex`), `EgressResolve` (`egressLookup`), and `WatchRow`, `WatchState` and `WatchUpdate` (`WatchStore`), which are beta.
+  - `polite-crawler/html` exports `DomNode` (`visibleText`).
+- **CI compares the API of polite-crawler-mcp too,** with its report in `packages/polite-crawler-mcp/api/`.
+
 ## 0.2.0 - 2026-10-19
 
 - **The declarations mark beta and deprecated exports.** The review of the API before 1.0 is in [`docs/API-REVIEW.md`](https://github.com/mark1russell7/crawler/blob/main/docs/API-REVIEW.md). It gives the tier of each export of the root entry point and the reader entry points.

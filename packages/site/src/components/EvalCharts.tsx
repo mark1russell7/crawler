@@ -121,7 +121,7 @@ export function ClaimCosts(): ReactElement {
         Tokens to prove each claim, the shortest page first
         <span className="pc-chart-muted">
           {" "}
-          on a log axis: each grid line is 2 or 2.5 times the last
+          on a log axis. The grid lines are at 1, 2 and 5 of each power of 10.
         </span>
       </figcaption>
       <ul className="pc-chart-legend">
@@ -162,9 +162,7 @@ export function ClaimCosts(): ReactElement {
             {CLAIM_TICKS.map((tick) => (
               <span
                 key={tick}
-                className={
-                  tick === 500 || String(tick).startsWith("1") ? undefined : "pc-eval-minor"
-                }
+                className={/^10*$/.test(String(tick)) ? undefined : "pc-eval-minor"}
                 style={{ left: pct(claimPlace(tick)) }}
               >
                 {tickText(tick)}

@@ -6,6 +6,10 @@
  * marks a claim on which polite-crawler costs more, with a ▲ beside it.
  */
 
+/* each part of a figure can shrink to the width of the page: a wide table scrolls in its own box */
+.pc-eval {
+  grid-template-columns: minmax(0, 1fr);
+}
 .pc-eval-polite {
   --eval-color: var(--series-1);
 }
@@ -54,8 +58,8 @@
 /* ------------------------------------------------------ the claims, one row each */
 
 .pc-eval-plot {
-  --eval-name: 13rem;
-  --eval-ratio: 6.5rem;
+  --eval-name: 11.5rem;
+  --eval-ratio: 6rem;
   --eval-gap: 0.75rem;
   --eval-left: calc(var(--eval-name) + var(--eval-gap));
   position: relative;
@@ -170,6 +174,10 @@
 .pc-eval-scale {
   position: relative;
   height: 1.2rem;
+}
+/* the axis names only 1k, 10k and 100k: the other grid lines have no label */
+.pc-eval-scale .pc-eval-minor {
+  display: none;
 }
 .pc-eval-scale span {
   position: absolute;
@@ -374,12 +382,14 @@
 
 .pc-eval-table {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   justify-items: start;
   gap: var(--space-2);
   margin: var(--space-5) 0;
 }
 .pc-eval-table .pc-table-wrap {
   width: 100%;
+  min-width: 0;
   border: 1px solid var(--color-rule);
   border-radius: var(--radius);
   background: var(--color-surface);
@@ -437,10 +447,6 @@
     grid-column: 1 / -1;
   }
   .pc-eval-axis > span:first-child {
-    display: none;
-  }
-  /* on a narrow track, the axis names only 500, 1k, 10k and 100k */
-  .pc-eval-scale .pc-eval-minor {
     display: none;
   }
   .pc-eval-frame {

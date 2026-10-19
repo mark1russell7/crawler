@@ -10,13 +10,7 @@ import type { Daemon, DaemonOptions } from "polite-crawler";
 import { readDaemonState, startDaemon } from "polite-crawler";
 import { afterEach, describe, expect, it } from "vitest";
 import { removeDir, tempDir } from "../../polite-crawler/src/test-helpers.ts";
-import {
-  CLI,
-  TSX,
-  besidePoliteCrawler,
-  childEnv,
-  runCli,
-} from "../../polite-crawler/src/test-surfaces.ts";
+import { CLI, TSX, besidePoliteCrawler, runCli } from "../../polite-crawler/src/test-surfaces.ts";
 import { mcpHttpHost } from "./http.ts";
 
 // The daemon of polite-crawler serves the tools of this package over HTTP. polite-crawler tests the

@@ -48,7 +48,7 @@ export const besidePoliteCrawler = (
   extra: Readonly<Record<string, string>> = {},
 ): NodeJS.ProcessEnv => {
   const packages = fileURLToPath(new URL("../..", import.meta.url));
-  const paths = [packages, process.env.NODE_PATH].filter(
+  const paths = [packages, process.env["NODE_PATH"]].filter(
     (path) => path !== undefined && path !== "",
   );
   return childEnv({ ...extra, NODE_PATH: paths.join(delimiter) });

@@ -22,50 +22,6 @@ List the package in the MCP and tool directories, then post it to Show HN.
 - Waits for: `eval`, `eval-b`
 - What Mark does: Say go in the Fleet Hub (ask crawler-eval) after part B. Then post from your Hacker News account: I write the title and the first comment.
 
-## In progress
-
-### `mcp-host`: The MCP server moves onto the shared MCP host
-
-Mark's decision D12 in the server-stack plan (OTH-3): the polite-crawler MCP server moves onto @procedures/mcp-server as its own package, polite-crawler-mcp, so polite-crawler depends on no package of Mark's. The shared host got MCP tasks and the guards of the HTTP face in client #59 (CLI-35, by this session), on npm in client 0.14.1. The new package is crawler #15: the nine tools as procedures on the shared host, with the same tool list as 0.1.4 (a golden test checks it). It is green, after two review rounds of server-stack; it ships with release 0.2.0 (rel020).
-
-- Area: Package
-- Waits for: `rel013`
-- Owner: The server-stack session, since 2026-10-18
-- Started: 2026-10-19
-- [crawler #15: polite-crawler-mcp and 0.2.0](https://github.com/mark1russell7/crawler/pull/15)
-- [client #59: MCP tasks and HTTP guards (CLI-35)](https://github.com/mark1russell7/client/pull/59)
-- [Server-stack tracker](https://claude.ai/artifact/WtkE3dtHp57qpcs4UvcaVZ)
-
-### `rel020`: Release 0.2.0: polite-crawler and polite-crawler-mcp
-
-A minor release: before 1.0.0, a breaking change raises the minor version. polite-crawler 0.2.0 drops the entry point ./mcp and the MCP SDK and zod dependencies, and 5 deprecated exports. The MCP server is the new package polite-crawler-mcp 0.2.0, and the MCP registry entry names it. crawler #15 is the version pull request: the release session bootstraps the new package with Mark's key, then merges #15, and release.yml publishes both packages.
-
-- Area: Release and CI
-- Waits for: `mcp-host`, `mcp-publish`, `api-report`
-- Started: 2026-10-19
-- [crawler #15](https://github.com/mark1russell7/crawler/pull/15)
-- [crawler #16: release.yml for two packages](https://github.com/mark1russell7/crawler/pull/16)
-
-## Blocked
-
-### `mcp-publish`: The first publish of polite-crawler-mcp
-
-polite-crawler-mcp is a new package, and only Mark and the release session make a new package on npm. Mark said yes on 2026-10-19. The release session bootstraps it with his key from the version PR of 0.2.0, then merges that PR, and release.yml publishes polite-crawler 0.2.0 and polite-crawler-mcp 0.2.0 (crawler #16 teaches release.yml the second package).
-
-- Area: Release and CI
-- Waits for: `mcp-host`
-- Blocked: Mark said yes in the Fleet Hub on 2026-10-19. The release session bootstraps the package from the 0.2.0 version PR, which comes after crawler #15 merges on client 0.14.1.
-- [crawler #16: release.yml for two packages](https://github.com/mark1russell7/crawler/pull/16)
-
-### `api-review`: API review before 1.0
-
-The final step of the API review: review the exports of the MCP package after its move, remove the 6 deprecated exports in 0.2.0, and name the types that signatures use but no entry exports. The reports and the tiers of every other entry shipped (api-report).
-
-- Area: Package
-- Waits for: `mcp-host`, `api-report`
-- Blocked: The review of the MCP entry and the removal of the 6 deprecated exports go with the MCP move in 0.2.0 (mcp-host).
-- Started: 2026-10-19
-
 ## Later
 
 ### `recheck-watch`: The jarvis hours recheck becomes a watch
@@ -82,6 +38,14 @@ Score a local open-weight decision model (for example Laya) on labelled data fro
 
 - Area: jarvis
 
+### `api-review`: API review before 1.0
+
+The last step of the API review: the exports of polite-crawler-mcp (its own API report in CI), and names for the types that signatures use but no entry point exports (Counts, Row, Update, Json, Resolve, IndexBuild, DomNode, JsonWebKey). Five of the 6 deprecated exports left in 0.2.0 (durationMs stays, as beta), and the MCP server moved, so this can start.
+
+- Area: Package
+- Waits for: `mcp-host`, `api-report`
+- Started: 2026-10-19
+
 ### `v1`: Version 1.0
 
 1.0 promises that the API does not break. It comes after the MCP move ships as 0.2.0, the API review, the real Claude Code eval, and some weeks of use by people outside this project.
@@ -89,7 +53,36 @@ Score a local open-weight decision model (for example Laya) on labelled data fro
 - Area: Release and CI
 - Waits for: `mcp-host`, `api-review`, `eval-b`, `showhn`, `rel020`
 
+### `remote-host`: The loopback Host rule on a remote bind too
+
+With allowRemote, the HTTP listener of polite-crawler-mcp accepts any Host header. A request that comes to a loopback socket can still get the loopback Host rule (req.socket.localAddress), so DNS rebinding cannot reach a server that also listens on 127.0.0.1. A hardening from the review of server-stack; not a break.
+
+- Area: Package
+- Waits for: `rel020`
+
 ## Shipped
+
+### `release-docs`: CLAUDE.md: the version places of two packages
+
+Mark said yes (2026-10-19). The release section of the crawler CLAUDE.md names the version places of both packages, the range check of the smoke test, and the merge by the release session.
+
+- Area: Release and CI
+- Waits for: `rel020`
+- Shipped: 2026-10-19
+- [Commit 4d0c06f](https://github.com/mark1russell7/crawler/commit/4d0c06f)
+
+### `rel020`: Release 0.2.0: polite-crawler and polite-crawler-mcp
+
+A minor release: before 1.0.0, a breaking change raises the minor version. polite-crawler 0.2.0 drops the entry point ./mcp, the MCP SDK and zod dependencies, and 5 deprecated exports. The MCP server is the new package polite-crawler-mcp 0.2.0, which depends on polite-crawler ^0.2.0, and the MCP registry entry io.github.mark1russell7/polite-crawler names it. release.yml published both with provenance; the GitHub release v0.2.0 has both tarballs.
+
+- Area: Release and CI
+- Waits for: `mcp-host`, `mcp-publish`, `api-report`
+- Started: 2026-10-19
+- Shipped: 2026-10-19
+- [Release v0.2.0](https://github.com/mark1russell7/crawler/releases/tag/v0.2.0)
+- [npm polite-crawler 0.2.0](https://www.npmjs.com/package/polite-crawler/v/0.2.0)
+- [npm polite-crawler-mcp 0.2.0](https://www.npmjs.com/package/polite-crawler-mcp/v/0.2.0)
+- [Release run 39323762591](https://github.com/mark1russell7/crawler/actions/runs/39323762591)
 
 ### `api-report`: The API report that CI compares, and the tiers for 1.0
 
@@ -111,6 +104,28 @@ A site page for part A of the eval: for each of the 30 claims, the tokens of the
 - Shipped: 2026-10-19
 - [The page: Tokens to prove a claim](https://mark1russell7.github.io/crawler/notes/tokens-per-claim/)
 - [Commit 168b8a1](https://github.com/mark1russell7/crawler/commit/168b8a1)
+
+### `mcp-publish`: The first publish of polite-crawler-mcp
+
+Mark said yes, and tapped his key at about 21:20 UTC. The release session bootstrapped polite-crawler-mcp on npm (placeholder, trusted publishing for release.yml, lock), then merged crawler #15.
+
+- Area: Release and CI
+- Waits for: `mcp-host`
+- Shipped: 2026-10-19
+- [npm polite-crawler-mcp](https://www.npmjs.com/package/polite-crawler-mcp)
+
+### `mcp-host`: The MCP server moves onto the shared MCP host
+
+Mark's decision D12 (OTH-3): the MCP server of polite-crawler is the package polite-crawler-mcp, on the shared MCP host of @procedures/mcp-server, so polite-crawler depends on no package of Mark's. This session gave the shared host MCP tasks and the guards of the HTTP face (client #59, in client 0.14.1), and moved the nine tools onto it (crawler #15) with the same tool list as 0.1.4, which a golden test checks. On npm since 2026-10-19 as polite-crawler-mcp 0.2.0.
+
+- Area: Package
+- Waits for: `rel013`
+- Owner: The server-stack session, since 2026-10-18
+- Started: 2026-10-19
+- Shipped: 2026-10-19
+- [crawler #15](https://github.com/mark1russell7/crawler/pull/15)
+- [npm polite-crawler-mcp](https://www.npmjs.com/package/polite-crawler-mcp)
+- [client #59 (CLI-35)](https://github.com/mark1russell7/client/pull/59)
 
 ### `site-figures`: Three new figures: a robots.txt builder, the crawler on your site, and the pace of each crawler
 

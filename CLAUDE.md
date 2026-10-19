@@ -19,7 +19,9 @@ Write all prose of this repository in the style of ASD-STE100 Simplified Technic
 
 ## Checks
 
-- `pnpm check` does the checks of CI in sequence: `format:check`, `typecheck`, `lint` (oxlint), `test`, `lint:ste`, `build` and `smoke`.
+- `pnpm check` does the checks of CI in sequence: `format:check`, `typecheck`, `lint` (oxlint), `test`, `lint:ste`, `build`, `api --check` and `smoke`.
+- `pnpm api` (`scripts/api.mjs`) makes the reports of the public API in `packages/polite-crawler/api/` from the build, one for each entry point. CI fails when a report is not the API of the build. After a change to the API, start `pnpm build` and `pnpm api`, and commit the reports.
+- An export with the TSDoc tag `@beta` is the engine: a minor version can change it. An export with no tag is stable. `docs/API-REVIEW.md` gives the tier of each export. Tag each new export of the engine.
 - `pnpm smoke` (`scripts/smoke.mjs`) installs the packed tarball into an empty project and uses it the way a user does.
 - CI does the tests on Ubuntu with Node.js 22.19, 24 and 26, and on Windows and macOS with Node.js 24.
 - CI fails when the code is not in the format of Prettier. Start `pnpm format` before a commit.

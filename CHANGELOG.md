@@ -15,6 +15,15 @@ A prerelease version (`0.2.0-beta.1`) goes to the npm tag `next`. Each other ver
 
 ## Unreleased
 
+- **The declarations mark beta and deprecated exports.** The review of the API before 1.0 is in [`docs/API-REVIEW.md`](https://github.com/mark1russell7/crawler/blob/main/docs/API-REVIEW.md). It gives the tier of each export of the root entry point and the reader entry points.
+  - An export of the engine has the TSDoc tag `@beta`. A minor version can change it, also after 1.0.0. An export with no tag is stable.
+  - Six exports have the tag `@deprecated`: `checkedRenderer`, `renderedKey`, `pageDocId`, `durationMs`, `renderAndIndex` and `pageExtractor`. Version 0.2.0 removes them from the root entry point.
+  - `diffDocument`, `versionAtTime`, `WatchStore`, `runWatch` and `registerRecipe` operate on a runtime of your own, so they move to the engine. The methods `diff`, `read` with `at` and `watch` of the crawler stay stable.
+  - The interfaces of the store (`BlobStore`, `CaptureReader`, `CaptureFilter`, `ScanOptions`, `DamagedLine`), `FetchOutcome`, `ExtractedDoc`, `Extractor` and `RuntimeOptions` are stable, because stable signatures use them.
+  - The root entry point also exports the types `CaptureLogOptions`, `DocIndexOptions`, `FileBlobStoreOptions`, `SqliteHostStateOptions` and `Outcome`. The constructors and `FetchOutcome` already use them.
+  - This change only adds to the API. The code, the capture log, the bodies and the capture ids do not change.
+- **CI compares the public API with the reports in `packages/polite-crawler/api/`.** API Extractor makes one report for each entry point from the build. `pnpm api` makes the reports again, and `pnpm api --check` fails when the API is not the API in the reports. Thus a pull request shows each change to the public API.
+
 ## 0.1.4 - 2026-10-18
 
 - **The recipes on the command line.** `polite-crawler venue <url>` and `polite-crawler product <url>` read a venue or a product page with `readVenue` and `readProduct`. The MCP server does not change.

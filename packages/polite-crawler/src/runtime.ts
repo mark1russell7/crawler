@@ -39,7 +39,12 @@ export type Extractor = (
   capture: { readonly url: string; readonly contentType: string | null },
 ) => ReadonlyArray<ExtractedDoc> | Promise<ReadonlyArray<ExtractedDoc>>;
 
-/** This function gives the document id of a web page. Each page has one id. */
+/**
+ * This function gives the document id of a web page. Each page has one id.
+ *
+ * @beta
+ * @deprecated Version 0.2.0 removes this export from the root entry point. No documented use needs it. The result of `fetch` gives the document id of a page (`doc`).
+ */
 export const pageDocId = (url: string): string => `url:${canonicalUrl(url)}`;
 
 /** The JSON-LD that a document keeps, in characters of JSON. */
@@ -101,6 +106,9 @@ const keepJsonLd = (
  * encoding that the page declares, with `decodeBody`. It does not throw: a page that it cannot read
  * gives a document that names the error. When the reader cut the text, the document keeps the whole
  * text in `full_text`, so `verify` finds a quote past the cut.
+ *
+ * @beta
+ * @deprecated Version 0.2.0 removes this export from the root entry point. No documented use needs it. The runtime uses it as the reader of the recipe `page`.
  */
 export const pageExtractor: Extractor = (body, capture) => {
   if (isPdf(body, capture.contentType)) return pdfDocs(body, capture.url);
@@ -211,6 +219,7 @@ const pdfDocs = async (body: Uint8Array, url: string): Promise<ReadonlyArray<Ext
   ];
 };
 
+/** @beta */
 export class Extractors {
   // the archived fallback reads its copies with the built-in recipe `archive-copy`
   private readonly byRecipe = new Map<string, Extractor>([
@@ -238,6 +247,7 @@ export class Extractors {
   }
 }
 
+/** @beta */
 export interface CrawlRuntime {
   readonly crawler: Crawler;
   /** This index keeps the documents and the cache entries. `DocIndex` is the SQLite index. */
@@ -251,7 +261,11 @@ export interface CrawlRuntime {
   readonly now: () => string;
 }
 
-/** This is the payload of a capture record, as the crawler writes it. */
+/**
+ * This is the payload of a capture record, as the crawler writes it.
+ *
+ * @beta
+ */
 export interface CapturePayload {
   readonly url: string;
   readonly recipe: string;
@@ -304,18 +318,28 @@ export const STRUCTURAL_META: readonly string[] = [
   "archived_kind",
 ];
 
-/** The note of a document that is held back. */
+/**
+ * The note of a document that is held back.
+ *
+ * @beta
+ */
 export const HELD_BACK =
   "This page asked not to be used as AI input, so its text is held back. Open the URL to read it, or read again with userProvided when a person gave this URL directly (the crawler logs that).";
 
 /**
  * This function tells if a document is held back: the page asked not to be AI input, and no person
  * gave its URL directly. The only way to read a held-back document is `userProvided`.
+ *
+ * @beta
  */
 export const isHeldBack = (doc: { readonly ai_input: AiInput }, userProvided = false): boolean =>
   doc.ai_input === "no" && !userProvided;
 
-/** This function gives the metadata that a held-back document shows: only the structural fields, which hold no text of the page. */
+/**
+ * This function gives the metadata that a held-back document shows: only the structural fields, which hold no text of the page.
+ *
+ * @beta
+ */
 export const heldBackMeta = (meta: Readonly<Record<string, unknown>>): Record<string, unknown> =>
   Object.fromEntries(Object.entries(meta).filter(([key]) => STRUCTURAL_META.includes(key)));
 
@@ -328,7 +352,11 @@ const blockedBy = (doc: ExtractedDoc): string | undefined => {
   return typeof blocked === "string" && blocked.length > 0 ? blocked : undefined;
 };
 
-/** The result of `fetchAndIndex` and `renderAndIndex`. */
+/**
+ * The result of `fetchAndIndex` and `renderAndIndex`.
+ *
+ * @beta
+ */
 export interface Indexed {
   readonly fetched: Fetched;
   readonly docs: readonly Doc[];
@@ -400,6 +428,8 @@ const indexCapture = async (
  * from the cache gives the documents that the index has for that capture. Thus a repeated
  * question sends no request and reads nothing again. An extractor that throws gives no document and an
  * `error`, and the fetch still succeeds.
+ *
+ * @beta
  */
 export const fetchAndIndex = async (
   runtime: CrawlRuntime,
@@ -410,7 +440,12 @@ export const fetchAndIndex = async (
   return { fetched, ...(await indexCapture(runtime, fetched, request.recipe, false)) };
 };
 
-/** This function renders a page in the headless browser and adds what the page shows to the index. */
+/**
+ * This function renders a page in the headless browser and adds what the page shows to the index.
+ *
+ * @beta
+ * @deprecated Version 0.2.0 removes this export from the root entry point. No documented use needs it. To render a page, use `fetchPage` with `render: "always"`.
+ */
 export const renderAndIndex = async (
   runtime: CrawlRuntime,
   request: RenderRequest,
@@ -452,7 +487,11 @@ export interface PageResult {
   readonly archived?: Archived | undefined;
 }
 
-/** These options control one page. */
+/**
+ * These options control one page.
+ *
+ * @beta
+ */
 export interface PageOptions {
   readonly render: "auto" | "never" | "always";
   readonly maxAgeMs?: number | "auto" | undefined;
@@ -479,6 +518,8 @@ const HTML_TYPE = /html|xml/i;
  * the page shows almost nothing without JavaScript, or when the caller asks for it. It renders
  * only an HTML page: not a PDF, a different file or a bot check. A page that sends the reader on
  * with a `<meta http-equiv="refresh">` gets one more plain fetch, of its target.
+ *
+ * @beta
  */
 export const fetchPage = async (
   runtime: CrawlRuntime,
@@ -712,6 +753,8 @@ export const isoTime = (name: string, value: string | Date): string => {
  * This function gives the version of a document that was current at a time (ISO 8601). It uses
  * `ReadingIndex.versionAt` when the index has it. Else it takes the newest version at or before
  * the time.
+ *
+ * @beta
  */
 export const versionAtTime = (runtime: CrawlRuntime, id: string, at: string): VersionAt => {
   const index = runtime.index;
@@ -761,6 +804,8 @@ const onBoundary = (text: string, position: number): number => {
  * This function writes an `override` record to the capture log. A person gave the URL of a
  * held-back document directly, and the hold stops for one action (`read` or `verify`). The record
  * takes the scope and the labels of `marks`, or else those of the document, as its captures do.
+ *
+ * @beta
  */
 export const recordOverride = async (
   runtime: CrawlRuntime,
@@ -796,6 +841,8 @@ export const recordOverride = async (
  * This function reads a range of characters of one stored document. It applies the rule for a
  * held-back document: no title, no text, and only the structural metadata, unless `userProvided`.
  * The positions do not cut a character in two.
+ *
+ * @beta
  */
 export const readDocument = async (
   runtime: CrawlRuntime,
@@ -1057,6 +1104,8 @@ export const checkQuote = (
  * unless `userProvided`. The same rule applies to each version. A version that asked not to be AI
  * input stays held back after a later capture drops the signal. The crawler logs an override when
  * `userProvided` opens a held-back version.
+ *
+ * @beta
  */
 export const verifyQuote = async (
   runtime: CrawlRuntime,
@@ -1073,6 +1122,8 @@ export const verifyQuote = async (
  * This function searches the stored documents. The syntax of the query is the syntax of
  * `parseQuery`. A held-back document is not in the results. The option `rank` chooses the
  * ranking (`RankMode`), and the default is `exact`.
+ *
+ * @beta
  */
 export const findDocuments = async (
   runtime: CrawlRuntime,
@@ -1313,6 +1364,8 @@ const replayRecord = async (
  * - It counts and skips a damaged line, a missing blob and an extractor that throws.
  * - The documents of a recipe that has no extractor in this runtime stay, from the old index.
  * - A capture that a different writer adds during the rebuild goes into the new index.
+ *
+ * @beta
  */
 export const reindex = async (
   runtime: CrawlRuntime,
@@ -1352,7 +1405,11 @@ export const reindex = async (
   }
 };
 
-/** The result of `catchUpIndex`. */
+/**
+ * The result of `catchUpIndex`.
+ *
+ * @beta
+ */
 export interface CatchUpResult extends ReindexResult {
   /**
    * The value `rebuild` tells that the index was stale, and the function built it again from the
@@ -1400,6 +1457,8 @@ const missed = (runtime: CrawlRuntime, envelope: CaptureRecord): boolean => {
  *   function reads the log from a short time before the newest cache entry.
  *
  * It gives the counts, or undefined when the index missed nothing.
+ *
+ * @beta
  */
 export const catchUpIndex = async (runtime: CrawlRuntime): Promise<CatchUpResult | undefined> => {
   if (runtime.index.stale) return { mode: "rebuild", ...(await reindex(runtime)) };

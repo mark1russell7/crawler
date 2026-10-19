@@ -14,6 +14,9 @@ const UNITS: Readonly<Record<string, number>> = {
  * This function changes a duration into milliseconds. The units are `ms`, `s`, `m` (minutes), `h`,
  * `d` and `w`, in any case. The unit `M` is an error, because a month is not a unit. A bare `0`
  * is zero. The function throws an error for a text that it cannot read.
+ *
+ * @beta
+ * @deprecated Version 0.2.0 removes this export from the root entry point. No documented use needs it. The options take a `Duration` (for example `"10m"`), and the crawler reads it.
  */
 export const durationMs = (duration: Duration): number => {
   if (typeof duration === "number") {

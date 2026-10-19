@@ -51,7 +51,11 @@ export const ARCHIVE_INDEX_RECIPE = "archive-index";
 /** The kind of the document of an archived copy. */
 export const ARCHIVED_KIND = "archived";
 
-/** This function gives the document id of the archived copy of a page. */
+/**
+ * This function gives the document id of the archived copy of a page.
+ *
+ * @beta
+ */
 export const archivedDocId = (url: string): string => `archive:${canonicalUrl(url)}`;
 
 /** The addresses of the archives. */
@@ -326,6 +330,8 @@ const asArchived = (
  *
  * It reads the body with the page reader, and gives a document of the kind `archived` with
  * `archived` in its metadata. The usage signals of the HTTP headers in a WARC record apply too.
+ *
+ * @beta
  */
 export const archiveExtractor: Extractor = async (body, capture) => {
   let url: URL;

@@ -12,6 +12,8 @@ import { getDocumentProxy, getMeta } from "unpdf";
  * - Reads one page at a time, and lets other work run between the pages.
  * - Stops at a page limit, a text limit and a time limit, and says so (`truncated`). The time limit
  *   stops a page in the middle too, and the text limit cuts the text of a page.
+ *
+ * @beta
  */
 export interface PdfText {
   /** This is the title in the file, or null when the file names no real title ("Microsoft Word - menu.docx"). */
@@ -24,7 +26,11 @@ export interface PdfText {
   readonly note: string | null;
 }
 
-/** These are the limits of one read. */
+/**
+ * These are the limits of one read.
+ *
+ * @beta
+ */
 export interface PdfOptions {
   /** The reader reads no more pages than this. The default is 500. */
   readonly maxPages?: number | undefined;
@@ -46,7 +52,11 @@ const TIME_BUDGET_MS = 20_000;
  */
 const MAX_INFLATED_BYTES = 8 * 1024 * 1024;
 
-/** This function finds a PDF from its first bytes or its content type. Some servers put bytes before `%PDF-`. */
+/**
+ * This function finds a PDF from its first bytes or its content type. Some servers put bytes before `%PDF-`.
+ *
+ * @beta
+ */
 export const isPdf = (body: Uint8Array, contentType: string | null): boolean => {
   if (/\bpdf\b/i.test(contentType ?? "")) return true;
   const end = Math.min(body.length - 4, 1024);
@@ -177,6 +187,7 @@ const cutText = (text: string, length: number): string => {
   return text.slice(0, end).trimEnd();
 };
 
+/** @beta */
 export const readPdf = async (bytes: Uint8Array, options: PdfOptions = {}): Promise<PdfText> => {
   const maxPages = options.maxPages ?? MAX_PAGES;
   const maxChars = options.maxChars ?? MAX_CHARS;

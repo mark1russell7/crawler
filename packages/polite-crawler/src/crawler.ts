@@ -87,6 +87,7 @@ import { signerOf } from "./webbotauth.ts";
  */
 export type FetchOutcome = Outcome | "skipped" | "not-html";
 
+/** @beta */
 export interface FetchRequest {
   readonly url: string;
   /** The value `api` is a documented API with its own terms. The value `page` is a web page, and robots.txt applies. */
@@ -150,6 +151,7 @@ export interface FetchRequest {
   // ── end of archived fallback ──
 }
 
+/** @beta */
 export interface Fetched {
   /** This URL is the URL of the capture. Its secrets show as `REDACTED`. */
   readonly url: string;
@@ -174,13 +176,21 @@ export interface Fetched {
   readonly labels?: Readonly<Record<string, string>> | undefined;
 }
 
-/** The crawler writes each record to a capture writer. The class `CaptureLog` is one. */
+/**
+ * The crawler writes each record to a capture writer. The class `CaptureLog` is one.
+ *
+ * @beta
+ */
 export interface CaptureWriter {
   append(record: CaptureRecord): Promise<void>;
   close?(): Promise<void>;
 }
 
-/** A cache entry is the last answer for a URL: its capture, its body and its validators. */
+/**
+ * A cache entry is the last answer for a URL: its capture, its body and its validators.
+ *
+ * @beta
+ */
 export interface CacheEntry {
   /** This text is the cache key: the canonical URL, with its secrets as `REDACTED`. */
   readonly url: string;
@@ -209,6 +219,8 @@ export interface CacheEntry {
  * The cache index holds the last answer for each URL. The crawler reads it before a request, and
  * it writes it after an answer. The class `DocIndex` is one. An index that keeps only the
  * necessary fields of `CacheEntry` works, and the crawler keeps the other fields in memory.
+ *
+ * @beta
  */
 export interface CacheIndex {
   latest(url: string, variant?: Variant): CacheEntry | undefined;
@@ -240,6 +252,7 @@ export type CrawlEvent =
     }
   | { readonly type: "skip"; readonly url: string; readonly note: string };
 
+/** @beta */
 export interface CrawlerOptions {
   /** This product token is the name that robots.txt rules match. It contains only letters, `_` and `-` (RFC 9309). */
   readonly token: string;
@@ -300,6 +313,7 @@ export interface CrawlerOptions {
   // ── end of signed requests ──
 }
 
+/** @beta */
 export interface RenderRequest {
   readonly url: string;
   readonly recipe: string;
@@ -317,16 +331,27 @@ export interface RenderRequest {
   readonly deadline?: number | undefined;
 }
 
-/** The note of a request starts with this text when its host was not free before its deadline, so the request did not start. */
+/**
+ * The note of a request starts with this text when its host was not free before its deadline, so the request did not start.
+ *
+ * @beta
+ */
 export const DEADLINE_NOTE = "deadline reached";
 
 /**
  * This function gives the key of the cache entry of a rendered page in the form of version 0.1.
  * The index keeps the variant in a column of its own, and it reads this form too.
+ *
+ * @beta
+ * @deprecated Version 0.2.0 removes this export from the root entry point. No documented use needs it. It gives the cache key of version 0.1, and only the index reads that form.
  */
 export const renderedKey = (url: string): string => `${url}#rendered`;
 
-/** This value is the version of the payload of the records that the crawler writes. A record with no `schema` is version 1. */
+/**
+ * This value is the version of the payload of the records that the crawler writes. A record with no `schema` is version 1.
+ *
+ * @beta
+ */
 export const CAPTURE_SCHEMA = 2;
 
 /** The content type of a rendered page: the browser gives its text as UTF-8. */
@@ -335,6 +360,8 @@ export const RENDERED_TYPE = "text/html; charset=utf-8";
 /**
  * These query parameters hold secrets in many APIs. The crawler writes `REDACTED` in place of
  * their values in each capture, in addition to the names of `secretParams`.
+ *
+ * @beta
  */
 export const DEFAULT_SECRET_PARAMS: readonly string[] = [
   "access_token",
@@ -1037,6 +1064,7 @@ export interface RobotsRead {
   readonly retryAfterMs: number | undefined;
 }
 
+/** @beta */
 export class Crawler {
   private readonly clock: Clock;
   private readonly random: () => number;

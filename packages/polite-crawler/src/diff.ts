@@ -740,6 +740,8 @@ const sideOf = (version: VersionText, at: string | null, held: boolean): DiffSid
  * This function compares two versions of a stored document, and writes nothing. It applies the
  * rule for a held-back document. When the document or a version is held back, the diff compares
  * only the structural metadata, and it shows no text and no title.
+ *
+ * @beta
  */
 export const diffDocument = async (
   runtime: CrawlRuntime,

@@ -101,6 +101,7 @@
   "devDependencies": {
     "@huggingface/transformers": "^4.3.1",
     "@mark1russell7/cue": "github:mark1russell7/cue",
+    "@microsoft/api-extractor": "^7.59.3",
     "@types/node": "^22.19.0",
     "@types/turndown": "^5.0.6",
     "@vitest/coverage-v8": "5.0.3",

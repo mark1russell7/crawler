@@ -19,7 +19,11 @@ import { cacheKeyOf, scopeTest } from "./urls.ts";
  * The state of the frontier is in memory, for one call. A later version can make it resumable.
  */
 
-/** These are the default limits of `crawl`, and the limits of the memory of the frontier. */
+/**
+ * These are the default limits of `crawl`, and the limits of the memory of the frontier.
+ *
+ * @beta
+ */
 export const CRAWL_LIMITS = {
   /** The most pages that one crawl gives. */
   maxPages: 100,
@@ -70,7 +74,11 @@ export interface CrawlOptions extends ScopeOptions {
   readonly labels?: Readonly<Record<string, string>> | undefined;
 }
 
-/** These options control `crawlSite`: the options of `crawl`, and a step before the first fetch. */
+/**
+ * These options control `crawlSite`: the options of `crawl`, and a step before the first fetch.
+ *
+ * @beta
+ */
 export interface CrawlRunOptions extends CrawlOptions {
   /** This function operates before the first fetch. `openCrawler` waits there for the open of the store. */
   readonly ready?: (() => Promise<void>) | undefined;
@@ -265,6 +273,8 @@ const REFUSALS: ReadonlySet<string> = new Set([
  * This function crawls a site from its seeds. `PoliteCrawler.crawl` uses it. It gives each page
  * when its fetch ends, and a summary at the end. The seeds come first, then the pages of the
  * sitemaps (the newest first), then the links, the lower depth first.
+ *
+ * @beta
  */
 export const crawlSite = (
   runtime: CrawlRuntime,

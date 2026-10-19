@@ -43,14 +43,6 @@ Mark's decision D12 in the server-stack plan (OTH-3): the polite-crawler MCP ser
 - [Server-stack tracker](https://claude.ai/artifact/WtkE3dtHp57qpcs4UvcaVZ)
 - [client #59: MCP tasks and HTTP guards (CLI-35)](https://github.com/mark1russell7/client/pull/59)
 
-### `eval-page`: A page for the eval: tokens to prove a claim
-
-A site page for part A of the eval: the tokens that an agent reads to prove each of the 30 claims, with polite-crawler and with the WebFetch way, and the total over a session, where the one-time cost of the tool definitions shows when polite-crawler starts to cost less. The numbers come from the eval run of October 18; part B replaces the proxy tokenizer with Claude's own counts.
-
-- Area: Site and growth
-- Waits for: `eval`
-- Started: 2026-10-19
-
 ## Blocked
 
 ### `api-review`: API review before 1.0
@@ -96,6 +88,17 @@ API Extractor makes one report of the public API for each entry point, in packag
 - Shipped: 2026-10-19
 - [docs/API-REVIEW.md](https://github.com/mark1russell7/crawler/blob/main/docs/API-REVIEW.md)
 - [Commit 9ebeca3](https://github.com/mark1russell7/crawler/commit/9ebeca3)
+
+### `eval-page`: A page for the eval: tokens to prove a claim
+
+A site page for part A of the eval: for each of the 30 claims, the tokens of the polite-crawler path against the page as Markdown and as visible text (a log axis, with the 4 claims where polite-crawler costs more marked), the running total of a session with the one-time 8,539 tokens of the tool definitions (polite-crawler stays below from claim 4 in the order of the run), and a sortable table. The numbers are from the eval run of October 18; part B replaces the proxy tokenizer with Claude's own counts.
+
+- Area: Site and growth
+- Waits for: `eval`
+- Started: 2026-10-19
+- Shipped: 2026-10-19
+- [The page: Tokens to prove a claim](https://mark1russell7.github.io/crawler/notes/tokens-per-claim/)
+- [Commit 168b8a1](https://github.com/mark1russell7/crawler/commit/168b8a1)
 
 ### `site-figures`: Three new figures: a robots.txt builder, the crawler on your site, and the pace of each crawler
 

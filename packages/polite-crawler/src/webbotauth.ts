@@ -45,9 +45,9 @@ export type SignatureAgentType = "directory" | "jwks_uri";
  * This type is a JSON Web Key, as `createPrivateKey` of `node:crypto` reads it. The type comes from `JsonWebKeyInput`, which
  * `@types/node` 22 and 26 both have: version 26 has no `JsonWebKey` export in `node:crypto`.
  */
-type JsonWebKey = JsonWebKeyInput["key"];
+export type JwkInput = JsonWebKeyInput["key"];
 
-export type KeyInput = KeyObject | string | Uint8Array | JsonWebKey;
+export type KeyInput = KeyObject | string | Uint8Array | JwkInput;
 
 /** These options make a signer for Web Bot Auth. */
 export interface WebBotAuthOptions {
@@ -88,7 +88,7 @@ export interface RequestSigner {
 /** The signer that `createWebBotAuthSigner` makes. It also gives its public key for the key directory. */
 export interface WebBotAuthSigner extends RequestSigner {
   /** This JWK is the public key of the signer, with no private part. Give it to `keyDirectory`. */
-  readonly publicKey: JsonWebKey;
+  readonly publicKey: JwkInput;
 }
 
 /** One key of a key directory: an Ed25519 public key as a JWK, with its thumbprint as `kid`. */
@@ -360,7 +360,7 @@ const privateKeyOf = (input: KeyInput): KeyObject => {
     if (isKeyObject(input)) key = input;
     else if (typeof input === "string")
       key = input.trim().startsWith("{")
-        ? createPrivateKey({ key: JSON.parse(input) as JsonWebKey, format: "jwk" })
+        ? createPrivateKey({ key: JSON.parse(input) as JwkInput, format: "jwk" })
         : createPrivateKey(input);
     else if (input instanceof Uint8Array)
       key = createPrivateKey({ key: Buffer.from(input), format: "der", type: "pkcs8" });
@@ -387,7 +387,7 @@ const publicKeyOf = (input: KeyInput): KeyObject => {
     if (isKeyObject(input)) key = input.type === "private" ? createPublicKey(input) : input;
     else if (typeof input === "string")
       key = input.trim().startsWith("{")
-        ? createPublicKey({ key: JSON.parse(input) as JsonWebKey, format: "jwk" })
+        ? createPublicKey({ key: JSON.parse(input) as JwkInput, format: "jwk" })
         : createPublicKey(input);
     else if (input instanceof Uint8Array) {
       const bytes = Buffer.from(input);

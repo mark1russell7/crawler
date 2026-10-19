@@ -505,7 +505,11 @@ export const changeCommand = (
 
 // ── the daemon ──────────────────────────────────────────────────────────────
 
-/** These options serve the MCP tools over HTTP. */
+/**
+ * These options serve the MCP tools over HTTP.
+ *
+ * @beta
+ */
 export interface DaemonMcpOptions {
   /** This value is the port. The default is 9307. The value 0 takes a free port. */
   readonly port?: number | undefined;
@@ -525,7 +529,11 @@ export interface DaemonMcpOptions {
   readonly renderOff?: string | undefined;
 }
 
-/** These functions connect an MCP host to the daemon. */
+/**
+ * These functions connect an MCP host to the daemon.
+ *
+ * @beta
+ */
 export interface DaemonMcpHooks {
   /** This function gives the status of the daemon, for the status route. */
   readonly status: () => DaemonStatus;
@@ -535,7 +543,11 @@ export interface DaemonMcpHooks {
   readonly log: (line: string) => void;
 }
 
-/** This is the MCP server of the daemon, as the MCP host gives it. */
+/**
+ * This is the MCP server of the daemon, as the MCP host gives it.
+ *
+ * @beta
+ */
 export interface DaemonMcpService {
   /** This URL is the MCP endpoint. */
   readonly url: string;
@@ -549,6 +561,8 @@ export interface DaemonMcpService {
  * This is the seam between the daemon and its MCP server. The default host (`mcpHttpHost` of the
  * package polite-crawler-mcp) serves the tools over Streamable HTTP. A different MCP host can
  * replace it.
+ *
+ * @beta
  */
 export interface DaemonMcpHost {
   start(
@@ -577,9 +591,17 @@ export interface DaemonOptions extends OpenOptions {
   readonly events?: string | ((line: string) => void) | false | undefined;
   /** This function gets each change event. The daemon starts it in order, one at a time, and logs its error. */
   readonly onChange?: ((event: WatchEvent) => void | Promise<void>) | undefined;
-  /** These options serve the MCP tools over HTTP. Without them, the daemon serves no MCP. */
+  /**
+   * These options serve the MCP tools over HTTP. Without them, the daemon serves no MCP.
+   *
+   * @beta
+   */
   readonly mcp?: DaemonMcpOptions | undefined;
-  /** This host serves the MCP tools. The default serves them over Streamable HTTP. */
+  /**
+   * This host serves the MCP tools. The default serves them over Streamable HTTP.
+   *
+   * @beta
+   */
   readonly mcpHost?: DaemonMcpHost | undefined;
   /** The value false installs no handler of `SIGINT` and `SIGTERM`. The default is true. */
   readonly signals?: boolean | undefined;
@@ -595,7 +617,11 @@ export interface Daemon {
   readonly crawler: OpenedCrawler;
   /** This file keeps the state of the daemon. */
   readonly stateFile: string;
-  /** This value is the MCP server, or undefined. */
+  /**
+   * This value is the MCP server, or undefined.
+   *
+   * @beta
+   */
   readonly mcp: DaemonMcpService | undefined;
   /** This method gives the status at this time. */
   status(): DaemonStatus;

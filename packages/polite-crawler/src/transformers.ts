@@ -69,7 +69,11 @@ export interface TransformersEmbedderOptions {
   readonly batch?: number | undefined;
 }
 
-/** This is the part of a feature-extraction pipeline of transformers.js that the embedder uses. */
+/**
+ * This is the part of a feature-extraction pipeline of transformers.js that the embedder uses.
+ *
+ * @beta
+ */
 export interface FeatureExtractor {
   (
     texts: string[],
@@ -78,7 +82,11 @@ export interface FeatureExtractor {
   dispose?(): Promise<unknown>;
 }
 
-/** This is the part of the module `@huggingface/transformers` that the embedder uses. */
+/**
+ * This is the part of the module `@huggingface/transformers` that the embedder uses.
+ *
+ * @beta
+ */
 export interface TransformersModule {
   pipeline(
     task: "feature-extraction",

@@ -32,7 +32,11 @@ import { deadlineOf, runtimeOf } from "./recipe.ts";
 import type { PageOptions, PageResult } from "./runtime.ts";
 import { HELD_BACK, fetchPage, isHeldBack, recordOverride } from "./runtime.ts";
 
-/** These are the limits of the venue recipe. */
+/**
+ * These are the limits of the venue recipe.
+ *
+ * @beta
+ */
 export const VENUE_LIMITS: {
   /** The pages of the site that a read fetches after the home page, by default. */
   readonly pages: number;
@@ -67,6 +71,8 @@ const wordsOf = (text: string): string[] =>
  * This function tells if a page names a venue: the page has the first word of the name and 60
  * percent of its words. A domain that a venue let go can show a different business. It gives
  * undefined for a name with no word.
+ *
+ * @beta
  */
 export const namesVenue = (
   name: string,
@@ -112,6 +118,8 @@ const withoutHash = (url: string): string => url.replace(/#.*$/s, "").replace(/\
  * This function ranks the links of a page by the words of their text and path. The links to
  * the hours or a menu come first. It keeps only the links on the site of `home`,
  * and it leaves out the files (a PDF, an image) and the home page itself.
+ *
+ * @beta
  */
 export const rankHoursLinks = (links: readonly PageLink[], home: string): PageLink[] => {
   const site = hostOf(home);
@@ -255,6 +263,8 @@ const addressText = (value: unknown): string | undefined => {
 /**
  * This function tells if a JSON-LD location record is the venue. The record must have the same
  * number on a street that shares a word, or a position near the venue (`VENUE_LIMITS.nearMetres`).
+ *
+ * @beta
  */
 export const locationMatches = (
   record: Readonly<Record<string, unknown>>,
@@ -342,7 +352,11 @@ export interface VenueRead {
   readonly phone: string | null;
   readonly menus: readonly VenueLink[];
   readonly notes: readonly string[];
-  /** This value counts the work of the reader. The tests use it, because it does not change with the computer. */
+  /**
+   * This value counts the work of the reader. The tests use it, because it does not change with the computer.
+   *
+   * @beta
+   */
   readonly steps: number;
 }
 

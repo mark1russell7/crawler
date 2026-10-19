@@ -30,9 +30,10 @@
  * - `polite-crawler/robots`, `/hours`, `/html`, `/classify`, `/politeness` and `/signals` give each
  *   reader whole. They import no Node.js module, so a browser can use them.
  */
-export type { BlobStore } from "./blobs.ts";
+export type { BlobStore, FileBlobStoreOptions } from "./blobs.ts";
 export { FileBlobStore } from "./blobs.ts";
-export { browserMissing, checkedRenderer } from "./browser.ts";
+export { browserMissing } from "./browser.ts";
+export type { Outcome } from "./classify.ts";
 // ── daemon ──
 export type {
   ChangeCommandOptions,
@@ -72,13 +73,7 @@ export type {
   Fetched,
   RenderRequest,
 } from "./crawler.ts";
-export {
-  CAPTURE_SCHEMA,
-  Crawler,
-  DEADLINE_NOTE,
-  DEFAULT_SECRET_PARAMS,
-  renderedKey,
-} from "./crawler.ts";
+export { CAPTURE_SCHEMA, Crawler, DEADLINE_NOTE, DEFAULT_SECRET_PARAMS } from "./crawler.ts";
 export type {
   DiffHunk,
   DiffInput,
@@ -107,6 +102,7 @@ export type {
   DigestOptions,
   Doc,
   DocDigest,
+  DocIndexOptions,
   DocInput,
   DocVersion,
   ExtractedDoc,
@@ -207,8 +203,15 @@ export {
 } from "./hours.ts";
 export type { PageExtract, PageLink } from "./html.ts";
 export { extractPage, typesOf } from "./html.ts";
+export type { SqliteHostStateOptions } from "./hoststate.ts";
 export { SqliteHostStateStore } from "./hoststate.ts";
-export type { CaptureFilter, CaptureReader, DamagedLine, ScanOptions } from "./log.ts";
+export type {
+  CaptureFilter,
+  CaptureLogOptions,
+  CaptureReader,
+  DamagedLine,
+  ScanOptions,
+} from "./log.ts";
 export { CaptureLog } from "./log.ts";
 export type {
   Duration,
@@ -347,12 +350,9 @@ export {
   heldBackMeta,
   isHeldBack,
   isoTime,
-  pageDocId,
-  pageExtractor,
   readDocument,
   recordOverride,
   reindex,
-  renderAndIndex,
   verifyQuote,
   versionAtTime,
 } from "./runtime.ts";

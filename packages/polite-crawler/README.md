@@ -253,17 +253,19 @@ The readers give more facts than before:
 
 ### Which parts are stable
 
-Before version 1.0.0, a minor version can change the API, and `CHANGELOG.md` tells what to change. Some parts change only for a strong reason. Other parts are the engine, and they change more often.
+Before version 1.0.0, a minor version can change the API, and `CHANGELOG.md` tells what to change. Some parts change only for a strong reason. Other parts are the engine, and they change more often. The declaration of each part of the engine has the TSDoc tag `@beta`, so your editor shows it. [The API review](https://github.com/mark1russell7/crawler/blob/main/docs/API-REVIEW.md) gives the tier of each export.
 
 These parts are the stable API:
 
 - `openCrawler` and the methods of `PoliteCrawler`: `fetch`, `find`, `read`, `verify`, `versions`, `discover`, `crawl`, `reindex`, `close`, `diff`, `watch` and `extract`. `openCrawler` gives an `OpenedCrawler`: a `PoliteCrawler` that has `discover`, `crawl`, `diff`, `watch` and `extract`. The five are optional in `PoliteCrawler`, so an object of your own that implements it stays correct.
+- The options of `openCrawler`: `OpenOptions` and `RuntimeOptions`, which `OpenOptions` extends, with `Extractor` and `ExtractedDoc` for the option `extractors` and `CrawlEvent` and `FetchOutcome` for `onEvent`. The options `log`, `blobs`, `index` and `renderer` of `RuntimeOptions` and the member `PoliteCrawler.runtime` are the engine.
+- The interfaces of the store on disk: `CaptureRecord`, `CaptureReader`, `CaptureFilter`, `ScanOptions`, `DamagedLine` and `BlobStore`.
 - The options and the results of these methods: `OpenOptions`, `FetchOptions`, `PageResult`, `Found`, `ReadResult`, `VerifyResult`, `DocVersion` and `ReindexResult`. `at` of `ReadOptions` and `VerifyOptions`, and `at` and `before_first` of their results, are stable too.
 - The options and the results of `extract`: `ExtractOptions`, `ExtractResult`, `ExtractSummary`, `FieldClaim`, `FieldKind`, `FieldStatus`, `FieldResult`, `FieldSpan` and `FieldCandidate`, with the names of the normalizations.
-- The diff: `diffDocument`, `diffTexts`, `DIFF_LIMITS`, `DiffOptions`, `DiffResult`, `DiffSide`, `DiffSummary`, `DiffHunk`, `DiffLine`, `WordPart`, `MetaChange`, `VersionChoice`, `DiffLimits`, `DiffInput` and `TextDiff`.
-- The time travel: `versionAtTime`, `isoTime` and `VersionAt`.
-- The watch list: `WatchList`, `WatchOptions`, `WatchEntry`, `WatchPending`, `WatchKind`, `WatchRun`, `WatchRunOptions`, `WatchEvent`, `WatchSummary`, `WatchStop`, `WATCH_LIMITS` and the file `watch.sqlite` (`WATCH_SCHEMA`). For a runtime of your own, it also has `WatchStore`, `WatchStoreOptions`, `runWatch` and `WatchRunnerOptions`. The lease steps of `WatchStore` (`claim`, `release` and `settle`) are the engine.
-- The daemon: `startDaemon`, `scheduleWatches`, `changeCommand`, `readDaemonState`, `daemonStateFile`, `DAEMON_DEFAULTS`, their options and results, and the state file (`DAEMON_STATE_SCHEMA`). The MCP server of the daemon is `mcpHttpHost` of `polite-crawler-mcp`.
+- The diff: `diffTexts`, `DIFF_LIMITS`, `DiffOptions`, `DiffResult`, `DiffSide`, `DiffSummary`, `DiffHunk`, `DiffLine`, `WordPart`, `MetaChange`, `VersionChoice`, `DiffLimits`, `DiffInput` and `TextDiff`.
+- The time travel: `isoTime` and `VersionAt`.
+- The watch list: `WatchList`, `WatchOptions`, `WatchEntry`, `WatchPending`, `WatchKind`, `WatchRun`, `WatchRunOptions`, `WatchEvent`, `WatchSummary`, `WatchStop`, `WATCH_LIMITS` and the file `watch.sqlite` (`WATCH_SCHEMA`).
+- The daemon: `startDaemon`, `scheduleWatches`, `changeCommand`, `readDaemonState`, `daemonStateFile`, `DAEMON_DEFAULTS`, their options and results, and the state file (`DAEMON_STATE_SCHEMA`). The MCP seam of the daemon is the engine: `DaemonMcpHooks`, `DaemonMcpHost`, `DaemonMcpOptions`, `DaemonMcpService`, the options `mcp` and `mcpHost`, and `Daemon.mcp`. The MCP server of the daemon is `mcpHttpHost` of `polite-crawler-mcp`.
 - The options and the results of `discover` and `crawl`: `DiscoverOptions`, `DiscoverResult`, `DiscoveredUrl`, `DiscoverSource`, `DiscoverStop`, `CrawlOptions`, `CrawlRun`, `CrawlPage`, `CrawlSummary`, `CrawlStop`, `UrlPattern` and `ScopeOptions`.
 - The readers: `polite-crawler/robots`, `/hours`, `/html`, `/classify`, `/politeness` and `/signals`. The site and its tools use them in the browser.
 - The command line, its exit codes, the store on disk and `polite-crawler/record.schema.json`.
@@ -275,22 +277,24 @@ These parts are the stable API:
 - Also stable: `HybridCrawler` (the result of `openCrawler`), `rank: "hybrid"` (`SearchRank`, `SearchOptions`), `embed`, `rankWithin` with `RankOptions` and `Ranked`, and `hybrid` (`HybridSearch`). The three members are optional in `PoliteCrawler`, and `OpenedCrawler` does not change.
 - The options and the results of hybrid search are stable too: `HybridOptions`, `HybridFindOptions`, `EmbedOptions`, `EmbedResult`, `EmbedStop`, `Passage` and `Found.passage`. So are `HYBRID_DEFAULTS`, `OLLAMA_MODELS`, `TRANSFORMERS_MODELS`, `NO_EMBEDDER`, `NO_OLLAMA` and `NO_TRANSFORMERS`.
 
-- The recipe SDK: `defineRecipe`, `runRecipe`, `registerRecipe`, `readJson`, the option `recipes` of `openCrawler` and `createRuntime`, and `RESERVED_RECIPES`. Its types are `Recipe`, `RecipeDefinition`, `RecipeExtract`, `RecipeCapture`, `RecipeRequest`, `RecipeRequestOptions`, `RecipeRunOptions`, `RecipeResult`, `RecipeDoc` and `RecipeTarget`.
+- The recipe SDK: `defineRecipe`, `runRecipe`, `readJson`, the option `recipes` of `openCrawler` and `createRuntime`, and `RESERVED_RECIPES`. Its types are `Recipe`, `RecipeDefinition`, `RecipeExtract`, `RecipeCapture`, `RecipeRequest`, `RecipeRequestOptions`, `RecipeRunOptions`, `RecipeResult`, `RecipeDoc` and `RecipeTarget`.
 - The recipes: `readVenue`, `venueReadingsOf`, `compareHours`, `readProduct` and `productOf`. Their options and results are stable too: `VenueOptions`, `VenueResult`, `VenueReading`, `VenuePage`, `VenueLink`, `VenueLocation`, `VenueOsm`, `VenueSource`, `VenueRead`, `HoursComparison`, `ProductOptions`, `ProductResult`, `ProductRead`, `ProductVariant` and `Money`.
 
 The other exports of the root entry point are the engine. Examples are `createRuntime`, `catchUpIndex`, `Crawler`, `CaptureLog`, `DocIndex`, `FileBlobStore`, `SqliteHostStateStore`, `Extractors`, `fetchAndIndex` and `makeRecord`. An application can build on them. A minor version before 1.0.0 can change them, and its section in `CHANGELOG.md` says so.
 
-The engine of the check of fields is `checkFields`, `extractDocument`, `FIELD_KINDS`, `FieldCheck`, `ExtractSource` and `FieldsChecked`.
+The engine of the check of fields is `checkFields`, `extractDocument`, `FIELD_KINDS`, `ExtractSource` and `FieldsChecked`.
 
 The engine of discovery and of the crawl is `discoverSite`, `crawlSite`, `readSitemap`, `feedDate`, `DISCOVER_LIMITS`, `CRAWL_LIMITS`, `SITEMAP_LIMITS` and `DEADLINE_NOTE`. It also includes `Crawler.robotsAllow` and the `deadline` of `FetchRequest`, `RenderRequest` and `PageOptions`.
 
-The engine of the time travel and of the watch list is the optional method `ReadingIndex.versionAt`, `DocIndex.versionAt` and `Crawler.hostStop`.
+The engine of the time travel, the diff and the watch list is `versionAtTime`, `diffDocument`, `WatchStore`, `WatchStoreOptions`, `runWatch` and `WatchRunnerOptions`. It also includes the optional method `ReadingIndex.versionAt`, `DocIndex.versionAt` and `Crawler.hostStop`. Each of these functions operates on a runtime of your own. The methods `diff`, `read` with `at` and `watch` of the crawler are the stable way.
 
 The engine of hybrid search is `createHybridSearch`, `HybridSearchOptions`, `VectorStore`, `VECTORS_SCHEMA` and the types of the vector store. It also includes `chunkText`, `chunkTokensOf`, `estimateTokens`, `CHUNK_LIMITS`, `fuseRanks`, `unitVector`, `isLoopback`, `FeatureExtractor`, `TransformersModule`, the optional method `ReadingIndex.digests` and `DocIndex.digests`. The file `vectors.sqlite` is a projection, as the index is: it is not part of the stable store.
 
-The engine of the recipes is `rankHoursLinks`, `namesVenue`, `locationMatches`, `pickProduct`, `pickVariant`, `readAmount`, `VENUE_LIMITS`, `PRODUCT_LIMITS`, `RECIPE_LIMITS` and the `steps` of `VenueRead` and `ProductRead`. The words that rank a link or a label are the engine too, so a version can improve them.
+The engine of the recipes is `registerRecipe`, `rankHoursLinks`, `namesVenue`, `locationMatches`, `pickProduct`, `pickVariant`, `readAmount`, `VENUE_LIMITS`, `PRODUCT_LIMITS`, `RECIPE_LIMITS` and the `steps` of `VenueRead` and `ProductRead`. The words that rank a link or a label are the engine too, so a version can improve them.
 
 The engine of the archived fallback and of the signatures is `archiveExtractor`, `archivedDocId`, and the `fallback` and `archiveDespiteRobots` of `PageOptions`. It also includes `range`, `signalLines` and `originalHeaderPrefix` of `FetchRequest`, `ai_input` of `ExtractedDoc`, `sign` of `RenderOptions` and `signer` of `CrawlerOptions`.
+
+Version 0.2.0 removed five exports from the root entry point: `checkedRenderer`, `renderedKey`, `pageDocId`, `renderAndIndex` and `pageExtractor`. No documented use needed them. `durationMs` stays in the engine, because `polite-crawler-mcp` uses it.
 
 ## Hybrid search
 

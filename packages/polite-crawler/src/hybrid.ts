@@ -106,7 +106,11 @@ export interface HybridSearch {
   embed(options?: EmbedOptions): Promise<EmbedResult>;
 }
 
-/** These options make a hybrid search. */
+/**
+ * These options make a hybrid search.
+ *
+ * @beta
+ */
 export interface HybridSearchOptions {
   readonly embedder: Embedder;
   /** This store keeps the vectors. The caller opens it and closes it. */
@@ -161,7 +165,11 @@ const round = (value: number, digits: number): number => {
 /** The facts of a document that hybrid search checks: its kind, its AI input and the hash of its text. */
 type Head = Pick<DocDigest, "doc" | "kind" | "ai_input" | "text_sha">;
 
-/** This function makes a hybrid search over a runtime. The vectors go into the store, with the id of the embedder. */
+/**
+ * This function makes a hybrid search over a runtime. The vectors go into the store, with the id of the embedder.
+ *
+ * @beta
+ */
 export const createHybridSearch = (
   runtime: CrawlRuntime,
   options: HybridSearchOptions,

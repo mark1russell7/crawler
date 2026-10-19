@@ -7,6 +7,7 @@
     "CHANGELOG.md",
     "CONTRIBUTING.md",
     "SECURITY.md",
+    "docs/API-REVIEW.md",
     "CODE_OF_CONDUCT.md",
     "packages/*/README.md",
     "packages/*/eval/README.md",

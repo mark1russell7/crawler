@@ -83,6 +83,8 @@ const MAILBOX = /^(?:[^\s<>@:/]+@[^\s<>@/]+|[^<>]*<[^\s<>@:/]+@[^\s<>@/]+>)$/;
  * This function tells if a contact is a mailbox. The `From` header holds only a mailbox (RFC 9110,
  * section 10.1.2). Thus the crawler sends a mailbox in `From` and in the `User-Agent`, and a URL in
  * the `User-Agent` only.
+ *
+ * @beta
  */
 export const isMailbox = (contact: string): boolean => MAILBOX.test(contact.trim());
 
@@ -94,11 +96,23 @@ export const isMailbox = (contact: string): boolean => MAILBOX.test(contact.trim
 export interface RuntimeOptions {
   /** This folder keeps the capture log (`captures/`), the bodies (`blobs/`), the index (`index.sqlite`) and the state of each host (`hosts.sqlite`). */
   readonly dir?: string | undefined;
-  /** This log replaces `<dir>/captures`. */
+  /**
+   * This log replaces `<dir>/captures`.
+   *
+   * @beta
+   */
   readonly log?: CaptureLog | undefined;
-  /** This blob store replaces `<dir>/blobs`. */
+  /**
+   * This blob store replaces `<dir>/blobs`.
+   *
+   * @beta
+   */
   readonly blobs?: BlobStore | undefined;
-  /** This index replaces `<dir>/index.sqlite`. A runtime takes any `ReadingIndex`. */
+  /**
+   * This index replaces `<dir>/index.sqlite`. A runtime takes any `ReadingIndex`.
+   *
+   * @beta
+   */
   readonly index?: ReadingIndex | undefined;
   /**
    * This store keeps the pace and the stops of each host. The default with `dir` is a SQLite file
@@ -118,6 +132,8 @@ export interface RuntimeOptions {
    * This browser renders the pages that need JavaScript. The value `false` turns rendering off. The
    * default checks one time that `playwright-core` and its browser are installed. With no browser,
    * each page that needs JavaScript gets a note at once, with no wait.
+   *
+   * @beta
    */
   readonly renderer?: Renderer | false | undefined;
   /** This value is the number of sites that the crawler fetches from at one time. The default is 16. */
@@ -156,7 +172,11 @@ export interface RuntimeOptions {
   readonly signer?: RequestSigner | WebBotAuthOptions | undefined;
 }
 
-/** A runtime that a store made. It owns the parts that it made, and it closes them. */
+/**
+ * A runtime that a store made. It owns the parts that it made, and it closes them.
+ *
+ * @beta
+ */
 export interface StoreRuntime extends CrawlRuntime {
   readonly hostState: HostStateStore;
   /** This method closes the crawler, the browser, the log, the index and the host state store that the runtime made. A second close does nothing. */
@@ -208,6 +228,8 @@ const guardStore = (dir: string): void => {
  * This function makes a runtime. It is the one place that puts the log, the blob store, the index,
  * the host state, the crawler and the extractors together. The function `openCrawler` uses it.
  * An application that needs the parts uses it too. The runtime and the crawler share one clock.
+ *
+ * @beta
  */
 export const createRuntime = (options: RuntimeOptions): StoreRuntime => {
   const dir = options.dir;
@@ -372,7 +394,11 @@ export interface RankOptions extends HybridOptions {
 
 /** A polite crawler fetches each source one time, keeps it, and answers the next questions from the disk. */
 export interface PoliteCrawler {
-  /** The runtime gives the parts to an application that needs more control. */
+  /**
+   * The runtime gives the parts to an application that needs more control.
+   *
+   * @beta
+   */
   readonly runtime: StoreRuntime;
   /** This method fetches a page, reads it and adds it to the index. */
   fetch(url: string, options?: FetchOptions): Promise<PageResult>;

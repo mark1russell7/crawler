@@ -24,10 +24,18 @@ import { DatabaseSync } from "node:sqlite";
  * a different version opens empty.
  */
 
-/** This value is the version of the schema of the vector file. */
+/**
+ * This value is the version of the schema of the vector file.
+ *
+ * @beta
+ */
 export const VECTORS_SCHEMA = 1;
 
-/** This is one chunk of a text with its vector, as the store keeps it. */
+/**
+ * This is one chunk of a text with its vector, as the store keeps it.
+ *
+ * @beta
+ */
 export interface StoredChunk {
   readonly chunk: number;
   /** These values are the positions of the chunk in the text, in UTF-16 units. */
@@ -37,7 +45,11 @@ export interface StoredChunk {
   readonly vector: Float32Array;
 }
 
-/** This is the best chunk of one text for a question. */
+/**
+ * This is the best chunk of one text for a question.
+ *
+ * @beta
+ */
 export interface VectorHit {
   /** This value is the SHA-256 of the text, in hex. */
   readonly sha: string;
@@ -50,7 +62,11 @@ export interface VectorHit {
   readonly docs: readonly string[];
 }
 
-/** These are the counts of the store, for one embedder or for each embedder. */
+/**
+ * These are the counts of the store, for one embedder or for each embedder.
+ *
+ * @beta
+ */
 export interface VectorCounts {
   readonly texts: number;
   readonly chunks: number;
@@ -59,13 +75,21 @@ export interface VectorCounts {
   readonly bytes: number;
 }
 
-/** These options open a vector store. */
+/**
+ * These options open a vector store.
+ *
+ * @beta
+ */
 export interface VectorStoreOptions {
   /** This value is the time in milliseconds that a write waits for the lock of a different process. The default is 10 seconds. */
   readonly busyTimeoutMs?: number | undefined;
 }
 
-/** These are the parts of one text in a write of the store. */
+/**
+ * These are the parts of one text in a write of the store.
+ *
+ * @beta
+ */
 export interface VectorWrite {
   readonly embedder: string;
   readonly dimensions: number;
@@ -152,6 +176,7 @@ const dot = (data: Float32Array, row: number, query: Float32Array, dims: number)
   return sum;
 };
 
+/** @beta */
 export class VectorStore {
   private readonly db: DatabaseSync;
   private readonly statements = new Map<string, StatementSync>();

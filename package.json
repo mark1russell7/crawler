@@ -10,9 +10,10 @@
   "scripts": {
     "package": "tsx packages/cli/src/index.ts package",
     "template": "tsx packages/cli/src/index.ts repo",
+    "api": "node scripts/api.mjs",
     "browser": "pnpm --filter polite-crawler exec playwright-core install chromium-headless-shell",
     "build": "pnpm --filter polite-crawler --filter polite-crawler-mcp build",
-    "check": "pnpm format:check && pnpm typecheck && pnpm lint && pnpm test && pnpm lint:ste && pnpm build && pnpm smoke",
+    "check": "pnpm format:check && pnpm typecheck && pnpm lint && pnpm test && pnpm lint:ste && pnpm build && pnpm api --check && pnpm smoke",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "lint": "oxlint --type-aware",

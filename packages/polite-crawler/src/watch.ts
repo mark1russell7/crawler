@@ -133,7 +133,11 @@ export interface WatchRunOptions {
   readonly drain?: AbortSignal | undefined;
 }
 
-/** These options control `runWatch`: the options of a run, and the parts of `openCrawler`. */
+/**
+ * These options control `runWatch`: the options of a run, and the parts of `openCrawler`.
+ *
+ * @beta
+ */
 export interface WatchRunnerOptions extends WatchRunOptions {
   /** These agents get their robots.txt rules applied to each check, before the agents of the entry. */
   readonly onBehalfOf?: readonly string[] | undefined;
@@ -213,7 +217,11 @@ export interface WatchList {
   run(options?: WatchRunOptions): WatchRun;
 }
 
-/** These options open a watch store. */
+/**
+ * These options open a watch store.
+ *
+ * @beta
+ */
 export interface WatchStoreOptions {
   /** This value is the time in milliseconds that a step waits for the lock of a different process. The default is 10 seconds. */
   readonly busyTimeoutMs?: number | undefined;
@@ -340,6 +348,8 @@ const targetOf = (
  *
  * The list is the decision of the operator, not a projection of the capture log. Thus it has its
  * own file: a deletion of `hosts.sqlite` or of the index does not lose it.
+ *
+ * @beta
  */
 export class WatchStore {
   private readonly db: DatabaseSync;
@@ -617,6 +627,8 @@ type Done =
  * it. Each check is a fetch of the page with `fetchPage`, with no stored copy (`maxAgeMs: 0`), so
  * each polite rule applies. A check that the budget stops before its request stays due. The store
  * can be a function that opens it: the run uses it before the first check.
+ *
+ * @beta
  */
 export const runWatch = (
   runtime: CrawlRuntime,

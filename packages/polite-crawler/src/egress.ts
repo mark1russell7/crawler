@@ -28,7 +28,11 @@ export interface EgressOptions {
   readonly allowHosts?: readonly string[] | undefined;
 }
 
-/** The connection hook gives this error when the policy refuses each address of a host. */
+/**
+ * The connection hook gives this error when the policy refuses each address of a host.
+ *
+ * @beta
+ */
 export class EgressRefused extends Error {
   readonly code: string = "EGRESS_REFUSED";
   constructor(
@@ -282,6 +286,8 @@ const screen = (
  * This function gives a `lookup` hook for the connection options of an undici `Agent`. The hook
  * resolves the name, removes each address that the policy refuses, and gives the rest to the
  * socket. When no address stays, the connection fails with `EgressRefused`.
+ *
+ * @beta
  */
 export const egressLookup =
   (policy: EgressOptions, resolve: Resolve = resolveAll): LookupFunction =>

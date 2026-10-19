@@ -281,7 +281,8 @@ describe("the MCP server over HTTP: the tools and the tasks", () => {
     expect(data.summary.stopped).toBe("done");
     const listed = await client.experimental.tasks.listTasks();
     expect(listed.tasks.map((one) => one.taskId)).toContain(id);
-    expect(server.tasks.running()).toEqual([]);
+    // the slot of a task is free when its call returns, a moment after its status ends
+    await until(() => server.tasks.running().length === 0);
   });
 
   it("cancels a task: the request in progress stops, and a cancel after the end is an error", async () => {
@@ -308,7 +309,8 @@ describe("the MCP server over HTTP: the tools and the tasks", () => {
     expect(cancelled.status).toBe("cancelled");
     // the cancel aborts the fetch: the site sees the client close the request
     await until(() => site.dropped.includes("/slow"));
-    expect(server.tasks.running()).toEqual([]);
+    // the slot of a task is free when its call returns, a moment after its status ends
+    await until(() => server.tasks.running().length === 0);
     expect((await client.experimental.tasks.getTask(id)).status).toBe("cancelled");
     await expect(client.experimental.tasks.cancelTask(id)).rejects.toThrow(/terminal status/);
   });

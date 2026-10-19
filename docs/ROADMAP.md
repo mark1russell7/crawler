@@ -22,6 +22,17 @@ List the package in the MCP and tool directories, then post it to Show HN.
 - Waits for: `eval`, `eval-b`
 - What Mark does: Say go in the Fleet Hub (ask crawler-eval) after part B. Then post from your Hacker News account: I write the title and the first comment.
 
+## In progress
+
+### `remote-host`: The loopback Host rule on a remote bind too
+
+With allowRemote, the HTTP listener of polite-crawler-mcp accepted any Host header. A request that comes to a loopback socket now gets the loopback Host rule (req.socket.localAddress), so DNS rebinding cannot reach a server that also listens on 127.0.0.1. The change and its test are on branch feat/remote-host-api (2651c5b), not yet run in CI. Next: run CI on it, open a pull request, and add the CHANGELOG line; it goes out in a patch release (0.2.1) with the last step of the API review.
+
+- Area: Package
+- Waits for: `rel020`
+- Started: 2026-10-19
+- [Branch feat/remote-host-api](https://github.com/mark1russell7/crawler/tree/feat/remote-host-api)
+
 ## Later
 
 ### `recheck-watch`: The jarvis hours recheck becomes a watch
@@ -52,13 +63,6 @@ The last step of the API review: the exports of polite-crawler-mcp (its own API 
 
 - Area: Release and CI
 - Waits for: `mcp-host`, `api-review`, `eval-b`, `showhn`, `rel020`
-
-### `remote-host`: The loopback Host rule on a remote bind too
-
-With allowRemote, the HTTP listener of polite-crawler-mcp accepts any Host header. A request that comes to a loopback socket can still get the loopback Host rule (req.socket.localAddress), so DNS rebinding cannot reach a server that also listens on 127.0.0.1. A hardening from the review of server-stack; not a break.
-
-- Area: Package
-- Waits for: `rel020`
 
 ## Shipped
 

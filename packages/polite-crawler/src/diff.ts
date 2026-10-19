@@ -831,6 +831,8 @@ const wordsText = (line: Extract<DiffLine, { op: "changed" }>): string =>
  * This function gives the text of a diff for a person or an assistant. The text has the counts, the
  * hunks as a unified diff, and the changes of the metadata. A changed line marks its words with `[-removed-]`
  * and `{+added+}`. The text holds the text of the pages, so the MCP server puts it in an envelope.
+ *
+ * @beta
  */
 export const formatDiff = (diff: Pick<DiffResult, "summary" | "hunks" | "meta">): string => {
   const { summary } = diff;

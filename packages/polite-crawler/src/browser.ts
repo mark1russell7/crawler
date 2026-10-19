@@ -20,9 +20,12 @@ interface Chromium {
  * The check does not start the browser. It finds the full Chromium build or the headless shell of
  * the same revision on the disk. When the check cannot find the answer, it gives no value, and the
  * renderer then tries.
+ *
+ * @beta
  */
 export const browserMissing = async (
-  load: () => Promise<{ readonly chromium: Chromium }> = () => import("playwright-core"),
+  load: () => Promise<{ readonly chromium: { executablePath(): string } }> = () =>
+    import("playwright-core"),
 ): Promise<string | undefined> => {
   let chromium: Chromium;
   try {

@@ -1,7 +1,7 @@
 {
   "$schema": "https://json.schemastore.org/package",
   "name": "polite-crawler",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "A polite web crawler for research and AI agents. It fetches a source once, keeps it, and reads it many times: robots.txt obeyed, one request per site, full-text search. The MCP server is the package polite-crawler-mcp.",
   "keywords": [
     "crawler",

@@ -15,11 +15,14 @@ A prerelease version (`0.2.0-beta.1`) goes to the npm tag `next`. Each other ver
 
 ## Unreleased
 
+## 0.2.1 - 2026-10-19
+
 - **The types of the signatures have exports.** Before, some signatures used a type that no entry point exported, so a program could not name it. No program changes.
   - The root entry point exports `JwkInput` (the key of `KeyInput`) and `JsonRecord` (the records of `productOf`), which are stable.
   - It also exports `IndexBuild` and `IndexCounts` (`DocIndex`), `EgressResolve` (`egressLookup`), and `WatchRow`, `WatchState` and `WatchUpdate` (`WatchStore`), which are beta.
   - `polite-crawler/html` exports `DomNode` (`visibleText`).
 - **CI compares the API of polite-crawler-mcp too,** with its report in `packages/polite-crawler-mcp/api/`.
+- **polite-crawler-mcp 0.2.1** comes with this version. Its HTTP server applies the loopback Host rule also on a remote bind (`allowRemote`). A request that comes to 127.0.0.1 or ::1 needs a loopback name in `Host`. Thus DNS rebinding cannot reach the server through the loopback address. Its [changelog](packages/polite-crawler-mcp/CHANGELOG.md) gives the rest.
 
 ## 0.2.0 - 2026-10-19
 

@@ -48,15 +48,17 @@ export const mcpPackagePlaces = (cwd: string = process.cwd()): string[] => [
 
 /**
  * This function loads polite-crawler-mcp from the first place that has it. It throws
- * `McpPackageMissing` when no place has it.
+ * `McpPackageMissing` when no place has it. A test gives another `name`: Node.js also looks in the
+ * folders of `NODE_PATH`, and pnpm sets it to the packages of the workspace.
  */
 export const loadMcpPackage = async (
   places: readonly string[] = mcpPackagePlaces(),
+  name: string = MCP_PACKAGE,
 ): Promise<McpPackage> => {
   for (const from of places) {
     let path: string;
     try {
-      path = createRequire(from).resolve(MCP_PACKAGE);
+      path = createRequire(from).resolve(name);
     } catch {
       continue;
     }

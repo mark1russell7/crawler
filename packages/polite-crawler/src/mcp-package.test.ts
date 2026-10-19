@@ -21,9 +21,13 @@ describe("the MCP server of polite-crawler 0.2.0", () => {
   it("tells where the MCP server is when polite-crawler-mcp is not there", async () => {
     const dir = await tempDir("no-mcp");
     cleanups.push(() => removeDir(dir));
+    // pnpm puts the packages of the workspace in NODE_PATH, so the test asks for a name that no folder has
     const places = [pathToFileURL(join(dir, "package.json")).href];
-    await expect(loadMcpPackage(places)).rejects.toBeInstanceOf(McpPackageMissing);
-    await expect(loadMcpPackage(places)).rejects.toThrow(/npx polite-crawler-mcp/);
+    const missing = loadMcpPackage(places, "polite-crawler-mcp-not-installed");
+    await expect(missing).rejects.toBeInstanceOf(McpPackageMissing);
+    await expect(loadMcpPackage(places, "polite-crawler-mcp-not-installed")).rejects.toThrow(
+      /npx polite-crawler-mcp/,
+    );
   });
 
   it("looks next to polite-crawler first, then in the project of the working folder", () => {

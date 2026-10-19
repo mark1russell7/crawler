@@ -18,6 +18,3 @@ minimumReleaseAgeExclude:
   - "@procedures/client@0.14.1"
   - "@procedures/mcp@0.14.1"
   - "@procedures/mcp-server@0.14.1"
-  - "@procedures/client@0.14.1"
-  - "@procedures/mcp-server@0.14.1"
-  - "@procedures/mcp@0.14.1"

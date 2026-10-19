@@ -10,7 +10,13 @@ import type { Daemon, DaemonOptions } from "polite-crawler";
 import { readDaemonState, startDaemon } from "polite-crawler";
 import { afterEach, describe, expect, it } from "vitest";
 import { removeDir, tempDir } from "../../polite-crawler/src/test-helpers.ts";
-import { CLI, TSX, childEnv, runCli } from "../../polite-crawler/src/test-surfaces.ts";
+import {
+  CLI,
+  TSX,
+  besidePoliteCrawler,
+  childEnv,
+  runCli,
+} from "../../polite-crawler/src/test-surfaces.ts";
 import { mcpHttpHost } from "./http.ts";
 
 // The daemon of polite-crawler serves the tools of this package over HTTP. polite-crawler tests the
@@ -76,7 +82,7 @@ describe("the MCP server of the daemon", () => {
     "runs polite-crawler daemon --mcp-http with this package, shows its MCP endpoint, and stops cleanly",
     async () => {
       const dir = await store();
-      // the working folder is this package: the daemon finds polite-crawler-mcp there
+      // the daemon finds polite-crawler-mcp next to polite-crawler: NODE_PATH names the folder of the packages
       const child = spawn(
         process.execPath,
         [
@@ -93,7 +99,7 @@ describe("the MCP server of the daemon", () => {
           "--mcp-port",
           "0",
         ],
-        { env: childEnv(), cwd: PACKAGE },
+        { env: besidePoliteCrawler(), cwd: PACKAGE },
       );
       let stderr = "";
       child.stderr.on("data", (chunk: Buffer) => (stderr += chunk.toString("utf8")));

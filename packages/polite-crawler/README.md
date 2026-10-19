@@ -613,7 +613,7 @@ claude mcp add --transport http polite-crawler http://127.0.0.1:9307/mcp --heade
 ```
 
 - `--mcp-http` serves the nine tools over the Streamable HTTP transport of MCP, at `http://127.0.0.1:9307/mcp`. `--mcp-port` and `--mcp-host` change the address.
-- The MCP server is the package `polite-crawler-mcp`. The daemon finds it next to polite-crawler, or in the project of the working folder. Without it, `--mcp-http` tells you to install it.
+- The MCP server is the package `polite-crawler-mcp`. The daemon finds it next to polite-crawler, not in the working folder. Without it, `--mcp-http` tells you to install it.
 - The tools, the envelope, elicitation and `--allow-user-provided` are the same as for `npx polite-crawler-mcp`.
 - `crawl_site` and `crawl_discover` are MCP tasks (the task primitive of the MCP specification 2025-11-25). The shared MCP host of `@procedures/mcp-server` gives the tasks.
 - A client that asks for a task gets a task id at once. It polls the status (`tasks/get`), gets the result (`tasks/result`) and can cancel the task (`tasks/cancel`). A cancel stops the requests in progress.

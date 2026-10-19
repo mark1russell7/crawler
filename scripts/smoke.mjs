@@ -204,9 +204,16 @@ try {
   step("the tarball of polite-crawler-mcp");
   const mcpTarball = tarballOf("polite-crawler-mcp", mcpDir, values["mcp-tarball"]);
   const { manifest: mcpManifest } = examine(mcpTarball);
+  // The MCP package uses exports of this version of polite-crawler: an older version lacks them
+  const wanted = `^${String(manifest.version)}`;
+  const range = mcpManifest.dependencies?.["polite-crawler"];
   check(
-    mcpManifest.dependencies?.["polite-crawler"] !== undefined,
-    `polite-crawler-mcp depends on polite-crawler ${String(mcpManifest.dependencies?.["polite-crawler"])}`,
+    range === wanted,
+    `polite-crawler-mcp depends on polite-crawler ${String(range)}, which is ${wanted}`,
+  );
+  check(
+    mcpManifest.version === manifest.version,
+    `polite-crawler-mcp ${String(mcpManifest.version)} has the version of polite-crawler ${String(manifest.version)}`,
   );
   const registry = JSON.parse(readFileSync(join(root, "server.json"), "utf8"));
   const entry = registry.packages?.find((item) => item.registryType === "npm");
@@ -297,7 +304,6 @@ console.log("opened a store, find gave " + String(found.length) + " results");
   writeFileSync(
     join(consumer, "types.ts"),
     `import { catchUpIndex, createRuntime, openCrawler, type PageResult, type ReadResult, type VerifyResult } from "polite-crawler";
-import { createMcpServer, startMcpServer } from "polite-crawler-mcp";
 import { decide, parseRobots } from "polite-crawler/robots";
 import { describeWeek, fromText } from "polite-crawler/hours";
 import { extractPage, type PageExtract } from "polite-crawler/html";
@@ -311,7 +317,6 @@ export const check = async (): Promise<string> => {
   const page: PageResult = await crawler.fetch("https://example.com/");
   const read: ReadResult = await crawler.read(page.doc ?? "");
   const verified: VerifyResult = await crawler.verify(read.doc, "Example");
-  const server = createMcpServer(crawler, { onBehalfOf: ["Claude-User"] });
   const runtime = createRuntime({ dir: "./store-runtime", renderer: false });
   const caught = await catchUpIndex(runtime);
   const allowed: boolean = decide(parseRobots("User-agent: *\\nDisallow: /x\\n"), ["PoliteCrawler"], "/").allowed;
@@ -319,8 +324,22 @@ export const check = async (): Promise<string> => {
   const extract: PageExtract = extractPage("<p>x</p>", "https://example.com/");
   const signals: Signals = readSignals([], () => undefined);
   const outcome: string = classify(200, () => undefined, Date.now()).outcome;
-  return [allowed, week, extract.title, signals.ai_input, verified.found, DEFAULT_POLICY.pageIntervalMs, schema.title, typeof server, typeof startMcpServer, caught?.mode, outcome].join();
+  return [allowed, week, extract.title, signals.ai_input, verified.found, DEFAULT_POLICY.pageIntervalMs, schema.title, caught?.mode, outcome].join();
 };
+`,
+  );
+  // polite-crawler-mcp in a file of its own: the declarations of its dependency @procedures/client
+  // name the types of express and ws, which a project without @types/express and @types/ws lacks.
+  // Thus this file checks with skipLibCheck, and types.ts keeps the strict check of polite-crawler.
+  writeFileSync(
+    join(consumer, "mcp-types.ts"),
+    `import { openCrawler } from "polite-crawler";
+import { createMcpServer, startMcpServer } from "polite-crawler-mcp";
+
+export const server = createMcpServer(openCrawler({ dir: "./store-types-mcp", renderer: false }), {
+  onBehalfOf: ["Claude-User"],
+});
+export const start: typeof startMcpServer = startMcpServer;
 `,
   );
   // The check uses the oldest and the newest @types/node of the workspace: the types of the lowest
@@ -345,32 +364,37 @@ export const check = async (): Promise<string> => {
       ["module nodenext", "nodenext", "nodenext"],
       ["module preserve, resolution bundler", "preserve", "bundler"],
     ]) {
-      const config = `tsconfig.${moduleResolution}.node-${version}.json`;
-      writeFileSync(
-        join(consumer, config),
-        `${JSON.stringify(
-          {
-            compilerOptions: {
-              strict: true,
-              noEmit: true,
-              skipLibCheck: false,
-              target: "es2022",
-              module,
-              moduleResolution,
-              resolveJsonModule: true,
-              types: ["node"],
-              typeRoots: [types],
+      for (const [file, skipLibCheck] of [
+        ["types.ts", false],
+        ["mcp-types.ts", true],
+      ]) {
+        const config = `tsconfig.${file}.${moduleResolution}.node-${version}.json`;
+        writeFileSync(
+          join(consumer, config),
+          `${JSON.stringify(
+            {
+              compilerOptions: {
+                strict: true,
+                noEmit: true,
+                skipLibCheck,
+                target: "es2022",
+                module,
+                moduleResolution,
+                resolveJsonModule: true,
+                types: ["node"],
+                typeRoots: [types],
+              },
+              files: [file],
             },
-            files: ["types.ts"],
-          },
-          null,
-          2,
-        )}\n`,
-      );
-      must(
-        `tsc --noEmit, ${label}, @types/node ${version}`,
-        run("node", [tsc, "-p", config], { cwd: consumer }),
-      );
+            null,
+            2,
+          )}\n`,
+        );
+        must(
+          `tsc --noEmit ${file}, ${label}, @types/node ${version}`,
+          run("node", [tsc, "-p", config], { cwd: consumer }),
+        );
+      }
     }
   }
 

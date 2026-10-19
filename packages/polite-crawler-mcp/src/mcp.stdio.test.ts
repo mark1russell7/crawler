@@ -4,6 +4,7 @@ import type { LocalSite, McpChild } from "../../polite-crawler/src/test-surfaces
 import {
   CLI as POLITE_CRAWLER_CLI,
   PLAIN_PAGE,
+  besidePoliteCrawler,
   childEnv,
   localSite,
   removeDir,
@@ -237,11 +238,13 @@ describe("the MCP server over standard input and output", () => {
   it(
     "starts with polite-crawler mcp for one minor version, with a note that the command is deprecated",
     async () => {
-      // the working folder of the test is this package, so polite-crawler finds polite-crawler-mcp
-      const server = startMcpChild(["--dir", store, "--no-browser"], childEnv(), undefined, [
-        POLITE_CRAWLER_CLI,
-        "mcp",
-      ]);
+      // polite-crawler finds polite-crawler-mcp next to it: NODE_PATH names the folder of the packages
+      const server = startMcpChild(
+        ["--dir", store, "--no-browser"],
+        besidePoliteCrawler(),
+        undefined,
+        [POLITE_CRAWLER_CLI, "mcp"],
+      );
       onTestFinished(() => server.stop());
       const initialized = await server.request("initialize", {
         protocolVersion: "2025-06-18",

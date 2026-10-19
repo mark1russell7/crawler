@@ -30,11 +30,10 @@ describe("the MCP server of polite-crawler 0.2.0", () => {
     );
   });
 
-  it("looks next to polite-crawler first, then in the project of the working folder", () => {
-    const places = mcpPackagePlaces("/work/project");
-    expect(places).toHaveLength(2);
+  it("looks only next to polite-crawler, never in the working folder", () => {
+    const places = mcpPackagePlaces();
+    expect(places).toHaveLength(1);
     expect(places[0]).toMatch(/mcp-package\.ts$/);
-    expect(places[1]).toBe(pathToFileURL(join("/work/project", "package.json")).href);
   });
 
   it("loads no MCP SDK and no zod: the package does not depend on them", () => {

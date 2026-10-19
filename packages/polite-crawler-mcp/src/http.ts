@@ -298,14 +298,16 @@ export const startMcpHttpServer = (
 ): Promise<McpHttpServer> => {
   const { onBehalfOf, allowUserProvided, renderOff, ...http } = options;
   return serveMcpHttp(
-    ({ token, tasks }) =>
+    ({ tasks }) =>
       createMcpHost({
         ...crawlHostOptions(crawler, { onBehalfOf, allowUserProvided, renderOff, tasks }),
         faces: {
+          // The listener checks the host, the origin and the token of each request, as in 0.1.4.
+          // Thus the face checks no token and no host name: the checks have one owner.
           http: {
             mount: true,
             path: MCP_HTTP_DEFAULTS.path,
-            token,
+            allowedHosts: "*",
             maxSessions: MCP_HTTP_DEFAULTS.maxSessions,
             maxBodyBytes: MCP_HTTP_DEFAULTS.maxBodyBytes,
           },

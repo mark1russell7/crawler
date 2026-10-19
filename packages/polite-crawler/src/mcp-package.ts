@@ -1,5 +1,4 @@
 import { createRequire } from "node:module";
-import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import type { DaemonMcpHost } from "./daemon.ts";
 import type { OpenOptions } from "./open.ts";
@@ -8,7 +7,8 @@ import type { OpenOptions } from "./open.ts";
  * The MCP server of polite-crawler is the package polite-crawler-mcp since polite-crawler 0.2.0.
  * polite-crawler does not depend on it, so the library loads no MCP SDK and no zod. The command
  * `polite-crawler mcp` and the MCP server of the daemon load the package when it is there: next to
- * polite-crawler, or in the project of the working folder.
+ * polite-crawler. They do not look in the working folder: an MCP client can start the command in any
+ * project, and the code of that project must not start.
  */
 
 /** The name of the package of the MCP server. */
@@ -39,12 +39,9 @@ export class McpPackageMissing extends Error {
 
 /**
  * This function gives the places where polite-crawler looks for polite-crawler-mcp, as file URLs:
- * next to polite-crawler, then the project of the working folder.
+ * only next to polite-crawler.
  */
-export const mcpPackagePlaces = (cwd: string = process.cwd()): string[] => [
-  import.meta.url,
-  pathToFileURL(join(cwd, "package.json")).href,
-];
+export const mcpPackagePlaces = (): string[] => [import.meta.url];
 
 /**
  * This function loads polite-crawler-mcp from the first place that has it. It throws

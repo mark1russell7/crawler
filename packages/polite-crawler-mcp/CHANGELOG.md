@@ -6,6 +6,8 @@ This file records the changes to `polite-crawler-mcp` in each version. The chang
 
 ## Unreleased
 
+- **The loopback Host rule also on a remote bind.** With `allowRemote`, the HTTP server accepted any `Host` header. A request that comes to a loopback address (127.0.0.1 or ::1) needs a loopback name in `Host`, also when the server listens on other addresses too. Thus a web page cannot reach the server through 127.0.0.1 by DNS rebinding. A request to another address of the server does not change.
+
 ## 0.2.0 - 2026-10-19
 
 - **The first version.** The MCP server of polite-crawler moves out of the entry point `polite-crawler/mcp` into this package, so the library depends on no MCP SDK and no `zod`. The version starts at 0.2.0, the version of polite-crawler that it goes with, so the MCP registry entry keeps a version above 0.1.4.

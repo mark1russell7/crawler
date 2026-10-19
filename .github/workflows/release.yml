@@ -5,14 +5,20 @@
 #                   CHANGELOG.md has a section for the version, tests the tarball and validates server.json.
 #   publish         Publishes each tarball whose version npm does not have. Only this job and
 #                   mcp-registry hold "id-token: write", and they run no code of the repository.
-#   mcp-registry    Publishes server.json to the MCP registry, after npm has the version.
+#   mcp-registry    Publishes server.json to the MCP registry, after npm has the version of the
+#                   package that server.json names.
 #   github-release  Makes the tag v<version> and the GitHub release with the section of CHANGELOG.md.
 #
 # A release: change the version in packages/polite-crawler/package.json, add its section to
 # CHANGELOG.md, and merge both to main. The workflow also starts by hand (workflow_dispatch), for
-# example after a failure. It skips each version that is already on npm. mcp-registry and
-# github-release run when publish published polite-crawler, or when the owner starts the workflow
-# by hand. Each of them skips the work that is done.
+# example after a failure. It skips each version that is already on npm. github-release runs when
+# publish published polite-crawler. mcp-registry runs when publish published the package and
+# version of server.json. Both also run when the owner starts the workflow by hand, and each of
+# them skips the work that is done.
+#
+# server.json names the npm package of the MCP server (packages[0].identifier), its version, and
+# its folder (repository.subfolder). The build job reads these values, and stops when the
+# package.json in that folder has a different name or version.
 #
 # npm trusted publishing uses the OIDC token of GitHub Actions: no npm token, and each version
 # gets a provenance statement. The trusted publisher of polite-crawler names the repository
@@ -53,6 +59,10 @@ jobs:
     outputs:
       version: ${{ steps.version.outputs.version }}
       dist-tag: ${{ steps.version.outputs.dist-tag }}
+      server: ${{ steps.server.outputs.server }}
+      server-version: ${{ steps.server.outputs.server-version }}
+      mcp-package: ${{ steps.server.outputs.mcp-package }}
+      mcp-version: ${{ steps.server.outputs.mcp-version }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -69,6 +79,27 @@ jobs:
           node scripts/changelog.mjs "$version" > /dev/null
           echo "version=$version" >> "$GITHUB_OUTPUT"
           echo "dist-tag=$dist_tag" >> "$GITHUB_OUTPUT"
+      - name: The MCP server package of server.json
+        id: server
+        run: |
+          node -e '
+            const { readFileSync, appendFileSync } = require("node:fs");
+            const server = JSON.parse(readFileSync("server.json", "utf8"));
+            const pkg = server.packages[0];
+            const manifest = JSON.parse(readFileSync(`${server.repository.subfolder}/package.json`, "utf8"));
+            if (manifest.name !== pkg.identifier || manifest.version !== pkg.version || server.version !== pkg.version) {
+              console.error(`::error::server.json names ${pkg.identifier} ${pkg.version} (server ${server.version}), but ${server.repository.subfolder}/package.json is ${manifest.name} ${manifest.version}.`);
+              process.exit(1);
+            }
+            const lines = [
+              `server=${server.name.replace("/", "%2F")}`,
+              `server-version=${server.version}`,
+              `mcp-package=${pkg.identifier}`,
+              `mcp-version=${pkg.version}`,
+            ];
+            appendFileSync(process.env.GITHUB_OUTPUT, `${lines.join("\n")}\n`);
+            console.log(lines.join("\n"));
+          '
       # The pnpm version comes from "packageManager" in package.json
       - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
       # No dependency cache: a release installs from the registry and the lockfile only.
@@ -87,10 +118,18 @@ jobs:
           fi
       # pnpm writes the publishConfig entry points (build/) into the packed package.json.
       - run: node scripts/release/pack.mjs "$RUNNER_TEMP/release"
-      - name: Test the tarball that goes to npm
+      # The tarballs that go to npm. When the MCP server is a package of its own, smoke.mjs tests
+      # its tarball too (--mcp-tarball).
+      - name: Test the tarballs that go to npm
         env:
-          VERSION: ${{ steps.version.outputs.version }}
-        run: node scripts/smoke.mjs --tarball "$RUNNER_TEMP/release/polite-crawler-$VERSION.tgz"
+          MCP_PACKAGE: ${{ steps.server.outputs.mcp-package }}
+        run: |
+          tarball_of() { awk -v name="$1" '$1 == name { print $3 }' "$RUNNER_TEMP/release/packages.txt"; }
+          args=(--tarball "$RUNNER_TEMP/release/$(tarball_of polite-crawler)")
+          if [ "$MCP_PACKAGE" != polite-crawler ]; then
+            args+=(--mcp-tarball "$RUNNER_TEMP/release/$(tarball_of "$MCP_PACKAGE")")
+          fi
+          node scripts/smoke.mjs "${args[@]}"
       # The registry examines server.json before npm gets the version. This step needs no token.
       - name: Validate server.json
         env:
@@ -150,6 +189,8 @@ jobs:
       # npm limits the requests of one account (HTTP 429), and Sigstore can fail once (a 502, then
       # a 409 for the entry that it wrote). npm does not send a request again by itself here: the
       # step waits, and then starts a new publish with a new signature.
+      # The query string of each request goes around the cache of the registry. Without it, a
+      # package that the owner bootstrapped some minutes before can still get a cached 404.
       - name: Publish
         id: publish
         shell: bash
@@ -159,7 +200,7 @@ jobs:
           published=" "
           while read -r name version file; do
             [ -n "$name" ] || continue
-            status=$(curl -sS -o packument.json -w '%{http_code}' "https://registry.npmjs.org/${name//\//%2f}")
+            status=$(curl -sS -o packument.json -w '%{http_code}' "https://registry.npmjs.org/${name//\//%2f}?t=$(date +%s%N)")
             if [ "$status" = "404" ]; then
               new_packages+=("$name")
               continue
@@ -196,14 +237,16 @@ jobs:
   mcp-registry:
     name: Publish to the MCP registry
     needs: [build, publish]
-    if: contains(needs.publish.outputs.published, format(' polite-crawler@{0} ', needs.build.outputs.version)) || github.event_name == 'workflow_dispatch'
+    if: contains(needs.publish.outputs.published, format(' {0}@{1} ', needs.build.outputs.mcp-package, needs.build.outputs.mcp-version)) || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
       id-token: write
     env:
-      VERSION: ${{ needs.build.outputs.version }}
-      SERVER: io.github.mark1russell7%2Fpolite-crawler
+      VERSION: ${{ needs.build.outputs.server-version }}
+      SERVER: ${{ needs.build.outputs.server }}
+      MCP_PACKAGE: ${{ needs.build.outputs.mcp-package }}
+      MCP_VERSION: ${{ needs.build.outputs.mcp-version }}
       # To update: take the version and the sha256 of mcp-publisher_linux_amd64.tar.gz from
       # https://github.com/modelcontextprotocol/registry/releases
       MCP_PUBLISHER_VERSION: 1.8.1
@@ -230,8 +273,8 @@ jobs:
         if: steps.registry.outputs.listed == 'false'
         run: |
           for attempt in 1 2 3 4 5 6 7 8 9 10; do
-            if curl -fsS -o /dev/null "https://registry.npmjs.org/polite-crawler/$VERSION"; then exit 0; fi
-            echo "npm does not serve polite-crawler $VERSION yet (attempt $attempt)."
+            if curl -fsS -o /dev/null "https://registry.npmjs.org/$MCP_PACKAGE/$MCP_VERSION?t=$(date +%s%N)"; then exit 0; fi
+            echo "npm does not serve $MCP_PACKAGE $MCP_VERSION yet (attempt $attempt)."
             sleep 30
           done
           exit 1
@@ -270,4 +313,4 @@ jobs:
           if [ "$DIST_TAG" = next ]; then prerelease=(--prerelease); fi
           gh release create "v$VERSION" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
             --title "polite-crawler $VERSION" --notes-file release/notes.md "${prerelease[@]}" \
-            "release/polite-crawler-$VERSION.tgz"
+            release/*.tgz

@@ -52,6 +52,9 @@ export const browserMissing = async (
  * on the disk (`browserMissing`). With no browser, each page gets a `RenderRefused` with the reason
  * `browser` at once, and the renderer opens nothing. `createRuntime` puts its default renderer in
  * it, so a library with no browser costs no wait and no error capture.
+ *
+ * @beta
+ * @deprecated Version 0.2.0 removes this export from the root entry point. No documented use needs it. `createRuntime` uses it for its default renderer.
  */
 export const checkedRenderer = (
   renderer: Renderer,

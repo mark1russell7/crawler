@@ -21,7 +21,11 @@ export type SitemapKind = "urlset" | "sitemapindex" | "rss" | "atom" | "rdf" | "
 /** The values of `<changefreq>` in the sitemap protocol. */
 export type Changefreq = "always" | "hourly" | "daily" | "weekly" | "monthly" | "yearly" | "never";
 
-/** One entry of a file: a page, or a sitemap of an index. */
+/**
+ * One entry of a file: a page, or a sitemap of an index.
+ *
+ * @beta
+ */
 export interface SitemapEntry {
   /** This URL is the canonical form of the URL of the entry. */
   readonly url: string;
@@ -31,7 +35,11 @@ export interface SitemapEntry {
   readonly changefreq: Changefreq | null;
 }
 
-/** The result of one file. */
+/**
+ * The result of one file.
+ *
+ * @beta
+ */
 export interface SitemapRead {
   readonly kind: SitemapKind;
   /** These entries are the pages of the file, or the sitemaps of an index, in the order of the file. */
@@ -44,7 +52,11 @@ export interface SitemapRead {
   readonly notes: readonly string[];
 }
 
-/** These limits stop the reader on a large or a hostile file. */
+/**
+ * These limits stop the reader on a large or a hostile file.
+ *
+ * @beta
+ */
 export interface SitemapLimits {
   /** This value is the maximum number of entries. The default is 50,000, the limit of the sitemap protocol. */
   readonly maxEntries?: number | undefined;
@@ -52,7 +64,11 @@ export interface SitemapLimits {
   readonly maxDepth?: number | undefined;
 }
 
-/** These are the default limits of the reader, and the maximum length of one value. */
+/**
+ * These are the default limits of the reader, and the maximum length of one value.
+ *
+ * @beta
+ */
 export const SITEMAP_LIMITS = {
   maxEntries: 50_000,
   maxDepth: 32,
@@ -105,6 +121,8 @@ const short = (name: string | undefined): string =>
  * This function changes a date of a sitemap or a feed into ISO 8601. It reads the W3C form of the
  * sitemap protocol and Atom, and the mail form of RSS. A time with no zone is UTC. It gives null
  * for a text that it cannot read.
+ *
+ * @beta
  */
 export const feedDate = (value: string): string | null => {
   const text = value.trim();
@@ -636,6 +654,8 @@ export const scanSitemap = (
  * This function reads a sitemap, a sitemap index, an RSS or Atom feed, or a text sitemap. The
  * root element of the file tells its kind. The entries of a feed can have URLs relative to `base`
  * (the URL of the file). The entries of a sitemap must have absolute URLs.
+ *
+ * @beta
  */
 export const readSitemap = (text: string, base: string, limits?: SitemapLimits): SitemapRead =>
   scanSitemap(text, base, limits);

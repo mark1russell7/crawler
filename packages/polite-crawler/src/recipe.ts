@@ -99,9 +99,17 @@ export interface Recipe<Input = string> {
   readonly description: string | null;
   readonly mode: "api" | "page";
   readonly accept: string;
-  /** This extractor reads the captures of the recipe. It checks the documents of the definition. */
+  /**
+   * This extractor reads the captures of the recipe. It checks the documents of the definition.
+   *
+   * @beta
+   */
   readonly extractor: Extractor;
-  /** This method gives the request of the crawler for one input. A value that is not a URL throws a `TypeError`. */
+  /**
+   * This method gives the request of the crawler for one input. A value that is not a URL throws a `TypeError`.
+   *
+   * @beta
+   */
   request(input: Input, options?: RecipeRequestOptions): FetchRequest;
 }
 
@@ -134,7 +142,11 @@ export const RESERVED_RECIPES: readonly string[] = [
   "feed",
 ];
 
-/** These are the limits of a recipe. */
+/**
+ * These are the limits of a recipe.
+ *
+ * @beta
+ */
 export const RECIPE_LIMITS: {
   /** The longest recipe name. */
   readonly nameChars: number;
@@ -291,6 +303,8 @@ export const defineRecipe = <Input = string>(
  * This function gives the extractor of a recipe to the extractors of a runtime. A second
  * registration of the same recipe does nothing. A different extractor with the same name throws
  * an error, because `reindex` must read each capture with one extractor.
+ *
+ * @beta
  */
 export const registerRecipe = <Input>(extractors: Extractors, recipe: Recipe<Input>): void => {
   const known = extractors.get(recipe.name);

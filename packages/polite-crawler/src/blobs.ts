@@ -12,7 +12,11 @@ export interface BlobStore {
   get(hash: string): Promise<Uint8Array | undefined>;
 }
 
-/** These options change a file blob store. */
+/**
+ * These options change a file blob store.
+ *
+ * @beta
+ */
 export interface FileBlobStoreOptions {
   /** When this value is true (the default), a blob is on the disk (`fsync`) before `put` finishes. */
   readonly sync?: boolean | undefined;
@@ -66,6 +70,8 @@ const syncFolder = async (path: string): Promise<void> => {
  *   other was first, the put succeeds if the stored file has the same hash.
  * - The method `get` examines the hash of the bytes. A damaged file gets a new name
  *   (`.damaged`), and `get` gives no bytes, so the crawler fetches the body again.
+ *
+ * @beta
  */
 export class FileBlobStore implements BlobStore {
   private readonly writing = new Map<

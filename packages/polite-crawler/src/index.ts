@@ -31,9 +31,10 @@
  * - `polite-crawler/robots`, `/hours`, `/html`, `/classify`, `/politeness` and `/signals` give each
  *   reader whole. They import no Node.js module, so a browser can use them.
  */
-export type { BlobStore } from "./blobs.ts";
+export type { BlobStore, FileBlobStoreOptions } from "./blobs.ts";
 export { FileBlobStore } from "./blobs.ts";
 export { checkedRenderer } from "./browser.ts";
+export type { Outcome } from "./classify.ts";
 // ── daemon ──
 export type {
   ChangeCommandOptions,
@@ -108,6 +109,7 @@ export type {
   DigestOptions,
   Doc,
   DocDigest,
+  DocIndexOptions,
   DocInput,
   DocVersion,
   ExtractedDoc,
@@ -208,8 +210,15 @@ export {
 } from "./hours.ts";
 export type { PageExtract, PageLink } from "./html.ts";
 export { extractPage, typesOf } from "./html.ts";
+export type { SqliteHostStateOptions } from "./hoststate.ts";
 export { SqliteHostStateStore } from "./hoststate.ts";
-export type { CaptureFilter, CaptureReader, DamagedLine, ScanOptions } from "./log.ts";
+export type {
+  CaptureFilter,
+  CaptureLogOptions,
+  CaptureReader,
+  DamagedLine,
+  ScanOptions,
+} from "./log.ts";
 export { CaptureLog } from "./log.ts";
 export type {
   Duration,

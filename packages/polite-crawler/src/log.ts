@@ -31,7 +31,11 @@ export interface CaptureReader {
   scan(filter?: CaptureFilter, options?: ScanOptions): AsyncIterable<CaptureRecord>;
 }
 
-/** These options change a capture log. */
+/**
+ * These options change a capture log.
+ *
+ * @beta
+ */
 export interface CaptureLogOptions {
   /**
    * When this value is true (the default), the log writes each batch of appends to the disk
@@ -102,6 +106,8 @@ const monthKey = (year: string, file: string): string =>
  * - The log does not remove or change a line.
  *
  * Two processes can append to one log, because each batch is one write to a file in append mode.
+ *
+ * @beta
  */
 export class CaptureLog implements CaptureReader {
   private readonly handles = new Map<string, FileHandle>();

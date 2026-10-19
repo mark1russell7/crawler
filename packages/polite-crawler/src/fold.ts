@@ -159,6 +159,7 @@ export const foldText = (text: string, mode: FoldMode): Folded => {
 /** This function gives the folded text alone, for a text with no need of positions. */
 export const fold = (text: string, mode: FoldMode): string => foldText(text, mode).text;
 
+/** @beta */
 export interface Verified {
   readonly found: boolean;
   /** These values are the character positions in the text of the document, when the quote is there. */
@@ -185,6 +186,8 @@ const atBoundary = (text: string, position: number, forward: boolean): number =>
  * This function finds a quote in a text, in the `quote` mode of `foldText`. It ignores case, runs
  * of spaces, typographic punctuation, soft hyphens, zero-width characters and the differences of
  * NFKC, NFC and NFD. The positions are in the original text.
+ *
+ * @beta
  */
 export const locate = (text: string, quote: string): Verified => {
   const needle = fold(quote, "quote");

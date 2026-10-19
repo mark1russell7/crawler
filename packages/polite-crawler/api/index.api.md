@@ -87,6 +87,13 @@ export const bodyEncoding: (bytes: Uint8Array, contentType: string | null) => st
 export const BOT_PAGE = "https://mark1russell7.github.io/crawler/bot/";
 
 // @beta
+export const browserMissing: (load?: () => Promise<{
+    readonly chromium: {
+        executablePath(): string;
+    };
+}>) => Promise<string | undefined>;
+
+// @beta
 export interface CacheEntry {
     readonly ai_input: AiInput;
     // (undocumented)
@@ -240,9 +247,6 @@ export interface ChangeCommandOptions {
 
 // @public
 export type Changefreq = "always" | "hourly" | "daily" | "weekly" | "monthly" | "yearly" | "never";
-
-// @beta @deprecated
-export const checkedRenderer: (renderer: Renderer, check?: () => Promise<string | undefined>) => Renderer;
 
 // @beta
 export const checkFields: (source: ExtractSource, fields: Readonly<Record<string, FieldClaim>>) => FieldsChecked;
@@ -1019,7 +1023,7 @@ export interface DocVersion {
 // @public
 export type Duration = number | string;
 
-// @beta @deprecated
+// @beta
 export const durationMs: (duration: Duration) => number;
 
 // Warning: (ae-forgotten-export) The symbol "Resolve" needs to be exported by the entry point index.d.mts
@@ -1403,6 +1407,9 @@ export interface FindOptions {
     readonly rank?: RankMode | undefined;
 }
 
+// @beta
+export const formatDiff: (diff: Pick<DiffResult, "summary" | "hunks" | "meta">) => string;
+
 // @public (undocumented)
 export interface Found {
     // (undocumented)
@@ -1691,10 +1698,10 @@ export const NO_EMBEDDER = "hybrid search needs an embedder: open the crawler wi
 export const NO_OLLAMA = "Ollama does not answer: install it from https://ollama.com, then start it with ollama serve";
 
 // @beta
-export const NO_PLAYWRIGHT = "rendering needs the package playwright-core and a browser: npm install playwright-core, then npx playwright-core install chromium-headless-shell. For the MCP server with npx, start it with npx -y -p polite-crawler -p playwright-core polite-crawler mcp";
+export const NO_PLAYWRIGHT = "rendering needs the package playwright-core and a browser: npm install playwright-core, then npx playwright-core install chromium-headless-shell. For the MCP server with npx, start it with npx -y -p polite-crawler-mcp -p playwright-core polite-crawler-mcp";
 
 // @public
-export const NO_TRANSFORMERS = "the transformers embedder needs the package @huggingface/transformers: npm install @huggingface/transformers. For the MCP server with npx, start it with npx -y -p polite-crawler -p @huggingface/transformers polite-crawler mcp --embedder transformers";
+export const NO_TRANSFORMERS = "the transformers embedder needs the package @huggingface/transformers: npm install @huggingface/transformers. For the MCP server with npx, start it with npx -y -p polite-crawler-mcp -p @huggingface/transformers polite-crawler-mcp --embedder transformers";
 
 // @public
 export const OLLAMA_MODELS: Readonly<Record<string, EmbeddingModel>>;
@@ -1738,9 +1745,6 @@ export interface OpenOptions extends Omit<RuntimeOptions, "dir" | "log" | "blobs
 // @public
 export type Outcome = "ok" | "not-modified" | "redirect" | "challenge" | "payment-required" | "blocked" | "not-found" | "rate-limited" | "unavailable" | "error";
 
-// @beta @deprecated
-export const pageDocId: (url: string) => string;
-
 // @public (undocumented)
 export interface PageExtract {
     readonly blocked: string | null;
@@ -1767,9 +1771,6 @@ export interface PageExtract {
     // (undocumented)
     readonly visibleChars: number;
 }
-
-// @beta @deprecated
-export const pageExtractor: Extractor;
 
 // @public
 export interface PageLink {
@@ -2348,9 +2349,6 @@ export interface ReindexResult {
     readonly urls: number;
 }
 
-// @beta @deprecated
-export const renderAndIndex: (runtime: CrawlRuntime, request: RenderRequest) => Promise<Indexed>;
-
 // @beta (undocumented)
 export interface Rendered {
     // (undocumented)
@@ -2362,9 +2360,6 @@ export interface Rendered {
     // (undocumented)
     readonly status: number | null;
 }
-
-// @beta @deprecated
-export const renderedKey: (url: string) => string;
 
 // @beta (undocumented)
 export interface Renderer {

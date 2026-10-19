@@ -3,29 +3,23 @@
   "name": "io.github.mark1russell7/polite-crawler",
   "title": "polite-crawler",
   "description": "A polite crawler for agents: obeys robots.txt, fetches each page once, finds and verifies quotes.",
-  "version": "0.1.4",
+  "version": "0.2.0",
   "websiteUrl": "https://mark1russell7.github.io/crawler/",
   "repository": {
     "url": "https://github.com/mark1russell7/crawler",
     "source": "github",
-    "subfolder": "packages/polite-crawler"
+    "subfolder": "packages/polite-crawler-mcp"
   },
   "packages": [
     {
       "registryType": "npm",
       "registryBaseUrl": "https://registry.npmjs.org",
-      "identifier": "polite-crawler",
-      "version": "0.1.4",
+      "identifier": "polite-crawler-mcp",
+      "version": "0.2.0",
       "runtimeHint": "npx",
       "transport": {
         "type": "stdio"
       },
-      "packageArguments": [
-        {
-          "type": "positional",
-          "value": "mcp"
-        }
-      ],
       "environmentVariables": [
         {
           "name": "POLITE_CRAWLER_DIR",

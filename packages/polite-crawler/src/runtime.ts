@@ -42,8 +42,7 @@ export type Extractor = (
 /**
  * This function gives the document id of a web page. Each page has one id.
  *
- * @beta
- * @deprecated Version 0.2.0 removes this export from the root entry point. No documented use needs it. The result of `fetch` gives the document id of a page (`doc`).
+ * This export is internal: the root entry point does not have it since 0.2.0.
  */
 export const pageDocId = (url: string): string => `url:${canonicalUrl(url)}`;
 
@@ -107,8 +106,7 @@ const keepJsonLd = (
  * gives a document that names the error. When the reader cut the text, the document keeps the whole
  * text in `full_text`, so `verify` finds a quote past the cut.
  *
- * @beta
- * @deprecated Version 0.2.0 removes this export from the root entry point. No documented use needs it. The runtime uses it as the reader of the recipe `page`.
+ * This export is internal: the root entry point does not have it since 0.2.0.
  */
 export const pageExtractor: Extractor = (body, capture) => {
   if (isPdf(body, capture.contentType)) return pdfDocs(body, capture.url);
@@ -443,8 +441,7 @@ export const fetchAndIndex = async (
 /**
  * This function renders a page in the headless browser and adds what the page shows to the index.
  *
- * @beta
- * @deprecated Version 0.2.0 removes this export from the root entry point. No documented use needs it. To render a page, use `fetchPage` with `render: "always"`.
+ * This export is internal: the root entry point does not have it since 0.2.0.
  */
 export const renderAndIndex = async (
   runtime: CrawlRuntime,

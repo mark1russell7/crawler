@@ -1,6 +1,6 @@
 # API review before 1.0
 
-This file records which exports of `polite-crawler` are stable for version 1.0.0, which are beta, and which leave the root entry point in 0.2.0. It is the review of the roadmap item `api-review`. The MCP entry point `polite-crawler/mcp` is not in this review yet. It waits for the move of the MCP server to the shared MCP host (the item `mcp-host`).
+This file records which exports of `polite-crawler` are stable for version 1.0.0, which are beta, and which leave the root entry point in 0.2.0. It is the review of the roadmap item `api-review`. Since 0.2.0, the MCP server is the package `polite-crawler-mcp`, on the shared MCP host (the item `mcp-host`). polite-crawler has no MCP entry point. The review of `polite-crawler-mcp` comes next.
 
 ## What 1.0 promises
 
@@ -58,6 +58,7 @@ The reports also show what API Extractor found:
 | --- | --- | --- |
 | `CacheEntry`, `CacheIndex`, `CAPTURE_SCHEMA`, `CaptureLog`, `CaptureLogOptions`, `CapturePayload`, `CaptureWriter`, `catchUpIndex`, `CatchUpResult`, `Crawler`, `CrawlerOptions`, `CrawlRuntime`, `createRuntime`, `DEADLINE_NOTE`, `DEFAULT_SECRET_PARAMS`, `Extractors`, `fetchAndIndex`, `Fetched`, `fetchPage`, `FetchRequest`, `FileBlobStore`, `FileBlobStoreOptions`, `findDocuments`, `HELD_BACK`, `heldBackMeta`, `Indexed`, `isHeldBack`, `isMailbox`, `PageOptions`, `readDocument`, `recordOverride`, `reindex`, `RenderRequest`, `SqliteHostStateOptions`, `SqliteHostStateStore`, `StoreRuntime`, `verifyQuote`, `versionAtTime` | root | The engine of a runtime of your own: `createRuntime`, the parts that it puts together, and the steps over a runtime. `versionAtTime` is a step over a runtime. `read` and `verify` with `at` are the stable way. jarvis builds on this tier. |
 | `DaemonMcpHooks`, `DaemonMcpHost`, `DaemonMcpOptions`, `DaemonMcpService` | root | The MCP seam of the daemon. It changes in 0.2.0, when the MCP server moves to the shared MCP host. |
+| `browserMissing`, `formatDiff` | root | New in 0.2.0 for `polite-crawler-mcp`: the check of the browser at start, and the text of a diff that the tool `crawl_diff` shows. |
 | `DigestOptions`, `DocDigest`, `DocIndex`, `DocIndexOptions`, `DocInput`, `FAST_RANK_SHARE`, `FindIndexOptions`, `Latest`, `locate`, `ReadingIndex`, `Variant`, `Verified` | root | The reading index and its parts. |
 | `CRAWL_LIMITS`, `CrawlRunOptions`, `crawlSite`, `DISCOVER_LIMITS`, `DiscoverRunOptions`, `discoverSite`, `feedDate`, `readSitemap`, `SITEMAP_LIMITS`, `SitemapEntry`, `SitemapLimits`, `SitemapRead` | root | The engine of discovery and of the crawl. |
 | `diffDocument`, `runWatch`, `WatchRunnerOptions`, `WatchStore`, `WatchStoreOptions` | root | Functions over a runtime of your own. `crawler.diff` and `crawler.watch` are the stable way. |
@@ -82,12 +83,12 @@ These members of stable types are beta:
 
 ## Deprecated
 
-These exports leave the root entry point in 0.2.0.
+Version 0.2.0 removes these exports from the root entry point. `durationMs` stays, with the tag `@beta`, because `polite-crawler-mcp` uses it.
 
 | Exports | Entry point | Reason |
 | --- | --- | --- |
 | `checkedRenderer` | root | `createRuntime` uses it for its default renderer. |
-| `durationMs` | root | The options take a `Duration`, and the crawler reads it. |
+| `durationMs` | root | It stays in 0.2.0 as beta: `polite-crawler-mcp` reads the durations of its tools with it. |
 | `pageDocId` | root | The result of `fetch` gives the document id (`doc`). |
 | `pageExtractor` | root | The runtime uses it as the reader of the recipe `page`. |
 | `renderAndIndex` | root | `fetchPage` with `render: "always"` does the same. |
@@ -103,8 +104,8 @@ Version 0.2.0 is a minor version, so it can break the API. It comes with the mov
 
 - It removes the deprecated exports above from the root entry point.
 - It gives a name to each type that a signature uses but no entry point exports, or it changes the signature. These are `DomNode` (`visibleText` of `/html`), `IndexBuild` and `Counts` (`DocIndex`), `Resolve` (`egressLookup`), `JsonWebKey` (`KeyInput`), `Json` (`pickProduct`), and `Row` and `Update` (`WatchStore`). A short name, for example `Row`, needs a longer name before it goes into the root entry point.
-- It changes the MCP seam of the daemon (`DaemonMcpHooks`, `DaemonMcpHost`, `DaemonMcpOptions` and `DaemonMcpService`) to fit the shared MCP host.
-- It reviews `polite-crawler/mcp` in this file, with the same tiers.
+- The MCP server leaves for the package `polite-crawler-mcp`, with the entry point `polite-crawler/mcp` and its report. The MCP seam of the daemon (`DaemonMcpHooks`, `DaemonMcpHost`, `DaemonMcpOptions` and `DaemonMcpService`) stays: its default host is `mcpHttpHost` of `polite-crawler-mcp`.
+- A later change reviews `polite-crawler-mcp` with the same tiers.
 
 ## Counts
 

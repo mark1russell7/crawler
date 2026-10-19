@@ -1,15 +1,21 @@
 import { afterAll, beforeAll, describe, expect, it, onTestFinished } from "vitest";
-import type { LocalSite, McpChild } from "./test-surfaces.ts";
+import { fileURLToPath } from "node:url";
+import type { LocalSite, McpChild } from "../../polite-crawler/src/test-surfaces.ts";
 import {
+  CLI as POLITE_CRAWLER_CLI,
   PLAIN_PAGE,
+  besidePoliteCrawler,
   childEnv,
   localSite,
   removeDir,
   seedStore,
   startMcpChild,
   tempDir,
-} from "./test-surfaces.ts";
+} from "../../polite-crawler/src/test-surfaces.ts";
 import { VERSION } from "./version.ts";
+
+/** This path is the source of the command line of the server. */
+const CLI = fileURLToPath(new URL("cli.ts", import.meta.url));
 
 const SLOW = 60_000;
 let store: string;
@@ -43,7 +49,7 @@ const start = async (
   capabilities: Record<string, unknown> = {},
   answer?: (method: string, params: unknown) => unknown,
 ): Promise<{ readonly server: McpChild; readonly initialized: Record<string, unknown> }> => {
-  const server = startMcpChild(args, env, answer);
+  const server = startMcpChild(args, env, answer, [CLI]);
   // a test that fails stops its server too, so the server does not hold the store
   onTestFinished(() => server.stop());
   const initialized = await server.request("initialize", {
@@ -225,6 +231,31 @@ describe("the MCP server over standard input and output", () => {
         "polite-crawler: rendering is off: rendering needs a browser",
       );
       expectOnlyJsonRpc(server);
+    },
+    SLOW,
+  );
+
+  it(
+    "starts with polite-crawler mcp for one minor version, with a note that the command is deprecated",
+    async () => {
+      // polite-crawler finds polite-crawler-mcp next to it: NODE_PATH names the folder of the packages
+      const server = startMcpChild(
+        ["--dir", store, "--no-browser"],
+        besidePoliteCrawler(),
+        undefined,
+        [POLITE_CRAWLER_CLI, "mcp"],
+      );
+      onTestFinished(() => server.stop());
+      const initialized = await server.request("initialize", {
+        protocolVersion: "2025-06-18",
+        capabilities: {},
+        clientInfo: { name: "stdio-test", version: "0" },
+      });
+      expect(initialized["result"]).toMatchObject({ serverInfo: { name: "polite-crawler" } });
+      const { code } = await server.end();
+      expect(code).toBe(0);
+      expectOnlyJsonRpc(server);
+      expect(server.stderr()).toContain("the command mcp is deprecated");
     },
     SLOW,
   );

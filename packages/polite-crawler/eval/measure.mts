@@ -29,7 +29,8 @@ import TurndownService from "turndown";
 import { MockAgent } from "undici";
 import type { Clock, PageResult } from "../src/index.ts";
 import { decodeBody, extractPage, locate, openCrawler } from "../src/index.ts";
-import { createMcpServer } from "../src/mcp.ts";
+// the MCP server is the package polite-crawler-mcp, next to this package in the workspace
+import { createMcpServer } from "../../polite-crawler-mcp/src/server.ts";
 import type { Archive, ArchivedResponse } from "./archive.mts";
 import { readWacz, replayKey } from "./archive.mts";
 

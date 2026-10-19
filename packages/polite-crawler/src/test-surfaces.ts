@@ -10,7 +10,7 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import { createServer } from "node:http";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
+import { delimiter, dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { MockAgent } from "undici";
 import { openCrawler } from "./open.ts";
@@ -38,6 +38,20 @@ export const childEnv = (extra: Readonly<Record<string, string>> = {}): NodeJS.P
     if (!name.startsWith("POLITE_CRAWLER_")) env[name] = value;
   }
   return { ...env, ...extra };
+};
+
+/**
+ * The environment of a child process in which polite-crawler finds polite-crawler-mcp next to it, as
+ * in an installed project. NODE_PATH names the folder of the packages of this workspace.
+ */
+export const besidePoliteCrawler = (
+  extra: Readonly<Record<string, string>> = {},
+): NodeJS.ProcessEnv => {
+  const packages = fileURLToPath(new URL("../..", import.meta.url));
+  const paths = [packages, process.env["NODE_PATH"]].filter(
+    (path) => path !== undefined && path !== "",
+  );
+  return childEnv({ ...extra, NODE_PATH: paths.join(delimiter) });
 };
 
 export interface Ran {
@@ -214,15 +228,17 @@ export interface McpChild {
 }
 
 /**
- * This function starts `polite-crawler mcp` in a child process, and talks JSON-RPC with it. The
- * function `answer` gives the result of each request that the server sends to the client.
+ * This function starts an MCP server in a child process, and talks JSON-RPC with it. The function
+ * `answer` gives the result of each request that the server sends to the client. `entry` is the
+ * source of the server and its first arguments: the default is `polite-crawler mcp`.
  */
 export const startMcpChild = (
   args: readonly string[],
   env: NodeJS.ProcessEnv = childEnv(),
   answer: (method: string, params: unknown) => unknown = () => ({}),
+  entry: readonly string[] = [CLI, "mcp"],
 ): McpChild => {
-  const child = spawn(process.execPath, ["--import", TSX, CLI, "mcp", ...args], { env });
+  const child = spawn(process.execPath, ["--import", TSX, ...entry, ...args], { env });
   const lines: string[] = [];
   const waiting = new Map<number, (message: Record<string, unknown>) => void>();
   let buffer = "";

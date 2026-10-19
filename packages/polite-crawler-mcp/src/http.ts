@@ -1,19 +1,20 @@
-import { createHash, randomBytes, randomUUID, timingSafeEqual } from "node:crypto";
+import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
 import { readFileSync, statSync } from "node:fs";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { createServer } from "node:http";
 import type { AddressInfo } from "node:net";
-import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
-import type { Transport } from "@modelcontextprotocol/sdk/shared/transport.js";
-import { isInitializeRequest } from "@modelcontextprotocol/sdk/types.js";
+import type { McpHost, McpServerTransport } from "@procedures/mcp-server";
+import { McpTaskStore, createMcpHost } from "@procedures/mcp-server";
+import type { DaemonMcpHost, DaemonTask, PoliteCrawler } from "polite-crawler";
 import { isLoopbackHost, urlHost } from "./loopback.ts";
-import { CrawlTaskStore } from "./mcp-tasks.ts";
+import type { CrawlToolOptions } from "./tools.ts";
+import { crawlHostOptions } from "./server.ts";
 
 /*
- * This file serves MCP servers over the Streamable HTTP transport of the MCP SDK. It does not know
- * the tools: a function makes the MCP server of each session. Thus a different MCP host can replace
- * this file and keep the tools.
+ * This file serves the tools over the Streamable HTTP transport of MCP. The listener is the
+ * crawler's own: it checks the host, the origin and the token, and it serves the status of the
+ * daemon. The MCP endpoint is the HTTP face of the shared MCP host, mounted at /mcp: the face keeps
+ * the sessions and the tasks.
  *
  * - Each request needs the bearer token. The check compares the SHA-256 digests of the two tokens
  *   in constant time.
@@ -54,8 +55,8 @@ export interface McpHttpOptions {
   readonly tokenFile?: string | undefined;
   /** This function gives the JSON of `GET /status`. Without it, the path gives 404. */
   readonly status?: (() => unknown) | undefined;
-  /** This store keeps the tasks of each session. The default is a new `CrawlTaskStore`. */
-  readonly tasks?: CrawlTaskStore | undefined;
+  /** This store keeps the tasks of each session. The default is a new `McpTaskStore`. */
+  readonly tasks?: McpTaskStore | undefined;
   /** This function writes the messages of the server. The default writes nothing. */
   readonly log?: ((line: string) => void) | undefined;
 }
@@ -69,7 +70,7 @@ export interface McpHttpServer {
   /** This value is the bearer token. Give it to the client, and keep it secret. */
   readonly token: string;
   /** This store keeps the tasks of the long tools. */
-  readonly tasks: CrawlTaskStore;
+  readonly tasks: McpTaskStore;
   /** This method counts the open sessions. */
   sessions(): number;
   /** This method closes each session, cancels each task and stops the server. A second close does nothing. */
@@ -131,32 +132,23 @@ const json = (response: ServerResponse, status: number, body: unknown, headers =
 const refuse = (response: ServerResponse, status: number, message: string, headers = {}): void =>
   json(response, status, { jsonrpc: "2.0", error: { code: -32000, message }, id: null }, headers);
 
-/** This function reads the body of a request to a limit, and parses its JSON. */
-const readJson = async (request: IncomingMessage, limit: number): Promise<unknown> => {
-  const parts: Buffer[] = [];
-  let size = 0;
-  for await (const chunk of request) {
-    const part = chunk as Buffer;
-    size += part.length;
-    if (size > limit) throw new RangeError("the body is too large");
-    parts.push(part);
-  }
-  return JSON.parse(Buffer.concat(parts).toString("utf8")) as unknown;
+/**
+ * The number of open sessions of the HTTP face. The state of the face gives it when the shared host
+ * has the field. Else the count of its Streamable HTTP endpoint gives it.
+ */
+const sessionsOf = (face: McpServerTransport): number => {
+  const state = face.getState() as { sessions?: unknown };
+  if (typeof state.sessions === "number") return state.sessions;
+  const endpoint = (face as unknown as { http?: { sessions?: unknown } }).http;
+  return typeof endpoint?.sessions === "number" ? endpoint.sessions : 0;
 };
 
-interface Session {
-  readonly transport: StreamableHTTPServerTransport;
-  readonly server: McpServer;
-  last: number;
-}
-
 /**
- * This function serves MCP over HTTP. `makeServer` makes the MCP server of each new session, with
- * the task store of the server. The sessions share the task store. Each request needs
- * `Authorization: Bearer <token>`.
+ * This function serves an MCP host over HTTP. `makeHost` makes the host with its HTTP face mounted
+ * at `/mcp`, with the task store of the server. Each request needs `Authorization: Bearer <token>`.
  */
 export const serveMcpHttp = async (
-  makeServer: (tasks: CrawlTaskStore) => McpServer,
+  makeHost: (face: { readonly token: string; readonly tasks: McpTaskStore }) => McpHost,
   options: McpHttpOptions = {},
 ): Promise<McpHttpServer> => {
   const log = options.log ?? (() => undefined);
@@ -171,8 +163,11 @@ export const serveMcpHttp = async (
     );
   }
   const token = tokenOf(options, log);
-  const tasks = options.tasks ?? new CrawlTaskStore();
-  const sessions = new Map<string, Session>();
+  const tasks = options.tasks ?? new McpTaskStore();
+  const mcp = makeHost({ token, tasks });
+  const face = mcp.transports[0];
+  if (face === undefined) throw new Error("the MCP host has no HTTP face");
+  await mcp.start();
   let bound = port;
   let closing: Promise<void> | undefined;
 
@@ -204,64 +199,7 @@ export const serveMcpHttp = async (
     return match !== null && sameToken(match[1]!, token);
   };
 
-  /** This function closes the session that was idle longest and has no task in progress. It gives false when each session has a task. */
-  const evict = async (): Promise<boolean> => {
-    const busy = tasks.busySessions();
-    let oldest: [string, Session] | undefined;
-    for (const entry of sessions) {
-      if (busy.has(entry[0])) continue;
-      if (oldest === undefined || entry[1].last < oldest[1].last) oldest = entry;
-    }
-    if (oldest === undefined) return false;
-    sessions.delete(oldest[0]);
-    await oldest[1].transport.close().catch(() => undefined);
-    return true;
-  };
-
-  const start = async (request: IncomingMessage, response: ServerResponse): Promise<void> => {
-    if (request.method !== "POST") {
-      refuse(response, 400, "a new session starts with a POST of initialize");
-      return;
-    }
-    let body: unknown;
-    try {
-      body = await readJson(request, MCP_HTTP_DEFAULTS.maxBodyBytes);
-    } catch (error) {
-      refuse(
-        response,
-        error instanceof RangeError ? 413 : 400,
-        "the body is not JSON of a request",
-      );
-      return;
-    }
-    if (!isInitializeRequest(body)) {
-      refuse(response, 400, "no session: send initialize first, or give the Mcp-Session-Id header");
-      return;
-    }
-    if (sessions.size >= MCP_HTTP_DEFAULTS.maxSessions && !(await evict())) {
-      refuse(response, 503, "each session of the server has a task in progress: try again later");
-      return;
-    }
-    let id: string | undefined;
-    const transport = new StreamableHTTPServerTransport({
-      sessionIdGenerator: () => randomUUID(),
-      onsessioninitialized: (sessionId) => {
-        id = sessionId;
-        sessions.set(sessionId, { transport, server, last: Date.now() });
-      },
-    });
-    const server = makeServer(tasks);
-    transport.onclose = () => {
-      if (id === undefined) return;
-      sessions.delete(id);
-      void tasks.cancelSession(id);
-    };
-    // the transport of the SDK leaves its optional members undefined, which exactOptionalPropertyTypes refuses
-    await server.connect(transport as unknown as Transport);
-    await transport.handleRequest(request, response, body);
-  };
-
-  const handle = async (request: IncomingMessage, response: ServerResponse): Promise<void> => {
+  const handle = (request: IncomingMessage, response: ServerResponse): void => {
     const hostHeader = request.headers.host;
     if (!hostAllowed(hostHeader) || !originAllowed(request.headers.origin, hostHeader)) {
       refuse(response, 403, "the Host or the Origin header is not of this server");
@@ -279,49 +217,45 @@ export const serveMcpHttp = async (
       else json(response, 200, options.status(), { "cache-control": "no-store" });
       return;
     }
-    if (path !== MCP_HTTP_DEFAULTS.path) {
+    // the face answers its path: the sessions, the initialize rule, the body limit and the tasks
+    if (!face.handleHttp(request, response)) {
       refuse(response, 404, `no such path: the MCP endpoint is ${MCP_HTTP_DEFAULTS.path}`);
-      return;
     }
-    const header = request.headers["mcp-session-id"];
-    if (typeof header !== "string") {
-      await start(request, response);
-      return;
-    }
-    const session = sessions.get(header);
-    if (session === undefined) {
-      refuse(response, 404, "the session is not known: start a new session with initialize");
-      return;
-    }
-    session.last = Date.now();
-    await session.transport.handleRequest(request, response);
   };
 
   const http = createServer((request, response) => {
-    handle(request, response).catch((error: unknown) => {
+    try {
+      handle(request, response);
+    } catch (error) {
       log(
         `polite-crawler: an MCP request failed: ${error instanceof Error ? error.message : String(error)}`,
       );
       if (!response.headersSent) refuse(response, 500, "the server could not handle the request");
       else response.end();
-    });
+    }
   });
-  await new Promise<void>((resolve, reject) => {
-    const failed = (error: NodeJS.ErrnoException): void => {
-      reject(
-        error.code === "EADDRINUSE"
-          ? new Error(`the port ${String(port)} of ${host} is in use: give a different port`, {
-              cause: error,
-            })
-          : error,
-      );
-    };
-    http.once("error", failed);
-    http.listen(port, host, () => {
-      http.removeListener("error", failed);
-      resolve();
+  try {
+    await new Promise<void>((resolve, reject) => {
+      const failed = (error: NodeJS.ErrnoException): void => {
+        reject(
+          error.code === "EADDRINUSE"
+            ? new Error(`the port ${String(port)} of ${host} is in use: give a different port`, {
+                cause: error,
+              })
+            : error,
+        );
+      };
+      http.once("error", failed);
+      http.listen(port, host, () => {
+        http.removeListener("error", failed);
+        resolve();
+      });
     });
-  });
+  } catch (error) {
+    await mcp.stop();
+    await tasks.close();
+    throw error;
+  }
   bound = (http.address() as AddressInfo).port;
   const url = `http://${urlHost(host)}:${String(bound)}${MCP_HTTP_DEFAULTS.path}`;
   if (!loopback)
@@ -334,16 +268,11 @@ export const serveMcpHttp = async (
     port: bound,
     token,
     tasks,
-    sessions: () => sessions.size,
+    sessions: () => sessionsOf(face),
     close() {
       closing ??= (async () => {
         await tasks.close();
-        // a close removes its session from the map: the loop goes over a copy
-        for (const session of Array.from(sessions.values())) {
-          await session.transport.close().catch(() => undefined);
-          await session.server.close().catch(() => undefined);
-        }
-        sessions.clear();
+        await mcp.stop();
         await new Promise<void>((resolve) => {
           http.close(() => resolve());
           http.closeAllConnections();
@@ -352,4 +281,64 @@ export const serveMcpHttp = async (
       return closing;
     },
   };
+};
+
+/** These options serve the tools over HTTP: the options of the tools, and of the HTTP server. */
+export interface StartMcpHttpOptions extends McpHttpOptions, CrawlToolOptions {}
+
+/**
+ * This function serves the tools of a crawler over the Streamable HTTP transport of MCP. The
+ * sessions share one MCP host with the nine tools of the server on the standard input and output.
+ * The envelope, the elicitation and the opt-ins are the same. `crawl_site` and `crawl_discover` are
+ * MCP tasks. Each request needs the bearer token. The function does not close the crawler.
+ */
+export const startMcpHttpServer = (
+  crawler: PoliteCrawler,
+  options: StartMcpHttpOptions = {},
+): Promise<McpHttpServer> => {
+  const { onBehalfOf, allowUserProvided, renderOff, ...http } = options;
+  return serveMcpHttp(
+    ({ tasks }) =>
+      createMcpHost({
+        ...crawlHostOptions(crawler, { onBehalfOf, allowUserProvided, renderOff, tasks }),
+        faces: {
+          // The listener checks the host, the origin and the token of each request, as in 0.1.4.
+          // Thus the face checks no token and no host name: the checks have one owner.
+          http: {
+            mount: true,
+            path: MCP_HTTP_DEFAULTS.path,
+            allowedHosts: "*",
+            maxSessions: MCP_HTTP_DEFAULTS.maxSessions,
+            maxBodyBytes: MCP_HTTP_DEFAULTS.maxBodyBytes,
+          },
+        },
+      }),
+    http,
+  );
+};
+
+/**
+ * This host serves the tools of the daemon over HTTP. It is the seam between the daemon and its MCP
+ * transport: a different MCP host can replace it with `DaemonOptions.mcpHost`.
+ */
+export const mcpHttpHost: DaemonMcpHost = {
+  async start(crawler, options, hooks) {
+    const tasks = new McpTaskStore({ onChange: hooks.onTasks });
+    const served = await startMcpHttpServer(crawler, {
+      ...options,
+      tasks,
+      status: hooks.status,
+      log: hooks.log,
+    });
+    const running = (): DaemonTask[] =>
+      tasks.running().map((task) => ({
+        id: task.id,
+        tool: task.tool,
+        status: task.status,
+        message: task.message,
+        created_at: task.createdAt,
+        updated_at: task.updatedAt,
+      }));
+    return { url: served.url, tasks: running, close: () => served.close() };
+  },
 };

@@ -218,9 +218,6 @@ importers:
 
   packages/polite-crawler:
     dependencies:
-      '@modelcontextprotocol/sdk':
-        specifier: ^1.32.1
-        version: 1.32.1(supports-color@7.2.0)(zod@4.6.6)
       '@mozilla/readability':
         specifier: ^0.6.0
         version: 0.6.0
@@ -233,9 +230,6 @@ importers:
       unpdf:
         specifier: ^1.8.1
         version: 1.8.1
-      zod:
-        specifier: ^4.6.6
-        version: 4.6.6
     devDependencies:
       '@huggingface/transformers':
         specifier: ^4.3.1
@@ -246,6 +240,9 @@ importers:
       '@microsoft/api-extractor':
         specifier: ^7.59.3
         version: 7.59.3(@types/node@22.20.5)
+      '@modelcontextprotocol/sdk':
+        specifier: ^1.32.1
+        version: 1.32.1(supports-color@7.2.0)(zod@4.6.6)
       '@types/node':
         specifier: ^22.19.0
         version: 22.20.5
@@ -273,6 +270,43 @@ importers:
       typescript:
         specifier: ^7.0.2
         version: 7.0.2
+      vitest:
+        specifier: ^5.0.3
+        version: 5.0.3(@types/node@22.20.5)(@vitest/coverage-v8@5.0.3)(vite@8.3.4(@types/node@22.20.5)(esbuild@0.28.2)(tsx@4.23.15)(yaml@2.9.1))
+
+  packages/polite-crawler-mcp:
+    dependencies:
+      '@modelcontextprotocol/sdk':
+        specifier: ^1.32.1
+        version: 1.32.1(supports-color@7.2.0)(zod@4.6.6)
+      '@procedures/client':
+        specifier: ^0.14.1
+        version: 0.14.1(express@5.3.0(supports-color@7.2.0))
+      '@procedures/mcp-server':
+        specifier: ^0.14.1
+        version: 0.14.1(@procedures/client@0.14.1(express@5.3.0(supports-color@7.2.0)))(supports-color@7.2.0)(zod@4.6.6)
+      polite-crawler:
+        specifier: workspace:^
+        version: link:../polite-crawler
+      zod:
+        specifier: ^4.6.6
+        version: 4.6.6
+    devDependencies:
+      '@mark1russell7/cue':
+        specifier: github:mark1russell7/cue
+        version: https://codeload.github.com/mark1russell7/cue/tar.gz/d4fc4d708b2cfeae91e194b18466455ccad875b7
+      '@types/node':
+        specifier: ^22.19.0
+        version: 22.20.5
+      tsdown:
+        specifier: ^0.23.1
+        version: 0.23.1(@arethetypeswrong/core@0.18.5)(publint@0.3.25)(tsx@4.23.15)(typescript@7.0.2)
+      typescript:
+        specifier: ^7.0.2
+        version: 7.0.2
+      undici:
+        specifier: ^8.11.2
+        version: 8.11.2
       vitest:
         specifier: ^5.0.3
         version: 5.0.3(@types/node@22.20.5)(@vitest/coverage-v8@5.0.3)(vite@8.3.4(@types/node@22.20.5)(esbuild@0.28.2)(tsx@4.23.15)(yaml@2.9.1))
@@ -1012,10 +1046,22 @@ packages:
   '@loaderkit/resolve@1.0.6':
     resolution: {integrity: sha512-G8FdIoF5CypfwmD9rl8BXod5HDn8JqB0CCNBXDTaRZ+yRYhARrrSToX1zg1zy9jX3zLqigsELwhT4gNtkdQAUg==}
 
+  '@mark1russell7/algebra@0.7.1':
+    resolution: {integrity: sha512-+nimxDO9pEOwNxVJ7/F4vOAba8CnytN/DbRJKN7FxF/Q+g5Yy2u6e+3bbjiuq0eH9vCWwc3WlIuyDJhSFfuNow==}
+    engines: {node: '>=22.19'}
+    peerDependencies:
+      zod: ^4.1.0
+
   '@mark1russell7/cue@https://codeload.github.com/mark1russell7/cue/tar.gz/01454a6f49e745268264795d4e77e0bb374e96cc':
     resolution: {gitHosted: true, integrity: sha512-xuYoZiX7Aza7OPPo39v2VlrADdIp+0uo+OlaJr9UPxiZTClYSMjbvNO+SBjIHIp6FiTL0/RbSl+HocaZ+h3o4w==, tarball: https://codeload.github.com/mark1russell7/cue/tar.gz/01454a6f49e745268264795d4e77e0bb374e96cc}
     version: 1.0.0
     engines: {node: '>=25.0.0', npm: '>=11.0.0'}
+    hasBin: true
+
+  '@mark1russell7/cue@https://codeload.github.com/mark1russell7/cue/tar.gz/d4fc4d708b2cfeae91e194b18466455ccad875b7':
+    resolution: {gitHosted: true, integrity: sha512-328oeIz1/QtCaK5wXO18E7eZPohVGh3lO+cpjkHFNl1vEL48FEUqTiXLHWDEiHjqnsogmCKyrCs9ssWTEaPV7A==, tarball: https://codeload.github.com/mark1russell7/cue/tar.gz/d4fc4d708b2cfeae91e194b18466455ccad875b7}
+    version: 1.0.0
+    engines: {node: '>=22'}
     hasBin: true
 
   '@mark1russell7/cue@https://codeload.github.com/mark1russell7/cue/tar.gz/f2bb6026e14fcfb782eef3e02771ce983d4bff55':
@@ -1023,6 +1069,27 @@ packages:
     version: 1.0.0
     engines: {node: '>=25.0.0', npm: '>=11.0.0'}
     hasBin: true
+
+  '@mark1russell7/quantity@0.2.0':
+    resolution: {integrity: sha512-pE2OganjbhstZgoeLVu5YRVQq6bOnV/5T4GYuJhIu0+PF77+DwpfrIZonhNNfEZHz/P4ioiwFowbIwxPq9VkSA==}
+    engines: {node: '>=22.19'}
+    peerDependencies:
+      zod: ^4.1.0
+    peerDependenciesMeta:
+      zod:
+        optional: true
+
+  '@mark1russell7/service@0.5.2':
+    resolution: {integrity: sha512-PwoZg09iW3my0Iu/+dlf9dWXCu6v28Lqd5Joy/eRpO0HNdwGkBcUjvptYkzF4ApaFzJpxDu/sMaG1vBn8KudxA==}
+    engines: {node: '>=22.19'}
+    peerDependencies:
+      ioredis: ^6.0.0
+      zod: ^4.1.0
+    peerDependenciesMeta:
+      ioredis:
+        optional: true
+      zod:
+        optional: true
 
   '@mark1russell7/ste-lint@https://codeload.github.com/mark1russell7/ste-lint/tar.gz/f597d6c1e09bcfcb487bb575825d6d5f29e9e0c7':
     resolution: {gitHosted: true, integrity: sha512-HDxumpWNUeciZKaXbAGFPyoOTrt0trj7L3/koNvWnTN/vEuF0gYzqVJdsgfTQ9bE/DhSxfNMRxtrh4KYnbbimA==, tarball: https://codeload.github.com/mark1russell7/ste-lint/tar.gz/f597d6c1e09bcfcb487bb575825d6d5f29e9e0c7}
@@ -1297,6 +1364,27 @@ packages:
     peerDependencies:
       preact: ^10.4.0 || ^11.0.0-0
       vite: '>=2.0.0'
+
+  '@procedures/client@0.14.1':
+    resolution: {integrity: sha512-eHf5aerdm1MBz1UDN/iqx67G0dSdhccGbAoASthvUSaTHM1gQsuF8Sc3+CbP8d9/h5wIJYj+LFojAg1az1DR1g==}
+    engines: {node: '>=22'}
+    peerDependencies:
+      express: ^4.0.0 || ^5.0.0
+    peerDependenciesMeta:
+      express:
+        optional: true
+
+  '@procedures/mcp-server@0.14.1':
+    resolution: {integrity: sha512-/j+YMZVgMuzsW7miYAMzY2ffDvAFOj5x71qMV6zVR56Io2F/JXGdXf2Vvr/vWszviuI4b8u+mOyKC2cz23C54g==}
+    engines: {node: '>=22'}
+    peerDependencies:
+      '@procedures/client': ^0.14.1
+
+  '@procedures/mcp@0.14.1':
+    resolution: {integrity: sha512-z2hJXQqblRBrID4T+KcAnZWhTp6S4JZuPHGYIxJkJsfGFNYwCZKelLR4rAh1X8NJo+8neHvWiSeOuBmSadfDQA==}
+    engines: {node: '>=22'}
+    peerDependencies:
+      '@procedures/client': ^0.14.1
 
   '@protobufjs/aspromise@1.1.2':
     resolution: {integrity: sha512-j+gKExEuLmKwvz3OgROXtrJ2UG2x8Ch2YZUxahh+s1F2HZ+wAceUNLkvy6zKCPVRkU++ZWQrdxsUeQXmcg4uoQ==}
@@ -3791,6 +3879,18 @@ packages:
   wrappy@1.0.2:
     resolution: {integrity: sha512-l4Sp/DRseor9wL6EvV2+TuQn63dMkPjZ/sp9XkghTEbV9KlPS1xUsZ3u7/IQO4wxtcFB4bgpQPRcR3QCvezPcQ==}
 
+  ws@8.22.0:
+    resolution: {integrity: sha512-Ydggc987+RO0AnWtZ/7Wq9FtNvcrL1b/RO0ud9mWjUPgDrsAAwQSF51sm2hm1XofbU/4jkpGEsLFsZZxU+1DOg==}
+    engines: {node: '>=10.0.0'}
+    peerDependencies:
+      bufferutil: ^4.0.1
+      utf-8-validate: '>=5.0.2'
+    peerDependenciesMeta:
+      bufferutil:
+        optional: true
+      utf-8-validate:
+        optional: true
+
   xxhash-wasm@1.1.0:
     resolution: {integrity: sha512-147y/6YNh+tlp6nd/2pWq38i9h6mz/EuQ6njIrmW8D1BS5nCqs0P6DG+m6zTGnNz5I+uhZ0SHxBs9BsPrwcKDA==}
 
@@ -4501,9 +4601,27 @@ snapshots:
     dependencies:
       '@braidai/lang': 1.1.2
 
+  '@mark1russell7/algebra@0.7.1(zod@4.6.6)':
+    dependencies:
+      '@mark1russell7/quantity': 0.2.0(zod@4.6.6)
+      zod: 4.6.6
+
   '@mark1russell7/cue@https://codeload.github.com/mark1russell7/cue/tar.gz/01454a6f49e745268264795d4e77e0bb374e96cc': {}
 
+  '@mark1russell7/cue@https://codeload.github.com/mark1russell7/cue/tar.gz/d4fc4d708b2cfeae91e194b18466455ccad875b7': {}
+
   '@mark1russell7/cue@https://codeload.github.com/mark1russell7/cue/tar.gz/f2bb6026e14fcfb782eef3e02771ce983d4bff55': {}
+
+  '@mark1russell7/quantity@0.2.0(zod@4.6.6)':
+    optionalDependencies:
+      zod: 4.6.6
+
+  '@mark1russell7/service@0.5.2(zod@4.6.6)':
+    dependencies:
+      '@mark1russell7/algebra': 0.7.1(zod@4.6.6)
+      '@mark1russell7/quantity': 0.2.0(zod@4.6.6)
+    optionalDependencies:
+      zod: 4.6.6
 
   '@mark1russell7/ste-lint@https://codeload.github.com/mark1russell7/ste-lint/tar.gz/f597d6c1e09bcfcb487bb575825d6d5f29e9e0c7':
     dependencies:
@@ -4733,6 +4851,34 @@ snapshots:
       vite: 8.3.4(@types/node@26.6.5)(esbuild@0.28.2)(tsx@4.23.15)(yaml@2.9.1)
     transitivePeerDependencies:
       - supports-color
+
+  '@procedures/client@0.14.1(express@5.3.0(supports-color@7.2.0))':
+    dependencies:
+      '@mark1russell7/algebra': 0.7.1(zod@4.6.6)
+      '@mark1russell7/quantity': 0.2.0(zod@4.6.6)
+      '@mark1russell7/service': 0.5.2(zod@4.6.6)
+      ws: 8.22.0
+      zod: 4.6.6
+    optionalDependencies:
+      express: 5.3.0(supports-color@7.2.0)
+    transitivePeerDependencies:
+      - bufferutil
+      - ioredis
+      - utf-8-validate
+
+  '@procedures/mcp-server@0.14.1(@procedures/client@0.14.1(express@5.3.0(supports-color@7.2.0)))(supports-color@7.2.0)(zod@4.6.6)':
+    dependencies:
+      '@modelcontextprotocol/sdk': 1.32.1(supports-color@7.2.0)(zod@4.6.6)
+      '@procedures/client': 0.14.1(express@5.3.0(supports-color@7.2.0))
+      '@procedures/mcp': 0.14.1(@procedures/client@0.14.1(express@5.3.0(supports-color@7.2.0)))
+    transitivePeerDependencies:
+      - '@cfworker/json-schema'
+      - supports-color
+      - zod
+
+  '@procedures/mcp@0.14.1(@procedures/client@0.14.1(express@5.3.0(supports-color@7.2.0)))':
+    dependencies:
+      '@procedures/client': 0.14.1(express@5.3.0(supports-color@7.2.0))
 
   '@protobufjs/aspromise@1.1.2': {}
 
@@ -7320,6 +7466,8 @@ snapshots:
       strip-ansi: 6.0.1
 
   wrappy@1.0.2: {}
+
+  ws@8.22.0: {}
 
   xxhash-wasm@1.1.0: {}
 

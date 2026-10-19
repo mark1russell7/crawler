@@ -15,8 +15,8 @@
  * - The time travel and the diff of the versions of a document: `versionAtTime`, `diffDocument`
  *   and `diffTexts`.
  * - The watch list: `WatchStore` and `runWatch`.
- * - The daemon: `startDaemon`, `scheduleWatches`, `changeCommand` and `readDaemonState`. It loads
- *   the MCP SDK only when it serves MCP over HTTP.
+ * - The daemon: `startDaemon`, `scheduleWatches`, `changeCommand` and `readDaemonState`. Its MCP
+ *   server over HTTP is the package polite-crawler-mcp, which it loads only when it serves MCP.
  * - The archived fallback: the types of an archived copy, `archivedDocId` and `archiveExtractor`.
  * - Signed requests (Web Bot Auth): `createWebBotAuthSigner`, `keyDirectory` and `verifySignature`.
  * - The check of proposed field values against a stored page: `checkFields` and `extractDocument`.
@@ -27,13 +27,12 @@
  *
  * The other entry points give the rest:
  *
- * - `polite-crawler/mcp` gives the MCP server. Only it loads the MCP SDK and `zod`.
  * - `polite-crawler/robots`, `/hours`, `/html`, `/classify`, `/politeness` and `/signals` give each
  *   reader whole. They import no Node.js module, so a browser can use them.
  */
 export type { BlobStore, FileBlobStoreOptions } from "./blobs.ts";
 export { FileBlobStore } from "./blobs.ts";
-export { checkedRenderer } from "./browser.ts";
+export { browserMissing } from "./browser.ts";
 export type { Outcome } from "./classify.ts";
 // ── daemon ──
 export type {
@@ -74,13 +73,7 @@ export type {
   Fetched,
   RenderRequest,
 } from "./crawler.ts";
-export {
-  CAPTURE_SCHEMA,
-  Crawler,
-  DEADLINE_NOTE,
-  DEFAULT_SECRET_PARAMS,
-  renderedKey,
-} from "./crawler.ts";
+export { CAPTURE_SCHEMA, Crawler, DEADLINE_NOTE, DEFAULT_SECRET_PARAMS } from "./crawler.ts";
 export type {
   DiffHunk,
   DiffInput,
@@ -95,7 +88,7 @@ export type {
   VersionChoice,
   WordPart,
 } from "./diff.ts";
-export { DIFF_LIMITS, diffDocument, diffTexts } from "./diff.ts";
+export { DIFF_LIMITS, diffDocument, diffTexts, formatDiff } from "./diff.ts";
 export type {
   DiscoverOptions,
   DiscoverResult,
@@ -357,12 +350,9 @@ export {
   heldBackMeta,
   isHeldBack,
   isoTime,
-  pageDocId,
-  pageExtractor,
   readDocument,
   recordOverride,
   reindex,
-  renderAndIndex,
   verifyQuote,
   versionAtTime,
 } from "./runtime.ts";

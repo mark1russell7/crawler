@@ -2,7 +2,8 @@
   "$schema": "https://json.schemastore.org/tsconfig",
   "extends": "../tsconfig.test.json",
   "compilerOptions": {
-    "rootDir": ".."
+    // the eval drives the MCP server of polite-crawler-mcp, so the root is packages/
+    "rootDir": "../.."
   },
   "include": ["./**/*"]
 }

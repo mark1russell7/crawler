@@ -11,10 +11,15 @@
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { afterEach, describe, expect, it } from "vitest";
-import type { FindOptions, OpenedCrawler, PoliteCrawler, ReadingIndex } from "./index.ts";
-import { openCrawler } from "./index.ts";
-import { createMcpServer } from "./mcp.ts";
-import { removeDir, seedStore, tempDir } from "./test-surfaces.ts";
+import type {
+  FindOptions,
+  OpenedCrawler,
+  PoliteCrawler,
+  ReadingIndex,
+} from "../../polite-crawler/src/index.ts";
+import { openCrawler } from "../../polite-crawler/src/index.ts";
+import { createMcpServer } from "./server.ts";
+import { removeDir, seedStore, tempDir } from "../../polite-crawler/src/test-surfaces.ts";
 
 const cleanups: Array<() => Promise<void> | void> = [];
 afterEach(async () => {

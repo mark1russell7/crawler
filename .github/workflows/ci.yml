@@ -125,8 +125,8 @@ jobs:
                       print(name, info.filename, info.compress_type, info.file_size, info.CRC)
           EOF
 
-      # The npm build, packed and installed into an empty project the way a user gets it
-      - run: pnpm --filter polite-crawler build
+      # The npm builds, packed and installed into an empty project the way a user gets them
+      - run: pnpm build
       - run: node scripts/smoke.mjs
 
   checks:
@@ -153,6 +153,16 @@ jobs:
       # The public API: the build of the package against the reports in packages/polite-crawler/api/
       - run: pnpm build
       - run: pnpm api --check
+      # When the check fails, the new reports are an artifact: download them, look at the change,
+      # and commit them to packages/polite-crawler/api/ (or start `pnpm api` with a build).
+      - name: Upload the new API reports
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: api-reports
+          path: packages/polite-crawler/temp/api/
+          if-no-files-found: ignore
+          retention-days: 7
       # A change to the site fails here, and not later in the Pages deployment.
       - name: Build the site
         run: pnpm --filter @crawler/site run build

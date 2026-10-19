@@ -39,8 +39,8 @@ import { VERSION } from "./version.ts";
 import type { WatchEntry, WatchEvent } from "./watch.ts";
 
 // This file imports only Node.js, the version and `cli-line.ts` at start. A command loads the
-// crawler, and only `mcp` and `daemon --mcp-http` load the MCP server, so `--version` and `--help`
-// answer at once.
+// crawler, and only `mcp` and `daemon --mcp-http` load the MCP server (the package
+// polite-crawler-mcp), so `--version` and `--help` answer at once.
 
 // node:sqlite of Node.js 22 writes "SQLite is an experimental feature" to the standard error at
 // each start. The command removes only that warning, before the store loads node:sqlite.
@@ -72,7 +72,7 @@ Usage:
   polite-crawler read <doc>            print a range of a stored document
   polite-crawler verify <doc> <quote>  check that a quote is in a stored document
   polite-crawler reindex               rebuild the search index from the capture log
-  polite-crawler mcp                   serve the tools over MCP (standard input and output)
+  polite-crawler mcp                   start the MCP server of polite-crawler-mcp (deprecated)
   polite-crawler export --out <file>   write the stored captures as a WARC or WACZ archive
   polite-crawler discover <site>       list the pages of a site from its sitemaps and feeds
   polite-crawler crawl <url...>        fetch a site and follow its links, within a budget
@@ -549,9 +549,21 @@ const main = async (args: readonly string[]): Promise<number> => {
     ...(embedder === undefined ? {} : { embedder }),
   };
 
+  // ── the MCP server is the package polite-crawler-mcp: this command starts it for one minor version ──
   if (command === "mcp") {
-    const { startMcpServer } = await import("./mcp.ts");
-    await startMcpServer({ ...options, allowUserProvided: line.allowUserProvided });
+    const { McpPackageMissing, loadMcpPackage } = await import("./mcp-package.ts");
+    let mcp;
+    try {
+      mcp = await loadMcpPackage();
+    } catch (error) {
+      if (!(error instanceof McpPackageMissing)) throw error;
+      process.stderr.write(`polite-crawler: ${error.message}\n`);
+      return 2;
+    }
+    process.stderr.write(
+      "polite-crawler: the command mcp is deprecated, and 0.3.0 removes it. Start npx polite-crawler-mcp.\n",
+    );
+    await mcp.startMcpServer({ ...options, allowUserProvided: line.allowUserProvided });
     return 0;
   }
 

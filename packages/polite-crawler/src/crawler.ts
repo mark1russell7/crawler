@@ -342,8 +342,7 @@ export const DEADLINE_NOTE = "deadline reached";
  * This function gives the key of the cache entry of a rendered page in the form of version 0.1.
  * The index keeps the variant in a column of its own, and it reads this form too.
  *
- * @beta
- * @deprecated Version 0.2.0 removes this export from the root entry point. No documented use needs it. It gives the cache key of version 0.1, and only the index reads that form.
+ * This export is internal: the root entry point does not have it since 0.2.0.
  */
 export const renderedKey = (url: string): string => `${url}#rendered`;
 

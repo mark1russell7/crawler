@@ -126,7 +126,7 @@ const OPEN_MS = 5000;
  * @beta
  */
 export const NO_PLAYWRIGHT =
-  "rendering needs the package playwright-core and a browser: npm install playwright-core, then npx playwright-core install chromium-headless-shell. For the MCP server with npx, start it with npx -y -p polite-crawler -p playwright-core polite-crawler mcp";
+  "rendering needs the package playwright-core and a browser: npm install playwright-core, then npx playwright-core install chromium-headless-shell. For the MCP server with npx, start it with npx -y -p polite-crawler-mcp -p playwright-core polite-crawler-mcp";
 
 // playwright-core is an optional peer: it loads only when a page first needs a browser
 const launch = async (): Promise<Browser> => {

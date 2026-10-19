@@ -15,14 +15,27 @@ A prerelease version (`0.2.0-beta.1`) goes to the npm tag `next`. Each other ver
 
 ## Unreleased
 
+## 0.2.0 - 2026-10-19
+
 - **The declarations mark beta and deprecated exports.** The review of the API before 1.0 is in [`docs/API-REVIEW.md`](https://github.com/mark1russell7/crawler/blob/main/docs/API-REVIEW.md). It gives the tier of each export of the root entry point and the reader entry points.
   - An export of the engine has the TSDoc tag `@beta`. A minor version can change it, also after 1.0.0. An export with no tag is stable.
-  - Six exports have the tag `@deprecated`: `checkedRenderer`, `renderedKey`, `pageDocId`, `durationMs`, `renderAndIndex` and `pageExtractor`. Version 0.2.0 removes them from the root entry point.
+  - Five exports leave the root entry point: `checkedRenderer`, `renderedKey`, `pageDocId`, `renderAndIndex` and `pageExtractor`. They were the internal parts of the runtime, and no documented use needs them. `durationMs` stays, with the tag `@beta`, because `polite-crawler-mcp` uses it.
   - `diffDocument`, `versionAtTime`, `WatchStore`, `runWatch` and `registerRecipe` operate on a runtime of your own, so they move to the engine. The methods `diff`, `read` with `at` and `watch` of the crawler stay stable.
   - The interfaces of the store (`BlobStore`, `CaptureReader`, `CaptureFilter`, `ScanOptions`, `DamagedLine`), `FetchOutcome`, `ExtractedDoc`, `Extractor` and `RuntimeOptions` are stable, because stable signatures use them.
   - The root entry point also exports the types `CaptureLogOptions`, `DocIndexOptions`, `FileBlobStoreOptions`, `SqliteHostStateOptions` and `Outcome`. The constructors and `FetchOutcome` already use them.
-  - This change only adds to the API. The code, the capture log, the bodies and the capture ids do not change.
+  - The capture log, the bodies and the capture ids do not change.
 - **CI compares the public API with the reports in `packages/polite-crawler/api/`.** API Extractor makes one report for each entry point from the build. `pnpm api` makes the reports again, and `pnpm api --check` fails when the API is not the API in the reports. Thus a pull request shows each change to the public API.
+- **The MCP server is the package `polite-crawler-mcp`.** This version breaks the API, so it is a minor version (0.2.0). The library loads no MCP SDK and no `zod`, and it depends on neither.
+  - The entry point `polite-crawler/mcp` is gone. Import `createMcpServer`, `startMcpServer`, `startMcpHttpServer` and `mcpHttpHost` from `polite-crawler-mcp`. `createMcpServer` gives a `CrawlMcpServer` with `connect(transport)` and `close()`, and the store of the tasks is `McpTaskStore`. The README of `polite-crawler-mcp` tells the rest.
+  - The nine tools, their names, their parameters, their answers and the envelope of the page text do not change. They are procedures on the shared MCP host of `@procedures/mcp-server`.
+  - A client sees these differences of the shared host. A GET of `/mcp` without a session gets 404, not 400. A tool error also carries `_meta.code`. The text of an error in the parameters comes from the validator of the procedure, not from the MCP SDK.
+  - Over HTTP, the refusals of the endpoint itself (no session, the session limit, a body that is too large) carry the JSON-RPC code -32001 with `data.code`, not -32000. The checks of the token, the host and the origin stay as in 0.1.4.
+  - The HTTP server keeps at most 32 sessions, as before. Before, a new session above the limit closed the session that was idle longest. In 0.2.0, a session with an open stream or a call in progress is not idle. When each of the 32 sessions is busy, the new session gets 503 with `Retry-After`.
+  - `polite-crawler mcp` still starts the server in 0.2.x when `polite-crawler-mcp` is installed next to polite-crawler, and it writes a note that the command is deprecated. Without the package, it tells you to start `npx polite-crawler-mcp`, and it exits with 2. Version 0.3.0 removes the command.
+  - `polite-crawler daemon --mcp-http` needs `polite-crawler-mcp` too. Both commands look for it only next to polite-crawler, not in the working folder. Thus an MCP client that starts the command in a project does not start code of that project.
+  - To move: change `npx -y polite-crawler mcp` to `npx -y polite-crawler-mcp` in the configuration of each MCP client, and `polite-crawler/mcp` to `polite-crawler-mcp` in your imports.
+  - In the MCP registry, the entry `io.github.mark1russell7/polite-crawler` names the package `polite-crawler-mcp`.
+- **Two new exports.** `formatDiff` gives the text of a diff, as the tool `crawl_diff` shows it. `browserMissing` tells why the default renderer cannot start a browser.
 
 ## 0.1.4 - 2026-10-18
 

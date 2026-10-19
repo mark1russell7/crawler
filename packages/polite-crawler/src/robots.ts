@@ -162,8 +162,11 @@ export const productToken = (value: string): string => {
   if (first !== "mozilla") return first;
   const compatible = /compatible;\s*([A-Za-z_-]+)/i.exec(text)?.[1];
   if (compatible !== undefined) return compatible.toLowerCase();
-  const products = [...text.matchAll(/([A-Za-z][A-Za-z_-]*)\/[\w.]+/g)].map((match) =>
-    (match[1] ?? "").toLowerCase(),
+  // One pass in linear time: each match is a name that starts with a letter, with an optional `/` and
+  // version after it, or a run of other characters. A run of other characters takes no version, so
+  // `_/a/a` gives the product `a`, as the scan before 0.2.0 did.
+  const products = [...text.matchAll(/([A-Za-z][A-Za-z_-]*)(\/[\w.]+)?|[^A-Za-z]+/g)].flatMap(
+    (match) => (match[1] !== undefined && match[2] !== undefined ? [match[1].toLowerCase()] : []),
   );
   return products.find((product) => !BROWSER_PARTS.has(product)) ?? first;
 };

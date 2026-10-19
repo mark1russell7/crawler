@@ -14,7 +14,7 @@ import type { EmbeddingModel } from "./ollama.ts";
 
 /** The text of the error when the optional package `@huggingface/transformers` is not installed. */
 export const NO_TRANSFORMERS =
-  "the transformers embedder needs the package @huggingface/transformers: npm install @huggingface/transformers. For the MCP server with npx, start it with npx -y -p polite-crawler -p @huggingface/transformers polite-crawler mcp --embedder transformers";
+  "the transformers embedder needs the package @huggingface/transformers: npm install @huggingface/transformers. For the MCP server with npx, start it with npx -y -p polite-crawler-mcp -p @huggingface/transformers polite-crawler-mcp --embedder transformers";
 
 /** The pooling of the vectors of the tokens: their mean, or the vector of the first token (`cls`). */
 export type Pooling = "mean" | "cls";

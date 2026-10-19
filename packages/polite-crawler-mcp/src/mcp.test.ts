@@ -2,12 +2,11 @@ import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { ElicitRequestSchema } from "@modelcontextprotocol/sdk/types.js";
 import { afterEach, describe, expect, it } from "vitest";
-import type { CrawlServerOptions } from "./mcp.ts";
-import { createMcpServer } from "./mcp.ts";
-import type { FetchOptions, PoliteCrawler } from "./open.ts";
-import { openCrawler } from "./open.ts";
-import type { PageResult } from "./runtime.ts";
-import { mockSites, removeDir, tempDir } from "./test-surfaces.ts";
+import type { FetchOptions, PageResult, PoliteCrawler } from "polite-crawler";
+import { openCrawler } from "polite-crawler";
+import { mockSites, removeDir, tempDir } from "../../polite-crawler/src/test-surfaces.ts";
+import type { CrawlServerOptions } from "./server.ts";
+import { createMcpServer } from "./server.ts";
 
 interface Called {
   readonly isError: boolean;

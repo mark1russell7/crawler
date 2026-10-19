@@ -7,25 +7,25 @@ description: A polite MCP web fetch server for Claude Code, Claude Desktop, Curs
 import { Tabs, TabItem } from "@astrojs/starlight/components";
 import AgentReplay from "../../../components/AgentReplay.tsx";
 
-The package includes an MCP server, and it gives an AI assistant nine tools. The assistant fetches pages politely and searches the pages that it fetched before. It also reads a range of a page, and it checks a quote before it cites it. It checks the field values that it reads from a page. It can list the pages of a site and fetch a few of them in a small crawl. It can compare two versions of a page and read the list of watched pages.
+The package `polite-crawler-mcp` is the MCP server of polite-crawler, and it gives an AI assistant nine tools. The assistant fetches pages politely and searches the pages that it fetched before. It also reads a range of a page, and it checks a quote before it cites it. It checks the field values that it reads from a page. It can list the pages of a site and fetch a few of them in a small crawl. It can compare two versions of a page and read the list of watched pages.
 
 <AgentReplay client:visible />
 
 ## Set up the server
 
-The server needs Node.js 22.19 or later. Each client starts it with `npx`, so you do not install it first.
+The server needs Node.js 22.19 or later. Each client starts it with `npx`, so you do not install it first. Until polite-crawler 0.2.0, the command was `npx -y polite-crawler mcp`. That command still works in 0.2.x when `polite-crawler-mcp` is installed, and 0.3.0 removes it.
 
 <Tabs syncKey="mcp-client">
   <TabItem label="Claude Code">
 
   ```sh
-  claude mcp add polite-crawler -- npx -y polite-crawler mcp
+  claude mcp add polite-crawler -- npx -y polite-crawler-mcp
   ```
 
   To make the server available in each project, put `--scope user` before the name:
 
   ```sh
-  claude mcp add --scope user polite-crawler -- npx -y polite-crawler mcp
+  claude mcp add --scope user polite-crawler -- npx -y polite-crawler-mcp
   ```
 
   </TabItem>
@@ -38,7 +38,7 @@ The server needs Node.js 22.19 or later. Each client starts it with `npx`, so yo
     "mcpServers": {
       "polite-crawler": {
         "command": "npx",
-        "args": ["-y", "polite-crawler", "mcp"]
+        "args": ["-y", "polite-crawler-mcp"]
       }
     }
   }
@@ -54,7 +54,7 @@ The server needs Node.js 22.19 or later. Each client starts it with `npx`, so yo
     "mcpServers": {
       "polite-crawler": {
         "command": "npx",
-        "args": ["-y", "polite-crawler", "mcp"]
+        "args": ["-y", "polite-crawler-mcp"]
       }
     }
   }
@@ -71,7 +71,7 @@ The server needs Node.js 22.19 or later. Each client starts it with `npx`, so yo
       "polite-crawler": {
         "type": "stdio",
         "command": "npx",
-        "args": ["-y", "polite-crawler", "mcp"]
+        "args": ["-y", "polite-crawler-mcp"]
       }
     }
   }
@@ -87,7 +87,7 @@ The server needs Node.js 22.19 or later. Each client starts it with `npx`, so yo
     "mcpServers": {
       "polite-crawler": {
         "command": "npx",
-        "args": ["-y", "polite-crawler", "mcp"]
+        "args": ["-y", "polite-crawler-mcp"]
       }
     }
   }
@@ -101,7 +101,7 @@ The server needs Node.js 22.19 or later. Each client starts it with `npx`, so yo
   ```toml
   [mcp_servers.polite-crawler]
   command = "npx"
-  args = ["-y", "polite-crawler", "mcp"]
+  args = ["-y", "polite-crawler-mcp"]
   ```
 
   </TabItem>
@@ -110,7 +110,7 @@ The server needs Node.js 22.19 or later. Each client starts it with `npx`, so yo
   Start the server with standard input and output:
 
   ```sh
-  npx -y polite-crawler mcp
+  npx -y polite-crawler-mcp
   ```
 
   </TabItem>
@@ -122,7 +122,7 @@ The server needs Node.js 22.19 or later. Each client starts it with `npx`, so yo
 
 ```sh
 npx playwright-core install chromium-headless-shell
-claude mcp add polite-crawler -- npx -y -p polite-crawler -p playwright-core polite-crawler mcp
+claude mcp add polite-crawler -- npx -y -p polite-crawler-mcp -p playwright-core polite-crawler-mcp
 ```
 
 For a client with a JSON configuration, use these arguments:
@@ -132,7 +132,7 @@ For a client with a JSON configuration, use these arguments:
   "mcpServers": {
     "polite-crawler": {
       "command": "npx",
-      "args": ["-y", "-p", "polite-crawler", "-p", "playwright-core", "polite-crawler", "mcp"]
+      "args": ["-y", "-p", "polite-crawler-mcp", "-p", "playwright-core", "polite-crawler-mcp"]
     }
   }
 }
@@ -142,7 +142,7 @@ When a new version of `playwright-core` comes out, install its browser again wit
 
 ### The options
 
-Add an option after `mcp`, for example `npx -y polite-crawler mcp --dir ~/research`. A client with a JSON configuration can set the variable in `env` in place of the option.
+Add an option after `polite-crawler-mcp`, for example `npx -y polite-crawler-mcp --dir ~/research`. A client with a JSON configuration can set the variable in `env` in place of the option.
 
 | Option | Variable | What it does |
 | --- | --- | --- |
@@ -163,8 +163,8 @@ Add an option after `mcp`, for example `npx -y polite-crawler mcp --dir ~/resear
 With `--embedder`, the tool `crawl_find` takes `rank: "hybrid"`. It then also finds the pages with a similar meaning, and each hit gives its `passage`. The model is local, so no page text goes to a cloud service.
 
 ```sh
-claude mcp add polite-crawler -- npx -y -p polite-crawler -p @huggingface/transformers polite-crawler mcp --embedder transformers
-claude mcp add polite-crawler -- npx -y polite-crawler mcp --embedder ollama
+claude mcp add polite-crawler -- npx -y -p polite-crawler-mcp -p @huggingface/transformers polite-crawler-mcp --embedder transformers
+claude mcp add polite-crawler -- npx -y polite-crawler-mcp --embedder ollama
 ```
 
 - With `transformers`, the first search downloads the model (approximately 34 MB) from the Hugging Face Hub into `<store>/models`. This download does not go through the polite crawler.
@@ -200,6 +200,7 @@ claude mcp add polite-crawler -- npx -y polite-crawler mcp --embedder ollama
 The daemon serves the same nine tools over the Streamable HTTP transport of MCP. Start it, then give the URL and the token to the client:
 
 ```sh
+npm install polite-crawler polite-crawler-mcp
 npx polite-crawler daemon --mcp-http
 claude mcp add --transport http polite-crawler http://127.0.0.1:9307/mcp --header "Authorization: Bearer $(cat ~/.polite-crawler/daemon/mcp-token)"
 ```

@@ -425,24 +425,25 @@ await daemon.done; // after SIGINT, SIGTERM or daemon.stop()
 | `events` | the standard output | A file or a function for the change lines, one JSON line for each change. `false` writes no line. |
 | `onChange` | none | A function for each change. `changeCommand(command)` gives a function that starts a command of the operator. |
 | `mcp` | none | The MCP server over HTTP: `port`, `host`, `allowRemote`, `token`, `tokenFile`, `onBehalfOf` and `allowUserProvided`. |
-| `mcpHost` | Streamable HTTP | The seam to the MCP server. A different MCP host can replace the default. |
+| `mcpHost` | `mcpHttpHost` of `polite-crawler-mcp` | The seam to the MCP server. A different MCP host can replace the default. The default needs the package `polite-crawler-mcp`. |
 | `signals` | `true` | `false` installs no handler of `SIGINT` and `SIGTERM`. |
 
 - A change is an event with `confirmed: true`. The `Daemon` gives `status()`, `stop(grace?)`, `done`, `crawler`, `mcp` and `stateFile`.
 - `readDaemonState(dir)` reads the state file of a store. `scheduleWatches(watch, options)` gives the schedule over the watch list of a crawler of your own.
-- `startMcpHttpServer(crawler, options)` in `polite-crawler/mcp` serves the tools over HTTP. There, `crawl_site` and `crawl_discover` are MCP tasks.
+- `startMcpHttpServer(crawler, options)` of `polite-crawler-mcp` serves the tools over HTTP. There, `crawl_site` and `crawl_discover` are MCP tasks.
 
 ## The MCP server
 
-The MCP server is in its own entry point, `polite-crawler/mcp`. Only this entry point loads the MCP SDK and `zod`.
+The MCP server is the package `polite-crawler-mcp`, so polite-crawler loads no MCP SDK and no `zod`. Until 0.2.0, it was the entry point `polite-crawler/mcp`. Its nine tools are procedures on the shared MCP host of `@procedures/mcp-server`.
 
 ```ts title="An MCP server in your code"
 import { openCrawler } from "polite-crawler";
-import { createMcpServer, startMcpServer } from "polite-crawler/mcp";
+import { createMcpServer, startMcpServer } from "polite-crawler-mcp";
 
 await startMcpServer({ dir: "./crawl" }); // standard input and output
 
-const server = createMcpServer(openCrawler({ dir: "./crawl" })); // any transport
+const server = createMcpServer(openCrawler({ dir: "./crawl" }));
+await server.connect(transport); // one transport of the MCP SDK
 ```
 
 The server has no tool that adds a watch or writes an export. These are actions of the operator.
@@ -462,7 +463,6 @@ The package is ESM only. These are its entry points:
 | Import | What it gives |
 | --- | --- |
 | `polite-crawler` | `openCrawler`, and the parts of the runtime for an application. It needs Node.js. |
-| `polite-crawler/mcp` | `createMcpServer`, `startMcpServer` and `startMcpHttpServer`. It needs Node.js. |
 | `polite-crawler/robots` | `parseRobots`, `decide`, `robotsFromStatus`, `robotsFromResponse`, `productToken`: robots.txt as RFC 9309 specifies it. `decide` gives the rule that decided and its line. A robots.txt that is a web page is unreadable. |
 | `polite-crawler/html` | `extractPage`: the JSON-LD, the visible text, the links and the decision about JavaScript. It also gives the canonical URL, a quick redirect, the name of a bot check and notes about what it left out. |
 | `polite-crawler/hours` | `fromText`, `fromSchemaOrg`, `fromCompact`, `describeWeek` and `compareHours`: opening hours. A reading tells its season and if it left out a rule (`season`, `partial`). |
@@ -470,8 +470,8 @@ The package is ESM only. These are its entry points:
 | `polite-crawler/politeness` | `HostScheduler`, `backoffMs`, `restAfter`: one request in progress for each host, and the rest of a host after a request. |
 | `polite-crawler/signals` | `readSignals`: content signals for AI input. |
 
-The entry points below `polite-crawler/mcp` have no Node.js dependency, so they operate in a browser too.
+The entry points below `polite-crawler` have no Node.js dependency, so they operate in a browser too. The MCP server is the package `polite-crawler-mcp`: `createMcpServer`, `startMcpServer` and `startMcpHttpServer`. It needs Node.js.
 
 The main entry point also exports `Crawler`, `CaptureLog`, `DocIndex`, `FileBlobStore`, `Extractors`, `fetchAndIndex`, `fetchPage`, `reindex` and `makeRecord`, for an application that builds its own runtime. It exports the readers that such an application uses: `extractPage`, `decodeBody`, `readPdf`, the hours reader, `parseRobots` and `decide`.
 
-The stable API is `openCrawler` with its results (`extract` too), `polite-crawler/mcp`, the reader entry points, and `exportWarc` and `exportWacz`. The recipes (`readVenue`, `readProduct`, `compareHours`) and the recipe SDK (`defineRecipe`, `runRecipe`) are stable too. The diff, the watch list, the command line and the store on disk are stable too. The parts of the runtime are the engine: before version 1.0.0, a minor version can change them, and the changelog says so. The declaration of each part of the engine has the tag `@beta`, so your editor shows it. [The API review](https://github.com/mark1russell7/crawler/blob/main/docs/API-REVIEW.md) gives the tier of each export, and CI compares the public API with a report of it.
+The stable API is `openCrawler` with its results (`extract` too), the MCP server of `polite-crawler-mcp`, the reader entry points, and `exportWarc` and `exportWacz`. The recipes (`readVenue`, `readProduct`, `compareHours`) and the recipe SDK (`defineRecipe`, `runRecipe`) are stable too. The diff, the watch list, the command line and the store on disk are stable too. The parts of the runtime are the engine: before version 1.0.0, a minor version can change them, and the changelog says so. The declaration of each part of the engine has the tag `@beta`, so your editor shows it. [The API review](https://github.com/mark1russell7/crawler/blob/main/docs/API-REVIEW.md) gives the tier of each export, and CI compares the public API with a report of it.

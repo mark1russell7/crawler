@@ -56,8 +56,8 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.32.1",
-    "@procedures/client": "link:../../../../client-wt/cli-35/packages/client",
-    "@procedures/mcp-server": "link:../../../../client-wt/cli-35/packages/client-mcp",
+    "@procedures/client": "^0.14.1",
+    "@procedures/mcp-server": "^0.14.1",
     "polite-crawler": "workspace:^",
     "zod": "^4.6.6"
   },

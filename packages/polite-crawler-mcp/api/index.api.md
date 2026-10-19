@@ -130,10 +130,6 @@ export const startMcpServer: (options: StartMcpOptions) => Promise<void>;
 // @public
 export const VERSION = "0.2.0";
 
-// Warnings were encountered during analysis:
-//
-// C:/Users/markt/git/crawler-wt/api-mcp/packages/polite-crawler/src/blobs.ts:1:1 - (ae-wrong-input-file-type) Incorrect file type; API Extractor expects to analyze compiler outputs with the .d.ts file extension. Troubleshooting tips: https://api-extractor.com/link/dts-error
-
 // (No @packageDocumentation comment for this package)
 
 ```

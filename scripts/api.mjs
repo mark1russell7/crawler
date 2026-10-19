@@ -93,6 +93,12 @@ function report(PKG, REPORTS, TEMP, packageName, entries) {
             "ae-missing-release-tag": { logLevel: "none" },
             // Many members have no doc comment, and the report says "(undocumented)" at each one.
             "ae-undocumented": { logLevel: "none" },
+            // In the workspace, polite-crawler resolves to its source (.ts), not to its declarations.
+            // The imports of polite-crawler-mcp from it stay external, but API Extractor writes this
+            // message with the absolute path of a source file, which differs on each computer.
+            ...(packageName === "polite-crawler-mcp"
+              ? { "ae-wrong-input-file-type": { logLevel: "none" } }
+              : {}),
           },
           // The doc comments are prose for people. ste-lint checks them, not the TSDoc parser.
           tsdocMessageReporting: { default: { logLevel: "none" } },

@@ -36,7 +36,11 @@ import { canonicalUrl } from "./urls.ts";
 export type FieldKind =
   "text" | "number" | "money" | "date" | "url" | "email" | "phone" | `json-ld:${string}`;
 
-/** These kinds read the text of the page. The kind `json-ld:<path>` reads the JSON-LD. */
+/**
+ * These kinds read the text of the page. The kind `json-ld:<path>` reads the JSON-LD.
+ *
+ * @beta
+ */
 export const FIELD_KINDS: readonly string[] = [
   "text",
   "number",
@@ -119,7 +123,11 @@ export interface ExtractSummary {
   readonly invalid: number;
 }
 
-/** This is the text of a document that `checkFields` reads, with its metadata. */
+/**
+ * This is the text of a document that `checkFields` reads, with its metadata.
+ *
+ * @beta
+ */
 export interface ExtractSource {
   readonly text: string;
   /** This text is the whole text of a page that the reader cut. The check reads it when the value is not in `text`. */
@@ -130,7 +138,11 @@ export interface ExtractSource {
   readonly meta?: Readonly<Record<string, unknown>> | undefined;
 }
 
-/** This is the result of `checkFields`. */
+/**
+ * This is the result of `checkFields`.
+ *
+ * @beta
+ */
 export interface FieldsChecked {
   readonly fields: Readonly<Record<string, FieldCheck>>;
   readonly summary: ExtractSummary;
@@ -2044,6 +2056,8 @@ const summaryOf = (statuses: readonly FieldStatus[]): ExtractSummary => {
  * This function checks the proposed values of fields against the text and the metadata of a
  * document. It sends no request and writes nothing. It does not make values. A field that is not
  * valid throws a `RangeError`. The work grows in proportion to the length of the text.
+ *
+ * @beta
  */
 export const checkFields = (
   source: ExtractSource,
@@ -2102,6 +2116,8 @@ const sameForEach = (
  * - A held-back document gives `held-back` for each field, with no position and no capture, unless
  *   `userProvided`. The crawler then logs an override.
  * - A field that is not valid throws a `RangeError`, and an unknown document throws an error.
+ *
+ * @beta
  */
 export const extractDocument = async (
   runtime: CrawlRuntime,

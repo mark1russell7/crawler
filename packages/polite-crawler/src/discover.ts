@@ -27,7 +27,11 @@ import { cacheKeyOf, scopeTest } from "./urls.ts";
  * it. It stops at a maximum of files, a maximum of URLs and a maximum time.
  */
 
-/** These are the default limits of `discover`. */
+/**
+ * These are the default limits of `discover`.
+ *
+ * @beta
+ */
 export const DISCOVER_LIMITS = {
   /** The most sitemap and feed files that one discovery reads. */
   maxFiles: 20,
@@ -78,7 +82,11 @@ export interface DiscoverOptions extends ScopeOptions {
   readonly labels?: Readonly<Record<string, string>> | undefined;
 }
 
-/** These options control `discoverSite`: the options of `discover`, and a deadline. */
+/**
+ * These options control `discoverSite`: the options of `discover`, and a deadline.
+ *
+ * @beta
+ */
 export interface DiscoverRunOptions extends DiscoverOptions {
   /** This time (milliseconds since the epoch) ends the discovery when it comes before the end of `budgetMs`. */
   readonly deadline?: number | undefined;
@@ -248,6 +256,8 @@ export const pastDeadline = (note: string | null | undefined): boolean =>
  * This function finds the pages of a site from its sitemaps and its feeds. `PoliteCrawler.discover`
  * uses it. Each file is a fetch of the crawler with the recipe `sitemap` or `feed`, so the
  * capture log records it, and robots.txt applies to it.
+ *
+ * @beta
  */
 export const discoverSite = async (
   runtime: CrawlRuntime,

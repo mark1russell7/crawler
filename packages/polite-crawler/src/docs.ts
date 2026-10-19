@@ -63,11 +63,17 @@ export interface ExtractedDoc {
   /**
    * The value `no` holds the document back from the AI reader, also when the capture said nothing.
    * An extractor sets it when the body states it, for example the headers in an archived response.
+   *
+   * @beta
    */
   readonly ai_input?: AiInput | undefined;
 }
 
-/** This is one version of a document: the document as one capture gave it. */
+/**
+ * This is one version of a document: the document as one capture gave it.
+ *
+ * @beta
+ */
 export interface DocInput extends ExtractedDoc {
   /** These ids are the capture records that this version came from. The first id names the version. */
   readonly captures: readonly string[];
@@ -165,7 +171,11 @@ export interface VersionAt {
  */
 export type RankMode = "exact" | "fast";
 
-/** In the mode `fast`, a part is common when more than this share of the documents hold it. */
+/**
+ * In the mode `fast`, a part is common when more than this share of the documents hold it.
+ *
+ * @beta
+ */
 export const FAST_RANK_SHARE = 0.2;
 
 /**
@@ -193,7 +203,11 @@ const rankModeOf = (value: unknown): RankMode => {
   );
 };
 
-/** These are the options of a search of the index. */
+/**
+ * These are the options of a search of the index.
+ *
+ * @beta
+ */
 export interface FindIndexOptions {
   /** This value is the maximum number of results. The index gives 1000 or fewer. */
   readonly limit: number;
@@ -230,7 +244,11 @@ export interface Found {
   readonly passage?: Passage | undefined;
 }
 
-/** This is the current text of a document in short: its hash, with no text. */
+/**
+ * This is the current text of a document in short: its hash, with no text.
+ *
+ * @beta
+ */
 export interface DocDigest {
   readonly doc: string;
   readonly kind: string;
@@ -239,7 +257,11 @@ export interface DocDigest {
   readonly text_sha: string;
 }
 
-/** These options choose the documents of `ReadingIndex.digests`. */
+/**
+ * These options choose the documents of `ReadingIndex.digests`.
+ *
+ * @beta
+ */
 export interface DigestOptions {
   /** These documents, in place of a list of each document. A document that is not in the index gives nothing. */
   readonly docs?: readonly string[] | undefined;
@@ -249,9 +271,14 @@ export interface DigestOptions {
   readonly limit?: number | undefined;
 }
 
-/** The variant of a cache entry: the plain response, or the page that the browser rendered. */
+/**
+ * The variant of a cache entry: the plain response, or the page that the browser rendered.
+ *
+ * @beta
+ */
 export type Variant = "plain" | "rendered";
 
+/** @beta */
 export interface Latest {
   readonly url: string;
   readonly capture: string;
@@ -540,6 +567,8 @@ const messageOf = (error: unknown): string =>
  * A reading index keeps the documents, their versions, the search and the cache entries. `DocIndex`
  * is the SQLite index. A runtime takes any object with these methods, for example a search index
  * of a different kind that wraps a `DocIndex`.
+ *
+ * @beta
  */
 export interface ReadingIndex {
   /** This value is true when the index opened empty and a rebuild did not fill it yet. */
@@ -578,12 +607,17 @@ export interface ReadingIndex {
   beginRebuild(options?: { readonly batch?: number }): IndexBuild;
 }
 
-/** These are the options of a reading index. */
+/**
+ * These are the options of a reading index.
+ *
+ * @beta
+ */
 export interface DocIndexOptions {
   /** This value is the time in milliseconds that a write waits for the lock of a different process. The default is 10 seconds. */
   readonly busyTimeoutMs?: number | undefined;
 }
 
+/** @beta */
 export class DocIndex implements ReadingIndex {
   private readonly db: DatabaseSync;
   private readonly statements = new Map<string, StatementSync>();

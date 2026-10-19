@@ -59,7 +59,11 @@ interface Row {
   stop_reason: string | null;
 }
 
-/** These options change a SQLite host state store. */
+/**
+ * These options change a SQLite host state store.
+ *
+ * @beta
+ */
 export interface SqliteHostStateOptions {
   /** This value is the time in milliseconds that a step waits for the lock of a different process. The default is 10 seconds. */
   readonly busyTimeoutMs?: number | undefined;
@@ -82,6 +86,8 @@ export interface SqliteHostStateOptions {
  *
  * The state is not a projection of the capture log. A deletion of the file loses only the pace,
  * the counts, the stops and the memos, and the crawler starts them again.
+ *
+ * @beta
  */
 export class SqliteHostStateStore implements HostStateStore {
   private readonly db: DatabaseSync;

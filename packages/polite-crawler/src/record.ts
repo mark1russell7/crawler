@@ -32,7 +32,11 @@ export interface CaptureRecord {
   readonly labels?: Readonly<Record<string, string>> | undefined;
 }
 
-/** These are the fields of a new record. The function `makeRecord` calculates the id and the hash. */
+/**
+ * These are the fields of a new record. The function `makeRecord` calculates the id and the hash.
+ *
+ * @beta
+ */
 export interface RecordInput {
   readonly source: string;
   readonly kind: string;
@@ -70,6 +74,8 @@ export const sha256 = (text: string): string =>
  * This function makes a capture record. The hash covers the source, the kind, the external id
  * and the payload. The id is the source and the first 12 digits of the hash. The times, `scope`
  * and `labels` are not part of the hash.
+ *
+ * @beta
  */
 export const makeRecord = (input: RecordInput): CaptureRecord => {
   const content_hash = sha256(

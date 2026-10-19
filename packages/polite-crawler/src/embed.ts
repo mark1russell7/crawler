@@ -41,7 +41,11 @@ export interface Embedder {
 
 // ── chunks ──────────────────────────────────────────────────────────────────
 
-/** These are the limits of the chunks of a text. */
+/**
+ * These are the limits of the chunks of a text.
+ *
+ * @beta
+ */
 export const CHUNK_LIMITS: {
   /** A chunk has this number of tokens at most, also for a model with a larger input. */
   readonly maxTokens: number;
@@ -55,7 +59,11 @@ export const CHUNK_LIMITS: {
   readonly maxChunks: number;
 } = { maxTokens: 512, defaultTokens: 256, fill: 0.9, overlap: 0.1, maxChunks: 64 };
 
-/** This is one chunk of a text: a window of paragraphs, with its position in the text. */
+/**
+ * This is one chunk of a text: a window of paragraphs, with its position in the text.
+ *
+ * @beta
+ */
 export interface TextChunk {
   /** This value is the position of the chunk in the list, from 0. */
   readonly index: number;
@@ -65,7 +73,11 @@ export interface TextChunk {
   readonly text: string;
 }
 
-/** These options control the chunks of a text. */
+/**
+ * These options control the chunks of a text.
+ *
+ * @beta
+ */
 export interface ChunkOptions {
   /** This value is the largest number of tokens in a chunk. */
   readonly maxTokens: number;
@@ -105,6 +117,8 @@ const kindOf = (point: number): Kind => {
  * This function estimates the number of tokens of a part of a text. A word is one token for each
  * six letters. A Chinese, Japanese or Thai character is one token. Each other character that is
  * not a space is one token. The estimate is a little high for English text, so a chunk fits.
+ *
+ * @beta
  */
 export const estimateTokens = (
   text: string,
@@ -255,6 +269,8 @@ const positive = (name: string, value: number): number => {
  * sentence that is longer than the window is cut at its spaces. Two chunks next to each other share
  * a few sentences (`overlapTokens`), so a passage at a cut is in one chunk. Each chunk keeps its
  * position in the text, so a hit points at a passage.
+ *
+ * @beta
  */
 export const chunkText = (text: string, options: ChunkOptions): TextChunk[] => {
   const size = positive("maxTokens", options.maxTokens);
@@ -307,6 +323,8 @@ export const chunkText = (text: string, options: ChunkOptions): TextChunk[] => {
 /**
  * This function gives the number of tokens of a chunk for an embedder. It is the input limit with a
  * margin for the estimate, and `CHUNK_LIMITS.maxTokens` at most.
+ *
+ * @beta
  */
 export const chunkTokensOf = (embedder: Pick<Embedder, "maxInputTokens">): number => {
   const limit = embedder.maxInputTokens;
@@ -319,7 +337,11 @@ export const chunkTokensOf = (embedder: Pick<Embedder, "maxInputTokens">): numbe
 
 // ── vectors ─────────────────────────────────────────────────────────────────
 
-/** This function gives a copy of a vector with a length of 1. A vector of zeros stays zeros. A value that is not finite throws a `RangeError`. */
+/**
+ * This function gives a copy of a vector with a length of 1. A vector of zeros stays zeros. A value that is not finite throws a `RangeError`.
+ *
+ * @beta
+ */
 export const unitVector = (vector: ArrayLike<number>): Float32Array => {
   const out = Float32Array.from(vector);
   let sum = 0;
@@ -346,7 +368,11 @@ export const HYBRID_DEFAULTS: {
   readonly fusionK: number;
 } = { candidates: 50, neighbors: 50, fusionK: 60 };
 
-/** This is one item of a fused list. */
+/**
+ * This is one item of a fused list.
+ *
+ * @beta
+ */
 export interface FusedRank {
   readonly id: string;
   /** This value is the sum of 1 / (k + rank) over the lists that hold the item. */
@@ -360,6 +386,8 @@ export interface FusedRank {
  * 1 / (k + rank) over the lists that hold it, with the rank from 1. The best item is first. A tie goes to
  * the item with the best rank in a list, then to the earlier list, then to the smaller id. An item
  * that is two times in one list counts at its first place.
+ *
+ * @beta
  */
 export const fuseRanks = (
   lists: ReadonlyArray<readonly string[]>,

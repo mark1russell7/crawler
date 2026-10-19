@@ -1,6 +1,6 @@
 # The gates of each change.
 #   test    the tests and the smoke test of the packed package, on each supported Node.js version and OS
-#   checks  the checks that give the same result everywhere: types, code lint, prose lint, the site build
+#   checks  the checks that give the same result everywhere: types, code lint, prose lint, the public API, the site build
 # release.yml calls this workflow before it builds a release.
 name: CI
 
@@ -150,6 +150,9 @@ jobs:
       - run: pnpm lint
       # The writing rules (ASD-STE100) of the README files and the doc comments
       - run: pnpm lint:ste
+      # The public API: the build of the package against the reports in packages/polite-crawler/api/
+      - run: pnpm build
+      - run: pnpm api --check
       # A change to the site fails here, and not later in the Pages deployment.
       - name: Build the site
         run: pnpm --filter @crawler/site run build

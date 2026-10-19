@@ -21,7 +21,11 @@ import { decodeBody } from "./text.ts";
 
 type Json = Readonly<Record<string, unknown>>;
 
-/** These are the limits of the product reader. A page with more is hostile or broken, and the reader stops there. */
+/**
+ * These are the limits of the product reader. A page with more is hostile or broken, and the reader stops there.
+ *
+ * @beta
+ */
 export const PRODUCT_LIMITS: {
   /** The most JSON-LD records that the reader examines. */
   readonly records: number;
@@ -76,7 +80,11 @@ export interface ProductRead {
   readonly seller: string | null;
   readonly image: string | null;
   readonly notes: readonly string[];
-  /** This value counts the work of the reader. The tests use it, because it does not change with the computer. */
+  /**
+   * This value counts the work of the reader. The tests use it, because it does not change with the computer.
+   *
+   * @beta
+   */
   readonly steps: number;
 }
 
@@ -122,6 +130,8 @@ const fractionDigits = (currency: string | undefined): number | undefined => {
  * separator, each followed by three digits, separates thousands: `1.299` is 1299. For a
  * currency with three decimal digits, one point with three digits is the decimal point. A text
  * with two numbers (a range), a negative amount or zero gives undefined.
+ *
+ * @beta
  */
 export const readAmount = (value: unknown, currency?: string): number | undefined => {
   if (typeof value === "number") return Number.isFinite(value) && value > 0 ? value : undefined;
@@ -292,6 +302,8 @@ const sizeOf = (record: Json): number => {
  * 3. Else the largest product.
  *
  * It also reads the `mainEntity` of a record (a `WebPage` or an `ItemPage` that names its product).
+ *
+ * @beta
  */
 export const pickProduct = (
   records: readonly Json[],
@@ -333,7 +345,11 @@ export const pickProduct = (
   return { product: best, steps };
 };
 
-/** This function gives the variant that a URL names: the `variant` parameter of Shopify, or a `sku` or `gtin` parameter. */
+/**
+ * This function gives the variant that a URL names: the `variant` parameter of Shopify, or a `sku` or `gtin` parameter.
+ *
+ * @beta
+ */
 export const pickVariant = (product: Json, page: string): Json | undefined => {
   let params: URLSearchParams;
   try {

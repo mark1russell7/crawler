@@ -24,6 +24,7 @@ import type { APIResponse, Browser, BrowserContext, Page, Request, Route } from 
  *   script uses `close()` when it is done.
  */
 
+/** @beta */
 export interface Rendered {
   readonly html: string;
   readonly finalUrl: string;
@@ -31,7 +32,11 @@ export interface Rendered {
   readonly headers: Readonly<Record<string, string>>;
 }
 
-/** These are the options of one render. */
+/**
+ * These are the options of one render.
+ *
+ * @beta
+ */
 export interface RenderOptions {
   readonly userAgent: string;
   /** This value is the deadline of the whole render, in milliseconds. */
@@ -56,12 +61,17 @@ export interface RenderOptions {
   readonly sign?: ((url: string) => Readonly<Record<string, string>> | undefined) | undefined;
 }
 
+/** @beta */
 export interface Renderer {
   render(url: string, options: RenderOptions): Promise<Rendered>;
   close(): Promise<void>;
 }
 
-/** The reason of a `RenderRefused`. */
+/**
+ * The reason of a `RenderRefused`.
+ *
+ * @beta
+ */
 export type RefusedReason = "refused" | "download" | "scheme" | "browser";
 
 /**
@@ -76,6 +86,8 @@ export type RefusedReason = "refused" | "download" | "scheme" | "browser";
  *   crawler then renders no more pages, and gives each one the note at once.
  *
  * A crawler does not count this error as a failure of the host.
+ *
+ * @beta
  */
 export class RenderRefused extends Error {
   readonly reason: RefusedReason;
@@ -108,7 +120,11 @@ const CLOSE_MS = 5000;
 /** A browser that does not open a context in this time is replaced. */
 const OPEN_MS = 5000;
 
-/** The text of the error when the optional package `playwright-core` is not installed. */
+/**
+ * The text of the error when the optional package `playwright-core` is not installed.
+ *
+ * @beta
+ */
 export const NO_PLAYWRIGHT =
   "rendering needs the package playwright-core and a browser: npm install playwright-core, then npx playwright-core install chromium-headless-shell. For the MCP server with npx, start it with npx -y -p polite-crawler -p playwright-core polite-crawler mcp";
 
@@ -217,11 +233,13 @@ const within = async <T>(promise: Promise<T>, ms: number): Promise<T | undefined
   }
 };
 
+/** @beta */
 export interface PlaywrightRenderer extends Renderer {
   /** This function tells if a browser is open. */
   readonly open: () => boolean;
 }
 
+/** @beta */
 export const playwrightRenderer = (
   options: {
     readonly idleMs?: number;

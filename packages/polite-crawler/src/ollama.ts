@@ -65,7 +65,11 @@ export interface OllamaEmbedderOptions {
 export const NO_OLLAMA =
   "Ollama does not answer: install it from https://ollama.com, then start it with ollama serve";
 
-/** This function tells if a host name is a loopback address: `localhost`, `127.0.0.0/8` or `::1`. */
+/**
+ * This function tells if a host name is a loopback address: `localhost`, `127.0.0.0/8` or `::1`.
+ *
+ * @beta
+ */
 export const isLoopback = (host: string): boolean => {
   const name = host.replace(/^\[|\]$/g, "").toLowerCase();
   return (

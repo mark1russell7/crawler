@@ -232,24 +232,23 @@ try {
     join(consumer, "package.json"),
     `${JSON.stringify({ name: "smoke-consumer", private: true, type: "module" }, null, 2)}\n`,
   );
-  must(
-    "npm install <the two tarballs>",
+  const install = (file) =>
     run(
       "npm",
-      [
-        "install",
-        tarball,
-        mcpTarball,
-        "--no-audit",
-        "--no-fund",
-        "--ignore-scripts",
-        "--loglevel=error",
-      ],
+      ["install", file, "--no-audit", "--no-fund", "--ignore-scripts", "--loglevel=error"],
       {
         cwd: consumer,
       },
-    ),
+    );
+  must("npm install <the tarball of polite-crawler>", install(tarball));
+  // Without polite-crawler-mcp, `polite-crawler mcp` tells where the MCP server is, and exits with 2
+  const pointer = run("npx", ["--no-install", manifest.name, "mcp"], { cwd: consumer });
+  check(
+    pointer.status === 2 && pointer.stderr.includes("npx polite-crawler-mcp"),
+    `${manifest.name} mcp without polite-crawler-mcp tells where the server is, and exits with 2`,
   );
+  if (pointer.status !== 2) show(pointer.stdout + pointer.stderr);
+  must("npm install <the tarball of polite-crawler-mcp>", install(mcpTarball));
 
   // 3. Every subpath imports, and a store opens
   step("import every subpath, and open a store");
@@ -524,10 +523,12 @@ export const check = async (): Promise<string> => {
     "crawl_watch_list",
     "crawl_extract",
   ];
-  for (const [args, label] of [
+  /** @type {Array<[string[], string]>} */
+  const servers = [
     [[mcpCommand, "--dir", "./store-mcp", "--no-browser"], mcpCommand],
     [[command, "mcp", "--dir", "./store-mcp", "--no-browser"], `${command} mcp`],
-  ]) {
+  ];
+  for (const [args, label] of servers) {
     const { tools, stderr } = await handshake(args, label);
     for (const name of TOOLS) check(tools.includes(name), `${label} lists ${name}`);
     check(await stopped(), `${label} stops when its standard input closes`);

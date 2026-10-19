@@ -1,9 +1,9 @@
 import { readFileSync, readdirSync } from "node:fs";
 import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
-import { MCP_POINTER, McpPackageMissing, loadMcpPackage } from "./mcp-package.ts";
-import { removeDir, runCli, tempDir } from "./test-surfaces.ts";
+import { McpPackageMissing, loadMcpPackage, mcpPackagePlaces } from "./mcp-package.ts";
+import { removeDir, tempDir } from "./test-surfaces.ts";
 
 // The MCP server is the package polite-crawler-mcp since 0.2.0. polite-crawler loads it only for
 // `polite-crawler mcp` and the MCP server of the daemon, and it tells where the server is when the
@@ -16,16 +16,22 @@ afterEach(async () => {
 });
 
 describe("the MCP server of polite-crawler 0.2.0", () => {
+  // In this workspace polite-crawler-mcp is next to polite-crawler. The smoke test of the tarball
+  // installs polite-crawler alone, and checks that `polite-crawler mcp` gives the pointer and exits with 2.
   it("tells where the MCP server is when polite-crawler-mcp is not there", async () => {
     const dir = await tempDir("no-mcp");
     cleanups.push(() => removeDir(dir));
-    await expect(loadMcpPackage(dir)).rejects.toBeInstanceOf(McpPackageMissing);
-    await expect(loadMcpPackage(dir)).rejects.toThrow(/npx polite-crawler-mcp/);
-    const ran = await runCli(["mcp", "--dir", join(dir, "store")], { cwd: dir });
-    expect(ran.code).toBe(2);
-    expect(ran.stderr).toContain(MCP_POINTER);
-    expect(ran.stdout).toBe("");
-  }, 60_000);
+    const places = [pathToFileURL(join(dir, "package.json")).href];
+    await expect(loadMcpPackage(places)).rejects.toBeInstanceOf(McpPackageMissing);
+    await expect(loadMcpPackage(places)).rejects.toThrow(/npx polite-crawler-mcp/);
+  });
+
+  it("looks next to polite-crawler first, then in the project of the working folder", () => {
+    const places = mcpPackagePlaces("/work/project");
+    expect(places).toHaveLength(2);
+    expect(places[0]).toMatch(/mcp-package\.ts$/);
+    expect(places[1]).toBe(pathToFileURL(join("/work/project", "package.json")).href);
+  });
 
   it("loads no MCP SDK and no zod: the package does not depend on them", () => {
     const manifest = JSON.parse(readFileSync(join(SRC, "..", "package.json"), "utf8")) as {

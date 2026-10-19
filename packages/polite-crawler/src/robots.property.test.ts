@@ -129,6 +129,51 @@ describe("robots.txt matching, for each input", () => {
   });
 });
 
+describe("the product token of a long browser header", () => {
+  // The parts of a browser header that name no crawler: the set BROWSER_PARTS of robots.ts
+  const BROWSER = new Set([
+    "mozilla",
+    "applewebkit",
+    "khtml",
+    "gecko",
+    "chrome",
+    "chromium",
+    "safari",
+    "version",
+    "mobile",
+    "firefox",
+    "edg",
+    "opr",
+    "like",
+  ]);
+  // The scan before 0.2.0: a regular expression that could take quadratic time (CodeQL js/polynomial-redos)
+  const before = (text: string): string[] =>
+    [...text.matchAll(/([A-Za-z][A-Za-z_-]*)\/[\w.]+/g)].map((match) =>
+      (match[1] ?? "").toLowerCase(),
+    );
+
+  it("finds the same products as the scan before 0.2.0", () => {
+    fc.assert(
+      fc.property(fc.stringMatching(/^[A-Za-z0-9_./;() -]{0,40}$/), (rest) => {
+        const header = `Mozilla/5.0 ${rest}`;
+        const expected = before(header).find((product) => !BROWSER.has(product));
+        expect(productToken(header)).toBe(
+          /compatible;\s*([A-Za-z_-]+)/i.exec(header)?.[1]?.toLowerCase() ?? expected ?? "mozilla",
+        );
+      }),
+    );
+    expect(productToken("Mozilla/5.0 (X11) -MyBot/1.0")).toBe("mybot");
+    expect(productToken("Mozilla/5.0 (X11) abc1def/2")).toBe("def");
+  });
+
+  it("reads a long header in linear time", () => {
+    const started = performance.now();
+    expect(productToken(`Mozilla/5.0 ${"A".repeat(200_000)}`)).toBe("mozilla");
+    expect(productToken(`Mozilla/5.0 ${"a-".repeat(100_000)}`)).toBe("mozilla");
+    expect(performance.now() - started).toBeLessThan(500);
+  });
+});
+
 describe("a robots.txt that is a web page", () => {
   // the shape of a reCAPTCHA page that a large site sends with a 200 in place of its robots.txt
   const CHALLENGE = `<!DOCTYPE html><html><head><title>Security Verification</title>

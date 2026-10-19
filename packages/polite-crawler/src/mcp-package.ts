@@ -38,11 +38,22 @@ export class McpPackageMissing extends Error {
 }
 
 /**
- * This function loads polite-crawler-mcp: next to polite-crawler, else in the project of the
- * working folder. It throws `McpPackageMissing` when neither has it.
+ * This function gives the places where polite-crawler looks for polite-crawler-mcp, as file URLs:
+ * next to polite-crawler, then the project of the working folder.
  */
-export const loadMcpPackage = async (cwd: string = process.cwd()): Promise<McpPackage> => {
-  for (const from of [import.meta.url, pathToFileURL(join(cwd, "package.json")).href]) {
+export const mcpPackagePlaces = (cwd: string = process.cwd()): string[] => [
+  import.meta.url,
+  pathToFileURL(join(cwd, "package.json")).href,
+];
+
+/**
+ * This function loads polite-crawler-mcp from the first place that has it. It throws
+ * `McpPackageMissing` when no place has it.
+ */
+export const loadMcpPackage = async (
+  places: readonly string[] = mcpPackagePlaces(),
+): Promise<McpPackage> => {
+  for (const from of places) {
     let path: string;
     try {
       path = createRequire(from).resolve(MCP_PACKAGE);

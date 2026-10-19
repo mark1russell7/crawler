@@ -421,6 +421,31 @@ const INTERACTIONS = [
         .waitFor({ timeout: 10_000 });
     },
   },
+  {
+    path: `${BASE}/notes/tokens-per-claim/`,
+    name: "figure-eval-claims",
+    figure: ".pc-eval-claims",
+    act: async (page) => {
+      await page.locator(".pc-eval-claims .pc-eval-plot").focus();
+      await page.keyboard.press("Home");
+      await page
+        .locator(".pc-eval-claims .pc-eval-detail")
+        .getByText(/RFC 1149/)
+        .waitFor({ timeout: 10_000 });
+    },
+  },
+  {
+    path: `${BASE}/notes/tokens-per-claim/`,
+    name: "figure-eval-session",
+    figure: ".pc-eval-session",
+    act: async (page) => {
+      await page.getByRole("button", { name: "Short pages first" }).click();
+      await page
+        .locator(".pc-eval-session .pc-crawl-verdict")
+        .getByText(/from claim 13 on/)
+        .waitFor({ timeout: 10_000 });
+    },
+  },
 ];
 for (const { scheme, viewport, device } of shots === undefined
   ? [{ scheme: "light", viewport: { width: 1280, height: 900 }, device: "desktop" }]

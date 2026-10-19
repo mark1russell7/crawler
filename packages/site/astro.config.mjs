@@ -280,7 +280,11 @@ export default defineConfig({
         },
         {
           label: "Field notes",
-          items: ["notes/robots-txt-ai-agents", "notes/restaurant-websites"],
+          items: [
+            "notes/robots-txt-ai-agents",
+            "notes/restaurant-websites",
+            "notes/tokens-per-claim",
+          ],
         },
         { label: "Reference", items: ["reference/api", "reference/cli", "reference/standards"] },
         { label: "For site owners", items: ["bot", "block-ai-training-crawlers"] },

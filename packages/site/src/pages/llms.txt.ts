@@ -3,6 +3,7 @@
  * numbers of the study come from the dataset, so the file agrees with the page of the study.
  */
 import crawlerPackage from "polite-crawler/package.json";
+import evalA from "../data/eval-a.json";
 import study from "../data/robots-study.json";
 import type { Study } from "../lib/study.ts";
 import { FEED_URL } from "../lib/feed.ts";
@@ -59,6 +60,7 @@ Install it with \`npm install polite-crawler\`. Use \`openCrawler({ dir })\` and
 ## Optional
 
 - [What 300 restaurant websites taught a crawler](${SITE}notes/restaurant-websites/): a survey
+- [Tokens to prove a claim](${SITE}notes/tokens-per-claim/): eval part A. To prove ${String(evalA.summary.claims)} claims with exact quotes, the polite-crawler path (fetch, find, read, verify) read ${evalA.summary.polite.total.toLocaleString("en-US")} tokens, and the pages as Markdown have ${evalA.summary.markdown.total.toLocaleString("en-US")} (${String(evalA.summary.ratio.markdownTotal)} times; the median for one claim is ${String(evalA.summary.ratio.markdownMedian)}). The tokenizer ${evalA.tokenizer} is a proxy, not the tokenizer of Claude
 - [The source](https://github.com/mark1russell7/crawler)
 - [Sitemap](${SITE}sitemap-index.xml): each page of the site, with the date of its last change
 `;

@@ -1603,7 +1603,7 @@ export const isoTime: (name: string, value: string | Date) => string;
 // @beta
 export const isPdf: (body: Uint8Array, contentType: string | null) => boolean;
 
-// @beta
+// @public
 export type JsonRecord = Readonly<Record<string, unknown>>;
 
 // @public
@@ -1968,8 +1968,6 @@ export const PRODUCT_LIMITS: {
     readonly priceChars: number;
 };
 
-// Warning: (ae-incompatible-release-tags) The symbol "productOf" is marked as @public, but its signature references "JsonRecord" which is marked as @beta
-//
 // @public
 export const productOf: (records: readonly JsonRecord[], page: string) => ProductRead;
 
@@ -3316,6 +3314,18 @@ export interface WatchSchedule {
     stop(grace?: Duration): Promise<ScheduleResult>;
 }
 
+// @beta
+export interface WatchState {
+    // (undocumented)
+    readonly capture: string | null;
+    // (undocumented)
+    readonly fetched_at: string | null;
+    // (undocumented)
+    readonly sha: string | null;
+    // (undocumented)
+    readonly state: "present" | "gone";
+}
+
 // @public
 export type WatchStop = "done" | "max-pages" | "budget" | "cancelled" | "closed" | "error";
 
@@ -3368,8 +3378,7 @@ export interface WatchSummary {
 
 // @beta
 export interface WatchUpdate {
-    // Warning: (ae-forgotten-export) The symbol "State" needs to be exported by the entry point index.d.mts
-    readonly base?: State | undefined;
+    readonly base?: WatchState | undefined;
     // (undocumented)
     readonly changed: boolean;
     // (undocumented)
@@ -3382,7 +3391,7 @@ export interface WatchUpdate {
     readonly last_note: string | null;
     // (undocumented)
     readonly next_at: number;
-    readonly pending?: (State & {
+    readonly pending?: (WatchState & {
         readonly since: number;
     }) | null | undefined;
 }

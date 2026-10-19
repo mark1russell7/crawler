@@ -524,9 +524,9 @@ export class WatchStore {
   /** This method gives the entries, the first due first. */
   list(now: number): WatchEntry[] {
     if (this.closed) throw new Error("the watch store is closed");
-    return (this.stmt("SELECT * FROM watches ORDER BY next_at, url").all() as unknown as WatchRow[]).map(
-      (row) => entryOf(row, now),
-    );
+    return (
+      this.stmt("SELECT * FROM watches ORDER BY next_at, url").all() as unknown as WatchRow[]
+    ).map((row) => entryOf(row, now));
   }
 
   /** This method counts the entries that are due at a time. */

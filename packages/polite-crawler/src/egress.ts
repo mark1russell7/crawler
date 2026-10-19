@@ -265,7 +265,8 @@ export type EgressResolve = (
   callback: (error: NodeJS.ErrnoException | null, addresses: LookupAddress[]) => void,
 ) => void;
 
-const resolveAll: EgressResolve = (host, options, callback) => systemLookup(host, options, callback);
+const resolveAll: EgressResolve = (host, options, callback) =>
+  systemLookup(host, options, callback);
 
 /** This function keeps the addresses that the policy permits. When it keeps none, it gives the refusal. */
 const screen = (

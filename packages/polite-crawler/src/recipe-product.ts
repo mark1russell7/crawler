@@ -19,11 +19,7 @@ import type { CrawlRuntime, PageOptions, PageResult } from "./runtime.ts";
 import { HELD_BACK, fetchPage, isHeldBack, recordOverride } from "./runtime.ts";
 import { decodeBody } from "./text.ts";
 
-/**
- * This is a JSON object, for example a schema.org record of a page.
- *
- * @beta
- */
+/** This is a JSON object, for example a schema.org record of a page. */
 export type JsonRecord = Readonly<Record<string, unknown>>;
 
 /**

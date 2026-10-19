@@ -10,7 +10,7 @@ import { FileBlobStore } from "./blobs.ts";
 import type { CrawlerOptions } from "./crawler.ts";
 import { Crawler } from "./crawler.ts";
 import { DocIndex } from "./docs.ts";
-import type { Resolve } from "./egress.ts";
+import type { EgressResolve } from "./egress.ts";
 import {
   addressKind,
   checkEgress,
@@ -144,7 +144,7 @@ describe("the kinds of address", () => {
 
   it("examines the addresses that DNS gives, for a client that does its own DNS", async () => {
     const resolve =
-      (address: string): Resolve =>
+      (address: string): EgressResolve =>
       (_host, _options, callback) =>
         callback(null, [{ address, family: address.includes(":") ? 6 : 4 }]);
     const url = new URL("http://rebind.example/");
@@ -155,7 +155,7 @@ describe("the kinds of address", () => {
     expect(
       await checkEgress({ allowHosts: ["rebind.example"] }, url, resolve("10.0.0.5")),
     ).toBeUndefined();
-    const fails: Resolve = (_host, _options, callback) =>
+    const fails: EgressResolve = (_host, _options, callback) =>
       callback(Object.assign(new Error("ENOTFOUND"), { code: "ENOTFOUND" }), []);
     expect(await checkEgress({}, url, fails)).toBeUndefined();
   });
@@ -215,7 +215,7 @@ describe("the egress policy of the crawler", () => {
 
   it("checks the address after DNS in the connection, so the address that it checks is the address that it uses", async () => {
     const site = await serve();
-    const toLoopback: Resolve = (_host, _options, callback) =>
+    const toLoopback: EgressResolve = (_host, _options, callback) =>
       callback(null, [{ address: "127.0.0.1", family: 4 }]);
     const guarded = new Agent({ connect: { lookup: egressLookup({}, toLoopback) } });
     const permitted = new Agent({

@@ -32,14 +32,12 @@ export interface CrawlMcpServer {
     readonly host: McpHost | undefined;
 }
 
-// Warning: (ae-incompatible-release-tags) The symbol "CrawlServerOptions" is marked as @public, but its signature references "CrawlToolOptions" which is marked as @beta
-//
 // @public
 export interface CrawlServerOptions extends CrawlToolOptions {
     readonly tasks?: McpTaskStore | undefined;
 }
 
-// @beta
+// @public
 export interface CrawlToolOptions {
     readonly allowUserProvided?: boolean | undefined;
     readonly onBehalfOf?: readonly string[] | undefined;
@@ -115,16 +113,12 @@ export const serveMcpHttp: (makeHost: (face: {
 // @public
 export const SERVER_NAME = "polite-crawler";
 
-// Warning: (ae-incompatible-release-tags) The symbol "StartMcpHttpOptions" is marked as @public, but its signature references "CrawlToolOptions" which is marked as @beta
-//
 // @public
 export interface StartMcpHttpOptions extends McpHttpOptions, CrawlToolOptions {}
 
 // @public
 export const startMcpHttpServer: (crawler: PoliteCrawler, options?: StartMcpHttpOptions) => Promise<McpHttpServer>;
 
-// Warning: (ae-incompatible-release-tags) The symbol "StartMcpOptions" is marked as @public, but its signature references "CrawlToolOptions" which is marked as @beta
-//
 // @public
 export interface StartMcpOptions extends OpenOptions, CrawlToolOptions {
     readonly log?: ((line: string) => void) | undefined;

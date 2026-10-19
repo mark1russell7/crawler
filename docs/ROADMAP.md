@@ -43,12 +43,23 @@ Mark's decision D12 in the server-stack plan (OTH-3): the polite-crawler MCP ser
 - [Server-stack tracker](https://claude.ai/artifact/WtkE3dtHp57qpcs4UvcaVZ)
 - [client #59: MCP tasks and HTTP guards (CLI-35)](https://github.com/mark1russell7/client/pull/59)
 
+### `eval-page`: A page for the eval: tokens to prove a claim
+
+A site page for part A of the eval: the tokens that an agent reads to prove each of the 30 claims, with polite-crawler and with the WebFetch way, and the total over a session, where the one-time cost of the tool definitions shows when polite-crawler starts to cost less. The numbers come from the eval run of October 18; part B replaces the proxy tokenizer with Claude's own counts.
+
+- Area: Site and growth
+- Waits for: `eval`
+- Started: 2026-10-19
+
+## Blocked
+
 ### `api-review`: API review before 1.0
 
-Decide which exports are stable for 1.0, mark the beta exports, deprecate the internal ones for removal in 0.2.0, and record the public API in reports that CI compares, so a change to it is always deliberate. The review of every entry except the MCP entry is in progress now. The MCP entry follows its move (mcp-host).
+The final step of the API review: review the exports of the MCP package after its move, remove the 6 deprecated exports in 0.2.0, and name the types that signatures use but no entry exports. The reports and the tiers of every other entry shipped (api-report).
 
 - Area: Package
-- Waits for: `mcp-host`
+- Waits for: `mcp-host`, `api-report`
+- Blocked: The review of the MCP entry and the removal of the 6 deprecated exports go with the MCP move in 0.2.0 (mcp-host).
 - Started: 2026-10-19
 
 ## Later
@@ -75,6 +86,16 @@ Score a local open-weight decision model (for example Laya) on labelled data fro
 - Waits for: `mcp-host`, `api-review`, `eval-b`, `showhn`
 
 ## Shipped
+
+### `api-report`: The API report that CI compares, and the tiers for 1.0
+
+API Extractor makes one report of the public API for each entry point, in packages/polite-crawler/api, and CI fails when the build does not match them. So each change to the API shows in a pull request. The declarations mark 125 beta exports (the engine) and 6 deprecated ones that 0.2.0 removes; docs/API-REVIEW.md records each decision. The MCP entry waits for its move.
+
+- Area: Package
+- Started: 2026-10-19
+- Shipped: 2026-10-19
+- [docs/API-REVIEW.md](https://github.com/mark1russell7/crawler/blob/main/docs/API-REVIEW.md)
+- [Commit 9ebeca3](https://github.com/mark1russell7/crawler/commit/9ebeca3)
 
 ### `site-figures`: Three new figures: a robots.txt builder, the crawler on your site, and the pace of each crawler
 

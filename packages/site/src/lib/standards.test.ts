@@ -2,7 +2,12 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { SOURCE, googleSummary, summarizeGoogle } from "./standards.ts";
 
+// The page links the tests of polite-crawler and of polite-crawler-mcp (the MCP server since 0.2.0)
 const packageDir = new URL("../../../polite-crawler/", import.meta.url);
+const packageDirs: Readonly<Record<string, URL>> = {
+  [SOURCE]: packageDir,
+  [`${SOURCE}-mcp`]: new URL("../../../polite-crawler-mcp/", import.meta.url),
+};
 const page = readFileSync(
   new URL("../content/docs/reference/standards.mdx", import.meta.url),
   "utf8",
@@ -60,8 +65,9 @@ describe("the Standards page", () => {
     expect(found.length).toBeGreaterThan(50);
     const missing: string[] = [];
     for (const { file, url, test } of found) {
-      expect(url).toBe(`${SOURCE}/src/${file}`);
-      const source = readFileSync(new URL(`src/${file}`, packageDir), "utf8");
+      const root = Object.keys(packageDirs).find((one) => url === `${one}/src/${file}`);
+      expect(root, `${url} is a test file of a package`).toBeDefined();
+      const source = readFileSync(new URL(`src/${file}`, packageDirs[root ?? SOURCE]), "utf8");
       if (!source.includes(JSON.stringify(test))) missing.push(`${file}: ${test}`);
     }
     expect(missing).toEqual([]);

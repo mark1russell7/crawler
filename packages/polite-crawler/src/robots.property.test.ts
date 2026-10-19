@@ -164,6 +164,8 @@ describe("the product token of a long browser header", () => {
     );
     expect(productToken("Mozilla/5.0 (X11) -MyBot/1.0")).toBe("mybot");
     expect(productToken("Mozilla/5.0 (X11) abc1def/2")).toBe("def");
+    // the counterexample that fast-check found for the first linear scan
+    expect(productToken("Mozilla/5.0 _/a/a")).toBe("a");
   });
 
   it("reads a long header with no product", () => {

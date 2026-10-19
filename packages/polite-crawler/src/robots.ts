@@ -162,14 +162,12 @@ export const productToken = (value: string): string => {
   if (first !== "mozilla") return first;
   const compatible = /compatible;\s*([A-Za-z_-]+)/i.exec(text)?.[1];
   if (compatible !== undefined) return compatible.toLowerCase();
-  // Each run of name characters is read one time, so a long header takes linear time. A product is
-  // a run with `/` and a version after it; its name starts at the first letter of the run.
-  const products = [...text.matchAll(/[A-Za-z_-]+(\/[\w.]+)?/g)].flatMap((match) => {
-    if (match[1] === undefined) return [];
-    const run = match[0].slice(0, match[0].length - match[1].length);
-    const start = run.search(/[A-Za-z]/);
-    return start < 0 ? [] : [run.slice(start).toLowerCase()];
-  });
+  // One pass in linear time: each match is a name that starts with a letter, with an optional `/` and
+  // version after it, or a run of other characters. A run of other characters takes no version, so
+  // `_/a/a` gives the product `a`, as the scan before 0.2.0 did.
+  const products = [...text.matchAll(/([A-Za-z][A-Za-z_-]*)(\/[\w.]+)?|[^A-Za-z]+/g)].flatMap(
+    (match) => (match[1] !== undefined && match[2] !== undefined ? [match[1].toLowerCase()] : []),
+  );
   return products.find((product) => !BROWSER_PARTS.has(product)) ?? first;
 };
 

@@ -1,0 +1,76 @@
+---
+title: Tokens to prove a claim
+description: "Eval part A of polite-crawler: the tokens that an agent reads to prove 30 claims with exact quotes, against the page as Markdown, the way WebFetch reads it. For each claim and for a session."
+---
+
+import { ClaimCosts, ClaimTable, SessionCosts } from "../../../components/EvalCharts.tsx";
+import evalA from "../../../data/eval-a.json";
+import { costsMore, ordered, ratioOf, sessionTotals, stayAheadFrom, tokens } from "../../../lib/eval-a.ts";
+import { STUDY_AUTHOR } from "../../../lib/study.ts";
+
+export const s = evalA.summary;
+export const runUrl = `https://github.com/mark1russell7/crawler/actions/runs/${evalA.run}`;
+export const readme = "https://github.com/mark1russell7/crawler/tree/main/packages/polite-crawler/eval";
+export const dataFile = "https://github.com/mark1russell7/crawler/blob/main/packages/site/src/data/eval-a.json";
+export const politeCosts = evalA.claims.map((claim) => claim.polite);
+export const pages = evalA.claims.map((claim) => claim.markdown);
+export const more = evalA.claims.filter(costsMore);
+export const pageCount = new Set(evalA.claims.map((claim) => claim.url)).size;
+export const times = (id) => Math.round(ratioOf(evalA.claims.find((claim) => claim.id === id)));
+export const aheadFrom = (order) => stayAheadFrom(sessionTotals(ordered(evalA.claims, order), evalA.toolDefinitions));
+export const day = new Date(`${evalA.date}T12:00:00Z`).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric", timeZone: "UTC" });
+
+<p class="pc-byline">By <a href={STUDY_AUTHOR.url}>{STUDY_AUTHOR.name}</a>. The eval read the pages on <time datetime={evalA.date}>{day}</time> with {evalA.package}, in <a href={runUrl}>workflow {evalA.run}</a> (commit <code>{evalA.commit}</code>).</p>
+
+An agent that cites a page must check the quote. How many tokens does it read to do that? Part A of the eval counts them for {s.claims} claims on {pageCount} pages, in CI, with no model. Each claim has a question and an exact quote from a page. The pages are RFCs, Wikipedia articles, MDN, the documentation of Node.js and Python, government pages and one W3C recommendation.
+
+The polite-crawler path is four calls of its MCP server. `crawl_fetch` stores the page, and `crawl_find` searches the store with the question. `crawl_read` reads {tokens(evalA.window)} characters at the quote, and `crawl_verify` checks the quote. The other path reads the whole page as Markdown, the way WebFetch converts a page.
+
+- **{s.verified} of {s.claims} claims are verified.** `crawl_verify` found each quote.
+- **In total, the pages as Markdown have {s.ratio.markdownTotal} times the tokens of the polite-crawler path:** {tokens(s.markdown.total)} against {tokens(s.polite.total)}.
+- **For one claim, the median ratio is {s.ratio.markdownMedian}.** A typical page is not long, so the difference for one claim is smaller than the difference in total.
+- **On {more.length} very short pages, polite-crawler costs more.** Its search results and its read window are longer than the page.
+
+## Each claim
+
+<ClaimCosts client:visible />
+
+The axis is a log axis. The pages go from {tokens(Math.min(...pages))} to {tokens(Math.max(...pages))} tokens, and a linear axis puts the short pages at 0. On a log axis, the same distance is the same ratio. The panel below the figure shows the four steps of the polite-crawler path on a linear bar. A stack of parts on a log axis gives the wrong lengths.
+
+The cost of polite-crawler stays between {tokens(Math.min(...politeCosts))} and {tokens(Math.max(...politeCosts))} tokens for each claim. It reads search results and a window of the page, not the page. The cost of the page grows with the page. RFC 9110 as Markdown has approximately {times("rfc9110-404")} times the tokens of the path. The Wikipedia article about the mathematician has approximately {times("wikipedia-turing-born")} times the tokens.
+
+## A session
+
+<SessionCosts client:visible />
+
+The MCP server costs {tokens(evalA.toolDefinitions)} tokens one time in each session: the definitions of its nine tools. Thus a session that proves one short claim costs more with polite-crawler. The order of the claims changes when polite-crawler goes below the proxy and stays there:
+
+- **In the order of the eval**, from claim {aheadFrom("run")} on.
+- **With the short pages first**, from claim {aheadFrom("short")} on.
+- **With the long pages first**, from claim {aheadFrom("long")} on.
+
+After all {s.claims} claims, the order does not matter: {tokens(s.polite.total + evalA.toolDefinitions)} tokens against {tokens(s.markdown.total)}. The figure counts no tool definition for WebFetch.
+
+## Each number
+
+<ClaimTable client:visible />
+
+The ratio is the tokens of the page as Markdown divided by the tokens of the polite-crawler path. A ratio below 1 is a claim on which polite-crawler costs more. The place in `crawl_find` is the place of the page of the claim in the results of the search for the question.
+
+## The method
+
+1. **The fetch.** The eval fetched each URL one time into a new store, with the default identity of the crawler. The crawler obeyed robots.txt and the pace of each site, and it opened no browser.
+2. **The archive.** The run exported the store as a WACZ file. Its SHA-256 starts with <code>{evalA.archive}</code>.
+3. **The replay.** The measurement read the WACZ file into a new store and sent no request. A second replay gave the same numbers.
+4. **The count.** For each claim, the count is all the text of the four tool results. The proxy is the HTML of the page as Markdown (`turndown`), with no script, style, noscript or template elements.
+
+The <a href={readme}>README of the eval</a> gives each step, the units and the checks. The numbers of this page are in <a href={dataFile}><code>eval-a.json</code></a>.
+
+## The limits
+
+- **The tokenizer is a proxy.** The count uses the encoding `{evalA.tokenizer}` of the package `gpt-tokenizer`. It is not the tokenizer of Claude, and Claude gives different counts. The two paths use the same tokenizer, so a ratio depends less on the tokenizer than a count.
+- **The real WebFetch is different.** The WebFetch tool of Claude Code converts the page to Markdown and gives it to a small model with the prompt. The main model gets the answer of that model, not the page. That answer is not an exact quote that the main model can check. To check a quote, a model reads the text of the page. The proxy counts that text, with no limit of WebFetch.
+- **The read window starts at the quote.** `crawl_verify` gives the place of the quote, so the agent knows where to read. An agent that reads from the start of each page in ranges of 4,000 characters reads {tokens(s.paged.total)} tokens in total, not {tokens(s.polite.total)}.
+- **Some quotes are past the cut.** The reader of polite-crawler cuts the text of a page at 50,000 characters. For {s.pastCut} claims on RFC 9110, the quote is past the cut. Then the path has no read, and the excerpt of `crawl_verify` shows the text around the quote.
+- **The count leaves out the text that the agent writes** (the arguments of each call) and the system prompt.
+- **Part B comes later.** It asks the same {s.claims} questions in real sessions of Claude Code, one time with the tools of polite-crawler and one time with WebFetch. It records the counts of Claude.

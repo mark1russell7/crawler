@@ -19,8 +19,9 @@ import { crawlHostOptions } from "./server.ts";
  * - Each request needs the bearer token. The check compares the SHA-256 digests of the two tokens
  *   in constant time.
  * - The server binds to a loopback host by default. A different host needs `allowRemote`.
- * - A server on a loopback host accepts only a loopback name in the `Host` header, and an `Origin`
- *   header must name the same host. Thus a web page cannot reach the server by DNS rebinding.
+ * - A request that comes to a loopback address accepts only a loopback name in the `Host` header,
+ *   also on a server with `allowRemote`. An `Origin` header must name the same host. Thus a web page
+ *   cannot reach the server by DNS rebinding.
  */
 
 /** These are the defaults of the MCP server over HTTP. */
@@ -173,9 +174,13 @@ export const serveMcpHttp = async (
   let bound = port;
   let closing: Promise<void> | undefined;
 
-  /** A loopback server accepts only a loopback name and its port in `Host`. */
-  const hostAllowed = (header: string | undefined): boolean => {
-    if (!loopback) return true;
+  /**
+   * A request that comes to a loopback address names only a loopback host and its port in `Host`.
+   * This applies to a server on a loopback host, and to a request on the loopback interface of a
+   * server with `allowRemote`. Thus DNS rebinding cannot reach the server through 127.0.0.1.
+   */
+  const hostAllowed = (header: string | undefined, localAddress: string | undefined): boolean => {
+    if (!loopback && !isLoopbackHost(localAddress ?? "")) return true;
     if (header === undefined) return false;
     let parsed: URL;
     try {
@@ -203,7 +208,10 @@ export const serveMcpHttp = async (
 
   const handle = (request: IncomingMessage, response: ServerResponse): void => {
     const hostHeader = request.headers.host;
-    if (!hostAllowed(hostHeader) || !originAllowed(request.headers.origin, hostHeader)) {
+    if (
+      !hostAllowed(hostHeader, request.socket.localAddress) ||
+      !originAllowed(request.headers.origin, hostHeader)
+    ) {
       refuse(response, 403, "the Host or the Origin header is not of this server");
       return;
     }

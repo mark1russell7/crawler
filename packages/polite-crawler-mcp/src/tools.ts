@@ -430,14 +430,14 @@ const FETCHES: Effects = {
 /** The effects of a tool that only reads the store. */
 const READS: Effects = { reads: ["store"], writes: [] };
 
-/** The config of a tool: its title, description, schemas, effects, and if it can run as an MCP task. */
+/** The config of a tool: its title, description, schemas, effects, and if it can be an MCP task. */
 interface ToolConfig<I extends z.ZodRawShape, O extends z.ZodRawShape> {
   readonly title: string;
   readonly description: string;
   readonly input: I;
   readonly output: O;
   readonly effects: Effects;
-  /** True: a client can call the tool as an MCP task, when the host has a task store. */
+  /** True: a client can ask for the tool as an MCP task, when the host has a task store. */
   readonly long?: boolean;
 }
 

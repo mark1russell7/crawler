@@ -207,6 +207,30 @@ describe("the MCP server over HTTP: the guards", () => {
     cleanups.push(() => taken.close());
     await expect(startMcpHttpServer(crawler, { port: taken.port })).rejects.toThrow(/in use/);
   });
+
+  it("applies the loopback Host rule to a request on the loopback interface of a remote server", async () => {
+    const { crawler, close } = await testCrawler();
+    cleanups.push(close);
+    const server = await startMcpHttpServer(crawler, {
+      host: "0.0.0.0",
+      port: 0,
+      allowRemote: true,
+    });
+    cleanups.push(() => server.close());
+    const url = `http://127.0.0.1:${String(server.port)}/mcp`;
+    const auth = { authorization: `Bearer ${server.token}` };
+    // DNS rebinding through 127.0.0.1: a page of a different site names its own host
+    const rebound = await raw(url, {
+      body: INITIALIZE,
+      headers: { ...auth, host: `evil.example:${String(server.port)}` },
+    });
+    expect(rebound.status).toBe(403);
+    const local = await raw(url, {
+      body: INITIALIZE,
+      headers: { ...auth, host: `127.0.0.1:${String(server.port)}` },
+    });
+    expect(local.status).toBe(200);
+  });
 });
 
 describe("the MCP server over HTTP: the tools and the tasks", () => {

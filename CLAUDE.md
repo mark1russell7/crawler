@@ -47,20 +47,25 @@ Write all prose of this repository in the style of ASD-STE100 Simplified Technic
 
 ## Releases
 
-The version is in four places: `version` in `packages/polite-crawler/package.json`, `VERSION` in `src/version.ts`, and the two `version` fields of `server.json`. A test and the smoke test make sure that they agree.
+Since 0.2.0 the repository publishes two packages with the same version: `polite-crawler` and `polite-crawler-mcp`. The version is in these places:
+
+- `polite-crawler`: `version` in `packages/polite-crawler/package.json`, `VERSION` in `packages/polite-crawler/src/version.ts`, and `VERSION` in its API report `packages/polite-crawler/api/index.api.md`.
+- `polite-crawler-mcp`: `version` in `packages/polite-crawler-mcp/package.json`, `VERSION` in `packages/polite-crawler-mcp/src/version.ts`, and the two `version` fields of `server.json`.
+
+`polite-crawler-mcp` depends on `polite-crawler` with `workspace:^`, so its tarball names `^<version>` of polite-crawler. The smoke test makes sure that the two versions agree and that the range is `^<version>`. Tests make sure that each package and its `version.ts` agree.
 
 To make a release:
 
-1. Change the version in the four places.
-2. In `CHANGELOG.md`, change `## Unreleased` to `## <version> - <date>`. Add a new empty `## Unreleased` above it.
-3. Open a pull request with the two changes. Wait until CI passes.
-4. Get the approval of the owner. Then merge the pull request to main.
+1. Change the version in each of these places.
+2. In `CHANGELOG.md` and in `packages/polite-crawler-mcp/CHANGELOG.md`, add `## <version> - <date>` below `## Unreleased`, above the notes of the version.
+3. Open a pull request with the changes. Wait until CI passes.
+4. Get the approval of the owner. Then the release session merges the pull request to main.
 
 Do not merge a version change to main without the approval of the owner. The merge starts `.github/workflows/release.yml`, which does these steps:
 
-- It does the gates of CI again, then builds, packs and smoke-tests the tarball. It makes sure that `CHANGELOG.md` has the section of the version.
-- A job with no code of the repository publishes that tarball to npm, with provenance. It skips a version that npm has already.
-- It publishes `server.json` to the MCP registry. It makes the tag `v<version>` and the GitHub release with the section of `CHANGELOG.md`.
+- It does the gates of CI again, then builds, packs and smoke-tests the two tarballs. It makes sure that each changelog has the section of the version.
+- A job with no code of the repository publishes the tarballs to npm, with provenance. It skips a version that npm has already.
+- It publishes `server.json` to the MCP registry. `server.json` names `polite-crawler-mcp`, and release.yml checks it against the version of that package. It makes the tag `v<version>` and the GitHub release with the section of `CHANGELOG.md` and the two tarballs.
 
 The rules for versions:
 

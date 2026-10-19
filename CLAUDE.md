@@ -25,7 +25,7 @@ Write all prose of this repository in the style of ASD-STE100 Simplified Technic
 - `pnpm smoke` (`scripts/smoke.mjs`) installs the packed tarball into an empty project and uses it the way a user does.
 - CI does the tests on Ubuntu with Node.js 22.19, 24 and 26, and on Windows and macOS with Node.js 24.
 - CI fails when the code is not in the format of Prettier. Start `pnpm format` before a commit.
-- Pin each GitHub action to a full commit SHA, with the version in a comment. Dependabot updates them.
+- Pin each GitHub action to a full commit SHA, with the version in a comment. Renovate updates them (`renovate.json`): one pull request each week for the actions, and one for the minor and patch updates of npm. It merges a patch update, and a minor or patch update of a dev dependency, when CI passes.
 
 ## Roadmap
 

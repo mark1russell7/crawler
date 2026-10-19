@@ -138,7 +138,7 @@ claude mcp add polite-crawler -- npx -y polite-crawler-mcp
 
 Its README tells the tools, the envelope of the page text, the pages that refuse AI input and the options of the server.
 
-Until 0.2.0, the server was the entry point `polite-crawler/mcp` and the command `polite-crawler mcp`. The command still starts the server in 0.2.x when `polite-crawler-mcp` is installed next to polite-crawler, with a note that it is deprecated. Without the package, it tells you to start `npx polite-crawler-mcp`. Version 0.3.0 removes the command.
+Until 0.2.0, the server was the entry point `polite-crawler/mcp` and the command `polite-crawler mcp`. The command still starts the server in 0.2.x when `polite-crawler-mcp` is installed next to polite-crawler, with a note that it is deprecated. Without the package, it tells you to start `npx polite-crawler-mcp`, and it exits with 2. Version 0.3.0 removes the command.
 
 ## Use it as a library
 

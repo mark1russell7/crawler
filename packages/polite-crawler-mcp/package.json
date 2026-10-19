@@ -1,0 +1,87 @@
+{
+  "$schema": "https://json.schemastore.org/package",
+  "name": "polite-crawler-mcp",
+  "version": "0.2.0",
+  "mcpName": "io.github.mark1russell7/polite-crawler",
+  "description": "The MCP server of polite-crawler: nine tools that fetch web pages politely, keep them, search them and verify quotes, for Claude and other MCP clients.",
+  "keywords": [
+    "mcp",
+    "mcp-server",
+    "model-context-protocol",
+    "claude",
+    "ai-agent",
+    "crawler",
+    "web-crawler",
+    "polite-crawler",
+    "robots.txt",
+    "fetch",
+    "research",
+    "full-text-search"
+  ],
+  "homepage": "https://mark1russell7.github.io/crawler/guide/mcp/",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mark1russell7/crawler.git",
+    "directory": "packages/polite-crawler-mcp"
+  },
+  "bugs": {
+    "url": "https://github.com/mark1russell7/crawler/issues"
+  },
+  "license": "MIT",
+  "author": "Mark Russell (https://github.com/mark1russell7)",
+  "type": "module",
+  "main": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./package.json": "./package.json"
+  },
+  "bin": {
+    "polite-crawler-mcp": "./src/cli.ts"
+  },
+  "files": [
+    "build",
+    "!build/cli.d.mts",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=22.19"
+  },
+  "scripts": {
+    "build": "tsdown",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc -p tsconfig.json --noEmit --emitDeclarationOnly false && tsc -p tsconfig.test.json",
+    "prepublishOnly": "node ../../scripts/publish-guard.mjs && pnpm build"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.32.1",
+    "@procedures/client": "link:../../../../client-wt/cli-35/packages/client",
+    "@procedures/mcp-server": "link:../../../../client-wt/cli-35/packages/client-mcp",
+    "polite-crawler": "workspace:^",
+    "zod": "^4.6.6"
+  },
+  "devDependencies": {
+    "@mark1russell7/cue": "github:mark1russell7/cue",
+    "@types/node": "^22.19.0",
+    "tsdown": "^0.23.1",
+    "typescript": "^7.0.2",
+    "undici": "^8.11.2",
+    "vitest": "^5.0.3"
+  },
+  "publishConfig": {
+    "access": "public",
+    "main": "./build/index.mjs",
+    "types": "./build/index.d.mts",
+    "bin": {
+      "polite-crawler-mcp": "./build/cli.mjs"
+    },
+    "exports": {
+      ".": {
+        "types": "./build/index.d.mts",
+        "default": "./build/index.mjs"
+      },
+      "./package.json": "./package.json"
+    }
+  }
+}

@@ -546,8 +546,9 @@ export interface DaemonMcpService {
 }
 
 /**
- * This is the seam between the daemon and its MCP server. The default host (`mcpHttpHost` of
- * `polite-crawler/mcp`) serves the tools over Streamable HTTP. A different MCP host can replace it.
+ * This is the seam between the daemon and its MCP server. The default host (`mcpHttpHost` of the
+ * package polite-crawler-mcp) serves the tools over Streamable HTTP. A different MCP host can
+ * replace it.
  */
 export interface DaemonMcpHost {
   start(
@@ -608,10 +609,14 @@ export interface Daemon {
   readonly done: Promise<DaemonStatus>;
 }
 
-/** The default MCP host loads the MCP SDK only when the daemon serves MCP. */
+/**
+ * The default MCP host is `mcpHttpHost` of the package polite-crawler-mcp. The daemon loads the
+ * package only when it serves MCP, and an error tells where the MCP server is when it is not there.
+ */
 const defaultHost: DaemonMcpHost = {
   async start(crawler, options, hooks) {
-    const { mcpHttpHost } = await import("./mcp.ts");
+    const { loadMcpPackage } = await import("./mcp-package.ts");
+    const { mcpHttpHost } = await loadMcpPackage();
     return mcpHttpHost.start(crawler, options, hooks);
   },
 };

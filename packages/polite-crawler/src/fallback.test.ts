@@ -1,12 +1,9 @@
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { gzipSync } from "node:zlib";
-import { Client } from "@modelcontextprotocol/sdk/client/index.js";
-import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { MockAgent } from "undici";
 import { afterEach, describe, expect, it } from "vitest";
 import { archivedDocId, fallbackReason, readWarcResponse } from "./fallback.ts";
-import { createMcpServer } from "./mcp.ts";
 import type { OpenOptions, PoliteCrawler } from "./open.ts";
 import { openCrawler } from "./open.ts";
 import { fakeClock, removeDir, tempDir } from "./test-helpers.ts";
@@ -657,70 +654,5 @@ describe("the parts of the fallback", () => {
     );
     expect(fallbackReason(indexed("error", "status 502", 500))).toBe("error");
     expect(fallbackReason(indexed("error", "status 418", 418))).toBeUndefined();
-  });
-});
-
-describe("the archived fallback over MCP", () => {
-  it("gives archived copies only with archive_fallback, and marks them in the envelope", async () => {
-    const page = "https://site.test/p";
-    const hosts = world(
-      { "https://site.test": (path) => (path === "/p" ? { status: 403 } : undefined) },
-      { wayback: { [page]: {} } },
-    );
-    const { crawler } = await open(hosts);
-    const server = createMcpServer(crawler);
-    const [clientSide, serverSide] = InMemoryTransport.createLinkedPair();
-    await server.connect(serverSide);
-    const client = new Client({ name: "test", version: "0" });
-    await client.connect(clientSide);
-    cleanups.push(async () => {
-      await client.close();
-      await server.close();
-    });
-    const call = async (name: string, args: Record<string, unknown>) => {
-      const result = await client.callTool({ name, arguments: args });
-      const content = result.content as Array<{ text: string }>;
-      return {
-        structured: result.structuredContent as Record<string, unknown>,
-        web: content[1]?.text ?? "",
-      };
-    };
-    const plain = await call("crawl_fetch", { urls: [page] });
-    expect((plain.structured["pages"] as Array<Record<string, unknown>>)[0]).not.toHaveProperty(
-      "archived",
-    );
-    expect(archiveHits(hosts)).toEqual([]);
-
-    const fetched = await call("crawl_fetch", { urls: [page], archive_fallback: true });
-    const shown = (fetched.structured["pages"] as Array<Record<string, unknown>>)[0]!;
-    // the 403 of the first call stopped the host: the second call is a stop, with a copy
-    expect(shown).toMatchObject({
-      outcome: "skipped",
-      doc: archivedDocId(page),
-      archived: { source: "wayback", timestamp: "2024-01-15T09:30:00Z" },
-    });
-    expect(fetched.web).toContain('archived="wayback%202024-01-15T09:30:00Z"');
-    const verified = await call("crawl_verify", {
-      doc: archivedDocId(page),
-      quote: "the bakery opens at seven",
-    });
-    expect(verified.structured).toMatchObject({
-      found: true,
-      archived: { source: "wayback", timestamp: "2024-01-15T09:30:00Z" },
-    });
-    expect(String(verified.structured["note"])).toContain("not a fresh fetch");
-    const read = await call("crawl_read", { doc: archivedDocId(page) });
-    expect(read.structured).toMatchObject({ kind: "archived", archived: { source: "wayback" } });
-    // a value from an archived copy says so, as a quote does
-    const extracted = await call("crawl_extract", {
-      doc: archivedDocId(page),
-      fields: { hours: { value: "the bakery opens at seven" } },
-    });
-    expect(extracted.structured).toMatchObject({
-      summary: { verified: 1 },
-      archived: { source: "wayback", timestamp: "2024-01-15T09:30:00Z" },
-    });
-    expect(String(extracted.structured["note"])).toContain("not a fresh fetch");
-    expect(extracted.web).toContain('archived="wayback%202024-01-15T09:30:00Z"');
   });
 });

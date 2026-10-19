@@ -4,7 +4,7 @@ import { copy } from "../lib/clipboard.ts";
 
 const COMMANDS = [
   { label: "Library", command: "npm install polite-crawler" },
-  { label: "Claude Code", command: "claude mcp add polite-crawler -- npx -y polite-crawler mcp" },
+  { label: "Claude Code", command: "claude mcp add polite-crawler -- npx -y polite-crawler-mcp" },
 ] as const;
 
 /** The install lines. */

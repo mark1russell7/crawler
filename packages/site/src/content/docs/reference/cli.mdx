@@ -19,7 +19,7 @@ npx polite-crawler <command> [options]
 | `verify <doc> <quote>` | It finds a quote in a stored document. |
 | `extract <doc> --field name=value[:kind]` | It checks the values that you propose for the fields of a stored document. It does not make values. |
 | `reindex` | It builds the search index again from the capture log. |
-| `mcp` | It starts the MCP server on the standard input and output. |
+| `mcp` | Deprecated: it starts the MCP server of the package `polite-crawler-mcp` on the standard input and output, and 0.3.0 removes it. Without that package, it tells you to start `npx polite-crawler-mcp` and exits with 2. |
 | `export --out <file>` | It writes the stored captures as a WARC or WACZ archive. It only reads the store. |
 | `discover <site>` | It lists the pages of a site from its sitemaps and feeds. It fetches no page of the list. |
 | `crawl <url...>` | It fetches the pages and follows their links on the same site, within a budget. |
@@ -28,7 +28,7 @@ npx polite-crawler <command> [options]
 | `watch remove <url...>` | It removes the pages from the watch list. |
 | `watch list` | It prints the watch list. |
 | `watch run` | It checks the pages that are due, within a budget, and prints what changed. |
-| `daemon` | It checks the watch list on a schedule, until `SIGINT` or `SIGTERM`. With `--mcp-http`, it also serves the MCP tools over local HTTP. |
+| `daemon` | It checks the watch list on a schedule, until `SIGINT` or `SIGTERM`. With `--mcp-http`, it also serves the MCP tools over local HTTP, with the package `polite-crawler-mcp`. |
 | `daemon status` | It prints the state of the daemon of the store. It opens no store. |
 | `key-directory` | It prints the key directory (a JSON Web Key Set) of `--sign-key`, for you to host. |
 | `embed --embedder <name>` | It gives vectors to the stored pages that have none, for `find --rank hybrid`. It sends no request to a site. |
@@ -127,7 +127,7 @@ These options apply to one command. The command line is wrong when another comma
 
 ## Daemon
 
-`polite-crawler daemon` checks the watch list on a schedule, until `SIGINT` or `SIGTERM`. Each tick is one `watch run`, so each polite rule applies. With `--mcp-http`, the daemon also serves the MCP tools over local HTTP. [The daemon, tick by tick](../../guide/daemon/) shows a schedule.
+`polite-crawler daemon` checks the watch list on a schedule, until `SIGINT` or `SIGTERM`. Each tick is one `watch run`, so each polite rule applies. With `--mcp-http`, the daemon also serves the MCP tools over local HTTP. The MCP server is the package `polite-crawler-mcp`: install it next to polite-crawler. [The daemon, tick by tick](../../guide/daemon/) shows a schedule.
 
 ```sh
 npx polite-crawler watch add https://example.com/hours --every 6h

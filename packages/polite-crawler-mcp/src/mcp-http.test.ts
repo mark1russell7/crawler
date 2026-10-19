@@ -5,13 +5,13 @@ import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/
 import type { Transport } from "@modelcontextprotocol/sdk/shared/transport.js";
 import { CallToolResultSchema, CreateTaskResultSchema } from "@modelcontextprotocol/sdk/types.js";
 import { afterEach, describe, expect, it } from "vitest";
+import { McpTaskStore } from "@procedures/mcp-server";
+import { fakeClock } from "../../polite-crawler/src/test-helpers.ts";
+import type { Reply, TestSite } from "../../polite-crawler/src/test-site.ts";
+import { htmlPage, testCrawler, testSite } from "../../polite-crawler/src/test-site.ts";
+import type { McpHttpServer, StartMcpHttpOptions } from "./http.ts";
+import { checkToken, makeToken, sameToken, startMcpHttpServer } from "./http.ts";
 import { isLoopbackHost, urlHost } from "./loopback.ts";
-import { checkToken } from "./mcp-http.ts";
-import type { McpHttpServer, StartMcpHttpOptions } from "./mcp.ts";
-import { CrawlTaskStore, makeToken, sameToken, startMcpHttpServer } from "./mcp.ts";
-import type { Reply, TestSite } from "./test-site.ts";
-import { htmlPage, testCrawler, testSite } from "./test-site.ts";
-import { fakeClock } from "./test-helpers.ts";
 
 const cleanups: Array<() => Promise<void> | void> = [];
 afterEach(async () => {
@@ -350,7 +350,7 @@ describe("the MCP server over HTTP: the tools and the tasks", () => {
     const held = gate();
     const { site, server } = await serve(
       (path) => (path === "/slow" ? { ...page("Slow page"), after: held.wait } : undefined),
-      { tasks: new CrawlTaskStore({ maxRunning: 1 }) },
+      { tasks: new McpTaskStore({ maxRunning: 1 }) },
     );
     const { client, transport } = await connect(server);
     const start = () =>

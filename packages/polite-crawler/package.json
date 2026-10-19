@@ -2,8 +2,7 @@
   "$schema": "https://json.schemastore.org/package",
   "name": "polite-crawler",
   "version": "0.1.4",
-  "mcpName": "io.github.mark1russell7/polite-crawler",
-  "description": "A polite web crawler for research and AI agents. It fetches a source once, keeps it, and reads it many times: robots.txt obeyed, one request per site, full-text search, an MCP server.",
+  "description": "A polite web crawler for research and AI agents. It fetches a source once, keeps it, and reads it many times: robots.txt obeyed, one request per site, full-text search. The MCP server is the package polite-crawler-mcp.",
   "keywords": [
     "crawler",
     "web-crawler",
@@ -15,7 +14,6 @@
     "fetch",
     "cache",
     "mcp",
-    "mcp-server",
     "model-context-protocol",
     "claude",
     "ai-agent",
@@ -47,7 +45,6 @@
   "main": "./src/index.ts",
   "exports": {
     ".": "./src/index.ts",
-    "./mcp": "./src/mcp.ts",
     "./robots": "./src/robots.ts",
     "./hours": "./src/hours.ts",
     "./html": "./src/html.ts",
@@ -79,12 +76,10 @@
     "prepublishOnly": "node ../../scripts/publish-guard.mjs && pnpm build"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.32.1",
     "@mozilla/readability": "^0.6.0",
     "linkedom": "^0.18.13",
     "undici": "^8.11.2",
-    "unpdf": "^1.8.1",
-    "zod": "^4.6.6"
+    "unpdf": "^1.8.1"
   },
   "peerDependencies": {
     "@huggingface/transformers": "^3.0.0 || ^4.0.0",
@@ -101,6 +96,7 @@
   "devDependencies": {
     "@huggingface/transformers": "^4.3.1",
     "@mark1russell7/cue": "github:mark1russell7/cue",
+    "@modelcontextprotocol/sdk": "^1.32.1",
     "@types/node": "^22.19.0",
     "@types/turndown": "^5.0.6",
     "@vitest/coverage-v8": "5.0.3",
@@ -123,10 +119,6 @@
       ".": {
         "types": "./build/index.d.mts",
         "default": "./build/index.mjs"
-      },
-      "./mcp": {
-        "types": "./build/mcp.d.mts",
-        "default": "./build/mcp.mjs"
       },
       "./robots": {
         "types": "./build/robots.d.mts",

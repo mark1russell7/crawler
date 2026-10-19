@@ -214,15 +214,17 @@ export interface McpChild {
 }
 
 /**
- * This function starts `polite-crawler mcp` in a child process, and talks JSON-RPC with it. The
- * function `answer` gives the result of each request that the server sends to the client.
+ * This function starts an MCP server in a child process, and talks JSON-RPC with it. The function
+ * `answer` gives the result of each request that the server sends to the client. `entry` is the
+ * source of the server and its first arguments: the default is `polite-crawler mcp`.
  */
 export const startMcpChild = (
   args: readonly string[],
   env: NodeJS.ProcessEnv = childEnv(),
   answer: (method: string, params: unknown) => unknown = () => ({}),
+  entry: readonly string[] = [CLI, "mcp"],
 ): McpChild => {
-  const child = spawn(process.execPath, ["--import", TSX, CLI, "mcp", ...args], { env });
+  const child = spawn(process.execPath, ["--import", TSX, ...entry, ...args], { env });
   const lines: string[] = [];
   const waiting = new Map<number, (message: Record<string, unknown>) => void>();
   let buffer = "";

@@ -1,18 +1,21 @@
 #!/usr/bin/env node
-// The smoke test of the published artifact of polite-crawler.
+// The smoke test of the published artifacts of polite-crawler and polite-crawler-mcp.
 //
-//   node scripts/smoke.mjs                      pack packages/polite-crawler (build it first if needed)
-//   node scripts/smoke.mjs --tarball <file>     test a tarball that `pnpm pack` made
-//   node scripts/smoke.mjs --keep               keep the temporary folder, and print its path
+//   node scripts/smoke.mjs                         pack the two packages (build them first if needed)
+//   node scripts/smoke.mjs --tarball <file>        test this tarball of polite-crawler
+//   node scripts/smoke.mjs --mcp-tarball <file>    test this tarball of polite-crawler-mcp
+//   node scripts/smoke.mjs --keep                  keep the temporary folder, and print its path
 //
-// It checks the tarball the way a user gets it:
-//   1. The packed manifest: every entry point is in the tarball, and server.json agrees with it.
-//   2. An empty project installs the tarball from disk, with its dependencies from npm.
+// It checks the tarballs the way a user gets them:
+//   1. The packed manifests: every entry point is in its tarball, the root entry point of
+//      polite-crawler loads no MCP SDK and no zod, and server.json agrees with polite-crawler-mcp.
+//   2. An empty project installs the two tarballs from disk, with their dependencies from npm.
 //   3. Every subpath imports, and a store opens (SQLite with FTS5).
 //   4. A TypeScript project type-checks its use of each entry point (nodenext, and bundler).
 //   5. The entry points for a browser stay inside their size budgets (gzip, bundled with esbuild).
-//   6. The command runs: --version, --help, find, and an MCP handshake over standard input and output.
-//   7. attw (the esm-only profile) and publint examine the tarball.
+//   6. The commands run: --version, --help, find, and an MCP handshake over standard input and
+//      output, with polite-crawler-mcp and with the deprecated polite-crawler mcp.
+//   7. attw (the esm-only profile) and publint examine each tarball.
 
 import { spawn, spawnSync } from "node:child_process";
 import {
@@ -32,9 +35,14 @@ import { gunzipSync, gzipSync } from "node:zlib";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const packageDir = join(root, "packages", "polite-crawler");
+const mcpDir = join(root, "packages", "polite-crawler-mcp");
 
 const { values } = parseArgs({
-  options: { tarball: { type: "string" }, keep: { type: "boolean" } },
+  options: {
+    tarball: { type: "string" },
+    "mcp-tarball": { type: "string" },
+    keep: { type: "boolean" },
+  },
 });
 
 let failures = 0;
@@ -106,48 +114,61 @@ const targetsOf = (value, where, into) => {
 const work = mkdtempSync(join(tmpdir(), "polite-crawler-smoke-"));
 let server;
 try {
-  // 1. The tarball and its manifest
-  step("the tarball");
-  let tarball = values.tarball === undefined ? undefined : resolve(values.tarball);
-  if (tarball === undefined) {
-    if (!existsSync(join(packageDir, "build", "cli.mjs"))) {
-      must(
-        "pnpm --filter polite-crawler build",
-        run("pnpm", ["--filter", "polite-crawler", "build"], { cwd: root }),
-      );
+  // 1. The tarballs and their manifests
+  /** This function packs a package of the workspace (it builds it first if needed), or takes the given tarball. */
+  const tarballOf = (name, dir, given) => {
+    if (given !== undefined) return resolve(given);
+    if (!existsSync(join(dir, "build", "cli.mjs"))) {
+      must(`pnpm --filter ${name} build`, run("pnpm", ["--filter", name, "build"], { cwd: root }));
     }
-    const out = join(work, "pack");
+    const out = join(work, `pack-${name}`);
     mkdirSync(out);
     must(
-      "pnpm pack",
-      run("pnpm", ["--filter", "polite-crawler", "pack", "--pack-destination", out], { cwd: root }),
+      `pnpm pack ${name}`,
+      run("pnpm", ["--filter", name, "pack", "--pack-destination", out], { cwd: root }),
     );
-    const packed = readdirSync(out).filter((name) => name.endsWith(".tgz"));
+    const packed = readdirSync(out).filter((file) => file.endsWith(".tgz"));
     if (packed.length !== 1) throw new Error(`pnpm pack made ${String(packed.length)} tarballs`);
-    tarball = join(out, packed[0]);
-  }
-  ok(tarball);
-  const files = readTarball(tarball);
-  const manifest = JSON.parse(files.get("package.json").toString("utf8"));
-  ok(`${manifest.name}@${manifest.version}, ${String(files.size)} files`);
+    return join(out, packed[0]);
+  };
+  /** This function checks the manifest of a tarball: each entry point is in it, with no src/ and no declaration maps. */
+  const examine = (tarball) => {
+    ok(tarball);
+    const files = readTarball(tarball);
+    const manifest = JSON.parse(files.get("package.json").toString("utf8"));
+    ok(`${manifest.name}@${manifest.version}, ${String(files.size)} files`);
+    const targets = ["main", "types", "bin", "exports"].flatMap((field) =>
+      targetsOf(manifest[field], field, []),
+    );
+    for (const [where, target] of targets) {
+      check(files.has(target.replace(/^\.\//, "")), `${where} -> ${target} is in the tarball`);
+    }
+    check(![...files.keys()].some((name) => name.startsWith("src/")), "the tarball has no src/");
+    check(
+      ![...files.keys()].some((name) => name.endsWith(".d.mts.map")),
+      "the tarball has no declaration maps",
+    );
+    check(
+      typeof manifest.engines?.node === "string",
+      `engines.node is ${String(manifest.engines?.node)}`,
+    );
+    // a dependency that is a link or a git ref does not install from npm
+    for (const [dependency, range] of Object.entries(manifest.dependencies ?? {})) {
+      check(
+        !/^(?:link|file|workspace|github|git\+?\w*):/.test(String(range)),
+        `${dependency} ${String(range)} installs from npm`,
+      );
+    }
+    return { files, manifest };
+  };
 
-  const targets = ["main", "types", "bin", "exports"].flatMap((field) =>
-    targetsOf(manifest[field], field, []),
-  );
-  for (const [where, target] of targets) {
-    check(files.has(target.replace(/^\.\//, "")), `${where} -> ${target} is in the tarball`);
-  }
-  check(![...files.keys()].some((name) => name.startsWith("src/")), "the tarball has no src/");
-  check(
-    ![...files.keys()].some((name) => name.endsWith(".d.mts.map")),
-    "the tarball has no declaration maps",
-  );
-  check(
-    typeof manifest.engines?.node === "string",
-    `engines.node is ${String(manifest.engines?.node)}`,
-  );
+  step("the tarball of polite-crawler");
+  const tarball = tarballOf("polite-crawler", packageDir, values.tarball);
+  const { files, manifest } = examine(tarball);
+  check(manifest.exports?.["./mcp"] === undefined, "polite-crawler has no ./mcp entry point");
+  check(manifest.mcpName === undefined, "polite-crawler has no mcpName");
 
-  // The root entry point must not load the MCP SDK or zod: only polite-crawler/mcp does. This walks
+  // The root entry point must not load the MCP SDK or zod: polite-crawler-mcp does. This walks
   // the static imports of the root module through the files of the tarball.
   const rootTarget = manifest.exports?.["."]?.default ?? manifest.main;
   const graph = new Set();
@@ -180,20 +201,30 @@ try {
     "the root entry point loads no optional peer at start",
   );
 
+  step("the tarball of polite-crawler-mcp");
+  const mcpTarball = tarballOf("polite-crawler-mcp", mcpDir, values["mcp-tarball"]);
+  const { manifest: mcpManifest } = examine(mcpTarball);
+  check(
+    mcpManifest.dependencies?.["polite-crawler"] !== undefined,
+    `polite-crawler-mcp depends on polite-crawler ${String(mcpManifest.dependencies?.["polite-crawler"])}`,
+  );
   const registry = JSON.parse(readFileSync(join(root, "server.json"), "utf8"));
   const entry = registry.packages?.find((item) => item.registryType === "npm");
   check(
-    manifest.mcpName === registry.name,
-    `mcpName ${String(manifest.mcpName)} is the name in server.json`,
+    mcpManifest.mcpName === registry.name,
+    `mcpName ${String(mcpManifest.mcpName)} is the name in server.json`,
   );
-  check(registry.version === manifest.version, `server.json version ${String(registry.version)}`);
-  check(entry?.identifier === manifest.name, `server.json package ${String(entry?.identifier)}`);
   check(
-    entry?.version === manifest.version,
+    registry.version === mcpManifest.version,
+    `server.json version ${String(registry.version)}`,
+  );
+  check(entry?.identifier === mcpManifest.name, `server.json package ${String(entry?.identifier)}`);
+  check(
+    entry?.version === mcpManifest.version,
     `server.json package version ${String(entry?.version)}`,
   );
 
-  // 2. An empty project installs the tarball
+  // 2. An empty project installs the tarballs
   step("install into an empty project");
   const consumer = join(work, "consumer");
   mkdirSync(consumer);
@@ -202,10 +233,18 @@ try {
     `${JSON.stringify({ name: "smoke-consumer", private: true, type: "module" }, null, 2)}\n`,
   );
   must(
-    "npm install <tarball>",
+    "npm install <the two tarballs>",
     run(
       "npm",
-      ["install", tarball, "--no-audit", "--no-fund", "--ignore-scripts", "--loglevel=error"],
+      [
+        "install",
+        tarball,
+        mcpTarball,
+        "--no-audit",
+        "--no-fund",
+        "--ignore-scripts",
+        "--loglevel=error",
+      ],
       {
         cwd: consumer,
       },
@@ -235,10 +274,14 @@ for (const subpath of subpaths) {
 const root = await import(${JSON.stringify(manifest.name)});
 if (typeof root.openCrawler !== "function") throw new Error("the root entry point has no openCrawler");
 if ("createMcpServer" in root) throw new Error("the root entry point exports the MCP server");
-const mcp = await import(${JSON.stringify(`${manifest.name}/mcp`)});
-for (const name of ["createMcpServer", "startMcpServer"]) {
-  if (typeof mcp[name] !== "function") throw new Error("polite-crawler/mcp has no " + name);
+const gone = await import(${JSON.stringify(`${manifest.name}/mcp`)}).then(() => false, () => true);
+if (!gone) throw new Error("polite-crawler/mcp still imports");
+const mcp = await import(${JSON.stringify(mcpManifest.name)});
+for (const name of ["createMcpServer", "startMcpServer", "startMcpHttpServer", "crawlTools"]) {
+  if (typeof mcp[name] !== "function") throw new Error("polite-crawler-mcp has no " + name);
 }
+if (typeof mcp.mcpHttpHost?.start !== "function") throw new Error("polite-crawler-mcp has no mcpHttpHost");
+if (mcp.VERSION !== ${JSON.stringify(mcpManifest.version)}) throw new Error("polite-crawler-mcp has the wrong VERSION");
 const { openCrawler } = root;
 const crawler = openCrawler({ dir: "./store-library", renderer: false });
 const found = await crawler.find("smoke");
@@ -255,7 +298,7 @@ console.log("opened a store, find gave " + String(found.length) + " results");
   writeFileSync(
     join(consumer, "types.ts"),
     `import { catchUpIndex, createRuntime, openCrawler, type PageResult, type ReadResult, type VerifyResult } from "polite-crawler";
-import { createMcpServer, startMcpServer } from "polite-crawler/mcp";
+import { createMcpServer, startMcpServer } from "polite-crawler-mcp";
 import { decide, parseRobots } from "polite-crawler/robots";
 import { describeWeek, fromText } from "polite-crawler/hours";
 import { extractPage, type PageExtract } from "polite-crawler/html";
@@ -390,65 +433,87 @@ export const check = async (): Promise<string> => {
   );
 
   // The MCP server: initialize, then tools/list. Each line of stdout must be JSON-RPC.
-  const tools = await new Promise((done, fail) => {
-    server = spawn([command, "mcp", "--dir", "./store-mcp", "--no-browser"].map(quote).join(" "), {
-      cwd: consumer,
-      env,
-      shell: true,
-      stdio: ["pipe", "pipe", "pipe"],
-    });
-    let buffer = "";
-    let stderr = "";
-    const timer = setTimeout(
-      () => fail(new Error(`the MCP server gave no tool list in 30 s. stderr: ${stderr}`)),
-      30_000,
-    );
-    server.stderr.on("data", (chunk) => (stderr += chunk));
-    server.on("error", fail);
-    server.stdout.on("data", (chunk) => {
-      buffer += chunk;
-      let newline;
-      while ((newline = buffer.indexOf("\n")) !== -1) {
-        const line = buffer.slice(0, newline).trim();
-        buffer = buffer.slice(newline + 1);
-        if (line === "") continue;
-        let message;
-        try {
-          message = JSON.parse(line);
-        } catch {
-          bad(`the MCP server wrote a line that is not JSON: ${line.slice(0, 200)}`);
-          continue;
+  const mcpCommand = Object.keys(mcpManifest.bin)[0];
+  const mcpVersion = must(
+    `${mcpCommand} --version`,
+    run(mcpCommand, ["--version"], { cwd: consumer, env }),
+  );
+  check(
+    mcpVersion.stdout.trim() === mcpManifest.version,
+    `--version prints ${mcpVersion.stdout.trim()}`,
+  );
+  const handshake = (args, label) =>
+    new Promise((done, fail) => {
+      let stderr = "";
+      server = spawn(args.map(quote).join(" "), {
+        cwd: consumer,
+        env,
+        shell: true,
+        stdio: ["pipe", "pipe", "pipe"],
+      });
+      let buffer = "";
+      const timer = setTimeout(
+        () => fail(new Error(`${label} gave no tool list in 30 s. stderr: ${stderr}`)),
+        30_000,
+      );
+      server.stderr.on("data", (chunk) => (stderr += chunk));
+      server.on("error", fail);
+      server.stdout.on("data", (chunk) => {
+        buffer += chunk;
+        let newline;
+        while ((newline = buffer.indexOf("\n")) !== -1) {
+          const line = buffer.slice(0, newline).trim();
+          buffer = buffer.slice(newline + 1);
+          if (line === "") continue;
+          let message;
+          try {
+            message = JSON.parse(line);
+          } catch {
+            bad(`${label} wrote a line that is not JSON: ${line.slice(0, 200)}`);
+            continue;
+          }
+          if (message.id === 1) {
+            ok(
+              `${label}: initialize: ${String(message.result?.serverInfo?.name)} ${String(message.result?.serverInfo?.version)}`,
+            );
+            server.stdin.write(
+              `${JSON.stringify({ jsonrpc: "2.0", method: "notifications/initialized" })}\n`,
+            );
+            server.stdin.write(
+              `${JSON.stringify({ jsonrpc: "2.0", id: 2, method: "tools/list" })}\n`,
+            );
+          } else if (message.id === 2) {
+            clearTimeout(timer);
+            done({
+              tools: (message.result?.tools ?? []).map((tool) => tool.name),
+              stderr: () => stderr,
+            });
+          }
         }
-        if (message.id === 1) {
-          ok(
-            `initialize: ${String(message.result?.serverInfo?.name)} ${String(message.result?.serverInfo?.version)}`,
-          );
-          server.stdin.write(
-            `${JSON.stringify({ jsonrpc: "2.0", method: "notifications/initialized" })}\n`,
-          );
-          server.stdin.write(
-            `${JSON.stringify({ jsonrpc: "2.0", id: 2, method: "tools/list" })}\n`,
-          );
-        } else if (message.id === 2) {
-          clearTimeout(timer);
-          done((message.result?.tools ?? []).map((tool) => tool.name));
-        }
-      }
+      });
+      server.stdin.write(
+        `${JSON.stringify({
+          jsonrpc: "2.0",
+          id: 1,
+          method: "initialize",
+          params: {
+            protocolVersion: "2025-06-18",
+            capabilities: {},
+            clientInfo: { name: "smoke", version: "0" },
+          },
+        })}\n`,
+      );
     });
-    server.stdin.write(
-      `${JSON.stringify({
-        jsonrpc: "2.0",
-        id: 1,
-        method: "initialize",
-        params: {
-          protocolVersion: "2025-06-18",
-          capabilities: {},
-          clientInfo: { name: "smoke", version: "0" },
-        },
-      })}\n`,
-    );
-  });
-  for (const name of [
+  const stopped = () =>
+    new Promise((done) => {
+      const timer = setTimeout(() => done(false), 10_000);
+      server.on("exit", () => {
+        clearTimeout(timer);
+        done(true);
+      });
+      server.stdin.end();
+    });
+  const TOOLS = [
     "crawl_fetch",
     "crawl_find",
     "crawl_read",
@@ -458,35 +523,36 @@ export const check = async (): Promise<string> => {
     "crawl_diff",
     "crawl_watch_list",
     "crawl_extract",
+  ];
+  for (const [args, label] of [
+    [[mcpCommand, "--dir", "./store-mcp", "--no-browser"], mcpCommand],
+    [[command, "mcp", "--dir", "./store-mcp", "--no-browser"], `${command} mcp`],
   ]) {
-    check(tools.includes(name), `the MCP server lists ${name}`);
+    const { tools, stderr } = await handshake(args, label);
+    for (const name of TOOLS) check(tools.includes(name), `${label} lists ${name}`);
+    check(await stopped(), `${label} stops when its standard input closes`);
+    if (label === `${command} mcp`)
+      check(stderr().includes("is deprecated"), `${label} says that the command is deprecated`);
+    server = undefined;
   }
-  const exited = await new Promise((done) => {
-    const timer = setTimeout(() => done(false), 10_000);
-    server.on("exit", () => {
-      clearTimeout(timer);
-      done(true);
-    });
-    server.stdin.end();
-  });
-  check(exited, "the MCP server stops when its standard input closes");
-  server = undefined;
 
   // 5. attw and publint
   step("attw and publint");
   // attw prints a table for each entry point. must() prints the output only when a tool fails.
-  must(
-    "attw --profile esm-only",
-    run(
-      "pnpm",
-      ["exec", "attw", tarball, "--profile", "esm-only", "--format", "ascii", "--no-color"],
-      { cwd: root },
-    ),
-  );
-  must(
-    "publint --strict",
-    run("pnpm", ["exec", "publint", "run", tarball, "--strict"], { cwd: root }),
-  );
+  for (const file of [tarball, mcpTarball]) {
+    must(
+      `attw --profile esm-only ${file}`,
+      run(
+        "pnpm",
+        ["exec", "attw", file, "--profile", "esm-only", "--format", "ascii", "--no-color"],
+        { cwd: root },
+      ),
+    );
+    must(
+      `publint --strict ${file}`,
+      run("pnpm", ["exec", "publint", "run", file, "--strict"], { cwd: root }),
+    );
+  }
 } catch (error) {
   // must() counted its own failure. Any other error is a new one.
   if (!(error instanceof Error && error.message.endsWith(" failed"))) failures += 1;

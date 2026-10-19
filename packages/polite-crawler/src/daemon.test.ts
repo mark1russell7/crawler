@@ -1,9 +1,5 @@
 import { readFileSync, statSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { Client } from "@modelcontextprotocol/sdk/client/index.js";
-import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
-// the transport of the SDK leaves its optional members undefined, which exactOptionalPropertyTypes refuses
-import type { Transport } from "@modelcontextprotocol/sdk/shared/transport.js";
 import { afterEach, describe, expect, it } from "vitest";
 import type {
   Daemon,
@@ -447,26 +443,6 @@ describe("the daemon", () => {
       ),
     ).rejects.toThrow(/in use/);
     expect(readDaemonState(dir)?.alive).toBe(false);
-  });
-
-  it("serves the MCP tools over HTTP, and its status route gives the status of the daemon", async () => {
-    const dir = await store();
-    const daemon = await started(options(dir, { tick: "1h", mcp: { port: 0 } }));
-    const token = readFileSync(join(dir, "daemon", "mcp-token"), "utf8").trim();
-    const url = daemon.mcp!.url;
-    const transport = new StreamableHTTPClientTransport(new URL(url), {
-      requestInit: { headers: { authorization: `Bearer ${token}` } },
-    });
-    const client = new Client({ name: "test", version: "0" });
-    await client.connect(transport as unknown as Transport);
-    expect((await client.listTools()).tools).toHaveLength(9);
-    const status = await fetch(url.replace(/\/mcp$/, "/status"), {
-      headers: { authorization: `Bearer ${token}` },
-    });
-    expect((await status.json()) as unknown).toMatchObject({ running: true, mcp: { url } });
-    await client.close();
-    await daemon.stop();
-    await expect(fetch(url)).rejects.toThrow(/fetch failed/);
   });
 });
 

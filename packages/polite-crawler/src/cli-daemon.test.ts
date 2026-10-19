@@ -286,25 +286,12 @@ describe("the command daemon, in a process of its own", () => {
   );
 
   it.skipIf(process.platform === "win32")(
-    "runs until SIGTERM, shows its state and its MCP endpoint, and stops cleanly with code 0",
+    "runs until SIGTERM, shows its state, and stops cleanly with code 0",
     async () => {
       const dir = await store();
       const child = spawn(
         process.execPath,
-        [
-          "--import",
-          TSX,
-          CLI,
-          "daemon",
-          "--dir",
-          dir,
-          "--tick",
-          "1h",
-          "--no-browser",
-          "--mcp-http",
-          "--mcp-port",
-          "0",
-        ],
+        ["--import", TSX, CLI, "daemon", "--dir", dir, "--tick", "1h", "--no-browser"],
         { env: childEnv() },
       );
       let stderr = "";
@@ -321,7 +308,6 @@ describe("the command daemon, in a process of its own", () => {
       const running = await runCli(["daemon", "status", "--dir", dir]);
       expect(running.code).toBe(0);
       expect(running.stdout).toMatch(/^the daemon runs \(process \d+\)/);
-      expect(running.stdout).toMatch(/MCP: http:\/\/127\.0\.0\.1:\d+\/mcp \(the token is in /);
       child.kill("SIGTERM");
       expect(await exited).toBe(0);
       expect(stderr).toContain("the daemon stopped");

@@ -1,52 +1,12 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": ["config:recommended", "helpers:pinGitHubActionDigests"],
-  "timezone": "America/New_York",
-  "schedule": ["before 6am on monday"],
-  "minimumReleaseAge": "7 days",
-  "internalChecksFilter": "strict",
-  "prConcurrentLimit": 5,
-  "dependencyDashboard": true,
+  "extends": ["github>mark1russell7/template//renovate/default"],
   "packageRules": [
     {
-      "description": "One pull request each week for the minor and patch updates of the npm packages.",
-      "matchManagers": ["npm"],
-      "matchUpdateTypes": ["minor", "patch"],
-      "groupName": "npm minor and patch updates",
-      "commitMessagePrefix": "deps:"
-    },
-    {
-      "description": "One pull request each week for the GitHub Actions, pinned to a commit SHA with the version in a comment.",
-      "matchManagers": ["github-actions"],
-      "groupName": "GitHub Actions",
-      "commitMessagePrefix": "ci:"
-    },
-    {
-      "description": "A major update of an npm package gets a pull request of its own.",
-      "matchManagers": ["npm"],
-      "matchUpdateTypes": ["major"],
-      "commitMessagePrefix": "deps:"
-    },
-    {
-      "description": "Merge a patch update, and a minor or patch update of a dev dependency, when CI passes.",
-      "matchUpdateTypes": ["patch"],
-      "automerge": true
-    },
-    {
-      "matchDepTypes": ["devDependencies"],
-      "matchUpdateTypes": ["minor", "patch"],
-      "automerge": true
-    },
-    {
-      "description": "The Node.js types follow the oldest Node.js release in engines, not the newest one.",
+      "description": "The Node.js types follow the oldest Node.js release in engines (22.19), not the newest one.",
       "matchPackageNames": ["@types/node"],
       "matchUpdateTypes": ["major"],
       "enabled": false
-    },
-    {
-      "description": "The packages of the owner (the shared MCP host and its parts) need no wait after a release.",
-      "matchPackageNames": ["@procedures/**", "@mark1russell7/**"],
-      "minimumReleaseAge": "0 days"
     }
   ]
 }

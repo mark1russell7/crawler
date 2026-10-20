@@ -50,7 +50,7 @@ Write all prose of this repository in the style of ASD-STE100 Simplified Technic
 Since 0.2.0 the repository publishes two packages with the same version: `polite-crawler` and `polite-crawler-mcp`. The version is in these places:
 
 - `polite-crawler`: `version` in `packages/polite-crawler/package.json`, `VERSION` in `packages/polite-crawler/src/version.ts`, and `VERSION` in its API report `packages/polite-crawler/api/index.api.md`.
-- `polite-crawler-mcp`: `version` in `packages/polite-crawler-mcp/package.json`, `VERSION` in `packages/polite-crawler-mcp/src/version.ts`, and the two `version` fields of `server.json`.
+- `polite-crawler-mcp`: `version` in `packages/polite-crawler-mcp/package.json`, `VERSION` in `packages/polite-crawler-mcp/src/version.ts`, `VERSION` in its API report `packages/polite-crawler-mcp/api/index.api.md`, and the two `version` fields of `server.json`.
 
 `polite-crawler-mcp` depends on `polite-crawler` with `workspace:^`, so its tarball names `^<version>` of polite-crawler. The smoke test makes sure that the two versions agree and that the range is `^<version>`. Tests make sure that each package and its `version.ts` agree.
 

@@ -288,6 +288,14 @@ export default defineConfig({
         },
         { label: "Reference", items: ["reference/api", "reference/cli", "reference/standards"] },
         { label: "For site owners", items: ["bot", "block-ai-training-crawlers"] },
+        // the pages of @mark1russell7/site-pages: the Pages workflow writes them at deploy time
+        {
+          label: "Project",
+          items: [
+            { label: "Releases", link: "https://mark1russell7.github.io/crawler/releases/" },
+            { label: "Status", link: "https://mark1russell7.github.io/crawler/status/" },
+          ],
+        },
       ],
     }),
     // the islands are React code that runs on Preact (preact/compat): 9 KB of runtime in place of 69 KB (gzip)

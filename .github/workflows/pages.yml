@@ -5,6 +5,9 @@ name: Pages
 on:
   push:
     branches: [main]
+  # Every 3 hours, so that the Status page shows the open pull requests and issues of now
+  schedule:
+    - cron: "17 */3 * * *"
   workflow_dispatch:
 
 permissions:
@@ -16,15 +19,26 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # The build installs and runs the code of the repository, so it gets only "contents: read".
+  # The build installs and runs the code of the repository, so it gets only read permissions.
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
       contents: read
+      # green-main reads the Actions runs. site-pages reads the pull requests, the issues and their checks.
+      actions: read
+      issues: read
+      pull-requests: read
+      checks: read
+      statuses: read
     steps:
+      # A scheduled build takes the newest commit of main that passed CI
+      - id: green
+        if: github.event_name == 'schedule'
+        uses: mark1russell7/template/.github/actions/green-main@7370860a744e657cdfe13b2f57d47e70697d5c7d # main
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          ref: ${{ steps.green.outputs.sha || github.sha }}
           persist-credentials: false
           # The whole history, so that the "last updated" date of each page comes from its last commit
           fetch-depth: 0
@@ -39,6 +53,14 @@ jobs:
         env:
           SITE_BASE: /${{ github.event.repository.name }}
           ASTRO_TELEMETRY_DISABLED: "1"
+      # The Releases page and the Status page (releases/, status/ and their data/*.json), at deploy time
+      - uses: mark1russell7/template/.github/actions/site-pages@7370860a744e657cdfe13b2f57d47e70697d5c7d # main
+        with:
+          out: packages/site/dist
+          roadmap: docs/ROADMAP.md
+          changesets: CHANGELOG.md
+          packages: polite-crawler,polite-crawler-mcp
+          site-name: polite-crawler
       - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
         with:
           path: packages/site/dist

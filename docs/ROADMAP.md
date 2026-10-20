@@ -22,17 +22,6 @@ List the package in the MCP and tool directories, then post it to Show HN.
 - Waits for: `eval`, `eval-b`
 - What Mark does: Say go in the Fleet Hub (ask crawler-eval) after part B. Then post from your Hacker News account: I write the title and the first comment.
 
-## In progress
-
-### `remote-host`: The loopback Host rule on a remote bind too
-
-With allowRemote, the HTTP listener of polite-crawler-mcp accepted any Host header. A request that comes to a loopback socket now gets the loopback Host rule (req.socket.localAddress), so DNS rebinding cannot reach a server that also listens on 127.0.0.1. The change and its test are on branch feat/remote-host-api (2651c5b), not yet run in CI. Next: run CI on it, open a pull request, and add the CHANGELOG line; it goes out in a patch release (0.2.1) with the last step of the API review.
-
-- Area: Package
-- Waits for: `rel020`
-- Started: 2026-10-19
-- [Branch feat/remote-host-api](https://github.com/mark1russell7/crawler/tree/feat/remote-host-api)
-
 ## Later
 
 ### `recheck-watch`: The jarvis hours recheck becomes a watch
@@ -49,22 +38,36 @@ Score a local open-weight decision model (for example Laya) on labelled data fro
 
 - Area: jarvis
 
-### `api-review`: API review before 1.0
-
-The last step of the API review: the exports of polite-crawler-mcp (its own API report in CI), and names for the types that signatures use but no entry point exports (Counts, Row, Update, Json, Resolve, IndexBuild, DomNode, JsonWebKey). Five of the 6 deprecated exports left in 0.2.0 (durationMs stays, as beta), and the MCP server moved, so this can start.
-
-- Area: Package
-- Waits for: `mcp-host`, `api-report`
-- Started: 2026-10-19
-
 ### `v1`: Version 1.0
 
-1.0 promises that the API does not break. It comes after the MCP move ships as 0.2.0, the API review, the real Claude Code eval, and some weeks of use by people outside this project.
+1.0 promises that the API does not break. The MCP move (0.2.0), the API review and its reports (0.2.1) are done. It waits for the real Claude Code eval (part B), the launch (Show HN), and some weeks of use by people outside this project.
 
 - Area: Release and CI
 - Waits for: `mcp-host`, `api-review`, `eval-b`, `showhn`, `rel020`
 
 ## Shipped
+
+### `rel021`: Release 0.2.1
+
+A patch release: polite-crawler 0.2.1 (exports for the types of its signatures) and polite-crawler-mcp 0.2.1 (the loopback Host rule on a remote bind, and its API report). PATCH: a backward-compatible fix and new exports. release.yml published both with provenance, and the MCP registry has 0.2.1.
+
+- Area: Release and CI
+- Waits for: `remote-host`, `api-review`
+- Started: 2026-10-19
+- Shipped: 2026-10-19
+- [crawler #22](https://github.com/mark1russell7/crawler/pull/22)
+- [Release v0.2.1](https://github.com/mark1russell7/crawler/releases/tag/v0.2.1)
+- [npm polite-crawler-mcp 0.2.1](https://www.npmjs.com/package/polite-crawler-mcp/v/0.2.1)
+
+### `renovate`: Renovate in place of Dependabot
+
+Mark installed Renovate for his repositories. crawler extends the shared preset of the template (github>mark1russell7/template//renovate/default): each Monday grouped pull requests, waits of 3 days after a release (1 day for Mark's packages), automerge of patch and dev updates when CI passes, and no change to release.yml. It keeps one rule of its own (no major update of @types/node). Dependabot left, and its three open pull requests closed.
+
+- Area: Release and CI
+- Started: 2026-10-19
+- Shipped: 2026-10-19
+- [crawler #18](https://github.com/mark1russell7/crawler/pull/18)
+- [crawler #23 (the shared preset)](https://github.com/mark1russell7/crawler/pull/23)
 
 ### `release-docs`: CLAUDE.md: the version places of two packages
 
@@ -74,6 +77,16 @@ Mark said yes (2026-10-19). The release section of the crawler CLAUDE.md names t
 - Waits for: `rel020`
 - Shipped: 2026-10-19
 - [Commit 4d0c06f](https://github.com/mark1russell7/crawler/commit/4d0c06f)
+
+### `remote-host`: The loopback Host rule on a remote bind too
+
+With allowRemote, the HTTP listener of polite-crawler-mcp accepted any Host header. A request that comes to a loopback socket now gets the loopback Host rule, so DNS rebinding cannot reach a server that also listens on 127.0.0.1. Merged as crawler #19; it ships in release 0.2.1.
+
+- Area: Package
+- Waits for: `rel020`
+- Started: 2026-10-19
+- Shipped: 2026-10-19
+- [crawler #19](https://github.com/mark1russell7/crawler/pull/19)
 
 ### `rel020`: Release 0.2.0: polite-crawler and polite-crawler-mcp
 
@@ -87,6 +100,17 @@ A minor release: before 1.0.0, a breaking change raises the minor version. polit
 - [npm polite-crawler 0.2.0](https://www.npmjs.com/package/polite-crawler/v/0.2.0)
 - [npm polite-crawler-mcp 0.2.0](https://www.npmjs.com/package/polite-crawler-mcp/v/0.2.0)
 - [Release run 39323762591](https://github.com/mark1russell7/crawler/actions/runs/39323762591)
+
+### `api-review`: API review before 1.0
+
+The API review before 1.0 is complete. Each export of polite-crawler and of polite-crawler-mcp has a tier (stable, beta) in docs/API-REVIEW.md, and CI compares the public API of both packages with their reports. Each type that a signature uses has an export with a clear name. The last step merged as crawler #20 and shipped in 0.2.1.
+
+- Area: Package
+- Waits for: `mcp-host`, `api-report`
+- Started: 2026-10-19
+- Shipped: 2026-10-19
+- [crawler #20](https://github.com/mark1russell7/crawler/pull/20)
+- [docs/API-REVIEW.md](https://github.com/mark1russell7/crawler/blob/main/docs/API-REVIEW.md)
 
 ### `api-report`: The API report that CI compares, and the tiers for 1.0
 

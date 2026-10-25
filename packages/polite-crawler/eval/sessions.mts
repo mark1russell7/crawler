@@ -23,7 +23,7 @@
  *
  * `summary` reads the records of the two arms and writes <out>/eval-b-result.json. With --fetch, it
  * fetches each page one time with the crawler (robots.txt, the pace of each site) and checks that
- * each quote of each answer is on the page. --markdown and --summary get the tables.
+ * each quote of each answer is on the page, as it is or with its inline Markdown removed. --markdown and --summary get the tables.
  *
  * The exit code of `run` is 0 when each session gives a result, and 1 when a session gives no result
  * or the budget stops the arm. A wrong command line gives 2.
@@ -48,6 +48,7 @@ import type { Arm, SessionRecord } from "./session-result.mts";
 import {
   ARMS,
   markdownOf,
+  plainOf,
   promptOf,
   quotesOf,
   recordOf,
@@ -241,8 +242,13 @@ async function checkOnPage(records: SessionRecord[]): Promise<SessionRecord[]> {
         checked.push(entry);
         continue;
       }
+      // a quote is on the page as it is, or with its Markdown markup removed
       const found = await Promise.all(
-        quotes.map(async (quote) => (await crawler.verify(doc, quote)).found),
+        quotes.map(
+          async (quote) =>
+            (await crawler.verify(doc, quote)).found ||
+            (await crawler.verify(doc, plainOf(quote))).found,
+        ),
       );
       checked.push({ ...entry, onPage: found.every(Boolean) });
     }

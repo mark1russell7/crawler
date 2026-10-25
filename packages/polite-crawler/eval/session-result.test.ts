@@ -4,6 +4,7 @@ import {
   checkAnswer,
   markdownOf,
   normalize,
+  plainOf,
   promptOf,
   recordOf,
   skippedRecord,
@@ -90,6 +91,18 @@ describe("the check of an answer", () => {
     expect(checkAnswer("<quote>The server sends a “hello”</quote>", claim.quote)).toBe("partial");
     expect(checkAnswer("<quote>The client sends nothing.</quote>", claim.quote)).toBe("wrong");
     expect(checkAnswer("The server sends a hello.", claim.quote)).toBe("no-quote");
+  });
+
+  it("removes the inline Markdown of a quote, and keeps the words", () => {
+    expect(plainOf("The `map()` method of `Array` instances")).toBe(
+      "The map() method of Array instances",
+    );
+    expect(plainOf("a **bold** and _italic_ [link](https://example.com/a) word")).toBe(
+      "a bold and italic link word",
+    );
+    expect(plainOf("snake_case_name and file_name.py stay")).toBe(
+      "snake_case_name and file_name.py stay",
+    );
   });
 
   it("gives the URL and the question in the prompt", () => {

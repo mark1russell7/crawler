@@ -8,8 +8,8 @@
     "node": ">=22.19"
   },
   "scripts": {
-    "package": "tsx packages/cli/src/index.ts package",
-    "template": "tsx packages/cli/src/index.ts repo",
+    "package": "template package",
+    "template": "template repo",
     "api": "node scripts/api.mjs",
     "browser": "pnpm --filter polite-crawler exec playwright-core install chromium-headless-shell",
     "build": "pnpm --filter polite-crawler --filter polite-crawler-mcp build",
@@ -27,6 +27,7 @@
     "@arethetypeswrong/cli": "^0.18.5",
     "@mark1russell7/cue": "github:mark1russell7/cue",
     "@mark1russell7/ste-lint": "github:mark1russell7/ste-lint",
+    "@mark1russell7/template-cli": "^0.1.2",
     "esbuild": "0.28.2",
     "oxlint": "^1.87.0",
     "oxlint-tsgolint": "^7.0.2004",

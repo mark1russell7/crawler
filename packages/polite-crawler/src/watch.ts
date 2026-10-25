@@ -11,7 +11,7 @@ import type { Duration } from "./duration.ts";
 import { durationMs } from "./duration.ts";
 import { sha256, stableStringify } from "./record.ts";
 import type { CrawlRuntime, PageResult } from "./runtime.ts";
-import { fetchPage, isHeldBack } from "./runtime.ts";
+import { fetchPage, isHeldBack, isoTime } from "./runtime.ts";
 import { cacheKeyOf } from "./urls.ts";
 
 /**
@@ -69,6 +69,27 @@ export interface WatchOptions {
   readonly onBehalfOf?: readonly string[] | undefined;
   /** This value is the number of checks that must see a change before it is confirmed. The default is 2. */
   readonly confirm?: 1 | 2 | undefined;
+  /**
+   * The value `true` keeps the time of the next check of a page that the list has. The default
+   * `false` sets that time one `every` after the last check. A new entry is due at once in the two cases.
+   *
+   * @beta
+   */
+  readonly keepSchedule?: boolean | undefined;
+}
+
+/**
+ * These options change the time of the next check of an entry (`reschedule`).
+ *
+ * @beta
+ */
+export interface WatchRescheduleOptions {
+  /**
+   * This time is the next check of the entry: an ISO 8601 text or a `Date`. A run checks the due
+   * entries in the sequence of these times, so an earlier time also gives an earlier check. The
+   * time is not before one floor (`watchFloor`) after the last check, so a watch cannot hammer a site.
+   */
+  readonly at: string | Date;
 }
 
 /** A change that one check saw, and that the next check can confirm. */
@@ -141,6 +162,8 @@ export interface WatchRunOptions {
 export interface WatchRunnerOptions extends WatchRunOptions {
   /** These agents get their robots.txt rules applied to each check, before the agents of the entry. */
   readonly onBehalfOf?: readonly string[] | undefined;
+  /** This name connects the captures of each check to the job that asked for them, as `PageOptions.job` does. */
+  readonly job?: string | undefined;
   /** This function operates before the first check. `openCrawler` waits there for the open of the store. */
   readonly ready?: (() => Promise<void>) | undefined;
 }
@@ -215,6 +238,13 @@ export interface WatchList {
   list(): Promise<WatchEntry[]>;
   /** This method checks the entries that are due, to a budget. A `for await` loop gets each event. */
   run(options?: WatchRunOptions): WatchRun;
+  /**
+   * This optional method changes the time of the next check of a page (`WatchStore.reschedule`). It
+   * gives the changed entry, or undefined when the list does not have the page. `openCrawler` gives it.
+   *
+   * @beta
+   */
+  reschedule?(url: string, options: WatchRescheduleOptions): Promise<WatchEntry | undefined>;
 }
 
 /**
@@ -455,8 +485,8 @@ export class WatchStore {
 
   /**
    * This method adds a page, or changes the options of its watch and keeps its state. A new entry
-   * is due at once. A changed entry is due one `every` after its last check. A bad option throws
-   * a `RangeError`.
+   * is due at once. A changed entry is due one `every` after its last check. With `keepSchedule`,
+   * it keeps the time of its next check. A bad option throws a `RangeError`.
    */
   add(url: string, options: WatchOptions, now: number): WatchEntry {
     const { key, target, host } = targetOf(url);
@@ -487,7 +517,7 @@ export class WatchStore {
          ON CONFLICT(url) DO UPDATE SET target = excluded.target, host = excluded.host,
            every_ms = excluded.every_ms, render = excluded.render, confirm = excluded.confirm,
            scope = excluded.scope, labels = excluded.labels, on_behalf_of = excluded.on_behalf_of,
-           next_at = CASE WHEN watches.last_at IS NULL THEN watches.next_at
+           next_at = CASE WHEN ? = 1 OR watches.last_at IS NULL THEN watches.next_at
                           ELSE watches.last_at + excluded.every_ms END`,
       ).run(
         key,
@@ -501,8 +531,32 @@ export class WatchStore {
         agents,
         now,
         now,
+        options.keepSchedule === true ? 1 : 0,
       );
       return entryOf(this.row(key)!, now);
+    });
+  }
+
+  /**
+   * This method changes the time of the next check of a page, and nothing else. It gives the
+   * changed entry, or undefined when the list does not have the page. A bad time, or a time before
+   * one floor after the last check, throws a `RangeError`. A check in progress sets the time again
+   * when it ends.
+   */
+  reschedule(url: string, options: WatchRescheduleOptions, now: number): WatchEntry | undefined {
+    const { key } = targetOf(url);
+    const at = Date.parse(isoTime("at", options.at));
+    return this.step(() => {
+      const row = this.row(key);
+      if (row === undefined) return undefined;
+      const earliest = row.last_at === null ? -Infinity : row.last_at + this.floorMs;
+      if (at < earliest) {
+        throw new RangeError(
+          `the next check must be at ${iso(earliest)} or later, ${String(this.floorMs / 60_000)} minutes after the last check, so a watch cannot hammer a site, not ${iso(at)}`,
+        );
+      }
+      this.stmt("UPDATE watches SET next_at = ? WHERE url = ?").run(at, key);
+      return entryOf({ ...row, next_at: at }, now);
     });
   }
 
@@ -694,6 +748,7 @@ export const runWatch = (
           render: row.render as "auto" | "never" | "always",
           maxAgeMs: 0,
           onBehalfOf: agents,
+          job: options.job,
           signal: abort.signal,
           scope: row.scope ?? undefined,
           labels,

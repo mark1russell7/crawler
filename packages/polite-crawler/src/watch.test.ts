@@ -2,12 +2,12 @@ import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { openCrawler } from "./open.ts";
-import type { OpenedCrawler } from "./open.ts";
+import type { HybridCrawler } from "./open.ts";
 import { fakeClock, removeDir, tempDir } from "./test-helpers.ts";
 import type { Reply, TestSite } from "./test-site.ts";
 import { htmlPage, pagesOf, testSite } from "./test-site.ts";
-import type { WatchEvent, WatchRunOptions, WatchSummary } from "./watch.ts";
-import { WATCH_LIMITS, WatchStore } from "./watch.ts";
+import type { WatchEvent, WatchRunOptions, WatchRunnerOptions, WatchSummary } from "./watch.ts";
+import { WATCH_LIMITS, WatchStore, runWatch } from "./watch.ts";
 
 const HOUR = 3_600_000;
 const cleanups: Array<() => Promise<void> | void> = [];
@@ -27,7 +27,7 @@ const crawlerOn = (
   dir: string,
   clock: Clock,
   extra: { watchFloor?: string } = {},
-): OpenedCrawler => {
+): HybridCrawler => {
   const crawler = openCrawler({
     dir,
     clock,
@@ -52,7 +52,7 @@ const siteWith = async (
 
 /** This function runs the watch list and gives the events and the summary. */
 const runOnce = async (
-  crawler: OpenedCrawler,
+  crawler: HybridCrawler,
   options: WatchRunOptions = {},
 ): Promise<{ events: WatchEvent[]; summary: WatchSummary }> => {
   const run = crawler.watch.run(options);
@@ -396,6 +396,147 @@ describe("a run of the watch list", () => {
     await crawler.close();
     await expect(crawler.watch.list()).rejects.toThrow(/closed/);
     await expect(runOnce(crawler)).rejects.toThrow(/closed/);
+    await expect(
+      crawler.watch.reschedule("https://example.com/", { at: new Date(clock.now()) }),
+    ).rejects.toThrow(/closed/);
+  });
+
+  it("names the captures of its checks with the job of runWatch, and a run with no job names none", async () => {
+    const clock = fakeClock();
+    const crawler = crawlerOn(await store(), clock);
+    const { url } = await changing(clock);
+    const watches = new WatchStore(":memory:");
+    cleanups.push(() => watches.close());
+    watches.add(url, { every: "1h" }, clock.now());
+    const check = async (options: WatchRunnerOptions): Promise<WatchEvent> => {
+      const events: WatchEvent[] = [];
+      for await (const event of runWatch(crawler.runtime, watches, options)) events.push(event);
+      expect(events).toHaveLength(1);
+      return events[0]!;
+    };
+    const named = await check({ job: "place.recheck" });
+    clock.advance(HOUR);
+    const plain = await check({});
+    expect([named.kind, plain.kind]).toEqual(["new", "unchanged"]);
+    const jobs = new Map<string, unknown>();
+    for await (const record of crawler.runtime.captures.scan({ source: "fetch" })) {
+      jobs.set(record.id, (record.payload as { readonly job?: unknown }).job);
+    }
+    expect(jobs.get(named.capture!)).toBe("place.recheck");
+    expect(jobs.has(plain.capture!)).toBe(true);
+    expect(jobs.get(plain.capture!)).toBeUndefined();
+  });
+});
+
+describe("the schedule of an entry", () => {
+  it("reschedules one entry: an earlier time comes sooner, a later time waits, and the check after it uses every again", async () => {
+    const clock = fakeClock();
+    const crawler = crawlerOn(await store(), clock);
+    const one = await changing(clock);
+    const two = await changing(clock);
+    await crawler.watch.add(one.url, { every: "20h" });
+    await crawler.watch.add(two.url, { every: "20h" });
+    expect(
+      await crawler.watch.reschedule("https://example.com/", { at: new Date(clock.now()) }),
+    ).toBeUndefined();
+    expect((await runOnce(crawler)).summary).toMatchObject({ checked: 2, due: 0 });
+    const checkedAt = async (url: string): Promise<number> =>
+      Date.parse((await crawler.watch.list()).find((entry) => entry.url === url)!.checked_at!);
+    const first = await checkedAt(one.url);
+
+    // a time before one floor (1 hour) after the last check, or no time, is refused
+    await expect(
+      crawler.watch.reschedule(one.url, { at: new Date(first + HOUR / 2) }),
+    ).rejects.toThrow(/60 minutes after the last check, so a watch cannot hammer a site/);
+    await expect(crawler.watch.reschedule(one.url, { at: "soon" })).rejects.toThrow(
+      /at must be a time/,
+    );
+
+    // the second page is due again after 1 hour, and the first waits 30 hours, not its 20
+    const soon = new Date((await checkedAt(two.url)) + HOUR).toISOString();
+    expect(await crawler.watch.reschedule(two.url, { at: soon })).toMatchObject({
+      url: two.url,
+      every_ms: 20 * HOUR,
+      checks: 1,
+      next_at: soon,
+    });
+    const late = new Date(first + 30 * HOUR).toISOString();
+    expect((await crawler.watch.reschedule(one.url, { at: late }))?.next_at).toBe(late);
+    clock.advance(HOUR);
+    expect((await runOnce(crawler)).events.map((event) => event.url)).toEqual([two.url]);
+    expect(
+      Date.parse((await crawler.watch.list()).find((entry) => entry.url === two.url)!.next_at),
+    ).toBe((await checkedAt(two.url)) + 20 * HOUR);
+    clock.advance(20 * HOUR);
+    expect((await runOnce(crawler)).events.map((event) => event.url)).toEqual([two.url]);
+    clock.advance(10 * HOUR);
+    expect((await runOnce(crawler)).events.map((event) => event.url)).toEqual([one.url]);
+    expect(pagesOf(one.made)).toEqual(["/", "/"]);
+  });
+
+  it("checks the due entries in the sequence of their times, so an earlier time comes first", () => {
+    const watches = new WatchStore(":memory:");
+    cleanups.push(() => watches.close());
+    const now = Date.parse("2026-10-07T12:00:00Z");
+    watches.add("https://one.example/", {}, now);
+    watches.add("https://two.example/", {}, now);
+    // an entry with no check has no floor: an earlier time puts it first
+    const earlier = new Date(now - HOUR).toISOString();
+    expect(watches.reschedule("https://two.example/", { at: earlier }, now)).toMatchObject({
+      url: "https://two.example/",
+      next_at: earlier,
+      checks: 0,
+    });
+    expect(watches.list(now).map((entry) => entry.url)).toEqual([
+      "https://two.example/",
+      "https://one.example/",
+    ]);
+    const claimed = watches.claim(now, "runner", now + 60_000, []);
+    expect(claimed?.target).toBe("https://two.example/");
+    // a check in progress sets the time again when it ends
+    watches.reschedule("https://two.example/", { at: new Date(now + 5 * HOUR) }, now);
+    watches.settle(claimed!.url, "runner", {
+      next_at: now + HOUR,
+      last_at: now,
+      last_kind: "unchanged",
+      last_note: null,
+      changed: false,
+      doc: null,
+    });
+    expect(watches.get("https://two.example/", now)?.next_at).toBe(
+      new Date(now + HOUR).toISOString(),
+    );
+    watches.close();
+    expect(() => watches.reschedule("https://two.example/", { at: earlier }, now)).toThrow(
+      /closed/,
+    );
+  });
+
+  it("keeps the time of the next check at an add with keepSchedule, and sets it from every by default", async () => {
+    const clock = fakeClock();
+    const crawler = crawlerOn(await store(), clock);
+    const { url } = await changing(clock);
+    await crawler.watch.add(url, { every: "20h" });
+    await runOnce(crawler);
+    const checked = Date.parse((await crawler.watch.list())[0]!.checked_at!);
+    const at = new Date(checked + HOUR).toISOString();
+    await crawler.watch.reschedule(url, { at });
+    // an add with keepSchedule changes the options, and keeps the time
+    const kept = await crawler.watch.add(url, {
+      every: "24h",
+      labels: { place: "p-1" },
+      keepSchedule: true,
+    });
+    expect(kept).toMatchObject({ next_at: at, every_ms: 24 * HOUR, labels: { place: "p-1" } });
+    // the default sets the time one every after the last check, as before
+    const reset = await crawler.watch.add(url, { every: "24h", keepSchedule: false });
+    expect(reset.next_at).toBe(new Date(checked + 24 * HOUR).toISOString());
+    expect((await crawler.watch.add(url, { every: "20h" })).next_at).toBe(
+      new Date(checked + 20 * HOUR).toISOString(),
+    );
+    // a new entry is due at once, also with keepSchedule
+    const fresh = await crawler.watch.add("https://example.com/new", { keepSchedule: true });
+    expect(fresh.next_at).toBe(new Date(clock.now()).toISOString());
   });
 });
 

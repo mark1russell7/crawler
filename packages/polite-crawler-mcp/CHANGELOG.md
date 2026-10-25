@@ -6,6 +6,10 @@ This file records the changes to `polite-crawler-mcp` in each version. The chang
 
 ## Unreleased
 
+## 0.2.2 - 2026-10-25
+
+- **An error of the embedder no longer stops the server.** The server uses polite-crawler 0.2.2. With `--embedder`, two hybrid searches that shared a text and both failed stopped the process with an unhandled rejection. With this version, the error goes only to the tool calls.
+
 ## 0.2.1 - 2026-10-19
 
 - **The tiers of the API.** The package has a report of its API that CI compares (`api/index.api.md`). `crawlHostOptions`, `crawlTools`, `crawlContent`, `serveMcpHttp` and `INSTRUCTIONS` have the tag `@beta`: a minor version can change them. The server, its options and the rules of the token are stable. [`docs/API-REVIEW.md`](https://github.com/mark1russell7/crawler/blob/main/docs/API-REVIEW.md) gives the reasons.

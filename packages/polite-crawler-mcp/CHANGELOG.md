@@ -6,6 +6,8 @@ This file records the changes to `polite-crawler-mcp` in each version. The chang
 
 ## Unreleased
 
+## 0.2.4 - 2026-10-25
+
 - **A server can no longer stop the MCP server through undici.** The server needs undici 8.12.3 or later (CVE-2026-109869). The [changelog of polite-crawler](../../CHANGELOG.md) tells the fault.
 - **A robots.txt or a query with many repeated characters no longer stops the server.** The parser of robots.txt and the reader of the `crawl_find` query took polynomial time. With this version, they take linear time. The [changelog of polite-crawler](../../CHANGELOG.md) gives the inputs.
 

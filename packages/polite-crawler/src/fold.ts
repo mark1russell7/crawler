@@ -235,6 +235,13 @@ export interface FtsQuery {
 
 const MAX_PARTS = 16;
 
+/** This function removes the stars at the end of a word. It uses no regular expression, so its time is linear. */
+const withoutStars = (word: string): string => {
+  let end = word.length;
+  while (end > 0 && word.charCodeAt(end - 1) === 0x2a) end -= 1;
+  return word.slice(0, end);
+};
+
 /**
  * These English words are in almost every document. In the form that needs one part, they match
  * each document and cost the most time. Thus that form leaves them out when other words remain.
@@ -291,7 +298,7 @@ export const parseQuery = (q: string): FtsQuery | undefined => {
     const phrase = match[1] !== undefined;
     const raw = phrase ? match[1]! : match[3]!;
     const prefix = phrase ? match[2] === "*" : raw.endsWith("*");
-    const tokens = tokensOf(phrase ? raw : raw.replace(/\*+$/, ""));
+    const tokens = tokensOf(phrase ? raw : withoutStars(raw));
     if (tokens.length === 0) continue;
     parts.push({
       text: `"${tokens.join(" ")}"${prefix ? " *" : ""}`,

@@ -149,3 +149,20 @@ describe("search queries", () => {
     expect(snippetOf("nothing here", ["zebra"])).toBe("nothing here");
   });
 });
+
+describe("the stars at the end of a word", () => {
+  it("make a prefix, and the reader removes them from the word", () => {
+    expect(parseQuery("bake***")?.all).toBe('"bake" *');
+    expect(parseQuery("ba*ke*")?.all).toBe('"ba ke" *');
+    expect(parseQuery("*bake")?.all).toBe('"bake"');
+    expect(parseQuery('"bake"*')?.all).toBe('"bake" *');
+  });
+
+  // CodeQL found this input (alert 1). A regular expression took 6 seconds for it.
+  it("read a word of 100,000 stars in linear time", () => {
+    const started = performance.now();
+    const query = parseQuery(`${"*".repeat(100_000)}x`);
+    expect(performance.now() - started).toBeLessThan(200);
+    expect(query?.all).toBe('"x"');
+  });
+});

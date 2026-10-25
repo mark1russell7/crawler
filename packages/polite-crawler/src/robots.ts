@@ -180,12 +180,16 @@ const truncateUtf8 = (text: string, maxBytes: number): string => {
   return lastBreak === -1 ? "" : head.slice(0, lastBreak);
 };
 
-/** This function reads a usage line: an optional path, then the value (`/images/ train-ai=n`). */
+/**
+ * This function reads a usage line: an optional path, then the value (`/images/ train-ai=n`). The
+ * path starts with `/` and stops at the first space. The function uses no backtracking, so its
+ * time is linear.
+ */
 const signalOf = (key: string, value: string, line: number): RobotsSignal => {
-  const path = /^(\/\S*)\s+(.*)$/.exec(value);
-  return path === null
+  const end = value.startsWith("/") ? value.search(/\s/) : -1;
+  return end === -1
     ? { key, value, path: undefined, line }
-    : { key, value: path[2]!.trim(), path: normalizePath(path[1]!), line };
+    : { key, value: value.slice(end).trim(), path: normalizePath(value.slice(0, end)), line };
 };
 
 export const parseRobots = (input: string): Robots => {
@@ -204,7 +208,9 @@ export const parseRobots = (input: string): Robots => {
   for (const [index, raw] of truncateUtf8(input, ROBOTS_MAX_BYTES)
     .split(/\r\n|\r|\n/)
     .entries()) {
-    const line = raw.replace(/#.*$/, "").trim();
+    // a comment starts at the first `#` and continues to the end of the line (RFC 9309, section 2.2.3)
+    const hash = raw.indexOf("#");
+    const line = (hash === -1 ? raw : raw.slice(0, hash)).trim();
     const colon = line.indexOf(":");
     if (colon <= 0) continue;
     const key = line.slice(0, colon).trim().toLowerCase();

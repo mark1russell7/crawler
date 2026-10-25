@@ -6,9 +6,12 @@
  */
 import type { Claim } from "./measure.mts";
 
-/** This value names an arm of the eval: the tools of its sessions. */
-export type Arm = "mcp" | "webfetch";
-export const ARMS: readonly Arm[] = ["mcp", "webfetch"];
+/**
+ * This value names an arm of the eval: the tools of its sessions. `mcp-quote` is the MCP server with
+ * `--tools quote`, which gives only the four tools of a quote.
+ */
+export type Arm = "mcp" | "mcp-quote" | "webfetch";
+export const ARMS: readonly Arm[] = ["mcp", "mcp-quote", "webfetch"];
 
 /** The tokens of a session, as the API counts them. */
 export interface Usage {

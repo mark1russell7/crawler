@@ -107,18 +107,19 @@ Part B gives the same claims to Claude Code (`claude -p`), and measures the toke
 
 ### The arms
 
-Each claim gets one session in each arm. The two arms use the same model and the same prompt.
+Each claim gets one session in each arm. The arms use the same model and the same prompt.
 
 | Arm | The tools of the session |
 | --- | --- |
 | `mcp` | The tools of `polite-crawler-mcp`, with a new store. The session has no built-in tool. |
+| `mcp-quote` | The same server with `--tools quote` (0.2.3 or later): only `crawl_fetch`, `crawl_find`, `crawl_read` and `crawl_verify`. |
 | `webfetch` | The built-in tool WebFetch. The session has no MCP server. |
 
 The prompt gives the URL and the question. It asks for the exact words of the page between `<quote>` and `</quote>`. `session-result.mts` has the prompt.
 
 ### The method of part B
 
-1. A job for each arm starts the sessions one after the other. Thus each site gets no more than two sessions at the same time.
+1. A job for each arm starts the sessions one after the other. No more than two jobs operate at the same time. Thus each site gets no more than two sessions at the same time.
 2. Each session starts in a new empty folder, with no settings and no `CLAUDE.md`.
 3. The session operates with `--output-format stream-json`. The job keeps the stream of each session.
 4. The record of a session takes the tokens and the cost from the result of the stream. The tokens include each model of the session. WebFetch gives each page to a small model, and the record counts that model too.
@@ -151,7 +152,7 @@ Start a dry run with two claims first:
 gh workflow run eval-sessions.yml -R mark1russell7/crawler -f limit=2
 ```
 
-The inputs are `limit`, `only` (claim ids), `repeat` (the sessions of each claim in each arm), `model`, `budget`, `max_turns`, `max_session_usd` and `summary_of`. With the id of an earlier run in `summary_of`, the workflow starts no session. It makes the summary of that run again, with the code of the branch. The job summary shows the tables. The artifact `eval-b` holds `eval-b-result.json` and `eval-b-summary.md`. The artifacts `sessions-mcp` and `sessions-webfetch` hold the stream of each session.
+The inputs are `arms` (a JSON list, default `["mcp","webfetch"]`), `mcp_version`, `limit`, `only` (claim ids), `repeat` (the sessions of each claim in each arm), `model`, `budget`, `max_turns`, `max_session_usd` and `summary_of`. With the id of an earlier run in `summary_of`, the workflow starts no session. It makes the summary of that run again, with the code of the branch. The job summary shows the tables. The artifact `eval-b` holds `eval-b-result.json` and `eval-b-summary.md`. The artifacts `sessions-mcp` and `sessions-webfetch` hold the stream of each session.
 
 The table "Projected for the set" gives the cost of the 30 claims at the mean cost of a session. Use it to decide on the full run.
 

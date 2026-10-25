@@ -175,6 +175,28 @@ export const countText = (text: string): Count => ({
   tokens: countTokens(text, NO_SPECIAL),
 });
 
+/** These counts are the cost of the MCP server one time in each session: the instructions and the tool list. */
+export interface ToolDefinitionCount {
+  readonly instructions: Count;
+  /** This count is the JSON of the tool list (`tools/list`): names, descriptions and schemas. */
+  readonly tools: Count;
+  /** This count is the two texts in one, the value `tool_definitions` of a measurement. */
+  readonly total: Count;
+}
+
+/** This function counts the instructions and the tool list of an MCP server, as a measurement counts them. */
+export const countToolDefinitions = (
+  instructions: string | undefined,
+  tools: unknown,
+): ToolDefinitionCount => {
+  const list = JSON.stringify(tools);
+  return {
+    instructions: countText(instructions ?? ""),
+    tools: countText(list),
+    total: countText(`${instructions ?? ""}\n${list}`),
+  };
+};
+
 const ZERO: Count = { chars: 0, tokens: 0 };
 const plus = (...counts: readonly Count[]): Count => ({
   chars: counts.reduce((sum, count) => sum + count.chars, 0),
@@ -382,9 +404,7 @@ export const measure = async (options: MeasureOptions): Promise<Measurement> => 
     Date.now = () => clock.now();
     try {
       const listed = await client.listTools();
-      const tool_definitions = countText(
-        `${client.getInstructions() ?? ""}\n${JSON.stringify(listed.tools)}`,
-      );
+      const tool_definitions = countToolDefinitions(client.getInstructions(), listed.tools).total;
 
       const call = async (
         name: string,

@@ -18,6 +18,12 @@ Add the server to Claude Code:
 claude mcp add polite-crawler -- npx -y polite-crawler-mcp
 ```
 
+A session reads the definitions of the tools in each turn, so each tool costs tokens. To prove facts with quotes, the server needs only four tools. `--tools quote` gives `crawl_fetch`, `crawl_find`, `crawl_read` and `crawl_verify`:
+
+```sh
+claude mcp add polite-crawler -- npx -y polite-crawler-mcp --tools quote
+```
+
 For Claude Desktop and other MCP clients, add this server to the configuration:
 
 ```json
@@ -105,6 +111,7 @@ The crawler records each release in the capture log.
 | `--allow-private` | `POLITE_CRAWLER_ALLOW_PRIVATE=1` | Fetch loopback, private and link-local addresses too. |
 | `--allow-user-provided` | `POLITE_CRAWLER_ALLOW_USER_PROVIDED=1` | Let `user_provided` work when the client cannot ask the user. |
 | `--no-browser` | | Do not open a headless browser. |
+| `--tools <names>` | | Give only these tools. `quote` gives `crawl_fetch`, `crawl_find`, `crawl_read` and `crawl_verify`. A list with commas names the tools, for example `quote,crawl_extract`. The default is all nine tools. |
 | `--sign-key <file>` | `POLITE_CRAWLER_SIGN_KEY` | Sign each request with this Ed25519 key (PKCS#8 PEM or JWK). |
 | `--signature-agent <url>` | `POLITE_CRAWLER_SIGNATURE_AGENT` | Where a site finds the public key of `--sign-key`: an https origin, or the URL of a JSON Web Key Set. |
 | `--embedder <name>` | `POLITE_CRAWLER_EMBEDDER` | The local model of hybrid search: `transformers` or `ollama`. `crawl_find` then takes `rank: "hybrid"`. |
@@ -136,12 +143,14 @@ await server.connect(serverSide);
 
 | Export | What it gives |
 | --- | --- |
-| `createMcpServer(crawler, options)` | The nine tools over one crawler. `connect(transport)` connects it to one transport of the MCP SDK, and `close()` stops it. |
+| `createMcpServer(crawler, options)` | The nine tools over one crawler, or the tools of the option `tools`. `connect(transport)` connects it to one transport of the MCP SDK, and `close()` stops it. |
 | `startMcpServer(options)` | The server on the standard input and output, as `npx polite-crawler-mcp` starts it. |
 | `startMcpHttpServer(crawler, options)` | The tools over Streamable HTTP, with the bearer token, the tasks and the status route. |
 | `mcpHttpHost` | The MCP host of the daemon of polite-crawler (`DaemonOptions.mcpHost`). |
 | `crawlTools`, `crawlHostOptions`, `crawlContent` | The procedures of the tools, the options of `createMcpHost`, and the content hook of the envelopes: to put the tools on an MCP host of your own. |
 | `McpTaskStore` | The store of the tasks of `crawl_site` and `crawl_discover`, from `@procedures/mcp-server`. |
+
+The option `tools` of `createMcpServer`, `startMcpServer`, `startMcpHttpServer` and `crawlTools` takes the names of `--tools`, for example `{ tools: ["quote"] }`. The instructions of the server then name only these tools. A name that is not a tool is an error.
 
 Before 0.2.0, `createMcpServer` of `polite-crawler/mcp` gave an `McpServer` of the MCP SDK. In 0.2.0, it gives a `CrawlMcpServer` with `connect`, `close` and `host`. The store of the tasks is `McpTaskStore`, not `CrawlTaskStore`: its `running()` gives `createdAt` and `updatedAt`.
 

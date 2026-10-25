@@ -151,6 +151,7 @@ Add an option after `polite-crawler-mcp`, for example `npx -y polite-crawler-mcp
 | `--allow-private` | `POLITE_CRAWLER_ALLOW_PRIVATE=1` | The crawler fetches loopback, private and link-local addresses too. By default, it refuses them. |
 | `--allow-user-provided` | `POLITE_CRAWLER_ALLOW_USER_PROVIDED=1` | `user_provided` works when the client cannot ask the user. [Read the rule](#pages-that-refuse-ai-input). |
 | `--no-browser` | | The crawler does not open a headless browser. |
+| `--tools <names>` | | The server gives only these tools. `quote` gives `crawl_fetch`, `crawl_find`, `crawl_read` and `crawl_verify`. [Read why](#a-smaller-tool-list). |
 | `--sign-key <file>` | `POLITE_CRAWLER_SIGN_KEY` | The crawler signs each request with this Ed25519 key (Web Bot Auth). It needs `--signature-agent`. |
 | `--signature-agent <url>` | `POLITE_CRAWLER_SIGNATURE_AGENT` | Where a site finds the public key of `--sign-key`. |
 | `--embedder <name>` | `POLITE_CRAWLER_EMBEDDER` | The local model of hybrid search: `transformers` or `ollama`. `crawl_find` then takes `rank: "hybrid"`. |
@@ -171,6 +172,18 @@ claude mcp add polite-crawler -- npx -y polite-crawler-mcp --embedder ollama
 - With `ollama`, install Ollama and pull the model first: `ollama pull nomic-embed-text`.
 - Start `npx polite-crawler embed --embedder <name>` to give vectors to each stored page. A search gives vectors only to its BM25 candidates.
 - A page that asks not to be AI input does not go to the model.
+
+### A smaller tool list
+
+A session reads the definitions of the tools and the instructions of the server in each turn. Thus each tool costs tokens, also when the assistant does not use it. To prove facts with quotes, the assistant needs only four tools:
+
+```sh
+claude mcp add polite-crawler -- npx -y polite-crawler-mcp --tools quote
+```
+
+- `--tools quote` gives `crawl_fetch`, `crawl_find`, `crawl_read` and `crawl_verify`. The definitions then cost approximately 40% of the nine tools.
+- `--tools` also takes tool names with commas, for example `--tools quote,crawl_extract`.
+- The instructions of the server name only the tools of the list.
 
 ## The tools
 

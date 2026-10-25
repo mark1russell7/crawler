@@ -23,7 +23,7 @@ A prerelease version (`0.2.0-beta.1`) goes to the npm tag `next`. Each other ver
   - A run checks the due entries in the sequence of their times, so an earlier time also comes first. The time is not before one floor (`1h`) after the last check.
   - `add` with `keepSchedule: true` keeps the time of the next check of a page on the list. The default does not change: `add` sets that time one `every` after the last check.
   - The new parts are beta: `WatchRescheduleOptions`, `WatchOptions.keepSchedule` and `WatchList.reschedule`. `reschedule` is optional in `WatchList`, so a watch list of your own stays correct. `HybridCrawler.watch` has it.
-- **polite-crawler-mcp 0.2.3** comes with this version. It has no change of its own.
+- **polite-crawler-mcp 0.2.3** comes with this version. Its tool list is shorter, and the option `tools` gives fewer tools. Its [changelog](packages/polite-crawler-mcp/CHANGELOG.md) gives the numbers.
 
 ## 0.2.2 - 2026-10-25
 

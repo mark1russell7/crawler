@@ -15,7 +15,10 @@ A prerelease version (`0.2.0-beta.1`) goes to the npm tag `next`. Each other ver
 
 ## Unreleased
 
+## 0.2.2 - 2026-10-25
+
 - **An error of the embedder no longer stops the process.** Two hybrid searches (or a search and `embed`) can share a text that one of them embeds. When both calls failed, the call that waited for the shared text left an unhandled rejection, and Node.js stopped the process (a daemon too). With this version, the error goes only to the calls.
+- **polite-crawler-mcp 0.2.2** comes with this version. Its [changelog](packages/polite-crawler-mcp/CHANGELOG.md) gives the change.
 
 ## 0.2.1 - 2026-10-19
 

@@ -4,13 +4,15 @@
  */
 import crawlerPackage from "polite-crawler/package.json";
 import evalA from "../data/eval-a.json";
-import evalB from "../data/eval-b.json";
+import evalBData from "../data/eval-b.json";
+import type { EvalBData } from "../lib/eval-b.ts";
 import study from "../data/robots-study.json";
 import type { Study } from "../lib/study.ts";
 import { FEED_URL } from "../lib/feed.ts";
 import { DATA_LICENSE, agentRows, summarize } from "../lib/study.ts";
 
 const SITE = "https://mark1russell7.github.io/crawler/";
+const evalB = evalBData as EvalBData;
 
 /** This function gives the text of llms.txt for a dataset. */
 export const llmsText = (data: Study): string => {
@@ -21,7 +23,14 @@ export const llmsText = (data: Study): string => {
   const fileShare = (token: string): string =>
     `${(rows.find((row) => row.token === token)?.fileShare ?? 0).toFixed(1)}%`;
   const day = data.fetched.from.slice(0, 10);
-  const sonnet = evalB.models.find((model) => model.id === "sonnet")!;
+  // the WebFetch arm comes from the first run of Sonnet, and polite-crawler from the newest
+  const sonnet = evalB.runs.find(
+    (run) => run.name === "Sonnet" && run.arms.webfetch !== undefined,
+  )!;
+  const lean = evalB.runs.findLast((run) => run.name === "Sonnet")!;
+  const webfetch = sonnet.arms.webfetch!;
+  const mcp = lean.arms.mcp!;
+  const quote = lean.arms["mcp-quote"];
   return `# polite-crawler
 
 > polite-crawler is a TypeScript web crawler for research and for AI agents, on npm as \`polite-crawler\` (version ${crawlerPackage.version}, Node.js 22.19 or later). It fetches a source one time, keeps the response in a capture log and a content-addressed blob store, and answers later questions from a local SQLite FTS5 index with no new request. It obeys robots.txt (RFC 9309, and the rules for Claude-User when an assistant asks), keeps one request in progress for each host, obeys Retry-After, and stops at a challenge, a 401, a 402 or a 403.
@@ -63,7 +72,7 @@ Install it with \`npm install polite-crawler\`. Use \`openCrawler({ dir })\` and
 
 - [What 300 restaurant websites taught a crawler](${SITE}notes/restaurant-websites/): a survey
 - [Tokens to prove a claim](${SITE}notes/tokens-per-claim/): eval part A. To prove ${String(evalA.summary.claims)} claims with exact quotes, the polite-crawler path (fetch, find, read, verify) read ${evalA.summary.polite.total.toLocaleString("en-US")} tokens, and the pages as Markdown have ${evalA.summary.markdown.total.toLocaleString("en-US")} (${String(evalA.summary.ratio.markdownTotal)} times; the median for one claim is ${String(evalA.summary.ratio.markdownMedian)}). The tokenizer ${evalA.tokenizer} is a proxy, not the tokenizer of Claude
-- [Real Claude Code sessions](${SITE}notes/claude-code-sessions/): eval part B. In real sessions of Claude Code (${sonnet.model}), the median session that proves one claim cost $${sonnet.arms.webfetch.medianCostUsd.toFixed(4)} with WebFetch and $${sonnet.arms.mcp.medianCostUsd.toFixed(4)} with the MCP tools of polite-crawler, because WebFetch gives the page to a small model (${evalB.helper}). Each quote was word for word on the page in ${String(sonnet.arms.mcp.onPage)} of ${String(sonnet.arms.mcp.sessions)} sessions with polite-crawler and ${String(sonnet.arms.webfetch.onPage)} of ${String(sonnet.arms.webfetch.sessions)} with WebFetch
+- [Real Claude Code sessions](${SITE}notes/claude-code-sessions/): eval part B. In real sessions of Claude Code (${lean.model}), the median session that proves one claim cost $${webfetch.medianCostUsd.toFixed(4)} with WebFetch and $${mcp.medianCostUsd.toFixed(4)} with the MCP tools of polite-crawler-mcp ${lean.mcp}${quote === undefined ? "" : ` ($${quote.medianCostUsd.toFixed(4)} with \`--tools quote\`)`}. WebFetch gives the page to a small model (${evalB.helper}), and the main model of polite-crawler writes the text of the page to its cache, the most expensive kind of input token. Each quote was word for word on the page in ${String(mcp.onPage)} of ${String(mcp.sessions)} sessions with polite-crawler and ${String(webfetch.onPage)} of ${String(webfetch.sessions)} with WebFetch. The WebFetch arm ran with polite-crawler-mcp ${sonnet.mcp}, and the run of ${lean.mcp} did not run it again
 - [The source](https://github.com/mark1russell7/crawler)
 - [Sitemap](${SITE}sitemap-index.xml): each page of the site, with the date of its last change
 `;

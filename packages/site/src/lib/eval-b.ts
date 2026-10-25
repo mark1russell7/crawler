@@ -5,9 +5,15 @@
  * gives the order of the claims and the linear scale of the figure.
  */
 
-/** The two arms of part B. Each arm gives the same prompt to the same model. */
+/** The arms of part B. Each arm of a run gives the same prompt to the same model. */
 export const ARMS = [
-  { id: "mcp", label: "polite-crawler", tools: "the MCP tools of polite-crawler-mcp" },
+  { id: "mcp", label: "polite-crawler", tools: "the nine MCP tools of polite-crawler-mcp" },
+  {
+    id: "mcp-quote",
+    label: "polite-crawler, four tools",
+    tools:
+      "polite-crawler-mcp with --tools quote: crawl_fetch, crawl_find, crawl_read and crawl_verify",
+  },
   { id: "webfetch", label: "WebFetch", tools: "the built-in tool WebFetch" },
 ] as const;
 
@@ -15,6 +21,17 @@ export type Arm = (typeof ARMS)[number]["id"];
 
 /** The check of the answer of a session against the quote of the claim. */
 export type Check = "verified" | "partial" | "wrong" | "no-quote";
+
+/**
+ * A number for each kind of token: the input, the tokens written to the cache, the tokens read from
+ * the cache and the output.
+ */
+export interface ByKind {
+  readonly input: number;
+  readonly cacheWrite: number;
+  readonly cacheRead: number;
+  readonly output: number;
+}
 
 /** One session of Claude Code. */
 export interface Session {
@@ -26,7 +43,7 @@ export interface Session {
   readonly onPage: boolean | null;
 }
 
-/** The summary of one arm with one model. */
+/** The summary of one arm of one run. */
 export interface ArmSummary {
   readonly sessions: number;
   readonly verified: number;
@@ -42,6 +59,12 @@ export interface ArmSummary {
   readonly mainUsd: number;
   /** The part of the cost that the small model of WebFetch used. */
   readonly helperUsd: number;
+  /** The cost of the main model, by the kind of token. The sum is `mainUsd`. */
+  readonly mainKindsUsd: ByKind;
+  /** The median tokens of a session for the main model, by the kind of token. */
+  readonly mainTokens: ByKind;
+  /** The median tokens of a session for the small model of WebFetch. They are zero in the other arms. */
+  readonly helperTokens: ByKind;
   readonly medianCostUsd: number;
   readonly costPerVerifiedUsd: number;
   readonly costPerOnPageUsd: number;
@@ -52,22 +75,44 @@ export interface ArmSummary {
   readonly toolCalls: number;
 }
 
-/** The sessions of one model: one run of the workflow, and the run that made its summary. */
-export interface ModelRun {
-  /** A short id, for example "sonnet". */
+/** One eval of part B: the runs with one version of polite-crawler-mcp, and their dry run. */
+export interface Version {
+  /** The version of polite-crawler-mcp, for example "0.2.1". */
+  readonly mcp: string;
+  /** The day of the sessions, in UTC. */
+  readonly date: string;
+  /** The commit of the code that made the summaries. */
+  readonly commit: string;
+  readonly claudeCode: string;
+  /** The cost of the dry run and of each run of this version. */
+  readonly costUsd: number;
+  readonly dryRun: { readonly run: number; readonly sessions: number; readonly costUsd: number };
+}
+
+/** The sessions of one model with one version: one run of the workflow, and the run that made its summary. */
+export interface Run {
+  /** A short id: the model and the version, for example "sonnet-0.2.1". */
   readonly id: string;
   readonly model: string;
-  /** The name on the page, for example "Sonnet". */
+  /** The name of the model on the page, for example "Sonnet". */
   readonly name: string;
+  /** The version of polite-crawler-mcp. */
+  readonly mcp: string;
   /** The sessions of each claim in each arm. */
   readonly repeat: number;
   readonly run: number;
   readonly summary: number;
   readonly costUsd: number;
-  readonly arms: Record<Arm, ArmSummary>;
+  /** The arms of this run. A run does not always have each arm. */
+  readonly arms: Partial<Record<Arm, ArmSummary>>;
+  /**
+   * The id of the run that gives the WebFetch arm, when this run has no WebFetch arm. It is the run of
+   * the same model with an earlier version. Null when the run has its own WebFetch arm.
+   */
+  readonly webfetchFrom: string | null;
 }
 
-/** One claim, with its sessions for each model and each arm. */
+/** One claim, with its sessions for each run and each arm. */
 export interface SessionClaim {
   readonly id: string;
   readonly url: string;
@@ -76,24 +121,21 @@ export interface SessionClaim {
   readonly question: string;
   /** The tokens of the page as Markdown, in the count of part A. The figure uses it for the order. */
   readonly markdown: number;
-  /** The sessions, by the id of the model and by the arm. */
-  readonly sessions: Readonly<Record<string, Record<Arm, readonly Session[]>>>;
+  /** The sessions, by the id of the run and by the arm. */
+  readonly sessions: Readonly<Record<string, Partial<Record<Arm, readonly Session[]>>>>;
 }
 
 /** The data of eval part B. */
 export interface EvalBData {
-  /** The day of the sessions, in UTC. */
-  readonly date: string;
-  /** The commit of the code that made the summaries. */
-  readonly commit: string;
-  readonly claudeCode: string;
-  readonly mcp: string;
   /** The small model that reads each page for WebFetch. */
   readonly helper: string;
-  /** The cost of the whole eval: the dry run and each model. */
+  /** The prices that gave the cost of each session, in USD for one million tokens, for each model. */
+  readonly prices: Readonly<Record<string, Partial<ByKind>>>;
+  /** The cost of the whole eval: each version, with its dry run. */
   readonly costUsd: number;
-  readonly dryRun: { readonly run: number; readonly sessions: number; readonly costUsd: number };
-  readonly models: readonly ModelRun[];
+  /** The versions of polite-crawler-mcp, the earliest first. */
+  readonly versions: readonly Version[];
+  readonly runs: readonly Run[];
   readonly claims: readonly SessionClaim[];
 }
 
@@ -105,21 +147,43 @@ export function median(values: readonly number[]): number {
   return sorted.length % 2 === 1 ? sorted[middle]! : (sorted[middle - 1]! + sorted[middle]!) / 2;
 }
 
-/** This function gives the sessions of a claim for a model and an arm. */
-export const sessionsOf = (claim: SessionClaim, model: string, arm: Arm): readonly Session[] =>
-  claim.sessions[model]?.[arm] ?? [];
+/** One series of the figure: the sessions of one arm, from one run. */
+export interface Series {
+  readonly arm: Arm;
+  /** The id of the run that gives the sessions. */
+  readonly run: string;
+  /** True when the sessions come from an earlier run, not from the selected run. */
+  readonly earlier: boolean;
+}
 
-/** This function gives the median cost of a session of a claim, for a model and an arm. */
-export const claimCost = (claim: SessionClaim, model: string, arm: Arm): number =>
-  median(sessionsOf(claim, model, arm).map((session) => session.usd));
+/** This function gives the series of a run in the order of `ARMS`, with the WebFetch arm of an earlier run. */
+export function seriesOf(run: Run): Series[] {
+  return ARMS.flatMap(({ id: arm }): Series[] => {
+    if (run.arms[arm] !== undefined) return [{ arm, run: run.id, earlier: false }];
+    if (arm === "webfetch" && run.webfetchFrom !== null)
+      return [{ arm, run: run.webfetchFrom, earlier: true }];
+    return [];
+  });
+}
 
-/** The median cost of polite-crawler divided by the median cost of WebFetch, for a claim. */
-export const costRatio = (claim: SessionClaim, model: string): number =>
-  claimCost(claim, model, "mcp") / claimCost(claim, model, "webfetch");
+/** This function gives the id of the run with the WebFetch sessions for a run. */
+export const webfetchRunOf = (run: Run): string => run.webfetchFrom ?? run.id;
 
-/** True when the median session of polite-crawler costs less than the median session of WebFetch. */
-export const costsLess = (claim: SessionClaim, model: string): boolean =>
-  costRatio(claim, model) < 1;
+/** This function gives the sessions of a claim for a run and an arm. */
+export const sessionsOf = (claim: SessionClaim, run: string, arm: Arm): readonly Session[] =>
+  claim.sessions[run]?.[arm] ?? [];
+
+/** This function gives the median cost of a session of a claim, for a run and an arm. */
+export const claimCost = (claim: SessionClaim, run: string, arm: Arm): number =>
+  median(sessionsOf(claim, run, arm).map((session) => session.usd));
+
+/** The median cost of an arm of polite-crawler divided by the median cost of WebFetch, for a claim. */
+export const costRatio = (claim: SessionClaim, run: Run, arm: Arm = "mcp"): number =>
+  claimCost(claim, run.id, arm) / claimCost(claim, webfetchRunOf(run), "webfetch");
+
+/** True when the median session of an arm of polite-crawler costs less than the median session of WebFetch. */
+export const costsLess = (claim: SessionClaim, run: Run, arm: Arm = "mcp"): boolean =>
+  costRatio(claim, run, arm) < 1;
 
 /** This function gives the claims, the shortest page first. The size of a page is its count of part A. */
 export function bySize(claims: readonly SessionClaim[]): SessionClaim[] {
@@ -129,6 +193,9 @@ export function bySize(claims: readonly SessionClaim[]): SessionClaim[] {
 /** This function gives the count of the sessions with each quote of the answer on the page. */
 export const onPageOf = (sessions: readonly Session[]): number =>
   sessions.filter((session) => session.onPage === true).length;
+
+/** This function gives the change from `from` to `to` as a percent: -6 for a cut of 6%. */
+export const change = (from: number, to: number): number => Math.round(((to - from) / from) * 100);
 
 /** This function writes a ratio of costs as "2.0× more" or "1.4× less", for polite-crawler. */
 export function ratioText(ratio: number): string {

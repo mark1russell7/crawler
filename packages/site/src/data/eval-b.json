@@ -1,20 +1,56 @@
 {
-  "date": "2026-10-25",
-  "commit": "aa97ae2",
-  "claudeCode": "2.1.296",
-  "mcp": "0.2.1",
   "helper": "claude-haiku-5-5",
-  "costUsd": 5.175489,
-  "dryRun": {
-    "run": 40152547898,
-    "sessions": 4,
-    "costUsd": 0.0804
+  "prices": {
+    "claude-sonnet-5-5": {
+      "input": 2,
+      "cacheWrite": 2.5,
+      "cacheRead": 0.1,
+      "output": 10
+    },
+    "claude-opus-5-5": {
+      "input": 4,
+      "cacheWrite": 5,
+      "cacheRead": 0.2,
+      "output": 20
+    },
+    "claude-haiku-5-5": {
+      "input": 0.1,
+      "output": 0.5
+    }
   },
-  "models": [
+  "costUsd": 8.616268,
+  "versions": [
     {
-      "id": "sonnet",
-      "name": "Sonnet",
+      "mcp": "0.2.1",
+      "date": "2026-10-25",
+      "commit": "aa97ae2",
+      "claudeCode": "2.1.296",
+      "costUsd": 5.175489,
+      "dryRun": {
+        "run": 40152547898,
+        "sessions": 4,
+        "costUsd": 0.0804
+      }
+    },
+    {
+      "mcp": "0.2.3",
+      "date": "2026-10-25",
+      "commit": "f19d91a",
+      "claudeCode": "2.1.296",
+      "costUsd": 3.440779,
+      "dryRun": {
+        "run": 40163467327,
+        "sessions": 4,
+        "costUsd": 0.087879
+      }
+    }
+  ],
+  "runs": [
+    {
+      "id": "sonnet-0.2.1",
       "model": "claude-sonnet-5-5",
+      "name": "Sonnet",
+      "mcp": "0.2.1",
       "repeat": 3,
       "run": 40153411428,
       "summary": 40155103977,
@@ -31,6 +67,24 @@
           "costUsd": 1.932132,
           "mainUsd": 1.932132,
           "helperUsd": 0,
+          "mainKindsUsd": {
+            "input": 0.001444,
+            "cacheWrite": 1.25323,
+            "cacheRead": 0.301968,
+            "output": 0.37549
+          },
+          "mainTokens": {
+            "input": 8,
+            "cacheWrite": 4997.5,
+            "cacheRead": 31638.5,
+            "output": 337
+          },
+          "helperTokens": {
+            "input": 0,
+            "cacheWrite": 0,
+            "cacheRead": 0,
+            "output": 0
+          },
           "medianCostUsd": 0.017678,
           "costPerVerifiedUsd": 0.024457,
           "costPerOnPageUsd": 0.021956,
@@ -50,6 +104,24 @@
           "costUsd": 1.085374,
           "mainUsd": 0.801917,
           "helperUsd": 0.283456,
+          "mainKindsUsd": {
+            "input": 0.000788,
+            "cacheWrite": 0.520765,
+            "cacheRead": 0.045974,
+            "output": 0.23439
+          },
+          "mainTokens": {
+            "input": 4,
+            "cacheWrite": 2206,
+            "cacheRead": 4415,
+            "output": 184.5
+          },
+          "helperTokens": {
+            "input": 13132.5,
+            "cacheWrite": 0,
+            "cacheRead": 0,
+            "output": 476
+          },
           "medianCostUsd": 0.009924,
           "costPerVerifiedUsd": 0.013077,
           "costPerOnPageUsd": 0.013236,
@@ -58,12 +130,14 @@
           "medianTurns": 2,
           "toolCalls": 107
         }
-      }
+      },
+      "webfetchFrom": null
     },
     {
-      "id": "opus",
-      "name": "Opus",
+      "id": "opus-0.2.1",
       "model": "claude-opus-5-5",
+      "name": "Opus",
+      "mcp": "0.2.1",
       "repeat": 1,
       "run": 40154501047,
       "summary": 40155110580,
@@ -80,6 +154,24 @@
           "costUsd": 1.344916,
           "mainUsd": 1.344916,
           "helperUsd": 0,
+          "mainKindsUsd": {
+            "input": 0.001048,
+            "cacheWrite": 0.83323,
+            "cacheRead": 0.224378,
+            "output": 0.28626
+          },
+          "mainTokens": {
+            "input": 8,
+            "cacheWrite": 5151,
+            "cacheRead": 32633.5,
+            "output": 397.5
+          },
+          "helperTokens": {
+            "input": 0,
+            "cacheWrite": 0,
+            "cacheRead": 0,
+            "output": 0
+          },
           "medianCostUsd": 0.040756,
           "costPerVerifiedUsd": 0.051728,
           "costPerOnPageUsd": 0.046376,
@@ -99,6 +191,24 @@
           "costUsd": 0.732666,
           "mainUsd": 0.608768,
           "helperUsd": 0.123899,
+          "mainKindsUsd": {
+            "input": 0.000584,
+            "cacheWrite": 0.37202,
+            "cacheRead": 0.036264,
+            "output": 0.1999
+          },
+          "mainTokens": {
+            "input": 4,
+            "cacheWrite": 2235,
+            "cacheRead": 4413.5,
+            "output": 270.5
+          },
+          "helperTokens": {
+            "input": 13207.5,
+            "cacheWrite": 0,
+            "cacheRead": 0,
+            "output": 863.5
+          },
           "medianCostUsd": 0.020146,
           "costPerVerifiedUsd": 0.026167,
           "costPerOnPageUsd": 0.024422,
@@ -107,7 +217,95 @@
           "medianTurns": 2,
           "toolCalls": 43
         }
-      }
+      },
+      "webfetchFrom": null
+    },
+    {
+      "id": "sonnet-0.2.3",
+      "model": "claude-sonnet-5-5",
+      "name": "Sonnet",
+      "mcp": "0.2.3",
+      "repeat": 3,
+      "run": 40163619030,
+      "summary": 40163619030,
+      "costUsd": 3.3529,
+      "arms": {
+        "mcp": {
+          "sessions": 90,
+          "verified": 81,
+          "partial": 0,
+          "wrong": 6,
+          "noQuote": 3,
+          "onPage": 86,
+          "turnLimit": 1,
+          "costUsd": 1.695798,
+          "mainUsd": 1.695798,
+          "helperUsd": 0,
+          "mainKindsUsd": {
+            "input": 0.001356,
+            "cacheWrite": 1.125925,
+            "cacheRead": 0.233697,
+            "output": 0.33482
+          },
+          "mainTokens": {
+            "input": 6,
+            "cacheWrite": 4704.5,
+            "cacheRead": 18922,
+            "output": 308.5
+          },
+          "helperTokens": {
+            "input": 0,
+            "cacheWrite": 0,
+            "cacheRead": 0,
+            "output": 0
+          },
+          "medianCostUsd": 0.016625,
+          "costPerVerifiedUsd": 0.020936,
+          "costPerOnPageUsd": 0.019719,
+          "medianReadTokens": 24829,
+          "medianOutputTokens": 309,
+          "medianTurns": 3,
+          "toolCalls": 260
+        },
+        "mcp-quote": {
+          "sessions": 90,
+          "verified": 81,
+          "partial": 0,
+          "wrong": 7,
+          "noQuote": 2,
+          "onPage": 88,
+          "turnLimit": 0,
+          "costUsd": 1.657102,
+          "mainUsd": 1.657102,
+          "helperUsd": 0,
+          "mainKindsUsd": {
+            "input": 0.00144,
+            "cacheWrite": 1.142255,
+            "cacheRead": 0.165847,
+            "output": 0.34756
+          },
+          "mainTokens": {
+            "input": 8,
+            "cacheWrite": 4501.5,
+            "cacheRead": 17744,
+            "output": 328
+          },
+          "helperTokens": {
+            "input": 0,
+            "cacheWrite": 0,
+            "cacheRead": 0,
+            "output": 0
+          },
+          "medianCostUsd": 0.015769,
+          "costPerVerifiedUsd": 0.020458,
+          "costPerOnPageUsd": 0.018831,
+          "medianReadTokens": 21752,
+          "medianOutputTokens": 328,
+          "medianTurns": 4,
+          "toolCalls": 280
+        }
+      },
+      "webfetchFrom": "sonnet-0.2.1"
     }
   ],
   "claims": [
@@ -118,7 +316,7 @@
       "question": "What is the smallest robots.txt parsing limit that a crawler can use?",
       "markdown": 7935,
       "sessions": {
-        "sonnet": {
+        "sonnet-0.2.1": {
           "mcp": [
             {
               "usd": 0.041388,
@@ -160,7 +358,7 @@
             }
           ]
         },
-        "opus": {
+        "opus-0.2.1": {
           "mcp": [
             {
               "usd": 0.059072,
@@ -177,6 +375,48 @@
               "onPage": true
             }
           ]
+        },
+        "sonnet-0.2.3": {
+          "mcp": [
+            {
+              "usd": 0.021992,
+              "turns": 6,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.0191,
+              "turns": 5,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.031424,
+              "turns": 8,
+              "check": "verified",
+              "onPage": true
+            }
+          ],
+          "mcp-quote": [
+            {
+              "usd": 0.026011,
+              "turns": 6,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.017725,
+              "turns": 5,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.023547,
+              "turns": 7,
+              "check": "verified",
+              "onPage": true
+            }
+          ]
         }
       }
     },
@@ -187,7 +427,7 @@
       "question": "How long can a crawler use a cached robots.txt file?",
       "markdown": 7935,
       "sessions": {
-        "sonnet": {
+        "sonnet-0.2.1": {
           "mcp": [
             {
               "usd": 0.017357,
@@ -229,7 +469,7 @@
             }
           ]
         },
-        "opus": {
+        "opus-0.2.1": {
           "mcp": [
             {
               "usd": 0.034626,
@@ -246,6 +486,48 @@
               "onPage": true
             }
           ]
+        },
+        "sonnet-0.2.3": {
+          "mcp": [
+            {
+              "usd": 0.016595,
+              "turns": 4,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.016346,
+              "turns": 4,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.016352,
+              "turns": 4,
+              "check": "verified",
+              "onPage": true
+            }
+          ],
+          "mcp-quote": [
+            {
+              "usd": 0.01568,
+              "turns": 4,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.015749,
+              "turns": 4,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.015432,
+              "turns": 4,
+              "check": "verified",
+              "onPage": true
+            }
+          ]
         }
       }
     },
@@ -256,7 +538,7 @@
       "question": "What does the key word MUST mean in an RFC?",
       "markdown": 1061,
       "sessions": {
-        "sonnet": {
+        "sonnet-0.2.1": {
           "mcp": [
             {
               "usd": 0.017171,
@@ -298,7 +580,7 @@
             }
           ]
         },
-        "opus": {
+        "opus-0.2.1": {
           "mcp": [
             {
               "usd": 0.043991,
@@ -315,6 +597,48 @@
               "onPage": true
             }
           ]
+        },
+        "sonnet-0.2.3": {
+          "mcp": [
+            {
+              "usd": 0.016493,
+              "turns": 3,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.016478,
+              "turns": 3,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.016501,
+              "turns": 3,
+              "check": "verified",
+              "onPage": true
+            }
+          ],
+          "mcp-quote": [
+            {
+              "usd": 0.015842,
+              "turns": 3,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.015865,
+              "turns": 3,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.015796,
+              "turns": 3,
+              "check": "verified",
+              "onPage": true
+            }
+          ]
         }
       }
     },
@@ -325,7 +649,7 @@
       "question": "What does the 404 Not Found status code mean?",
       "markdown": 161837,
       "sessions": {
-        "sonnet": {
+        "sonnet-0.2.1": {
           "mcp": [
             {
               "usd": 0.017613,
@@ -367,7 +691,7 @@
             }
           ]
         },
-        "opus": {
+        "opus-0.2.1": {
           "mcp": [
             {
               "usd": 0.029199,
@@ -384,6 +708,48 @@
               "onPage": true
             }
           ]
+        },
+        "sonnet-0.2.3": {
+          "mcp": [
+            {
+              "usd": 0.016713,
+              "turns": 4,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.016654,
+              "turns": 4,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.016891,
+              "turns": 4,
+              "check": "verified",
+              "onPage": true
+            }
+          ],
+          "mcp-quote": [
+            {
+              "usd": 0.015719,
+              "turns": 4,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.015742,
+              "turns": 4,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.015779,
+              "turns": 4,
+              "check": "verified",
+              "onPage": true
+            }
+          ]
         }
       }
     },
@@ -394,7 +760,7 @@
       "question": "Why can HTTP not use the 418 status code?",
       "markdown": 161837,
       "sessions": {
-        "sonnet": {
+        "sonnet-0.2.1": {
           "mcp": [
             {
               "usd": 0.058971,
@@ -436,7 +802,7 @@
             }
           ]
         },
-        "opus": {
+        "opus-0.2.1": {
           "mcp": [
             {
               "usd": 0.119372,
@@ -453,6 +819,48 @@
               "onPage": true
             }
           ]
+        },
+        "sonnet-0.2.3": {
+          "mcp": [
+            {
+              "usd": 0.034178,
+              "turns": 8,
+              "check": "no-quote",
+              "onPage": null
+            },
+            {
+              "usd": 0.07187,
+              "turns": 13,
+              "check": "no-quote",
+              "onPage": null
+            },
+            {
+              "usd": 0.04985,
+              "turns": 11,
+              "check": "no-quote",
+              "onPage": null
+            }
+          ],
+          "mcp-quote": [
+            {
+              "usd": 0.044159,
+              "turns": 11,
+              "check": "no-quote",
+              "onPage": null
+            },
+            {
+              "usd": 0.039299,
+              "turns": 10,
+              "check": "wrong",
+              "onPage": true
+            },
+            {
+              "usd": 0.038175,
+              "turns": 9,
+              "check": "no-quote",
+              "onPage": null
+            }
+          ]
         }
       }
     },
@@ -463,7 +871,7 @@
       "question": "What kind of service do avian carriers provide for IP datagrams?",
       "markdown": 701,
       "sessions": {
-        "sonnet": {
+        "sonnet-0.2.1": {
           "mcp": [
             {
               "usd": 0.015934,
@@ -505,7 +913,7 @@
             }
           ]
         },
-        "opus": {
+        "opus-0.2.1": {
           "mcp": [
             {
               "usd": 0.04102,
@@ -522,6 +930,48 @@
               "onPage": true
             }
           ]
+        },
+        "sonnet-0.2.3": {
+          "mcp": [
+            {
+              "usd": 0.015229,
+              "turns": 3,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.0153,
+              "turns": 3,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.015244,
+              "turns": 3,
+              "check": "verified",
+              "onPage": true
+            }
+          ],
+          "mcp-quote": [
+            {
+              "usd": 0.014547,
+              "turns": 3,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.014535,
+              "turns": 3,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.014512,
+              "turns": 3,
+              "check": "verified",
+              "onPage": true
+            }
+          ]
         }
       }
     },
@@ -532,7 +982,7 @@
       "question": "What happens when someone tries to brew coffee with a teapot?",
       "markdown": 5364,
       "sessions": {
-        "sonnet": {
+        "sonnet-0.2.1": {
           "mcp": [
             {
               "usd": 0.017131,
@@ -574,7 +1024,7 @@
             }
           ]
         },
-        "opus": {
+        "opus-0.2.1": {
           "mcp": [
             {
               "usd": 0.027629,
@@ -591,6 +1041,48 @@
               "onPage": true
             }
           ]
+        },
+        "sonnet-0.2.3": {
+          "mcp": [
+            {
+              "usd": 0.016007,
+              "turns": 4,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.015899,
+              "turns": 4,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.015985,
+              "turns": 4,
+              "check": "verified",
+              "onPage": true
+            }
+          ],
+          "mcp-quote": [
+            {
+              "usd": 0.015084,
+              "turns": 4,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.015118,
+              "turns": 4,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.015335,
+              "turns": 4,
+              "check": "verified",
+              "onPage": true
+            }
+          ]
         }
       }
     },
@@ -601,7 +1093,7 @@
       "question": "Which character encoding must JSON text use between systems?",
       "markdown": 8655,
       "sessions": {
-        "sonnet": {
+        "sonnet-0.2.1": {
           "mcp": [
             {
               "usd": 0.017661,
@@ -643,7 +1135,7 @@
             }
           ]
         },
-        "opus": {
+        "opus-0.2.1": {
           "mcp": [
             {
               "usd": 0.027916,
@@ -660,6 +1152,48 @@
               "onPage": true
             }
           ]
+        },
+        "sonnet-0.2.3": {
+          "mcp": [
+            {
+              "usd": 0.01326,
+              "turns": 3,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.013268,
+              "turns": 3,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.013314,
+              "turns": 3,
+              "check": "verified",
+              "onPage": true
+            }
+          ],
+          "mcp-quote": [
+            {
+              "usd": 0.015174,
+              "turns": 4,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.015489,
+              "turns": 4,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.015452,
+              "turns": 4,
+              "check": "verified",
+              "onPage": true
+            }
+          ]
         }
       }
     },
@@ -670,7 +1204,7 @@
       "question": "What does the HTTP status code 429 mean?",
       "markdown": 4820,
       "sessions": {
-        "sonnet": {
+        "sonnet-0.2.1": {
           "mcp": [
             {
               "usd": 0.027693,
@@ -712,7 +1246,7 @@
             }
           ]
         },
-        "opus": {
+        "opus-0.2.1": {
           "mcp": [
             {
               "usd": 0.02757,
@@ -729,6 +1263,48 @@
               "onPage": true
             }
           ]
+        },
+        "sonnet-0.2.3": {
+          "mcp": [
+            {
+              "usd": 0.019543,
+              "turns": 4,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.020809,
+              "turns": 4,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.02055,
+              "turns": 4,
+              "check": "verified",
+              "onPage": true
+            }
+          ],
+          "mcp-quote": [
+            {
+              "usd": 0.020594,
+              "turns": 4,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.019908,
+              "turns": 4,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.015324,
+              "turns": 4,
+              "check": "verified",
+              "onPage": true
+            }
+          ]
         }
       }
     },
@@ -739,7 +1315,7 @@
       "question": "How are the records of a CSV file separated?",
       "markdown": 3929,
       "sessions": {
-        "sonnet": {
+        "sonnet-0.2.1": {
           "mcp": [
             {
               "usd": 0.024352,
@@ -781,7 +1357,7 @@
             }
           ]
         },
-        "opus": {
+        "opus-0.2.1": {
           "mcp": [
             {
               "usd": 0.033006,
@@ -798,6 +1374,48 @@
               "onPage": true
             }
           ]
+        },
+        "sonnet-0.2.3": {
+          "mcp": [
+            {
+              "usd": 0.012875,
+              "turns": 3,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.012896,
+              "turns": 3,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.015706,
+              "turns": 4,
+              "check": "verified",
+              "onPage": true
+            }
+          ],
+          "mcp-quote": [
+            {
+              "usd": 0.014831,
+              "turns": 4,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.014805,
+              "turns": 4,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.014814,
+              "turns": 4,
+              "check": "verified",
+              "onPage": true
+            }
+          ]
         }
       }
     },
@@ -808,7 +1426,7 @@
       "question": "What is the primary goal of TLS 1.3?",
       "markdown": 90750,
       "sessions": {
-        "sonnet": {
+        "sonnet-0.2.1": {
           "mcp": [
             {
               "usd": 0.016929,
@@ -850,7 +1468,7 @@
             }
           ]
         },
-        "opus": {
+        "opus-0.2.1": {
           "mcp": [
             {
               "usd": 0.029281,
@@ -867,6 +1485,48 @@
               "onPage": true
             }
           ]
+        },
+        "sonnet-0.2.3": {
+          "mcp": [
+            {
+              "usd": 0.020901,
+              "turns": 5,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.015886,
+              "turns": 4,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.016394,
+              "turns": 4,
+              "check": "verified",
+              "onPage": true
+            }
+          ],
+          "mcp-quote": [
+            {
+              "usd": 0.015129,
+              "turns": 4,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.015747,
+              "turns": 4,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.014846,
+              "turns": 4,
+              "check": "verified",
+              "onPage": true
+            }
+          ]
         }
       }
     },
@@ -877,7 +1537,7 @@
       "question": "What is a web crawler?",
       "markdown": 27635,
       "sessions": {
-        "sonnet": {
+        "sonnet-0.2.1": {
           "mcp": [
             {
               "usd": 0.018797,
@@ -919,7 +1579,7 @@
             }
           ]
         },
-        "opus": {
+        "opus-0.2.1": {
           "mcp": [
             {
               "usd": 0.040324,
@@ -936,6 +1596,48 @@
               "onPage": true
             }
           ]
+        },
+        "sonnet-0.2.3": {
+          "mcp": [
+            {
+              "usd": 0.018201,
+              "turns": 3,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.018164,
+              "turns": 3,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.017419,
+              "turns": 3,
+              "check": "verified",
+              "onPage": true
+            }
+          ],
+          "mcp-quote": [
+            {
+              "usd": 0.017883,
+              "turns": 3,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.017903,
+              "turns": 3,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.017862,
+              "turns": 3,
+              "check": "verified",
+              "onPage": true
+            }
+          ]
         }
       }
     },
@@ -946,7 +1648,7 @@
       "question": "What is the file robots.txt for?",
       "markdown": 19829,
       "sessions": {
-        "sonnet": {
+        "sonnet-0.2.1": {
           "mcp": [
             {
               "usd": 0.019522,
@@ -988,7 +1690,7 @@
             }
           ]
         },
-        "opus": {
+        "opus-0.2.1": {
           "mcp": [
             {
               "usd": 0.040493,
@@ -1005,6 +1707,48 @@
               "onPage": true
             }
           ]
+        },
+        "sonnet-0.2.3": {
+          "mcp": [
+            {
+              "usd": 0.018842,
+              "turns": 3,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.018837,
+              "turns": 3,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.018845,
+              "turns": 3,
+              "check": "verified",
+              "onPage": true
+            }
+          ],
+          "mcp-quote": [
+            {
+              "usd": 0.018117,
+              "turns": 3,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.018125,
+              "turns": 3,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.018118,
+              "turns": 3,
+              "check": "verified",
+              "onPage": true
+            }
+          ]
         }
       }
     },
@@ -1015,7 +1759,7 @@
       "question": "When was Alan Turing born?",
       "markdown": 98133,
       "sessions": {
-        "sonnet": {
+        "sonnet-0.2.1": {
           "mcp": [
             {
               "usd": 0.032246,
@@ -1057,7 +1801,7 @@
             }
           ]
         },
-        "opus": {
+        "opus-0.2.1": {
           "mcp": [
             {
               "usd": 0.074176,
@@ -1074,6 +1818,48 @@
               "onPage": true
             }
           ]
+        },
+        "sonnet-0.2.3": {
+          "mcp": [
+            {
+              "usd": 0.03141,
+              "turns": 5,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.031531,
+              "turns": 5,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.031089,
+              "turns": 5,
+              "check": "verified",
+              "onPage": true
+            }
+          ],
+          "mcp-quote": [
+            {
+              "usd": 0.030645,
+              "turns": 5,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.018479,
+              "turns": 4,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.030732,
+              "turns": 5,
+              "check": "verified",
+              "onPage": true
+            }
+          ]
         }
       }
     },
@@ -1084,7 +1870,7 @@
       "question": "Which language did Python succeed?",
       "markdown": 71201,
       "sessions": {
-        "sonnet": {
+        "sonnet-0.2.1": {
           "mcp": [
             {
               "usd": 0.032606,
@@ -1126,7 +1912,7 @@
             }
           ]
         },
-        "opus": {
+        "opus-0.2.1": {
           "mcp": [
             {
               "usd": 0.064128,
@@ -1143,6 +1929,48 @@
               "onPage": true
             }
           ]
+        },
+        "sonnet-0.2.3": {
+          "mcp": [
+            {
+              "usd": 0.022496,
+              "turns": 6,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.019552,
+              "turns": 5,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.021528,
+              "turns": 6,
+              "check": "verified",
+              "onPage": true
+            }
+          ],
+          "mcp-quote": [
+            {
+              "usd": 0.039228,
+              "turns": 9,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.032857,
+              "turns": 7,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.029475,
+              "turns": 7,
+              "check": "verified",
+              "onPage": true
+            }
+          ]
         }
       }
     },
@@ -1153,7 +1981,7 @@
       "question": "What does the map method of an array return?",
       "markdown": 8165,
       "sessions": {
-        "sonnet": {
+        "sonnet-0.2.1": {
           "mcp": [
             {
               "usd": 0.019659,
@@ -1195,7 +2023,7 @@
             }
           ]
         },
-        "opus": {
+        "opus-0.2.1": {
           "mcp": [
             {
               "usd": 0.054056,
@@ -1212,6 +2040,48 @@
               "onPage": true
             }
           ]
+        },
+        "sonnet-0.2.3": {
+          "mcp": [
+            {
+              "usd": 0.014006,
+              "turns": 3,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.022726,
+              "turns": 4,
+              "check": "wrong",
+              "onPage": true
+            },
+            {
+              "usd": 0.01948,
+              "turns": 3,
+              "check": "wrong",
+              "onPage": true
+            }
+          ],
+          "mcp-quote": [
+            {
+              "usd": 0.016448,
+              "turns": 4,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.021431,
+              "turns": 4,
+              "check": "wrong",
+              "onPage": true
+            },
+            {
+              "usd": 0.016393,
+              "turns": 4,
+              "check": "verified",
+              "onPage": true
+            }
+          ]
         }
       }
     },
@@ -1222,7 +2092,7 @@
       "question": "What does JSON.parse do?",
       "markdown": 5531,
       "sessions": {
-        "sonnet": {
+        "sonnet-0.2.1": {
           "mcp": [
             {
               "usd": 0.019114,
@@ -1264,7 +2134,7 @@
             }
           ]
         },
-        "opus": {
+        "opus-0.2.1": {
           "mcp": [
             {
               "usd": 0.043383,
@@ -1281,6 +2151,48 @@
               "onPage": true
             }
           ]
+        },
+        "sonnet-0.2.3": {
+          "mcp": [
+            {
+              "usd": 0.019048,
+              "turns": 3,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.018719,
+              "turns": 3,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.019315,
+              "turns": 3,
+              "check": "verified",
+              "onPage": true
+            }
+          ],
+          "mcp-quote": [
+            {
+              "usd": 0.01824,
+              "turns": 3,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.018621,
+              "turns": 3,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.019244,
+              "turns": 3,
+              "check": "wrong",
+              "onPage": true
+            }
+          ]
         }
       }
     },
@@ -1291,7 +2203,7 @@
       "question": "What does Promise.all take as input?",
       "markdown": 7443,
       "sessions": {
-        "sonnet": {
+        "sonnet-0.2.1": {
           "mcp": [
             {
               "usd": 0.020422,
@@ -1333,7 +2245,7 @@
             }
           ]
         },
-        "opus": {
+        "opus-0.2.1": {
           "mcp": [
             {
               "usd": 0.059987,
@@ -1350,6 +2262,48 @@
               "onPage": true
             }
           ]
+        },
+        "sonnet-0.2.3": {
+          "mcp": [
+            {
+              "usd": 0.022273,
+              "turns": 3,
+              "check": "wrong",
+              "onPage": true
+            },
+            {
+              "usd": 0.019753,
+              "turns": 3,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.019807,
+              "turns": 3,
+              "check": "verified",
+              "onPage": true
+            }
+          ],
+          "mcp-quote": [
+            {
+              "usd": 0.02228,
+              "turns": 4,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.022301,
+              "turns": 4,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.025245,
+              "turns": 4,
+              "check": "wrong",
+              "onPage": true
+            }
+          ]
         }
       }
     },
@@ -1360,7 +2314,7 @@
       "question": "What is the Node.js fs module modeled on?",
       "markdown": 121232,
       "sessions": {
-        "sonnet": {
+        "sonnet-0.2.1": {
           "mcp": [
             {
               "usd": 0.016506,
@@ -1402,7 +2356,7 @@
             }
           ]
         },
-        "opus": {
+        "opus-0.2.1": {
           "mcp": [
             {
               "usd": 0.041676,
@@ -1419,6 +2373,48 @@
               "onPage": true
             }
           ]
+        },
+        "sonnet-0.2.3": {
+          "mcp": [
+            {
+              "usd": 0.015326,
+              "turns": 4,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.012616,
+              "turns": 3,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.018667,
+              "turns": 5,
+              "check": "verified",
+              "onPage": true
+            }
+          ],
+          "mcp-quote": [
+            {
+              "usd": 0.014722,
+              "turns": 4,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.014654,
+              "turns": 4,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.014266,
+              "turns": 4,
+              "check": "verified",
+              "onPage": true
+            }
+          ]
         }
       }
     },
@@ -1429,7 +2425,7 @@
       "question": "What does the Node.js path module do?",
       "markdown": 8011,
       "sessions": {
-        "sonnet": {
+        "sonnet-0.2.1": {
           "mcp": [
             {
               "usd": 0.016633,
@@ -1471,7 +2467,7 @@
             }
           ]
         },
-        "opus": {
+        "opus-0.2.1": {
           "mcp": [
             {
               "usd": 0.042859,
@@ -1488,6 +2484,48 @@
               "onPage": true
             }
           ]
+        },
+        "sonnet-0.2.3": {
+          "mcp": [
+            {
+              "usd": 0.012181,
+              "turns": 3,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.015922,
+              "turns": 3,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.012188,
+              "turns": 3,
+              "check": "verified",
+              "onPage": true
+            }
+          ],
+          "mcp-quote": [
+            {
+              "usd": 0.015213,
+              "turns": 3,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.014134,
+              "turns": 4,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.015266,
+              "turns": 3,
+              "check": "verified",
+              "onPage": true
+            }
+          ]
         }
       }
     },
@@ -1498,7 +2536,7 @@
       "question": "Which architecture is the Node.js core API built around?",
       "markdown": 26733,
       "sessions": {
-        "sonnet": {
+        "sonnet-0.2.1": {
           "mcp": [
             {
               "usd": 0.016518,
@@ -1540,7 +2578,7 @@
             }
           ]
         },
-        "opus": {
+        "opus-0.2.1": {
           "mcp": [
             {
               "usd": 0.05069,
@@ -1557,6 +2595,48 @@
               "onPage": true
             }
           ]
+        },
+        "sonnet-0.2.3": {
+          "mcp": [
+            {
+              "usd": 0.012531,
+              "turns": 3,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.015799,
+              "turns": 4,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.01254,
+              "turns": 3,
+              "check": "verified",
+              "onPage": true
+            }
+          ],
+          "mcp-quote": [
+            {
+              "usd": 0.014341,
+              "turns": 4,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.014625,
+              "turns": 4,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.014696,
+              "turns": 4,
+              "check": "verified",
+              "onPage": true
+            }
+          ]
         }
       }
     },
@@ -1567,7 +2647,7 @@
       "question": "What kind of format is JSON, according to the Python documentation?",
       "markdown": 9689,
       "sessions": {
-        "sonnet": {
+        "sonnet-0.2.1": {
           "mcp": [
             {
               "usd": 0.018258,
@@ -1609,7 +2689,7 @@
             }
           ]
         },
-        "opus": {
+        "opus-0.2.1": {
           "mcp": [
             {
               "usd": 0.041531,
@@ -1626,6 +2706,48 @@
               "onPage": true
             }
           ]
+        },
+        "sonnet-0.2.3": {
+          "mcp": [
+            {
+              "usd": 0.013697,
+              "turns": 3,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.02263,
+              "turns": 4,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.022206,
+              "turns": 4,
+              "check": "verified",
+              "onPage": true
+            }
+          ],
+          "mcp-quote": [
+            {
+              "usd": 0.019266,
+              "turns": 4,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.018978,
+              "turns": 4,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.019037,
+              "turns": 4,
+              "check": "verified",
+              "onPage": true
+            }
+          ]
         }
       }
     },
@@ -1636,7 +2758,7 @@
       "question": "Are the built-in functions of Python always available?",
       "markdown": 27691,
       "sessions": {
-        "sonnet": {
+        "sonnet-0.2.1": {
           "mcp": [
             {
               "usd": 0.01771,
@@ -1678,7 +2800,7 @@
             }
           ]
         },
-        "opus": {
+        "opus-0.2.1": {
           "mcp": [
             {
               "usd": 0.044983,
@@ -1695,6 +2817,48 @@
               "onPage": true
             }
           ]
+        },
+        "sonnet-0.2.3": {
+          "mcp": [
+            {
+              "usd": 0.021504,
+              "turns": 4,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.016997,
+              "turns": 3,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.016976,
+              "turns": 3,
+              "check": "verified",
+              "onPage": true
+            }
+          ],
+          "mcp-quote": [
+            {
+              "usd": 0.01631,
+              "turns": 3,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.014441,
+              "turns": 4,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.014452,
+              "turns": 4,
+              "check": "verified",
+              "onPage": true
+            }
+          ]
         }
       }
     },
@@ -1705,7 +2869,7 @@
       "question": "What does the Python collections module implement?",
       "markdown": 16111,
       "sessions": {
-        "sonnet": {
+        "sonnet-0.2.1": {
           "mcp": [
             {
               "usd": 0.017344,
@@ -1747,7 +2911,7 @@
             }
           ]
         },
-        "opus": {
+        "opus-0.2.1": {
           "mcp": [
             {
               "usd": 0.03724,
@@ -1764,6 +2928,48 @@
               "onPage": true
             }
           ]
+        },
+        "sonnet-0.2.3": {
+          "mcp": [
+            {
+              "usd": 0.01643,
+              "turns": 3,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.016391,
+              "turns": 3,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.016816,
+              "turns": 3,
+              "check": "verified",
+              "onPage": true
+            }
+          ],
+          "mcp-quote": [
+            {
+              "usd": 0.015016,
+              "turns": 4,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.016582,
+              "turns": 3,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.015103,
+              "turns": 4,
+              "check": "verified",
+              "onPage": true
+            }
+          ]
         }
       }
     },
@@ -1774,7 +2980,7 @@
       "question": "What is the first aphorism of the Zen of Python?",
       "markdown": 735,
       "sessions": {
-        "sonnet": {
+        "sonnet-0.2.1": {
           "mcp": [
             {
               "usd": 0.015659,
@@ -1816,7 +3022,7 @@
             }
           ]
         },
-        "opus": {
+        "opus-0.2.1": {
           "mcp": [
             {
               "usd": 0.038535,
@@ -1833,6 +3039,48 @@
               "onPage": true
             }
           ]
+        },
+        "sonnet-0.2.3": {
+          "mcp": [
+            {
+              "usd": 0.01501,
+              "turns": 3,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.014956,
+              "turns": 3,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.014951,
+              "turns": 3,
+              "check": "verified",
+              "onPage": true
+            }
+          ],
+          "mcp-quote": [
+            {
+              "usd": 0.014265,
+              "turns": 3,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.01426,
+              "turns": 3,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.014234,
+              "turns": 3,
+              "check": "verified",
+              "onPage": true
+            }
+          ]
         }
       }
     },
@@ -1843,7 +3091,7 @@
       "question": "Which truths does the Declaration of Independence hold to be self-evident?",
       "markdown": 3737,
       "sessions": {
-        "sonnet": {
+        "sonnet-0.2.1": {
           "mcp": [
             {
               "usd": 0.017761,
@@ -1885,7 +3133,7 @@
             }
           ]
         },
-        "opus": {
+        "opus-0.2.1": {
           "mcp": [
             {
               "usd": 0.054551,
@@ -1902,6 +3150,48 @@
               "onPage": true
             }
           ]
+        },
+        "sonnet-0.2.3": {
+          "mcp": [
+            {
+              "usd": 0.013827,
+              "turns": 3,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.013847,
+              "turns": 3,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.013825,
+              "turns": 3,
+              "check": "verified",
+              "onPage": true
+            }
+          ],
+          "mcp-quote": [
+            {
+              "usd": 0.015794,
+              "turns": 4,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.016186,
+              "turns": 4,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.01576,
+              "turns": 4,
+              "check": "verified",
+              "onPage": true
+            }
+          ]
         }
       }
     },
@@ -1912,7 +3202,7 @@
       "question": "Why did the people of the United States ordain the Constitution?",
       "markdown": 8531,
       "sessions": {
-        "sonnet": {
+        "sonnet-0.2.1": {
           "mcp": [
             {
               "usd": 0.015387,
@@ -1954,7 +3244,7 @@
             }
           ]
         },
-        "opus": {
+        "opus-0.2.1": {
           "mcp": [
             {
               "usd": 0.037487,
@@ -1971,6 +3261,48 @@
               "onPage": true
             }
           ]
+        },
+        "sonnet-0.2.3": {
+          "mcp": [
+            {
+              "usd": 0.014681,
+              "turns": 3,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.014648,
+              "turns": 3,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.014665,
+              "turns": 3,
+              "check": "verified",
+              "onPage": true
+            }
+          ],
+          "mcp-quote": [
+            {
+              "usd": 0.013972,
+              "turns": 3,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.016766,
+              "turns": 4,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.01402,
+              "turns": 3,
+              "check": "verified",
+              "onPage": true
+            }
+          ]
         }
       }
     },
@@ -1981,7 +3313,7 @@
       "question": "What does the UK Data Protection Act 2018 make provision about?",
       "markdown": 5838,
       "sessions": {
-        "sonnet": {
+        "sonnet-0.2.1": {
           "mcp": [
             {
               "usd": 0.018973,
@@ -2023,7 +3355,7 @@
             }
           ]
         },
-        "opus": {
+        "opus-0.2.1": {
           "mcp": [
             {
               "usd": 0.032927,
@@ -2040,6 +3372,48 @@
               "onPage": true
             }
           ]
+        },
+        "sonnet-0.2.3": {
+          "mcp": [
+            {
+              "usd": 0.020521,
+              "turns": 3,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.020561,
+              "turns": 3,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.020523,
+              "turns": 3,
+              "check": "verified",
+              "onPage": true
+            }
+          ],
+          "mcp-quote": [
+            {
+              "usd": 0.021245,
+              "turns": 3,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.019826,
+              "turns": 3,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.021243,
+              "turns": 3,
+              "check": "verified",
+              "onPage": true
+            }
+          ]
         }
       }
     },
@@ -2050,7 +3424,7 @@
       "question": "Does the UK Human Rights Act protect the right to life?",
       "markdown": 5100,
       "sessions": {
-        "sonnet": {
+        "sonnet-0.2.1": {
           "mcp": [
             {
               "usd": 0.01799,
@@ -2092,7 +3466,7 @@
             }
           ]
         },
-        "opus": {
+        "opus-0.2.1": {
           "mcp": [
             {
               "usd": 0.033185,
@@ -2109,6 +3483,48 @@
               "onPage": true
             }
           ]
+        },
+        "sonnet-0.2.3": {
+          "mcp": [
+            {
+              "usd": 0.012933,
+              "turns": 3,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.012948,
+              "turns": 3,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.012948,
+              "turns": 3,
+              "check": "verified",
+              "onPage": true
+            }
+          ],
+          "mcp-quote": [
+            {
+              "usd": 0.014979,
+              "turns": 4,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.014886,
+              "turns": 4,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.014895,
+              "turns": 4,
+              "check": "verified",
+              "onPage": true
+            }
+          ]
         }
       }
     },
@@ -2119,7 +3535,7 @@
       "question": "What does WCAG 2.1 cover?",
       "markdown": 63111,
       "sessions": {
-        "sonnet": {
+        "sonnet-0.2.1": {
           "mcp": [
             {
               "usd": 0.017403,
@@ -2161,7 +3577,7 @@
             }
           ]
         },
-        "opus": {
+        "opus-0.2.1": {
           "mcp": [
             {
               "usd": 0.040024,
@@ -2174,6 +3590,48 @@
             {
               "usd": 0.021347,
               "turns": 2,
+              "check": "wrong",
+              "onPage": true
+            }
+          ]
+        },
+        "sonnet-0.2.3": {
+          "mcp": [
+            {
+              "usd": 0.020766,
+              "turns": 4,
+              "check": "wrong",
+              "onPage": false
+            },
+            {
+              "usd": 0.027068,
+              "turns": 5,
+              "check": "wrong",
+              "onPage": true
+            },
+            {
+              "usd": 0.016161,
+              "turns": 4,
+              "check": "wrong",
+              "onPage": true
+            }
+          ],
+          "mcp-quote": [
+            {
+              "usd": 0.015159,
+              "turns": 4,
+              "check": "wrong",
+              "onPage": true
+            },
+            {
+              "usd": 0.021975,
+              "turns": 4,
+              "check": "wrong",
+              "onPage": true
+            },
+            {
+              "usd": 0.015153,
+              "turns": 4,
               "check": "wrong",
               "onPage": true
             }

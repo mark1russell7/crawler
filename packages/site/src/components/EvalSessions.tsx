@@ -62,8 +62,10 @@ function ArmSessions({
     <div className={`pc-evalb-arm pc-evalb-${arm}`}>
       <p>
         <span className="pc-evalb-key" aria-hidden="true" />
-        <strong>{labelOf(arm)}</strong>: {onPageOf(sessions)} of {sessions.length} with the quote on
-        the page
+        <strong>{labelOf(arm)}</strong>
+        <span>
+          {onPageOf(sessions)} of {sessions.length} with the quote on the page
+        </span>
       </p>
       <ul>
         {sessions.map((session, index) => (

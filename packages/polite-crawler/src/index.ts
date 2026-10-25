@@ -407,6 +407,7 @@ export type {
   WatchList,
   WatchOptions,
   WatchPending,
+  WatchRescheduleOptions,
   WatchRun,
   WatchRunOptions,
   WatchRunnerOptions,

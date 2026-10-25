@@ -1522,6 +1522,7 @@ export interface HybridCrawler extends OpenedCrawler {
     find(q: string, options?: SearchOptions): Promise<Found[]>;
     readonly hybrid: HybridSearch | undefined;
     rankWithin(q: string, docs: readonly string[], options?: RankOptions): Promise<Ranked[]>;
+    readonly watch: Required<WatchList>;
 }
 
 // @public
@@ -3207,6 +3208,8 @@ export interface WatchList {
     add(url: string, options?: WatchOptions): Promise<WatchEntry>;
     list(): Promise<WatchEntry[]>;
     remove(url: string): Promise<boolean>;
+    // @beta
+    reschedule?(url: string, options: WatchRescheduleOptions): Promise<WatchEntry | undefined>;
     run(options?: WatchRunOptions): WatchRun;
 }
 
@@ -3214,6 +3217,8 @@ export interface WatchList {
 export interface WatchOptions {
     readonly confirm?: 1 | 2 | undefined;
     readonly every?: Duration | undefined;
+    // @beta
+    readonly keepSchedule?: boolean | undefined;
     readonly labels?: Readonly<Record<string, string>> | undefined;
     readonly onBehalfOf?: readonly string[] | undefined;
     readonly render?: "auto" | "never" | "always" | undefined;
@@ -3225,6 +3230,11 @@ export interface WatchPending {
     readonly capture: string | null;
     readonly kind: "changed" | "gone" | "new";
     readonly since: string;
+}
+
+// @beta
+export interface WatchRescheduleOptions {
+    readonly at: string | Date;
 }
 
 // @beta
@@ -3295,6 +3305,7 @@ export interface WatchRun extends AsyncIterable<WatchEvent> {
 
 // @beta
 export interface WatchRunnerOptions extends WatchRunOptions {
+    readonly job?: string | undefined;
     readonly onBehalfOf?: readonly string[] | undefined;
     readonly ready?: (() => Promise<void>) | undefined;
 }
@@ -3343,6 +3354,7 @@ export class WatchStore {
     readonly path: string;
     release(key: string, owner: string): void;
     remove(url: string): boolean;
+    reschedule(url: string, options: WatchRescheduleOptions, now: number): WatchEntry | undefined;
     settle(key: string, owner: string, update: WatchUpdate): boolean;
 }
 

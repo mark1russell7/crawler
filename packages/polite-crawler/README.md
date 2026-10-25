@@ -286,7 +286,7 @@ The engine of the check of fields is `checkFields`, `extractDocument`, `FIELD_KI
 
 The engine of discovery and of the crawl is `discoverSite`, `crawlSite`, `readSitemap`, `feedDate`, `DISCOVER_LIMITS`, `CRAWL_LIMITS`, `SITEMAP_LIMITS` and `DEADLINE_NOTE`. It also includes `Crawler.robotsAllow` and the `deadline` of `FetchRequest`, `RenderRequest` and `PageOptions`.
 
-The engine of the time travel, the diff and the watch list is `versionAtTime`, `diffDocument`, `WatchStore`, `WatchStoreOptions`, `runWatch` and `WatchRunnerOptions`. It also includes the optional method `ReadingIndex.versionAt`, `DocIndex.versionAt` and `Crawler.hostStop`. Each of these functions operates on a runtime of your own. The methods `diff`, `read` with `at` and `watch` of the crawler are the stable way.
+The engine of the time travel, the diff and the watch list is `versionAtTime`, `diffDocument`, `WatchStore`, `WatchStoreOptions`, `runWatch`, `WatchRunnerOptions` and `WatchRescheduleOptions`. It also includes the optional method `ReadingIndex.versionAt`, `DocIndex.versionAt` and `Crawler.hostStop`, the optional method `WatchList.reschedule` and the option `keepSchedule` of `WatchOptions`. Each of these functions operates on a runtime of your own. The methods `diff`, `read` with `at` and `watch` of the crawler are the stable way.
 
 The engine of hybrid search is `createHybridSearch`, `HybridSearchOptions`, `VectorStore`, `VECTORS_SCHEMA` and the types of the vector store. It also includes `chunkText`, `chunkTokensOf`, `estimateTokens`, `CHUNK_LIMITS`, `fuseRanks`, `unitVector`, `isLoopback`, `FeatureExtractor`, `TransformersModule`, the optional method `ReadingIndex.digests` and `DocIndex.digests`. The file `vectors.sqlite` is a projection, as the index is: it is not part of the stable store.
 
@@ -498,8 +498,9 @@ await crawler.watch.remove("https://example.com/hours");
 | `confirm` | `2` | The number of checks that must see a change before it is confirmed. |
 | `render` | `auto` | As for `fetch`. |
 | `labels`, `scope`, `onBehalfOf` | none | As for `fetch`. They apply to each check. |
+| `keepSchedule` | `false` | The value `true` keeps the time of the next check of a page on the list. See [The time of the next check](#the-time-of-the-next-check). |
 
-`add` of a page on the list changes its options and keeps its state. A new entry is due at once.
+`add` of a page on the list changes its options and keeps its state. It sets the next check one `every` after the last check, unless `keepSchedule` is `true`. A new entry is due at once.
 
 `run` checks the entries that are due, the first due first. It gives an async iterable of events, and a `summary`. Its options are `budgetMs` (10 minutes by default), `maxPages` (100 by default) and `signal`.
 
@@ -531,6 +532,23 @@ One read can be a glitch: a page of an error, a test of the site, or a cache tha
 A confirmation needs a new capture: a stored copy does not confirm a change. `gone` and a page that comes back follow the same rule. With `confirm: 1`, each change is confirmed at once. A `refused` or an `error` check changes no state.
 
 The `diff` of an event of the kind `changed` gives the counts of the diff from the last confirmed version. A page that asked not to be AI input gives no diff.
+
+### The time of the next check
+
+Each check sets the next check of its entry one `every` later. An application with a schedule rule of its own can set a different time for one check:
+
+```ts
+const entry = await crawler.watch.reschedule("https://example.com/hours", { at: "2026-10-25T07:00:00Z" });
+await crawler.watch.add("https://example.com/hours", { every: "20h", keepSchedule: true });
+```
+
+- `reschedule` changes only the time of the next check. It gives the changed entry, or `undefined` when the list does not have the page.
+- `at` is an ISO 8601 text or a `Date`. A time in the past makes the entry due at once.
+- A run checks the due entries in the sequence of their times. Thus an earlier time also puts an entry before the other due entries.
+- The time is not before one floor (`1h`, or `watchFloor`) after the last check, so a watch cannot hammer a site. An earlier time throws a `RangeError`.
+- The check after it sets the next check one `every` later again. When a check is in progress, its end sets the time again.
+- `add` with `keepSchedule: true` changes the options of a page on the list and keeps the time of its next check. Without it, `add` sets that time one `every` after the last check.
+- Over a runtime of your own, `WatchStore.reschedule` does the same. The option `job` of `runWatch` puts a name in the captures of each check, as the option `job` of a recipe does.
 
 ### The list in the store
 

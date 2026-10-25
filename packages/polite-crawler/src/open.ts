@@ -495,6 +495,8 @@ export interface OpenedCrawler extends PoliteCrawler {
 export interface HybridCrawler extends OpenedCrawler {
   /** This method searches the stored documents. It also takes `rank: "hybrid"`, when the crawler has an embedder. */
   find(q: string, options?: SearchOptions): Promise<Found[]>;
+  /** This list is the watch list of `OpenedCrawler`, with each optional method, for example `reschedule`. */
+  readonly watch: Required<WatchList>;
   /** This search ranks with the vectors of the embedder, or it is undefined when the crawler has no embedder. */
   readonly hybrid: HybridSearch | undefined;
   /** This method gives vectors to the stored documents that have none, within a budget. It rejects when the crawler has no embedder. */
@@ -570,7 +572,7 @@ export const openCrawler = (options: OpenOptions): HybridCrawler => {
         };
   // ── end of hybrid search ──
   let closing: Promise<void> | undefined;
-  const watch: WatchList = {
+  const watch: Required<WatchList> = {
     async add(url, watchOptions = {}) {
       return (await watchStore()).add(url, watchOptions, clockNow());
     },
@@ -579,6 +581,9 @@ export const openCrawler = (options: OpenOptions): HybridCrawler => {
     },
     async list() {
       return (await watchStore()).list(clockNow());
+    },
+    async reschedule(url, rescheduleOptions) {
+      return (await watchStore()).reschedule(url, rescheduleOptions, clockNow());
     },
     run(runOptions = {}) {
       return runWatch(runtime, watchStore, {

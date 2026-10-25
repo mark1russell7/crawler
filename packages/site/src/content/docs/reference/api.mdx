@@ -210,10 +210,11 @@ console.log(await run.summary);
 
 | Method | What it does |
 | --- | --- |
-| `add(url, options?)` | It adds a page, or changes the options of its watch. The options are `every` (default `24h`, floor `1h`), `confirm` (`2` or `1`, default `2`), `render`, `labels`, `scope` and `onBehalfOf`. A new entry is due at once. |
+| `add(url, options?)` | It adds a page, or changes the options of its watch. The options are `every` (default `24h`, floor `1h`), `confirm` (`2` or `1`, default `2`), `render`, `labels`, `scope`, `onBehalfOf` and `keepSchedule`. A new entry is due at once. |
 | `remove(url)` | It removes a page. It gives `false` when the list does not have the page. |
 | `list()` | It gives the entries, the first due first, with the last confirmed capture and a suspected change. |
 | `run(options?)` | It checks the due entries through the normal fetch, to `budgetMs` (10 minutes) and `maxPages` (100). It gives a `WatchRun`. |
+| `reschedule(url, { at })` | It changes the time of the next check of a page, not before one floor after the last check. It gives the entry, or `undefined`. It is beta. |
 
 Each event has the kind of the check: `new`, `changed`, `unchanged`, `gone`, `refused` or `error`. It also has the capture of the check, the last confirmed capture (`previous`) and the counts of the diff.
 

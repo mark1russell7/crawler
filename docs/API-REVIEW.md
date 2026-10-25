@@ -61,7 +61,7 @@ The reports also show what API Extractor found:
 | `browserMissing`, `formatDiff` | root | New in 0.2.0 for `polite-crawler-mcp`: the check of the browser at start, and the text of a diff that the tool `crawl_diff` shows. |
 | `DigestOptions`, `DocDigest`, `DocIndex`, `DocIndexOptions`, `DocInput`, `FAST_RANK_SHARE`, `FindIndexOptions`, `Latest`, `locate`, `ReadingIndex`, `Variant`, `Verified` | root | The reading index and its parts. |
 | `CRAWL_LIMITS`, `CrawlRunOptions`, `crawlSite`, `DISCOVER_LIMITS`, `DiscoverRunOptions`, `discoverSite`, `feedDate`, `readSitemap`, `SITEMAP_LIMITS`, `SitemapEntry`, `SitemapLimits`, `SitemapRead` | root | The engine of discovery and of the crawl. |
-| `diffDocument`, `runWatch`, `WatchRunnerOptions`, `WatchStore`, `WatchStoreOptions` | root | Functions over a runtime of your own. `crawler.diff` and `crawler.watch` are the stable way. |
+| `diffDocument`, `runWatch`, `WatchRescheduleOptions`, `WatchRunnerOptions`, `WatchStore`, `WatchStoreOptions` | root | Functions over a runtime of your own. `crawler.diff` and `crawler.watch` are the stable way. |
 | `CHUNK_LIMITS`, `ChunkOptions`, `chunkText`, `chunkTokensOf`, `createHybridSearch`, `estimateTokens`, `FeatureExtractor`, `FusedRank`, `fuseRanks`, `HybridSearchOptions`, `isLoopback`, `StoredChunk`, `TextChunk`, `TransformersModule`, `unitVector`, `VectorCounts`, `VectorHit`, `VECTORS_SCHEMA`, `VectorStore`, `VectorStoreOptions`, `VectorWrite` | root | The engine of hybrid search: the chunks, the fusion, the vector store, and the shape of the transformers.js module. |
 | `egressLookup`, `EgressRefused` | root | The lookup for a dispatcher of your own. |
 | `checkFields`, `extractDocument`, `ExtractSource`, `FIELD_KINDS`, `FieldsChecked` | root | The engine of the check of fields. |
@@ -80,6 +80,7 @@ These members of stable types are beta:
 - `ExtractedDoc.ai_input`
 - `VenueRead.steps` and `ProductRead.steps`
 - `DaemonOptions.mcp` and `mcpHost`, and `Daemon.mcp`
+- `WatchList.reschedule` and `WatchOptions.keepSchedule`
 
 ## Deprecated
 
@@ -137,6 +138,6 @@ The package is the MCP server of polite-crawler since 0.2.0. Its tiers follow th
 
 | Entry point | Stable | Beta | Deprecated |
 | --- | --- | --- | --- |
-| polite-crawler root | 235 | 134 | 0 |
+| polite-crawler root | 235 | 135 | 0 |
 | `/robots`, `/hours`, `/html`, `/classify`, `/politeness`, `/signals` | 87 | 0 | 0 |
 | polite-crawler-mcp | 17 | 5 | 0 |

@@ -43,21 +43,31 @@ Two `polite-crawler daemon` starts at the same moment on one store both pass the
 
 - Area: Package
 
-### `watch-api`: Watch API: a job for runWatch, a schedule setter, and add that keeps next_at
-
-Three gaps that jarvis found when its venue recheck moved to WatchStore and runWatch (jarvis#84): runWatch takes no job, so a run has no name or limit as other crawls do; no setter for the priority or next_at of an entry, so jarvis re-adds entries to keep its own schedule; and add computes next_at again, so it overwrites a schedule set on purpose. jarvis is not blocked. Each change is a new option, so a patch version.
-
-- Area: Package
-- Waits for: `watch`
+## Shipped
 
 ### `mcp-lean`: MCP server: a smaller fixed cost in each session
 
-Eval part B shows that a polite-crawler MCP session reads about 36,000 tokens (Sonnet median), against about 20,000 with WebFetch. A large part is fixed: the definitions of the nine tools and the instructions of the server, read on each turn. Make them shorter (or offer a small tool set for quote checks), then run part B again to measure the change.
+Shipped in 0.2.3 (#38). The re-run of part B (run 40163619030, Sonnet, 90 sessions per arm, 3.35 USD): read tokens 35,600 -> 24,829 (mcp) and 21,752 (--tools quote); median cost per session 0.0177 -> 0.0166 and 0.0158 USD; per quote on the page 0.0220 -> 0.0197 and 0.0188. Quotes on the page: 86 and 88 of 90 (88 before). WebFetch (earlier run) stays cheaper: 0.0099 per session. The numbers and why WebFetch still costs less (cache writes are 66-69% of the MCP cost) are on the site (#41).
 
 - Area: Package
 - Waits for: `eval-b`
+- Started: 2026-10-25
+- Shipped: 2026-10-25
+- [crawler #38](https://github.com/mark1russell7/crawler/pull/38)
+- [crawler #41 (the numbers on the site)](https://github.com/mark1russell7/crawler/pull/41)
+- [Real Claude Code sessions](https://mark1russell7.github.io/crawler/notes/claude-code-sessions/)
 
-## Shipped
+### `watch-api`: Watch API: a job for runWatch, a schedule setter, and add that keeps next_at
+
+Shipped in 0.2.3 (crawler #36): runWatch takes job (a name in the captures), crawler.watch.reschedule and WatchStore.reschedule set the next check of an entry (1-hour floor), and add takes keepSchedule. No priority field: due entries run in the order of their times. jarvis is told.
+
+- Area: Package
+- Waits for: `watch`
+- Started: 2026-10-24
+- Shipped: 2026-10-25
+- [crawler #36](https://github.com/mark1russell7/crawler/pull/36)
+- [release PR #37 (0.2.3)](https://github.com/mark1russell7/crawler/pull/37)
+- [v0.2.3 release](https://github.com/mark1russell7/crawler/releases/tag/v0.2.3)
 
 ### `hybrid-rejection`: Hybrid search: no unhandled rejection from a shared embedding
 

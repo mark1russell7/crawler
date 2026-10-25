@@ -175,6 +175,9 @@ importers:
       '@mark1russell7/ste-lint':
         specifier: github:mark1russell7/ste-lint
         version: https://codeload.github.com/mark1russell7/ste-lint/tar.gz/f597d6c1e09bcfcb487bb575825d6d5f29e9e0c7
+      '@mark1russell7/template-cli':
+        specifier: ^0.1.2
+        version: 0.1.2
       esbuild:
         specifier: 0.28.2
         version: 0.28.2
@@ -196,25 +199,6 @@ importers:
       typescript:
         specifier: ^7.0.2
         version: 7.0.2
-
-  packages/cli:
-    dependencies:
-      '@clack/prompts':
-        specifier: ^1.8.1
-        version: 1.8.1
-    devDependencies:
-      '@mark1russell7/cue':
-        specifier: github:mark1russell7/cue
-        version: https://codeload.github.com/mark1russell7/cue/tar.gz/f2bb6026e14fcfb782eef3e02771ce983d4bff55
-      '@types/node':
-        specifier: ^26.6.4
-        version: 26.6.5
-      typescript:
-        specifier: ^7.0.2
-        version: 7.0.2
-      vitest:
-        specifier: ^5.0.3
-        version: 5.0.3(@types/node@26.6.5)(@vitest/coverage-v8@5.0.3)(vite@8.3.4(@types/node@26.6.5)(esbuild@0.28.2)(tsx@4.23.15)(yaml@2.9.1))
 
   packages/polite-crawler:
     dependencies:
@@ -1095,6 +1079,11 @@ packages:
     resolution: {gitHosted: true, integrity: sha512-HDxumpWNUeciZKaXbAGFPyoOTrt0trj7L3/koNvWnTN/vEuF0gYzqVJdsgfTQ9bE/DhSxfNMRxtrh4KYnbbimA==, tarball: https://codeload.github.com/mark1russell7/ste-lint/tar.gz/f597d6c1e09bcfcb487bb575825d6d5f29e9e0c7}
     version: 0.1.0
     engines: {node: '>=22'}
+    hasBin: true
+
+  '@mark1russell7/template-cli@0.1.2':
+    resolution: {integrity: sha512-PymBwlcDGyJiGZCQ6y9+dxWCpKPMSoqky5WkuNP+paoQp8z6vFkQJZTeIozxRHPtCipL2GmHg6RmpthaWAiM5g==}
+    engines: {node: '>=22.12'}
     hasBin: true
 
   '@microsoft/api-extractor-model@7.33.14':
@@ -4631,6 +4620,10 @@ snapshots:
     dependencies:
       typescript: 6.0.3
 
+  '@mark1russell7/template-cli@0.1.2':
+    dependencies:
+      '@clack/prompts': 1.8.1
+
   '@microsoft/api-extractor-model@7.33.14(@types/node@22.20.5)':
     dependencies:
       '@microsoft/tsdoc': 0.17.1
@@ -5185,7 +5178,7 @@ snapshots:
       obug: 2.2.1
       std-env: 4.3.0
       tinyrainbow: 3.2.0
-      vitest: 5.0.3(@types/node@26.6.5)(@vitest/coverage-v8@5.0.3)(vite@8.3.4(@types/node@26.6.5)(esbuild@0.28.2)(tsx@4.23.15)(yaml@2.9.1))
+      vitest: 5.0.3(@types/node@22.20.5)(@vitest/coverage-v8@5.0.3)(vite@8.3.4(@types/node@22.20.5)(esbuild@0.28.2)(tsx@4.23.15)(yaml@2.9.1))
 
   '@vitest/istanbul-lib-coverage@1.0.2': {}
 

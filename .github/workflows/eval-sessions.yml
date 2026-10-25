@@ -21,6 +21,9 @@ on:
       only:
         description: The claim ids, comma separated (empty for all)
         default: ""
+      repeat:
+        description: The sessions of each claim in each arm
+        default: "1"
       model:
         description: The model of the two arms
         default: claude-sonnet-5-5
@@ -83,13 +86,14 @@ jobs:
           ARM: ${{ matrix.arm }}
           LIMIT: ${{ inputs.limit }}
           ONLY: ${{ inputs.only }}
+          REPEAT: ${{ inputs.repeat }}
           MODEL: ${{ inputs.model }}
           BUDGET: ${{ inputs.budget }}
           MAX_TURNS: ${{ inputs.max_turns }}
           MAX_SESSION_USD: ${{ inputs.max_session_usd }}
         run: >-
           pnpm exec tsx packages/polite-crawler/eval/sessions.mts run
-          --arm "$ARM" --model "$MODEL" --limit "$LIMIT" --only "$ONLY"
+          --arm "$ARM" --model "$MODEL" --limit "$LIMIT" --only "$ONLY" --repeat "$REPEAT"
           --budget "$BUDGET" --max-turns "$MAX_TURNS" --max-budget-usd "$MAX_SESSION_USD"
           --mcp-command "$RUNNER_TEMP/mcp/node_modules/.bin/polite-crawler-mcp"
           --out sessions
@@ -128,10 +132,12 @@ jobs:
           for arm in mcp webfetch; do
             if [ -d "downloaded/sessions-$arm" ]; then cp -r "downloaded/sessions-$arm" "sessions/$arm"; fi
           done
+      # The summary fetches each page one time (robots.txt, the pace of each site), and checks that
+      # each quote of each answer is on the page.
       - name: The summary
         run: >-
           pnpm exec tsx packages/polite-crawler/eval/sessions.mts summary
-          --out sessions --markdown sessions/eval-b-summary.md --summary "$GITHUB_STEP_SUMMARY"
+          --out sessions --fetch --markdown sessions/eval-b-summary.md --summary "$GITHUB_STEP_SUMMARY"
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: ${{ !cancelled() }}
         with:

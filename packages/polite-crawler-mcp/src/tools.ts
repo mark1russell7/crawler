@@ -733,7 +733,7 @@ export const crawlTools = (
     {
       title: "Read a stored document",
       description:
-        "Read a range of characters of a stored document, with the capture id to cite. For the next range, set from to next_from (null at the end). The text comes in an <untrusted-web-content> block. A page that asked not to be AI input is held back.",
+        "Read a range of characters of a stored document, with the capture id to cite. For the next range, set from to next_from (null at the end). The text stops at 50,000 characters, but crawl_verify also finds a quote past that point. The text comes in an <untrusted-web-content> block. A page that asked not to be AI input is held back.",
       input: {
         doc: DOC,
         from: z.number().int().min(0).default(0).describe("the first character to read"),

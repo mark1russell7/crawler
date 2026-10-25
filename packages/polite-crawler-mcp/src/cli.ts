@@ -4,10 +4,11 @@ import { homedir } from "node:os";
 import { join, resolve } from "node:path";
 import { parseArgs } from "node:util";
 import type { Embedder, OpenOptions } from "polite-crawler";
+import { chooseTools } from "./tool-names.ts";
 import { VERSION } from "./version.ts";
 
-// This file imports only Node.js and the version at start, so `--version` and `--help` answer at
-// once. The server loads the crawler and the MCP host.
+// This file imports only Node.js, the version and the tool names at start, so `--version` and
+// `--help` answer at once. The server loads the crawler and the MCP host.
 
 // node:sqlite of Node.js 22 writes "SQLite is an experimental feature" to the standard error at
 // each start. The command removes only that warning, before the store loads node:sqlite.
@@ -37,8 +38,9 @@ Usage:
   polite-crawler-mcp [options]
 
 The server gives nine tools: crawl_fetch, crawl_find, crawl_read, crawl_verify, crawl_extract,
-crawl_discover, crawl_site, crawl_diff and crawl_watch_list. Each fetch obeys robots.txt (the
-rules for Claude-User too), with one request at a time to each site.
+crawl_discover, crawl_site, crawl_diff and crawl_watch_list. --tools gives fewer tools, and a
+session then reads fewer tokens. Each fetch obeys robots.txt (the rules for Claude-User too),
+with one request at a time to each site.
 
 Options:
   --dir <folder>          the store (default ~/.polite-crawler, or POLITE_CRAWLER_DIR)
@@ -46,6 +48,7 @@ Options:
   --no-browser            render no page, also when a browser is installed
   --allow-private         fetch loopback, private and link-local addresses (or POLITE_CRAWLER_ALLOW_PRIVATE=1)
   --allow-user-provided   let user_provided work when the client cannot ask you (or POLITE_CRAWLER_ALLOW_USER_PROVIDED=1)
+  --tools <names>         only these tools: quote (fetch, find, read and verify), or tool names with commas
   --embedder <name>       the local model of hybrid search: transformers or ollama (or POLITE_CRAWLER_EMBEDDER)
   --embed-model <model>   the model of the embedder (or POLITE_CRAWLER_EMBED_MODEL)
   --ollama-url <url>      the URL of Ollama (or POLITE_CRAWLER_OLLAMA_URL)
@@ -114,7 +117,14 @@ const agentTypeOf = (url: string): "directory" | "jwks_uri" => {
 const optionsOf = async (
   args: readonly string[],
   env: Env,
-): Promise<{ readonly options: OpenOptions; readonly allowUserProvided: boolean } | string> => {
+): Promise<
+  | {
+      readonly options: OpenOptions;
+      readonly allowUserProvided: boolean;
+      readonly tools: readonly string[] | undefined;
+    }
+  | string
+> => {
   let values;
   try {
     ({ values } = parseArgs({
@@ -125,6 +135,7 @@ const optionsOf = async (
         "no-browser": { type: "boolean" },
         "allow-private": { type: "boolean" },
         "allow-user-provided": { type: "boolean" },
+        tools: { type: "string" },
         embedder: { type: "string" },
         "embed-model": { type: "string" },
         "ollama-url": { type: "string" },
@@ -148,6 +159,7 @@ const optionsOf = async (
     values["allow-private"] === true || envFlag(env, "POLITE_CRAWLER_ALLOW_PRIVATE");
   const allowUserProvided =
     values["allow-user-provided"] === true || envFlag(env, "POLITE_CRAWLER_ALLOW_USER_PROVIDED");
+  const tools = toolsOf(values.tools);
   const signKey = values["sign-key"] ?? fromEnv("POLITE_CRAWLER_SIGN_KEY");
   const signatureAgent = values["signature-agent"] ?? fromEnv("POLITE_CRAWLER_SIGNATURE_AGENT");
   if ((signKey === undefined) !== (signatureAgent === undefined)) {
@@ -181,7 +193,23 @@ const optionsOf = async (
       ...(embedder === undefined ? {} : { embedder }),
     },
     allowUserProvided,
+    tools,
   };
+};
+
+/** This function reads `--tools`: `quote`, or tool names with commas. An unknown name is a usage error. */
+const toolsOf = (text: string | undefined): readonly string[] | undefined => {
+  if (text === undefined) return undefined;
+  const names = text
+    .split(",")
+    .map((name) => name.trim())
+    .filter((name) => name !== "");
+  try {
+    chooseTools(names);
+  } catch (error) {
+    throw new UsageError(`--${(error as Error).message}`, { cause: error });
+  }
+  return names;
 };
 
 /** This function makes the embedder of hybrid search, when the command line or the environment names one. */
@@ -238,7 +266,11 @@ const main = async (args: readonly string[]): Promise<number> => {
     return 0;
   }
   const { startMcpServer } = await import("./server.ts");
-  await startMcpServer({ ...parsed.options, allowUserProvided: parsed.allowUserProvided });
+  await startMcpServer({
+    ...parsed.options,
+    allowUserProvided: parsed.allowUserProvided,
+    tools: parsed.tools,
+  });
   return 0;
 };
 

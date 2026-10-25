@@ -5,7 +5,8 @@ import { createMcpHost } from "@procedures/mcp-server";
 import type { OpenOptions, PoliteCrawler } from "polite-crawler";
 import { browserMissing, openCrawler } from "polite-crawler";
 import type { CrawlToolOptions } from "./tools.ts";
-import { INSTRUCTIONS, crawlContent, crawlTools } from "./tools.ts";
+import { chooseTools } from "./tool-names.ts";
+import { crawlContent, crawlTools, instructionsFor } from "./tools.ts";
 import { SERVER_NAME, VERSION } from "./version.ts";
 
 /** These options change the tools of the MCP server. */
@@ -38,9 +39,9 @@ export interface CrawlMcpServer {
 }
 
 /**
- * This function gives the options of the MCP host of the tools. They are the nine procedures in
- * the namespace `crawl`, the tool names `crawl_<name>` and the instructions. They also have the
- * content hook of the envelopes and the task store.
+ * This function gives the options of the MCP host of the tools. They are the procedures in the
+ * namespace `crawl`, the tool names `crawl_<name>` and the instructions for the chosen tools. They
+ * also have the content hook of the envelopes and the task store.
  *
  * @beta
  */
@@ -54,7 +55,7 @@ export const crawlHostOptions = (
   toolName: (path) => path.join("_"),
   name: SERVER_NAME,
   version: VERSION,
-  instructions: INSTRUCTIONS,
+  instructions: instructionsFor(chooseTools(options.tools)),
   content: crawlContent,
   json: "compact",
   ...(options.tasks === undefined ? {} : { tasks: { store: options.tasks } }),
@@ -63,15 +64,18 @@ export const crawlHostOptions = (
 /**
  * This function makes an MCP server with nine tools over one crawler: `crawl_fetch`, `crawl_find`,
  * `crawl_read`, `crawl_verify`, `crawl_extract`, `crawl_discover`, `crawl_site`, `crawl_diff` and
- * `crawl_watch_list`. The tools are procedures on the shared MCP host (`createMcpHost` of
- * `@procedures/mcp-server`). The server does not connect to a transport: `connect` does. Each
- * fetch applies the robots.txt rules for `Claude-User` too, unless `onBehalfOf` gives other
- * tokens. No tool adds a watch or an export, because they are actions of the operator.
+ * `crawl_watch_list`. The option `tools` chooses fewer tools. The tools are procedures on the
+ * shared MCP host (`createMcpHost` of `@procedures/mcp-server`). The server does not connect to a
+ * transport: `connect` does. Each fetch applies the robots.txt rules for `Claude-User` too, unless
+ * `onBehalfOf` gives other tokens. No tool adds a watch or an export, because they are actions of
+ * the operator.
  */
 export const createMcpServer = (
   crawler: PoliteCrawler,
   options: CrawlServerOptions = {},
 ): CrawlMcpServer => {
+  // an unknown tool name is an error of the call, not of connect
+  chooseTools(options.tools);
   let host: McpHost | undefined;
   return {
     get host() {
@@ -98,10 +102,12 @@ export const startMcpServer = async (options: StartMcpOptions): Promise<void> =>
   const {
     onBehalfOf,
     allowUserProvided,
+    tools,
     renderOff: given,
     log = (line: string) => void process.stderr.write(`${line}\n`),
     ...open
   } = options;
+  const chosen = chooseTools(tools);
   // a missing browser turns rendering off one time, at start
   const renderOff = given ?? (open.renderer === undefined ? await browserMissing() : undefined);
   const crawler = openCrawler({
@@ -109,12 +115,13 @@ export const startMcpServer = async (options: StartMcpOptions): Promise<void> =>
     ...(renderOff === undefined ? {} : { renderer: false as const }),
   });
   const host = createMcpHost({
-    ...crawlHostOptions(crawler, { onBehalfOf, allowUserProvided, renderOff }),
+    ...crawlHostOptions(crawler, { onBehalfOf, allowUserProvided, renderOff, tools }),
     // the process stops at the end of the input, after the crawler closed
     faces: { stdio: { stopOnEnd: false } },
   });
   log(`polite-crawler-mcp ${VERSION}: MCP server on standard input and output, store ${open.dir}`);
   if (renderOff !== undefined) log(`polite-crawler: rendering is off: ${renderOff}`);
+  if (tools !== undefined) log(`polite-crawler: the tools are ${chosen.join(", ")}`);
   if (open.embedder !== undefined)
     log(`polite-crawler: crawl_find takes rank hybrid, with the embedder ${open.embedder.id}`);
   let stopping: Promise<void> | undefined;

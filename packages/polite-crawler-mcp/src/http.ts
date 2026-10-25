@@ -9,6 +9,7 @@ import type { DaemonMcpHost, DaemonTask, PoliteCrawler } from "polite-crawler";
 import { isLoopbackHost, urlHost } from "./loopback.ts";
 import type { CrawlToolOptions } from "./tools.ts";
 import { crawlHostOptions } from "./server.ts";
+import { chooseTools } from "./tool-names.ts";
 
 /*
  * This file serves the tools over the Streamable HTTP transport of MCP. The listener is the
@@ -306,11 +307,16 @@ export const startMcpHttpServer = (
   crawler: PoliteCrawler,
   options: StartMcpHttpOptions = {},
 ): Promise<McpHttpServer> => {
-  const { onBehalfOf, allowUserProvided, renderOff, ...http } = options;
+  const { onBehalfOf, allowUserProvided, renderOff, tools, ...http } = options;
+  try {
+    chooseTools(tools);
+  } catch (error) {
+    return Promise.reject(error as Error);
+  }
   return serveMcpHttp(
     ({ tasks }) =>
       createMcpHost({
-        ...crawlHostOptions(crawler, { onBehalfOf, allowUserProvided, renderOff, tasks }),
+        ...crawlHostOptions(crawler, { onBehalfOf, allowUserProvided, renderOff, tools, tasks }),
         faces: {
           // The listener checks the host, the origin and the token of each request, as in 0.1.4.
           // Thus the face checks no token and no host name: the checks have one owner.

@@ -82,6 +82,44 @@ const expectOnlyJsonRpc = (server: McpChild): void => {
 
 describe("the MCP server over standard input and output", () => {
   it(
+    "gives only the chosen tools with --tools, and refuses a name that is not a tool",
+    async () => {
+      const { server, initialized } = await start([
+        "--dir",
+        store,
+        "--no-browser",
+        "--tools",
+        "quote",
+      ]);
+      const listed = (await server.request("tools/list"))["result"] as {
+        tools: Array<{ name: string }>;
+      };
+      expect(listed.tools.map((tool) => tool.name)).toEqual([
+        "crawl_fetch",
+        "crawl_find",
+        "crawl_read",
+        "crawl_verify",
+      ]);
+      const result = initialized["result"] as { instructions?: string };
+      expect(result.instructions).toContain("Only crawl_fetch sends requests.");
+      await server.end();
+      expectOnlyJsonRpc(server);
+
+      const wrong = startMcpChild(
+        ["--dir", store, "--tools", "quote,crawl_nope"],
+        childEnv(),
+        undefined,
+        [CLI],
+      );
+      onTestFinished(() => wrong.stop());
+      const { code } = await wrong.end();
+      expect(code).toBe(2);
+      expect(wrong.stderr()).toContain('--tools: "crawl_nope" is not a tool');
+    },
+    SLOW,
+  );
+
+  it(
     "lists the tools, answers each one, writes only JSON-RPC, and stops when its input closes",
     async () => {
       const { server, initialized } = await start(["--dir", store, "--no-browser"]);

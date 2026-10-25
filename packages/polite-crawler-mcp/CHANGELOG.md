@@ -6,6 +6,15 @@ This file records the changes to `polite-crawler-mcp` in each version. The chang
 
 ## Unreleased
 
+- **A shorter tool list.** A session reads the tool definitions and the instructions of the server in each turn. The text is now approximately 28% shorter, by the count of part A of the eval (the cl100k proxy tokenizer).
+  - With all nine tools, the count goes from 8,268 to 5,972 tokens: the instructions from 220 to 131, and the tool list from 8,048 to 5,841. The name, the description and the input schema of each tool, with the instructions, go from 3,351 to 2,372 tokens. The Claude API takes only these fields of a tool.
+  - The descriptions keep the purpose of each tool, when to use it, its key parameters and the safety rules. The schemas give the types, the defaults and the limits, so the text does not tell them again. The README and the site keep the long explanations.
+  - The names of the tools and of the parameters, the schemas and the results do not change. `INSTRUCTIONS` has a new text, and its type is `string`.
+  - A test (`src/tool-cost.test.ts`) prints the counts and stops them from growing again.
+- **The option `tools` gives fewer tools.** `--tools quote` gives only `crawl_fetch`, `crawl_find`, `crawl_read` and `crawl_verify`, at 2,404 tokens (1,039 for the fields that the Claude API takes). `--tools` also takes tool names with commas.
+  - `createMcpServer`, `startMcpServer`, `startMcpHttpServer` and `crawlTools` take the same names in the option `tools` (`CrawlToolOptions`). The default stays all nine tools.
+  - The instructions of the server name only the chosen tools. A name that is not a tool stops the server at start, and the command line exits with code 2.
+
 ## 0.2.2 - 2026-10-25
 
 - **An error of the embedder no longer stops the server.** The server uses polite-crawler 0.2.2. With `--embedder`, two hybrid searches that shared a text and both failed stopped the process with an unhandled rejection. With this version, the error goes only to the tool calls.

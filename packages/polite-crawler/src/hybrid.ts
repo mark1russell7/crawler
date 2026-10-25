@@ -286,12 +286,14 @@ export const createHybridSearch = (
       const busy = working.get(sha);
       if (busy !== undefined) {
         // a different call embeds this text now: this call points the document at it after
-        shared.push(
-          busy.then((made) => {
-            store.point(embedder.id, id, sha, now);
-            return made;
-          }),
-        );
+        const after = busy.then((made) => {
+          store.point(embedder.id, id, sha, now);
+          return made;
+        });
+        // This call can stop with an error before it waits for `shared`. Then a failure of the other
+        // call is not an unhandled rejection, which stops the process.
+        after.catch(() => undefined);
+        shared.push(after);
         continue;
       }
       waiting.set(sha, { text: doc.text, docs: [id] });

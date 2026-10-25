@@ -336,6 +336,53 @@ describe("hybrid search over a runtime", () => {
     await expect(one.search.find("bread", { signal: aborted.signal })).rejects.toThrow("cancelled");
   });
 
+  it("gives no unhandled rejection when two embeddings of a shared text fail", async () => {
+    const calls: Array<(error: unknown) => void> = [];
+    const held: Embedder = {
+      id: "fake:held",
+      dimensions: 4,
+      embed: () =>
+        new Promise<Float32Array[]>((_, reject) => {
+          calls.push(reject);
+        }),
+    };
+    const until = async (ok: () => boolean): Promise<void> => {
+      for (let tries = 0; tries < 400 && !ok(); tries += 1) {
+        await new Promise((resolve) => setTimeout(resolve, 5));
+      }
+      expect(ok()).toBe(true);
+    };
+    const { search, seed } = await open({ embedder: held });
+    await seed();
+    const unhandled: unknown[] = [];
+    const listen = (reason: unknown): void => {
+      unhandled.push(reason);
+    };
+    process.on("unhandledRejection", listen);
+    try {
+      // The first call embeds the PDF. The second call waits for that text, and embeds the others.
+      const first = search.embed({ kind: "pdf" }).then(
+        () => undefined,
+        (error: unknown) => error,
+      );
+      await until(() => calls.length === 1);
+      const second = search.embed().then(
+        () => undefined,
+        (error: unknown) => error,
+      );
+      await until(() => calls.length === 2);
+      // The second call fails first, before it waits for the shared text. Then the first call fails.
+      calls[1]!(new Error("the second call stopped"));
+      expect(await second).toMatchObject({ message: "the second call stopped" });
+      calls[0]!(new Error("the model is not there"));
+      expect(await first).toMatchObject({ message: "the model is not there" });
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      expect(unhandled).toEqual([]);
+    } finally {
+      process.off("unhandledRejection", listen);
+    }
+  });
+
   it("refuses vectors of new dimensions for the same id of an embedder", async () => {
     const { dir, seed, search, index } = await open();
     await seed();

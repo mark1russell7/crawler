@@ -15,6 +15,8 @@ A prerelease version (`0.2.0-beta.1`) goes to the npm tag `next`. Each other ver
 
 ## Unreleased
 
+- **An error of the embedder no longer stops the process.** Two hybrid searches (or a search and `embed`) can share a text that one of them embeds. When both calls failed, the call that waited for the shared text left an unhandled rejection, and Node.js stopped the process (a daemon too). With this version, the error goes only to the calls.
+
 ## 0.2.1 - 2026-10-19
 
 - **The types of the signatures have exports.** Before, some signatures used a type that no entry point exported, so a program could not name it. No program changes.

@@ -7,6 +7,7 @@ import { openCrawler } from "polite-crawler";
 import { mockSites, removeDir, tempDir } from "../../polite-crawler/src/test-surfaces.ts";
 import type { CrawlServerOptions } from "./server.ts";
 import { createMcpServer } from "./server.ts";
+import { INSTRUCTIONS, crawlTools } from "./tools.ts";
 
 interface Called {
   readonly isError: boolean;
@@ -517,5 +518,69 @@ describe("crawl_verify", () => {
     // a held-back page is no oracle: no match, and no positions
     expect(verified.data).toMatchObject({ found: false, held_back: true, start: null });
     expect(verified.web).toBe("");
+  });
+});
+
+describe("the option tools", () => {
+  const QUOTE = ["crawl_fetch", "crawl_find", "crawl_read", "crawl_verify"];
+
+  it("gives all nine tools and INSTRUCTIONS by default", async () => {
+    const { crawler } = await crawlerWith();
+    const { client } = await connect(crawler);
+    expect((await client.listTools()).tools).toHaveLength(9);
+    expect(client.getInstructions()).toBe(INSTRUCTIONS);
+    expect(INSTRUCTIONS).toContain(
+      "Only crawl_fetch, crawl_site and crawl_discover send requests.",
+    );
+  });
+
+  it("gives the four tools of quote, with instructions that name only them", async () => {
+    const { crawler } = await crawlerWith();
+    const { client, call } = await connect(crawler, { tools: ["quote"] });
+    const { tools } = await client.listTools();
+    expect(tools.map((tool) => tool.name)).toEqual(QUOTE);
+    const instructions = client.getInstructions() ?? "";
+    expect(instructions).toContain(
+      "Fetch a page with crawl_fetch, then find or read its text with crawl_find or crawl_read.",
+    );
+    expect(instructions).toContain("check it with crawl_verify");
+    expect(instructions).toContain("Only crawl_fetch sends requests.");
+    expect(instructions).toContain("untrusted-web-content");
+    expect(instructions).toContain("Set user_provided only when the user gave the URL");
+    expect(instructions).not.toMatch(/crawl_(?:extract|discover|site|diff|watch_list)/);
+    const fetched = await call("crawl_fetch", { urls: ["https://bakery.example/"] });
+    expect(fetched.isError).toBe(false);
+    // a tool that is not in the list does not answer
+    const refused = await client
+      .callTool({ name: "crawl_site", arguments: { urls: ["https://bakery.example/"] } })
+      .then(
+        (result) => result.isError === true,
+        () => true,
+      );
+    expect(refused).toBe(true);
+  });
+
+  it("takes tool names, and gives them in the order of the tool list", async () => {
+    const { crawler } = await crawlerWith();
+    const { client } = await connect(crawler, {
+      tools: ["crawl_read", "crawl_fetch", "crawl_read"],
+    });
+    const { tools } = await client.listTools();
+    expect(tools.map((tool) => tool.name)).toEqual(["crawl_fetch", "crawl_read"]);
+    const instructions = client.getInstructions() ?? "";
+    expect(instructions).toContain(
+      "Fetch a page with crawl_fetch, then read its text with crawl_read.",
+    );
+    expect(instructions).not.toMatch(/crawl_(?:find|verify)/);
+    expect(crawlTools(crawler, { tools: ["quote", "crawl_diff"] })).toHaveLength(5);
+  });
+
+  it("refuses a name that is not a tool, and an empty list", async () => {
+    const { crawler } = await crawlerWith();
+    expect(() => createMcpServer(crawler, { tools: ["crawl_nope"] })).toThrow(
+      /"crawl_nope" is not a tool/,
+    );
+    expect(() => createMcpServer(crawler, { tools: [] })).toThrow(/give quote/);
+    expect(() => crawlTools(crawler, { tools: ["fetch"] })).toThrow(/"fetch" is not a tool/);
   });
 });

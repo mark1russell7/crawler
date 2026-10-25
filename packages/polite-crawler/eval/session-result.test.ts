@@ -134,7 +134,10 @@ describe("the record of a session", () => {
 describe("the summary", () => {
   it("counts only the sessions with a result, and projects the cost of the set", () => {
     const records = [
-      recordOf(claim, "mcp", stream("<quote>The server sends a “hello” — once.</quote>")),
+      {
+        ...recordOf(claim, "mcp", stream("<quote>The server sends a “hello” — once.</quote>")),
+        onPage: true,
+      },
       recordOf(
         { ...claim, id: "two" },
         "mcp",
@@ -150,11 +153,15 @@ describe("the summary", () => {
     expect(mcp?.costUsd).toBeCloseTo(0.2);
     expect(mcp?.costPerVerifiedUsd).toBeCloseTo(0.2);
     expect(mcp?.projectedUsd).toBeCloseTo(3);
+    expect(mcp?.onPage).toBe(1);
+    expect(mcp?.costPerOnPageUsd).toBeCloseTo(0.2);
+    expect(webfetch?.onPage).toBe(0);
     expect(mcp?.medianTurns).toBe(4);
     expect(webfetch?.checks.partial).toBe(1);
     expect(webfetch?.costPerVerifiedUsd).toBeNull();
     const markdown = markdownOf([mcp!, webfetch!], records, "claude-sonnet-5-5");
-    expect(markdown).toContain("| mcp | 2 | 1 |");
+    expect(markdown).toContain("| mcp | 2 | 1 | 1 |");
+    expect(markdown).toContain("| rfc-example | 1 | mcp | done | verified | yes |");
     expect(markdown).toContain("crawl_verify 2");
   });
 });

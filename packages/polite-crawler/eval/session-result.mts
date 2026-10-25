@@ -32,12 +32,20 @@ export type Check = "verified" | "partial" | "wrong" | "no-quote";
 export interface SessionRecord {
   readonly id: string;
   readonly arm: Arm;
+  /** The number of the repeat of the claim, from 1. */
+  readonly rep: number;
   readonly url: string;
   /** `done` when the stream has a result, `failed` when it has none, `skipped` when the budget stopped the arm first. */
   readonly status: "done" | "failed" | "skipped";
   /** The subtype of the result: `success`, or the limit that stopped the session (for example `error_max_turns`). */
   readonly subtype: string | null;
   readonly check: Check;
+  /**
+   * This value is true when each quote of the answer is on the page, word for word, and false when a
+   * quote is not on the page. It is null when no check was done (no quote, or no copy of the page).
+   * A quote on the page proves an answer, also when it is not the sentence of the claim.
+   */
+  readonly onPage: boolean | null;
   readonly answer: string;
   readonly turns: number;
   readonly durationMs: number;
@@ -117,6 +125,7 @@ export const recordOf = (
   arm: Arm,
   stream: string,
   note: string | null = null,
+  rep = 1,
 ): SessionRecord => {
   const events: Event[] = [];
   for (const line of stream.split("\n")) {
@@ -169,10 +178,12 @@ export const recordOf = (
   return {
     id: claim.id,
     arm,
+    rep,
     url: claim.url,
     status: result === undefined ? "failed" : "done",
     subtype: typeof result?.["subtype"] === "string" ? result["subtype"] : null,
     check: checkAnswer(answer, claim.quote),
+    onPage: null,
     answer,
     turns: num(result?.["num_turns"]),
     durationMs: num(result?.["duration_ms"]),
@@ -189,13 +200,15 @@ export const recordOf = (
 };
 
 /** This function gives the record of a claim that the budget stopped before its session. */
-export const skippedRecord = (claim: Claim, arm: Arm, note: string): SessionRecord => ({
+export const skippedRecord = (claim: Claim, arm: Arm, note: string, rep = 1): SessionRecord => ({
   id: claim.id,
   arm,
+  rep,
   url: claim.url,
   status: "skipped",
   subtype: null,
   check: "no-quote",
+  onPage: null,
   answer: "",
   turns: 0,
   durationMs: 0,
@@ -224,17 +237,21 @@ export interface ArmSummary {
   readonly failed: number;
   readonly skipped: number;
   readonly checks: Readonly<Record<Check, number>>;
+  /** The sessions with each quote on the page (`onPage`). */
+  readonly onPage: number;
   readonly costUsd: number;
   readonly medianCostUsd: number | null;
-  /** The cost of the arm, divided by its verified claims. */
+  /** The cost of the arm, divided by its verified sessions. */
   readonly costPerVerifiedUsd: number | null;
+  /** The cost of the arm, divided by its sessions with each quote on the page. */
+  readonly costPerOnPageUsd: number | null;
   readonly usage: Usage;
   /** The median of the tokens that the model reads in a session (input and cache). */
   readonly medianReadTokens: number | null;
   readonly medianOutputTokens: number | null;
   readonly medianTurns: number | null;
   readonly toolCalls: number;
-  /** The cost of the question set (`claims` sessions) at the mean cost of a session. */
+  /** The cost of one session for each claim of the question set (`claims`), at the mean cost of a session. */
   readonly projectedUsd: number | null;
 }
 
@@ -246,6 +263,7 @@ export const summarize = (records: readonly SessionRecord[], claims: number): Ar
     const done = all.filter((entry) => entry.status === "done");
     const checks: Record<Check, number> = { verified: 0, partial: 0, wrong: 0, "no-quote": 0 };
     for (const entry of done) checks[entry.check] += 1;
+    const onPage = done.filter((entry) => entry.onPage === true).length;
     const costUsd = done.reduce((sum, entry) => sum + entry.costUsd, 0);
     return [
       {
@@ -254,9 +272,11 @@ export const summarize = (records: readonly SessionRecord[], claims: number): Ar
         failed: all.filter((entry) => entry.status === "failed").length,
         skipped: all.filter((entry) => entry.status === "skipped").length,
         checks,
+        onPage,
         costUsd,
         medianCostUsd: median(done.map((entry) => entry.costUsd)),
         costPerVerifiedUsd: checks.verified === 0 ? null : costUsd / checks.verified,
+        costPerOnPageUsd: onPage === 0 ? null : costUsd / onPage,
         usage: done.reduce((sum, entry) => add(sum, entry.usage), ZERO),
         medianReadTokens: median(done.map((entry) => readTokens(entry.usage))),
         medianOutputTokens: median(done.map((entry) => entry.usage.output)),
@@ -273,6 +293,7 @@ export const summarize = (records: readonly SessionRecord[], claims: number): Ar
 const usd = (value: number | null): string => (value === null ? "—" : `$${value.toFixed(4)}`);
 const int = (value: number | null): string =>
   value === null ? "—" : Math.round(value).toLocaleString("en-US");
+const yesNo = (value: boolean | null): string => (value === null ? "—" : value ? "yes" : "no");
 
 /** This function gives the tables of the summary in Markdown. */
 export const markdownOf = (
@@ -285,19 +306,19 @@ export const markdownOf = (
     "",
     `Model: \`${model}\`. The tokens and the cost come from the usage that Claude Code reports.`,
     "",
-    "| Arm | Sessions | Verified | Partial | Wrong | No quote | Failed | Skipped | Cost | Median cost | Cost per verified | Median read tokens | Median output tokens | Median turns | Projected for the set |",
-    "| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |",
+    "| Arm | Sessions | Verified | On the page | Partial | Wrong | No quote | Failed | Skipped | Cost | Median cost | Cost per verified | Cost per quote on the page | Median read tokens | Median output tokens | Median turns | Projected for the set |",
+    "| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |",
     ...arms.map(
       (arm) =>
-        `| ${arm.arm} | ${String(arm.sessions)} | ${String(arm.checks.verified)} | ${String(arm.checks.partial)} | ${String(arm.checks.wrong)} | ${String(arm.checks["no-quote"])} | ${String(arm.failed)} | ${String(arm.skipped)} | ${usd(arm.costUsd)} | ${usd(arm.medianCostUsd)} | ${usd(arm.costPerVerifiedUsd)} | ${int(arm.medianReadTokens)} | ${int(arm.medianOutputTokens)} | ${int(arm.medianTurns)} | ${usd(arm.projectedUsd)} |`,
+        `| ${arm.arm} | ${String(arm.sessions)} | ${String(arm.checks.verified)} | ${String(arm.onPage)} | ${String(arm.checks.partial)} | ${String(arm.checks.wrong)} | ${String(arm.checks["no-quote"])} | ${String(arm.failed)} | ${String(arm.skipped)} | ${usd(arm.costUsd)} | ${usd(arm.medianCostUsd)} | ${usd(arm.costPerVerifiedUsd)} | ${usd(arm.costPerOnPageUsd)} | ${int(arm.medianReadTokens)} | ${int(arm.medianOutputTokens)} | ${int(arm.medianTurns)} | ${usd(arm.projectedUsd)} |`,
     ),
     "",
     `Total cost of this run: ${usd(arms.reduce((sum, arm) => sum + arm.costUsd, 0))}.`,
     "",
     "### Each session",
     "",
-    "| Claim | Arm | Status | Check | Turns | Tool calls | Read tokens | Output tokens | Cost |",
-    "| --- | --- | --- | --- | ---: | --- | ---: | ---: | ---: |",
+    "| Claim | Repeat | Arm | Status | Check | On the page | Turns | Tool calls | Read tokens | Output tokens | Cost |",
+    "| --- | ---: | --- | --- | --- | --- | ---: | --- | ---: | ---: | ---: |",
     ...records.map((entry) => {
       const calls = Object.entries(entry.tools)
         .map(([name, count]) => `${name.replace(/^mcp__[^_]+__/, "")} ${String(count)}`)
@@ -306,7 +327,7 @@ export const markdownOf = (
         entry.subtype !== null && entry.subtype !== "success"
           ? `${entry.status} (${entry.subtype})`
           : entry.status;
-      return `| ${entry.id} | ${entry.arm} | ${status} | ${entry.check} | ${String(entry.turns)} | ${calls || "none"} | ${int(readTokens(entry.usage))} | ${int(entry.usage.output)} | ${usd(entry.costUsd)} |`;
+      return `| ${entry.id} | ${String(entry.rep)} | ${entry.arm} | ${status} | ${entry.check} | ${yesNo(entry.onPage)} | ${String(entry.turns)} | ${calls || "none"} | ${int(readTokens(entry.usage))} | ${int(entry.usage.output)} | ${usd(entry.costUsd)} |`;
     }),
   ];
   return `${lines.join("\n")}\n`;

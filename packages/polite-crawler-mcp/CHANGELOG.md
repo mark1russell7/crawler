@@ -6,6 +6,10 @@ This file records the changes to `polite-crawler-mcp` in each version. The chang
 
 ## Unreleased
 
+## 0.2.3 - 2026-10-25
+
+- **The server uses polite-crawler 0.2.3.** The server has no change of its own. The new options of the watch list are in the [changelog of polite-crawler](../../CHANGELOG.md).
+
 ## 0.2.2 - 2026-10-25
 
 - **An error of the embedder no longer stops the server.** The server uses polite-crawler 0.2.2. With `--embedder`, two hybrid searches that shared a text and both failed stopped the process with an unhandled rejection. With this version, the error goes only to the tool calls.

@@ -15,12 +15,15 @@ A prerelease version (`0.2.0-beta.1`) goes to the npm tag `next`. Each other ver
 
 ## Unreleased
 
+## 0.2.3 - 2026-10-25
+
 - **The watch list keeps a schedule of the application.** Each change adds an option or a method, so no program changes.
   - `runWatch` takes the option `job`. It puts the name in the captures of each check, as the option `job` of a recipe does.
   - `crawler.watch.reschedule(url, { at })` and `WatchStore.reschedule` change the time of the next check of one entry. They give the changed entry, or `undefined` when the list does not have the page.
   - A run checks the due entries in the sequence of their times, so an earlier time also comes first. The time is not before one floor (`1h`) after the last check.
   - `add` with `keepSchedule: true` keeps the time of the next check of a page on the list. The default does not change: `add` sets that time one `every` after the last check.
   - The new parts are beta: `WatchRescheduleOptions`, `WatchOptions.keepSchedule` and `WatchList.reschedule`. `reschedule` is optional in `WatchList`, so a watch list of your own stays correct. `HybridCrawler.watch` has it.
+- **polite-crawler-mcp 0.2.3** comes with this version. It has no change of its own.
 
 ## 0.2.2 - 2026-10-25
 

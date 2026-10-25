@@ -1,27 +1,43 @@
-# The standard npm release of mark1russell7/template, with the extra jobs of polite-crawler.
+# The standard npm release of mark1russell7/template, with the extra steps of polite-crawler
+# (RELEASING.md, and CI.md of the template).
 #
-#   verify          The gates of ci.yml: each OS and Node.js version, and the smoke test.
-#   build           Builds and packs each published package (scripts/release/pack.mjs), checks that
-#                   CHANGELOG.md has a section for the version, tests the tarball and validates server.json.
-#   publish         Publishes each tarball whose version npm does not have. Only this job and
-#                   mcp-registry hold "id-token: write", and they run no code of the repository.
-#   mcp-registry    Publishes server.json to the MCP registry, after npm has the version of the
-#                   package that server.json names.
-#   github-release  Makes the tag v<version> and the GitHub release with the section of CHANGELOG.md.
+#   verify        The gates of ci.yml: each OS and Node.js version, and the smoke test.
+#   build         reusable-release-build.yml of the template: stops when the commit is not on main,
+#                 builds and packs each published package (scripts/release/pack.mjs), and writes
+#                 the plan of the git tag and the GitHub release (scripts/release/tags.mjs). The
+#                 plan stops the release when CHANGELOG.md has no section for the version. The
+#                 input after-pack checks server.json, tests the tarballs and validates server.json.
+#   publish       The npm-publish action of the template: publishes each tarball whose version npm
+#                 does not have. Only this job and mcp-registry hold "id-token: write", and they run
+#                 no code of the repository: no checkout, no install.
+#   mcp-registry  Publishes server.json to the MCP registry, after npm has the version of the
+#                 package that server.json names.
+#   tag           reusable-release-tag.yml of the template: makes the tag v<version> and the GitHub
+#                 release "polite-crawler <version>", with the section of CHANGELOG.md and the two
+#                 tarballs. Only this job holds "contents: write", and it runs no code of the
+#                 repository.
 #
-# A release: change the version in packages/polite-crawler/package.json, add its section to
-# CHANGELOG.md, and merge both to main. The workflow also starts by hand (workflow_dispatch), for
-# example after a failure. It skips each version that is already on npm. github-release runs when
-# publish published polite-crawler. mcp-registry runs when publish published the package and
-# version of server.json. Both also run when the owner starts the workflow by hand, and each of
-# them skips the work that is done.
+# The publish job and mcp-registry stay in this file. npm trusted publishing matches the OIDC token
+# of the run to the trusted publisher of each package: this repository and the workflow file
+# release.yml. A shared workflow of a different repository can change what npm sees (CI.md of the
+# template). A composite action runs in this job, so npm sees this file. The build job and the tag
+# job need no OIDC token, so they are shared workflows of the template. Renovate does not change
+# this file: the release session moves its pins (RELEASING.md).
+#
+# A release: change the version in the places that CLAUDE.md names, add its section to
+# CHANGELOG.md, and merge to main. The workflow also starts by hand (workflow_dispatch), for
+# example after a failure. It skips each version that is already on npm, and each tag that exists.
+# mcp-registry runs when publish published the package and version of server.json, and when the
+# owner starts the workflow by hand. It skips a version that the registry has. A release publishes
+# only a commit on main: the first step of the build job stops a run on a commit that main does
+# not have (RELEASING.md).
 #
 # server.json names the npm package of the MCP server (packages[0].identifier), its version, and
 # its folder (repository.subfolder). The build job reads these values, and stops when the
 # package.json in that folder has a different name or version.
 #
 # npm trusted publishing uses the OIDC token of GitHub Actions: no npm token, and each version
-# gets a provenance statement. The trusted publisher of polite-crawler names the repository
+# gets a provenance statement. The trusted publisher of each package names the repository
 # mark1russell7/crawler and the workflow file release.yml, with NO environment (npm refuses an
 # environment for a repository with the immutable OIDC subject, npm/cli#9969). A version with a
 # hyphen (0.2.0-beta.1) gets the dist-tag "next". The others get "latest".
@@ -52,107 +68,53 @@ jobs:
   build:
     name: Build and pack
     needs: verify
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
+    uses: mark1russell7/template/.github/workflows/reusable-release-build.yml@67fb145c9cc5e30df25ed74a40a51d60c6d932d7 # main
     permissions:
       contents: read
-    outputs:
-      version: ${{ steps.version.outputs.version }}
-      dist-tag: ${{ steps.version.outputs.dist-tag }}
-      server: ${{ steps.server.outputs.server }}
-      server-version: ${{ steps.server.outputs.server-version }}
-      mcp-package: ${{ steps.server.outputs.mcp-package }}
-      mcp-version: ${{ steps.server.outputs.mcp-version }}
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - name: The version and its section in CHANGELOG.md
-        id: version
-        run: |
-          version="$(node -p 'require("./packages/polite-crawler/package.json").version')"
-          # A prerelease (0.2.0-beta.1) goes to the npm tag "next", and each other version to "latest".
-          case "$version" in
-            *-*) dist_tag=next ;;
-            *) dist_tag=latest ;;
-          esac
-          node scripts/changelog.mjs "$version" > /dev/null
-          echo "version=$version" >> "$GITHUB_OUTPUT"
-          echo "dist-tag=$dist_tag" >> "$GITHUB_OUTPUT"
-      - name: The MCP server package of server.json
-        id: server
-        run: |
-          node -e '
-            const { readFileSync, appendFileSync } = require("node:fs");
-            const server = JSON.parse(readFileSync("server.json", "utf8"));
-            const pkg = server.packages[0];
-            const manifest = JSON.parse(readFileSync(`${server.repository.subfolder}/package.json`, "utf8"));
-            if (manifest.name !== pkg.identifier || manifest.version !== pkg.version || server.version !== pkg.version) {
-              console.error(`::error::server.json names ${pkg.identifier} ${pkg.version} (server ${server.version}), but ${server.repository.subfolder}/package.json is ${manifest.name} ${manifest.version}.`);
-              process.exit(1);
-            }
-            const lines = [
-              `server=${server.name.replace("/", "%2F")}`,
-              `server-version=${server.version}`,
-              `mcp-package=${pkg.identifier}`,
-              `mcp-version=${pkg.version}`,
-            ];
-            appendFileSync(process.env.GITHUB_OUTPUT, `${lines.join("\n")}\n`);
-            console.log(lines.join("\n"));
-          '
-      # The pnpm version comes from "packageManager" in package.json
-      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
-      # No dependency cache: a release installs from the registry and the lockfile only.
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
-        with:
-          node-version-file: .nvmrc
-          package-manager-cache: false
-      - run: pnpm install --frozen-lockfile
-      # The build script of the root package.json, or else the build script of each package
-      - name: Build
-        run: |
-          if node -e 'process.exit(require("./package.json").scripts?.build ? 0 : 1)'; then
-            pnpm run build
-          else
-            pnpm -r --if-present run build
-          fi
-      # pnpm writes the publishConfig entry points (build/) into the packed package.json.
-      - run: node scripts/release/pack.mjs "$RUNNER_TEMP/release"
-      # The tarballs that go to npm. When the MCP server is a package of its own, smoke.mjs tests
-      # its tarball too (--mcp-tarball).
-      - name: Test the tarballs that go to npm
-        env:
-          MCP_PACKAGE: ${{ steps.server.outputs.mcp-package }}
-        run: |
-          tarball_of() { awk -v name="$1" '$1 == name { print $3 }' "$RUNNER_TEMP/release/packages.txt"; }
-          args=(--tarball "$RUNNER_TEMP/release/$(tarball_of polite-crawler)")
-          if [ "$MCP_PACKAGE" != polite-crawler ]; then
-            args+=(--mcp-tarball "$RUNNER_TEMP/release/$(tarball_of "$MCP_PACKAGE")")
-          fi
-          node scripts/smoke.mjs "${args[@]}"
-      # The registry examines server.json before npm gets the version. This step needs no token.
-      - name: Validate server.json
-        env:
-          MCP_PUBLISHER_VERSION: 1.8.1
-          MCP_PUBLISHER_SHA256: a06c9096dcb9727c13555b6be26c7effa707b01f06a4c561ba7a3635443cf2cc
-        run: |
-          curl -fsSL -o "$RUNNER_TEMP/mcp-publisher.tar.gz" "https://github.com/modelcontextprotocol/registry/releases/download/v${MCP_PUBLISHER_VERSION}/mcp-publisher_linux_amd64.tar.gz"
-          echo "${MCP_PUBLISHER_SHA256}  $RUNNER_TEMP/mcp-publisher.tar.gz" | sha256sum --check
-          tar -xzf "$RUNNER_TEMP/mcp-publisher.tar.gz" -C "$RUNNER_TEMP" mcp-publisher
-          "$RUNNER_TEMP/mcp-publisher" validate
-      - name: The release notes and server.json
-        env:
-          VERSION: ${{ steps.version.outputs.version }}
-        run: |
-          node scripts/changelog.mjs "$VERSION" > "$RUNNER_TEMP/release/notes.md"
-          cp server.json "$RUNNER_TEMP/release/server.json"
-          ls -l "$RUNNER_TEMP/release"
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: release
-          path: ${{ runner.temp }}/release/
-          if-no-files-found: error
-          retention-days: 30
+    with:
+      node-version-file: .nvmrc
+      # 1. The MCP server package of server.json. Its outputs (server, server-version, mcp-package,
+      #    mcp-version) go to the output after-pack, for mcp-registry.
+      # 2. The tarballs that go to npm. When the MCP server is a package of its own, smoke.mjs
+      #    tests its tarball too (--mcp-tarball). pnpm writes the publishConfig entry points
+      #    (build/) into the packed package.json.
+      # 3. The registry examines server.json before npm gets the version. This step needs no token.
+      #    To update mcp-publisher, change it here and in mcp-registry.
+      # 4. server.json goes into the artifact "release", for mcp-registry.
+      after-pack: |
+        node -e '
+          const { readFileSync, appendFileSync } = require("node:fs");
+          const server = JSON.parse(readFileSync("server.json", "utf8"));
+          const pkg = server.packages[0];
+          const manifest = JSON.parse(readFileSync(`${server.repository.subfolder}/package.json`, "utf8"));
+          if (manifest.name !== pkg.identifier || manifest.version !== pkg.version || server.version !== pkg.version) {
+            console.error(`::error::server.json names ${pkg.identifier} ${pkg.version} (server ${server.version}), but ${server.repository.subfolder}/package.json is ${manifest.name} ${manifest.version}.`);
+            process.exit(1);
+          }
+          const lines = [
+            `server=${server.name.replace("/", "%2F")}`,
+            `server-version=${server.version}`,
+            `mcp-package=${pkg.identifier}`,
+            `mcp-version=${pkg.version}`,
+          ];
+          appendFileSync(process.env.GITHUB_OUTPUT, `${lines.join("\n")}\n`);
+          console.log(lines.join("\n"));
+        '
+        mcp_package="$(node -p 'require("./server.json").packages[0].identifier')"
+        tarball_of() { awk -v name="$1" '$1 == name { print $3 }' "$RELEASE_DIR/packages.txt"; }
+        args=(--tarball "$RELEASE_DIR/$(tarball_of polite-crawler)")
+        if [ "$mcp_package" != polite-crawler ]; then
+          args+=(--mcp-tarball "$RELEASE_DIR/$(tarball_of "$mcp_package")")
+        fi
+        node scripts/smoke.mjs "${args[@]}"
+        MCP_PUBLISHER_VERSION=1.8.1
+        MCP_PUBLISHER_SHA256=a06c9096dcb9727c13555b6be26c7effa707b01f06a4c561ba7a3635443cf2cc
+        curl -fsSL -o "$RUNNER_TEMP/mcp-publisher.tar.gz" "https://github.com/modelcontextprotocol/registry/releases/download/v${MCP_PUBLISHER_VERSION}/mcp-publisher_linux_amd64.tar.gz"
+        echo "${MCP_PUBLISHER_SHA256}  $RUNNER_TEMP/mcp-publisher.tar.gz" | sha256sum --check
+        tar -xzf "$RUNNER_TEMP/mcp-publisher.tar.gz" -C "$RUNNER_TEMP" mcp-publisher
+        "$RUNNER_TEMP/mcp-publisher" validate
+        cp server.json "$RELEASE_DIR/server.json"
+        ls -l "$RELEASE_DIR"
 
   publish:
     name: Publish to npm
@@ -162,93 +124,31 @@ jobs:
     permissions:
       id-token: write
     outputs:
-      # "name@version" of each version that this run published, with a space before and after each one
+      # The versions that this run published, "name@version" with a space between them
       published: ${{ steps.publish.outputs.published }}
     steps:
-      # No registry-url: with it, setup-node writes `_authToken=${NODE_AUTH_TOKEN}` to an .npmrc,
-      # and that empty token can stop the OIDC exchange. The default registry is npmjs.org.
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
-        with:
-          node-version: 26
-          package-manager-cache: false
-      - name: npm is 11.5.1 or later
-        run: |
-          npm_version="$(npm --version)"
-          if ! node -e 'const [a, b, c] = process.argv[1].split(".").map(Number); process.exit(a > 11 || (a === 11 && (b > 5 || (b === 5 && c >= 1))) ? 0 : 1)' "$npm_version"; then
-            echo "::error::npm $npm_version cannot do trusted publishing. It must be 11.5.1 or later."
-            exit 1
-          fi
-          echo "npm $npm_version"
-      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
-        with:
-          name: release
-          path: release
-      # packages.txt has one line for each tarball, "name version file", in the sequence of their
-      # dependencies. npm publishes each tarball as it is, with no package scripts. The path starts
-      # with ./ because npm reads "release/x.tgz" as a GitHub repository (user/repo).
-      # npm limits the requests of one account (HTTP 429), and Sigstore can fail once (a 502, then
-      # a 409 for the entry that it wrote). npm does not send a request again by itself here: the
-      # step waits, and then starts a new publish with a new signature.
-      # The query string of each request goes around the cache of the registry. Without it, a
-      # package that the owner bootstrapped some minutes before can still get a cached 404.
-      - name: Publish
-        id: publish
-        shell: bash
-        run: |
-          set -o pipefail
-          new_packages=()
-          published=" "
-          while read -r name version file; do
-            [ -n "$name" ] || continue
-            status=$(curl -sS -o packument.json -w '%{http_code}' "https://registry.npmjs.org/${name//\//%2f}?t=$(date +%s%N)")
-            if [ "$status" = "404" ]; then
-              new_packages+=("$name")
-              continue
-            elif [ "$status" != "200" ]; then
-              echo "::error::The registry gave HTTP $status for $name."
-              exit 1
-            fi
-            if node -e 'process.exit(require("./packument.json").versions?.[process.argv[1]] ? 0 : 1)' "$version"; then
-              echo "$name $version is on npm."
-              continue
-            fi
-            tag=latest
-            case "$version" in *-*) tag=next ;; esac
-            for attempt in 1 2 3; do
-              if npm publish "./release/$file" --access public --provenance --tag "$tag" --fetch-retries 0 2>&1 | tee publish.log; then
-                published+="$name@$version "
-                echo "published=$published" >> "$GITHUB_OUTPUT"
-                break
-              fi
-              if ! grep -qE "E429|E5[0-9][0-9]|TLOG_CREATE_ENTRY_ERROR|ETIMEDOUT|ECONNRESET" publish.log || [ "$attempt" = 3 ]; then
-                echo "::error::npm did not publish $name $version."
-                exit 1
-              fi
-              echo "npm or Sigstore gave a temporary error (429, 5xx, or a transparency-log conflict). The next try starts in $((attempt * 60)) seconds."
-              sleep $((attempt * 60))
-            done
-          done < release/packages.txt
-          echo "published=$published" >> "$GITHUB_OUTPUT"
-          if [ ${#new_packages[@]} -gt 0 ]; then
-            echo "::error::These packages are not on npm: ${new_packages[*]}. The owner bootstraps each new package once (RELEASING.md), then starts this workflow again."
-            exit 1
-          fi
+      # The action of the template, pinned to a commit. It runs in this job, so the OIDC token names
+      # this repository and release.yml. It downloads the artifact "release" and publishes each
+      # version that npm does not have, with provenance (.github/actions/npm-publish of the template).
+      - id: publish
+        uses: mark1russell7/template/.github/actions/npm-publish@67fb145c9cc5e30df25ed74a40a51d60c6d932d7 # main
 
   mcp-registry:
     name: Publish to the MCP registry
     needs: [build, publish]
-    if: contains(needs.publish.outputs.published, format(' {0}@{1} ', needs.build.outputs.mcp-package, needs.build.outputs.mcp-version)) || github.event_name == 'workflow_dispatch'
+    # The values of server.json come from the output after-pack of the build job.
+    if: contains(format(' {0} ', needs.publish.outputs.published), format(' {0}@{1} ', fromJSON(needs.build.outputs.after-pack || '{}')['mcp-package'], fromJSON(needs.build.outputs.after-pack || '{}')['mcp-version'])) || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
       id-token: write
     env:
-      VERSION: ${{ needs.build.outputs.server-version }}
-      SERVER: ${{ needs.build.outputs.server }}
-      MCP_PACKAGE: ${{ needs.build.outputs.mcp-package }}
-      MCP_VERSION: ${{ needs.build.outputs.mcp-version }}
+      VERSION: ${{ fromJSON(needs.build.outputs.after-pack)['server-version'] }}
+      SERVER: ${{ fromJSON(needs.build.outputs.after-pack)['server'] }}
+      MCP_PACKAGE: ${{ fromJSON(needs.build.outputs.after-pack)['mcp-package'] }}
+      MCP_VERSION: ${{ fromJSON(needs.build.outputs.after-pack)['mcp-version'] }}
       # To update: take the version and the sha256 of mcp-publisher_linux_amd64.tar.gz from
-      # https://github.com/modelcontextprotocol/registry/releases
+      # https://github.com/modelcontextprotocol/registry/releases (also in the input after-pack)
       MCP_PUBLISHER_VERSION: 1.8.1
       MCP_PUBLISHER_SHA256: a06c9096dcb9727c13555b6be26c7effa707b01f06a4c561ba7a3635443cf2cc
     steps:
@@ -285,32 +185,13 @@ jobs:
           ../mcp-publisher login github-oidc
           ../mcp-publisher publish
 
-  github-release:
-    name: GitHub release
+  tag:
+    name: Git tag and GitHub release
     needs: [build, publish]
-    if: contains(needs.publish.outputs.published, format(' polite-crawler@{0} ', needs.build.outputs.version)) || github.event_name == 'workflow_dispatch'
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
+    # Also after a failed publish: each version that it published before the failure gets its tag.
+    if: ${{ !cancelled() && needs.build.result == 'success' }}
+    uses: mark1russell7/template/.github/workflows/reusable-release-tag.yml@67fb145c9cc5e30df25ed74a40a51d60c6d932d7 # main
     permissions:
       contents: write
-    env:
-      VERSION: ${{ needs.build.outputs.version }}
-      DIST_TAG: ${{ needs.build.outputs.dist-tag }}
-      GH_TOKEN: ${{ github.token }}
-    steps:
-      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
-        with:
-          name: release
-          path: release
-      # No version tag starts this workflow, so this job makes the tag v<version> on the released commit.
-      - name: Make the tag and the release
-        run: |
-          if gh release view "v$VERSION" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
-            echo "The release v$VERSION exists. Nothing to do."
-            exit 0
-          fi
-          prerelease=()
-          if [ "$DIST_TAG" = next ]; then prerelease=(--prerelease); fi
-          gh release create "v$VERSION" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
-            --title "polite-crawler $VERSION" --notes-file release/notes.md "${prerelease[@]}" \
-            release/*.tgz
+    with:
+      published: ${{ needs.publish.outputs.published }}

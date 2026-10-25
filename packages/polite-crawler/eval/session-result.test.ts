@@ -177,4 +177,13 @@ describe("the summary", () => {
     expect(markdown).toContain("| rfc-example | 1 | mcp | done | verified | yes |");
     expect(markdown).toContain("crawl_verify 2");
   });
+
+  it("gives a summary for each arm with records, in the sequence of the arms", () => {
+    const answer = "<quote>The server sends a “hello” — once.</quote>";
+    const records = [
+      recordOf(claim, "webfetch", stream(answer)),
+      recordOf(claim, "mcp-quote", stream(answer)),
+    ];
+    expect(summarize(records, 30).map((arm) => arm.arm)).toEqual(["mcp-quote", "webfetch"]);
+  });
 });

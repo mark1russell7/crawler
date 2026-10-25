@@ -10,8 +10,8 @@
  *
  * `run` starts one session of `claude -p` for each claim, one after the other, --repeat times. Each
  * session starts in a new empty folder. The arm `mcp` has the tools of polite-crawler-mcp (with a
- * new store) and no built-in tool. The arm `webfetch` has the built-in tool WebFetch and no MCP
- * server. The command writes <out>/<arm>/<claim>.<repeat>.ndjson (the stream of each session) and
+ * new store) and no built-in tool. The arm `mcp-quote` is the same server with `--tools quote`.
+ * The arm `webfetch` has the built-in tool WebFetch and no MCP server. The command writes <out>/<arm>/<claim>.<repeat>.ndjson (the stream of each session) and
  * <out>/<arm>/sessions.json (the records). Before each session, it stops when the cost of the arm
  * is at --budget.
  *
@@ -19,7 +19,7 @@
  * (claim ids, comma separated), --limit (the first N claims), --repeat (default 1), --max-turns
  * (default 12), --max-budget-usd (the limit of one session, default 1), --budget (the limit of the
  * arm in USD, default 20), --claude (the command of Claude Code, default `claude`), --mcp-command
- * (the command of polite-crawler-mcp, for the arm mcp) and --out.
+ * (the command of polite-crawler-mcp, for the arms mcp and mcp-quote) and --out.
  *
  * `summary` reads the records of the two arms and writes <out>/eval-b-result.json. With --fetch, it
  * fetches each page one time with the crawler (robots.txt, the pace of each site) and checks that
@@ -102,7 +102,7 @@ function run(): void {
   if (!ARMS.includes(arm)) fail(`--arm is ${ARMS.join(" or ")}`);
   const model = args.model ?? fail("give --model, so that each record names its model");
   const mcpCommand = args["mcp-command"];
-  if (arm === "mcp" && mcpCommand === undefined) fail("the arm mcp needs --mcp-command");
+  if (arm !== "webfetch" && mcpCommand === undefined) fail(`the arm ${arm} needs --mcp-command`);
   const budget = Number(args.budget);
   if (!(budget > 0)) fail("--budget is a number of USD above 0");
   const repeat = Number(args.repeat || "1");
@@ -135,8 +135,10 @@ function run(): void {
         continue;
       }
       const work = mkdtempSync(join(tmpdir(), `eval-b-${claim.id}-`));
+      const server = ["--dir", join(work, ".store"), "--no-browser"];
+      if (arm === "mcp-quote") server.push("--tools", "quote");
       const tools =
-        arm === "mcp"
+        arm !== "webfetch"
           ? [
               "--tools",
               "",
@@ -146,7 +148,7 @@ function run(): void {
                   crawler: {
                     type: "stdio",
                     command: mcpCommand,
-                    args: ["--dir", join(work, ".store"), "--no-browser"],
+                    args: server,
                   },
                 },
               }),

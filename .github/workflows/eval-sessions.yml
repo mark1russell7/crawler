@@ -1,7 +1,8 @@
 # The eval "tokens per verified claim", part B (packages/polite-crawler/eval/README.md tells the method).
 # Real sessions of Claude Code (claude -p) on the API: one session for each claim in each arm.
-#   mcp       the MCP tools of polite-crawler-mcp, and no built-in tool
-#   webfetch  the built-in tool WebFetch, and no MCP server
+#   mcp        the MCP tools of polite-crawler-mcp, and no built-in tool
+#   mcp-quote  the same server with --tools quote: only the four tools of a quote
+#   webfetch   the built-in tool WebFetch, and no MCP server
 # Each session costs money on the API. A dry run first:
 #   gh workflow run eval-sessions.yml -R mark1russell7/crawler -f limit=2
 # The artifact "eval-b" holds the records and the summary, and each arm has an artifact with the
@@ -15,6 +16,12 @@ name: Eval sessions
 on:
   workflow_dispatch:
     inputs:
+      arms:
+        description: The arms, as a JSON list of mcp, mcp-quote and webfetch
+        default: '["mcp","webfetch"]'
+      mcp_version:
+        description: The version of polite-crawler-mcp (mcp-quote needs 0.2.3 or later)
+        default: "0.2.3"
       limit:
         description: The first N claims (empty for all)
         default: ""
@@ -53,7 +60,7 @@ concurrency:
 env:
   # Claude Code and polite-crawler-mcp at fixed versions, so that a run can be done again
   CLAUDE_CODE_VERSION: 2.1.296
-  MCP_VERSION: 0.2.1
+  MCP_VERSION: ${{ inputs.mcp_version }}
 
 jobs:
   arm:
@@ -63,9 +70,10 @@ jobs:
     timeout-minutes: 120
     strategy:
       fail-fast: false
-      # Two jobs: each site gets no more than two sessions at the same time
+      # No more than two jobs at the same time: each site gets no more than two sessions at a time
+      max-parallel: 2
       matrix:
-        arm: [mcp, webfetch]
+        arm: ${{ fromJSON(inputs.arms) }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -137,7 +145,7 @@ jobs:
       - name: The records of the two arms
         run: |
           mkdir -p sessions
-          for arm in mcp webfetch; do
+          for arm in mcp mcp-quote webfetch; do
             if [ -d "downloaded/sessions-$arm" ]; then cp -r "downloaded/sessions-$arm" "sessions/$arm"; fi
           done
       # The summary fetches each page one time (robots.txt, the pace of each site), and checks that

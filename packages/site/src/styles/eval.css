@@ -463,15 +463,30 @@
 
 /*
  * The figure of "Real Claude Code sessions" (components/EvalSessions.tsx) keeps the colors and the
- * shapes of part A: polite-crawler is a blue dot and WebFetch an orange square. A hollow mark is one
- * session, and the full mark is the median of the sessions. A ▼ beside the ratio marks a claim on
- * which polite-crawler costs less.
+ * shapes of part A: polite-crawler is a blue dot and WebFetch an orange square. The four tools of
+ * `--tools quote` are a purple diamond. A hollow mark is one session, and the full mark is the median
+ * of the sessions. A ▼ beside the ratio marks a claim on which polite-crawler costs less.
  */
 .pc-evalb-mcp {
   --eval-color: var(--series-1);
 }
+.pc-evalb-mcp-quote {
+  --eval-color: var(--series-7);
+}
 .pc-evalb-webfetch {
   --eval-color: var(--series-2);
+}
+.pc-evalb-controls {
+  display: grid;
+  justify-items: end;
+  gap: var(--space-2);
+}
+.pc-evalb .pc-chip:disabled,
+.pc-evalb .pc-chip:disabled:hover {
+  border-color: var(--color-rule-strong);
+  color: var(--color-ink-secondary);
+  opacity: 0.45;
+  cursor: default;
 }
 .pc-evalb-key {
   display: inline-block;
@@ -485,6 +500,12 @@
 }
 .pc-evalb-key.pc-evalb-webfetch {
   border-radius: 2px;
+}
+.pc-evalb-key.pc-evalb-mcp-quote {
+  width: 8px;
+  height: 8px;
+  margin: 1px;
+  transform: rotate(45deg);
 }
 .pc-evalb-key.pc-evalb-one {
   border: 2px solid var(--eval-color);
@@ -520,6 +541,18 @@
 .pc-evalb-one.pc-evalb-webfetch {
   border-radius: 2px;
 }
+.pc-evalb-mark.pc-evalb-mcp-quote {
+  width: 9px;
+  height: 9px;
+}
+.pc-evalb-one.pc-evalb-mcp-quote {
+  width: 7px;
+  height: 7px;
+}
+.pc-evalb-mark.pc-evalb-mcp-quote,
+.pc-evalb-one.pc-evalb-mcp-quote {
+  transform: translate(-50%, -50%) rotate(45deg);
+}
 .pc-evalb-less .pc-eval-ratio {
   font-weight: 600;
   color: var(--color-ink);
@@ -531,6 +564,9 @@
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--space-3);
+}
+.pc-evalb-arms-3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 .pc-evalb-arm {
   display: grid;
@@ -574,5 +610,8 @@
   }
   .pc-evalb-arms {
     grid-template-columns: minmax(0, 1fr);
+  }
+  .pc-evalb-controls {
+    justify-items: start;
   }
 }

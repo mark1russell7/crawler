@@ -1,95 +1,172 @@
 ---
 title: Real Claude Code sessions
-description: "Eval part B of polite-crawler: real sessions of Claude Code prove 30 claims with exact quotes, with the MCP tools of polite-crawler or with WebFetch. The cost of a session, the tokens and the quotes on the page."
+description: "Eval part B of polite-crawler: real sessions of Claude Code prove 30 claims with exact quotes, with the MCP tools of polite-crawler or with WebFetch. The cost of a session, the tokens, the quotes on the page, and a second run with polite-crawler-mcp 0.2.3."
 ---
 
 import { ClaimSessions } from "../../../components/EvalSessions.tsx";
 import evalB from "../../../data/eval-b.json";
-import { claimCost, costsLess, tokens, usd } from "../../../lib/eval-b.ts";
+import { change, claimCost, costsLess, tokens, usd } from "../../../lib/eval-b.ts";
 import { STUDY_AUTHOR } from "../../../lib/study.ts";
 
-export const sonnet = evalB.models.find((model) => model.id === "sonnet");
-export const opus = evalB.models.find((model) => model.id === "opus");
+export const runOf = (id) => evalB.runs.find((run) => run.id === id);
+export const sonnet = runOf("sonnet-0.2.1");
+export const opus = runOf("opus-0.2.1");
+export const lean = runOf("sonnet-0.2.3");
+export const first = evalB.versions[0];
+export const second = evalB.versions[1];
 export const S = sonnet.arms;
 export const O = opus.arms;
+export const L = lean.arms.mcp;
+export const Q = lean.arms["mcp-quote"];
+export const W = sonnet.arms.webfetch;
 export const runUrl = (run) => `https://github.com/mark1russell7/crawler/actions/runs/${run}`;
 export const readme = "https://github.com/mark1russell7/crawler/tree/main/packages/polite-crawler/eval#part-b-real-sessions-of-claude-code";
 export const dataFile = "https://github.com/mark1russell7/crawler/blob/main/packages/site/src/data/eval-b.json";
+export const leanPr = "https://github.com/mark1russell7/crawler/pull/38";
 export const count = evalB.claims.length;
-export const sessionsOf = (model) => model.arms.mcp.sessions + model.arms.webfetch.sessions;
-export const allSessions = sessionsOf(sonnet) + sessionsOf(opus) + evalB.dryRun.sessions;
-export const less = (model) => evalB.claims.filter((claim) => costsLess(claim, model.id));
+export const sessionsIn = (run) => Object.values(run.arms).reduce((total, arm) => total + arm.sessions, 0);
+export const drySessions = evalB.versions.reduce((total, version) => total + version.dryRun.sessions, 0);
+export const allSessions = evalB.runs.reduce((total, run) => total + sessionsIn(run), 0) + drySessions;
+export const less = (run, arm = "mcp") => evalB.claims.filter((claim) => costsLess(claim, run, arm));
 export const names = (claims) => claims.map((claim) => `${claim.page} (“${claim.question}”)`).join(" and ");
-export const cheapest = (model, arm) => Math.min(...evalB.claims.flatMap((claim) => claim.sessions[model.id][arm].map((session) => session.usd)));
+export const cheapest = (run, arm) => Math.min(...evalB.claims.flatMap((claim) => claim.sessions[run.id][arm].map((session) => session.usd)));
 export const shortest = evalB.claims.reduce((short, claim) => (claim.markdown < short.markdown ? claim : short));
 export const times = (a, b) => (a / b).toFixed(1);
-export const day = new Date(`${evalB.date}T12:00:00Z`).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric", timeZone: "UTC" });
+export const cut = (from, to) => Math.abs(change(from, to));
+export const share = (part, whole) => Math.round((part / whole) * 100);
+export const price = (model, kind) => `$${evalB.prices[model][kind].toFixed(2)}`;
+export const helperPrice = (kind) => price(evalB.helper, kind);
+export const kindOf = (arm, kind) => usd(arm.mainKindsUsd[kind]);
+export const readSaving = S.mcp.mainTokens.cacheRead - L.mainTokens.cacheRead;
+export const gap = Q.costUsd - W.costUsd;
+export const writeGap = Q.mainKindsUsd.cacheWrite - W.mainKindsUsd.cacheWrite;
+export const day = new Date(`${first.date}T12:00:00Z`).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric", timeZone: "UTC" });
 
-<p class="pc-byline">By <a href={STUDY_AUTHOR.url}>{STUDY_AUTHOR.name}</a>. The sessions used Claude Code {evalB.claudeCode} and polite-crawler-mcp {evalB.mcp}. They started on <time datetime={evalB.date}>{day}</time>, in <a href={runUrl(sonnet.run)}>workflow {sonnet.run}</a> (Sonnet) and <a href={runUrl(opus.run)}>workflow {opus.run}</a> (Opus).</p>
+<p class="pc-byline">By <a href={STUDY_AUTHOR.url}>{STUDY_AUTHOR.name}</a>. The sessions used Claude Code {first.claudeCode}, and they started on <time datetime={first.date}>{day}</time>. The runs of polite-crawler-mcp {first.mcp} are <a href={runUrl(sonnet.run)}>workflow {sonnet.run}</a> (Sonnet) and <a href={runUrl(opus.run)}>workflow {opus.run}</a> (Opus). The run of {second.mcp} is <a href={runUrl(lean.run)}>workflow {lean.run}</a> (Sonnet).</p>
 
 [Part A](../tokens-per-claim/) of the eval counted the tokens that an agent reads to prove {count} claims with exact quotes. It used a proxy tokenizer and no model. Part B asks the same questions in real sessions of Claude Code (`claude -p`), in CI. The tokens and the cost come from the usage that Claude Code reports, with each model of the session.
 
-Each claim got one session in each of two arms, with the same prompt and the same model:
+Each run gives each claim the same prompt in each of its arms, with the same model. The arms are:
 
 - **`mcp`**: only the MCP tools of polite-crawler-mcp, with a new store.
+- **`mcp-quote`**: the same server with `--tools quote`. The session gets only `crawl_fetch`, `crawl_find`, `crawl_read` and `crawl_verify`. Only the run of {second.mcp} has this arm.
 - **`webfetch`**: only the built-in tool WebFetch.
 
 The results:
 
-- **In real sessions, WebFetch costs approximately half as much as polite-crawler.** With Sonnet, the median session costs {usd(S.webfetch.medianCostUsd)} with WebFetch and {usd(S.mcp.medianCostUsd)} with polite-crawler. With Opus, it costs {usd(O.webfetch.medianCostUsd)} against {usd(O.mcp.medianCostUsd)}.
-- **The token saving of part A does not give a lower cost.** WebFetch gives the page to a small, cheap model (<code>{evalB.helper}</code>). The main model reads only the answer of that small model.
-- **With Sonnet, polite-crawler gives more quotes that are word for word on the page:** {S.mcp.onPage} of {S.mcp.sessions} against {S.webfetch.onPage} of {S.webfetch.sessions}. With Opus, the two arms are almost equal: {O.mcp.onPage} of {O.mcp.sessions} against {O.webfetch.onPage} of {O.webfetch.sessions}.
+- **WebFetch costs less than polite-crawler, also with the shorter tool text of {second.mcp}.** With Sonnet, the median session costs {usd(W.medianCostUsd)} with WebFetch. With polite-crawler, it costs {usd(S.mcp.medianCostUsd)} with {first.mcp}, {usd(L.medianCostUsd)} with {second.mcp} and {usd(Q.medianCostUsd)} with `--tools quote`.
+- **The shorter tool text cut the tokens more than the cost.** With polite-crawler-mcp {second.mcp}, the median session read {cut(S.mcp.medianReadTokens, L.medianReadTokens)}% fewer tokens, and {cut(S.mcp.medianReadTokens, Q.medianReadTokens)}% fewer with `--tools quote`. The new version cut the median cost of a session by {cut(S.mcp.medianCostUsd, L.medianCostUsd)}% and {cut(S.mcp.medianCostUsd, Q.medianCostUsd)}%. It cut the cost for each quote on the page by {cut(S.mcp.costPerOnPageUsd, L.costPerOnPageUsd)}% and {cut(S.mcp.costPerOnPageUsd, Q.costPerOnPageUsd)}%.
+- **polite-crawler gives more quotes that are word for word on the page.** With Sonnet, {L.onPage} and {Q.onPage} of {L.sessions} sessions have each quote on the page with {second.mcp}, and {S.mcp.onPage} with {first.mcp}. WebFetch has {W.onPage} of {W.sessions}. With Opus, the two arms are almost equal: {O.mcp.onPage} of {O.mcp.sessions} against {O.webfetch.onPage} of {O.webfetch.sessions}.
+- **The writes to the cache make the difference.** A token that the main model writes to its cache costs 25 times a token that it reads from the cache. The tools of polite-crawler put text of the page into the context of the main model. The main model writes that text to its cache. WebFetch gives the page to a small model (<code>{evalB.helper}</code>), and the main model gets only a short answer.
 - **Only polite-crawler lets the agent check its quote.** `crawl_verify` finds the quote in the stored page, and the stored capture has an id that a citation can name. With WebFetch, the main model does not see the page, so it cannot check the quote.
-- **The whole eval cost {usd(evalB.costUsd)}** for {allSessions} sessions, with a dry run of {evalB.dryRun.sessions} sessions.
+- **The WebFetch arm started one time.** The run of {second.mcp} changed only polite-crawler-mcp, so it did not start WebFetch again. For WebFetch, this page uses the sessions of the run of {first.mcp} with Sonnet.
+- **The whole eval cost {usd(evalB.costUsd)}** for {allSessions} sessions, with a dry run for each version: {drySessions} sessions in total. The run of {second.mcp} cost {usd(lean.costUsd)}, and its dry run {usd(second.dryRun.costUsd)}.
 
 ## The results
 
-| Model | Arm | Sessions | The quote of the claim | Quotes on the page | Median cost of a session | Cost for each quote on the page |
-| --- | --- | ---: | ---: | ---: | ---: | ---: |
-| Sonnet | `mcp` | {S.mcp.sessions} | {S.mcp.verified} | {S.mcp.onPage} | {usd(S.mcp.medianCostUsd)} | {usd(S.mcp.costPerOnPageUsd)} |
-| Sonnet | `webfetch` | {S.webfetch.sessions} | {S.webfetch.verified} | {S.webfetch.onPage} | {usd(S.webfetch.medianCostUsd)} | {usd(S.webfetch.costPerOnPageUsd)} |
-| Opus | `mcp` | {O.mcp.sessions} | {O.mcp.verified} | {O.mcp.onPage} | {usd(O.mcp.medianCostUsd)} | {usd(O.mcp.costPerOnPageUsd)} |
-| Opus | `webfetch` | {O.webfetch.sessions} | {O.webfetch.verified} | {O.webfetch.onPage} | {usd(O.webfetch.medianCostUsd)} | {usd(O.webfetch.costPerOnPageUsd)} |
+| Model | Run | Arm | Sessions | The quote of the claim | Quotes on the page | Median cost of a session | Cost for each quote on the page |
+| --- | --- | --- | ---: | ---: | ---: | ---: | ---: |
+| Sonnet | {first.mcp} | `mcp` | {S.mcp.sessions} | {S.mcp.verified} | {S.mcp.onPage} | {usd(S.mcp.medianCostUsd)} | {usd(S.mcp.costPerOnPageUsd)} |
+| Sonnet | {second.mcp} | `mcp` | {L.sessions} | {L.verified} | {L.onPage} | {usd(L.medianCostUsd)} | {usd(L.costPerOnPageUsd)} |
+| Sonnet | {second.mcp} | `mcp-quote` | {Q.sessions} | {Q.verified} | {Q.onPage} | {usd(Q.medianCostUsd)} | {usd(Q.costPerOnPageUsd)} |
+| Sonnet | {first.mcp} | `webfetch` | {W.sessions} | {W.verified} | {W.onPage} | {usd(W.medianCostUsd)} | {usd(W.costPerOnPageUsd)} |
+| Opus | {first.mcp} | `mcp` | {O.mcp.sessions} | {O.mcp.verified} | {O.mcp.onPage} | {usd(O.mcp.medianCostUsd)} | {usd(O.mcp.costPerOnPageUsd)} |
+| Opus | {first.mcp} | `webfetch` | {O.webfetch.sessions} | {O.webfetch.verified} | {O.webfetch.onPage} | {usd(O.webfetch.medianCostUsd)} | {usd(O.webfetch.costPerOnPageUsd)} |
 
-The cost of a session includes each model of the session. The cost for each quote on the page is the cost of the arm, divided by the sessions with each quote on the page.
+The column "Run" gives the version of polite-crawler-mcp in the run. The WebFetch arm does not use polite-crawler-mcp, and only the runs of {first.mcp} have it. The cost of a session includes each model of the session. The cost for each quote on the page is the cost of the arm, divided by the sessions with each quote on the page.
 
 ### Two checks of an answer
 
 - **The quote of the claim** (`verified`): the answer holds the quote of the claim.
 - **Quotes on the page**: each quote of the answer is on the page, word for word.
 
-The two checks give different counts. An answer can quote a different sentence of the page. Then its quote is on the page, but it is not the quote of the claim. For the question "What does the map method of an array return?", the two arms quoted "A new array with each element being the result of the callback function." That sentence is on the page and answers the question, but the claim has a different sentence. By the check of the claim, WebFetch has a few more: {S.webfetch.verified} against {S.mcp.verified} with Sonnet, and {O.webfetch.verified} against {O.mcp.verified} with Opus.
+The two checks give different counts. An answer can quote a different sentence of the page. Then its quote is on the page, but it is not the quote of the claim. For the question "What does the map method of an array return?", the two arms quoted "A new array with each element being the result of the callback function." That sentence is on the page and answers the question, but the claim has a different sentence.
+
+By the check of the claim, WebFetch has a few more. With Sonnet, it has {W.verified}, against {S.mcp.verified} with {first.mcp} and {L.verified} with {second.mcp}. With Opus, it has {O.webfetch.verified} against {O.mcp.verified}.
 
 With Sonnet, most quotes of WebFetch that are not on the page join or drop text. Examples are a footnote mark "[1]" in the quote, the pronunciation left out of "Alan Mathison Turing (23 June 1912 – 7 June 1954)", and two sentences joined as one. The small model of WebFetch reads the page, and the main model gets only its answer.
 
-The misses of polite-crawler are all on one claim: the status code 418 of RFC 9110. That quote is past the cut of the reader, at 50,000 characters. One session gave a quote that is not on the page. Two sessions, one with each model, stopped at the limit of turns with no answer.
+The sessions of polite-crawler with no quote on the page are almost all on one claim: the status code 418 of RFC 9110. That quote is past the cut of the reader, at 50,000 characters. With {first.mcp}, one session gave a quote that is not on the page. Two sessions, one with each model, stopped at the limit of turns with no answer.
 
-## The cost of a session
+With {second.mcp}, the description of `crawl_read` tells the model where the text stops, and that `crawl_verify` finds a quote past that point. On the claim of the status code 418, 4 of the 6 sessions of {second.mcp} said that the stored text stops before the section. They gave no quote. One session stopped at the limit of turns.
 
-Part A counted fewer tokens for polite-crawler. Why does WebFetch cost less? The two arms read their tokens with different models.
+In one session, `crawl_verify` found a different sentence of the section. That quote is on the page, but it is not the quote of the claim. With {second.mcp}, one other session gave a quote that is not on the page, on WCAG 2.1.
 
-- **polite-crawler:** the main model reads each token. Each session starts with the system prompt of Claude Code, the definitions of the nine tools and the instructions of the server. The median session has {S.mcp.medianTurns} turns, and each turn reads the context again from the cache. With Sonnet, the median session reads {tokens(S.mcp.medianReadTokens)} tokens.
-- **WebFetch:** the small model reads the page, and the main model reads only its answer. The median session has {S.webfetch.medianTurns} turns and reads {tokens(S.webfetch.medianReadTokens)} tokens with the two models. A token of the small model costs much less than a token of Sonnet.
+## Why WebFetch still costs less
 
-With Sonnet, the WebFetch arm cost {usd(S.webfetch.costUsd)} in total: {usd(S.webfetch.mainUsd)} for Sonnet and {usd(S.webfetch.helperUsd)} for the small model. The polite-crawler arm cost {usd(S.mcp.costUsd)}, all for Sonnet.
+Part A counted fewer tokens for polite-crawler, and {second.mcp} cut the tokens again. Why does WebFetch still cost less? The price of a token changes with its kind and with the model. These are the prices of the sessions, in USD for one million tokens:
 
-The fixed part of the cost is large. With Sonnet, the cheapest session cost {usd(cheapest(sonnet, "mcp"))} with polite-crawler and {usd(cheapest(sonnet, "webfetch"))} with WebFetch. On the shortest page, {shortest.page}, a session cost {usd(claimCost(shortest, "sonnet", "mcp"))} with polite-crawler and {usd(claimCost(shortest, "sonnet", "webfetch"))} with WebFetch.
+| Model | Input | Written to the cache | Read from the cache | Output |
+| --- | ---: | ---: | ---: | ---: |
+| Sonnet (<code>{sonnet.model}</code>) | {price(sonnet.model, "input")} | {price(sonnet.model, "cacheWrite")} | {price(sonnet.model, "cacheRead")} | {price(sonnet.model, "output")} |
+| The small model of WebFetch (<code>{evalB.helper}</code>) | {helperPrice("input")} | none | none | {helperPrice("output")} |
+
+The data script checks that these prices give the cost that Claude Code reported for each model of each session. The small model wrote nothing to a cache and read nothing from a cache.
+
+The median tokens of a session with Sonnet, for each kind of token:
+
+| Median of a session | `mcp`, {first.mcp} | `mcp`, {second.mcp} | `mcp-quote`, {second.mcp} | `webfetch` |
+| --- | ---: | ---: | ---: | ---: |
+| Turns | {S.mcp.medianTurns} | {L.medianTurns} | {Q.medianTurns} | {W.medianTurns} |
+| Main model: input | {tokens(S.mcp.mainTokens.input)} | {tokens(L.mainTokens.input)} | {tokens(Q.mainTokens.input)} | {tokens(W.mainTokens.input)} |
+| Main model: written to the cache | {tokens(S.mcp.mainTokens.cacheWrite)} | {tokens(L.mainTokens.cacheWrite)} | {tokens(Q.mainTokens.cacheWrite)} | {tokens(W.mainTokens.cacheWrite)} |
+| Main model: read from the cache | {tokens(S.mcp.mainTokens.cacheRead)} | {tokens(L.mainTokens.cacheRead)} | {tokens(Q.mainTokens.cacheRead)} | {tokens(W.mainTokens.cacheRead)} |
+| Main model: output | {tokens(S.mcp.mainTokens.output)} | {tokens(L.mainTokens.output)} | {tokens(Q.mainTokens.output)} | {tokens(W.mainTokens.output)} |
+| Small model: input | none | none | none | {tokens(W.helperTokens.input)} |
+| Small model: output | none | none | none | {tokens(W.helperTokens.output)} |
+| All the tokens that the models read | {tokens(S.mcp.medianReadTokens)} | {tokens(L.medianReadTokens)} | {tokens(Q.medianReadTokens)} | {tokens(W.medianReadTokens)} |
+
+Each number is the median of its row, so the numbers of a column do not add up. The cost of each arm, for its {W.sessions} sessions, by the kind of token:
+
+| The cost of the arm | `mcp`, {first.mcp} | `mcp`, {second.mcp} | `mcp-quote`, {second.mcp} | `webfetch` |
+| --- | ---: | ---: | ---: | ---: |
+| Main model: input | {kindOf(S.mcp, "input")} | {kindOf(L, "input")} | {kindOf(Q, "input")} | {kindOf(W, "input")} |
+| Main model: written to the cache | {kindOf(S.mcp, "cacheWrite")} | {kindOf(L, "cacheWrite")} | {kindOf(Q, "cacheWrite")} | {kindOf(W, "cacheWrite")} |
+| Main model: read from the cache | {kindOf(S.mcp, "cacheRead")} | {kindOf(L, "cacheRead")} | {kindOf(Q, "cacheRead")} | {kindOf(W, "cacheRead")} |
+| Main model: output | {kindOf(S.mcp, "output")} | {kindOf(L, "output")} | {kindOf(Q, "output")} | {kindOf(W, "output")} |
+| The small model | none | none | none | {usd(W.helperUsd)} |
+| All | {usd(S.mcp.costUsd)} | {usd(L.costUsd)} | {usd(Q.costUsd)} | {usd(W.costUsd)} |
+
+These numbers show four facts:
+
+- **The shorter tool text cut the cheapest kind of token.** The tool definitions are the same in each session. Thus the main model reads them from the cache, at the lowest price. With {second.mcp}, the median session of the arm `mcp` reads {tokens(readSaving)} fewer tokens from the cache than with {first.mcp}. At the price of a read, that is {usd(readSaving * evalB.prices[sonnet.model].cacheRead / 1e6)} for each session.
+- **The writes to the cache are the largest part of the cost.** They are {share(Q.mainKindsUsd.cacheWrite, Q.costUsd)}% of the cost of the arm `mcp-quote`, and {share(L.mainKindsUsd.cacheWrite, L.costUsd)}% of the arm `mcp`. The median session writes {tokens(Q.mainTokens.cacheWrite)} tokens with `--tools quote`. The main model of WebFetch writes {tokens(W.mainTokens.cacheWrite)}.
+- **WebFetch keeps the page out of the context of the main model.** The small model reads a median of {tokens(W.helperTokens.input)} tokens in each session, at {helperPrice("input")} for one million. That is the price of a read from the cache of Sonnet. The main model gets only the answer of the small model.
+- **The writes to the cache cost more than the whole difference.** For {Q.sessions} sessions, the arm `mcp-quote` cost {usd(gap)} more than WebFetch. Its writes to the cache cost {usd(writeGap)} more. The small model of WebFetch cost {usd(W.helperUsd)}, and the arms of polite-crawler have no such cost.
+
+The streams of the sessions show where the writes are. These numbers are medians from the artifacts `sessions-mcp`, `sessions-mcp-quote` and `sessions-webfetch` of the runs. `eval-b.json` does not hold them.
+
+| Median of a session, from the streams | `mcp`, {first.mcp} | `mcp`, {second.mcp} | `mcp-quote`, {second.mcp} | `webfetch` |
+| --- | ---: | ---: | ---: | ---: |
+| The first request: read from the cache | 5,823 | 4,652 | 2,412 | 1,254 |
+| The first request: written to the cache | 2,258 | 2,139 | 2,128 | 1,905 |
+| The later requests: written to the cache | 2,751 | 2,574 | 2,370 | 304 |
+| Characters of the tool results | 5,308 | 4,689 | 4,462 | 357 |
+
+- **The first request of a session reads the text that the sessions of an arm share.** That text holds the tool definitions, so the shorter tool text of {second.mcp} is easy to see there. The first request writes a little more with polite-crawler than with WebFetch.
+- **The later requests write the new part of the context.** That part holds the tool results and the turns of the model. The tool results of polite-crawler hold text of the page. The result of WebFetch is the short answer of the small model.
+
+Thus the shorter tool text made a cheap part of the session smaller. The expensive part is the new text in the context of the main model. With polite-crawler, the later requests write 2,066 to 2,270 more tokens to the cache than with WebFetch. With WebFetch, the text of the page goes to the small model, and it does not come into that context.
+
+The fixed part of the cost is large. With Sonnet, the cheapest session cost {usd(cheapest(sonnet, "mcp"))} with polite-crawler {first.mcp}, {usd(cheapest(lean, "mcp"))} with {second.mcp} and {usd(cheapest(sonnet, "webfetch"))} with WebFetch. On the shortest page, {shortest.page}, a session cost {usd(claimCost(shortest, sonnet.id, "mcp"))} with polite-crawler {first.mcp}, {usd(claimCost(shortest, lean.id, "mcp-quote"))} with `--tools quote` and {usd(claimCost(shortest, sonnet.id, "webfetch"))} with WebFetch.
 
 ## Each claim
 
 <ClaimSessions client:visible />
 
-The count of part A gives the order: the claims go from the shortest page to the longest. With Sonnet, the cost of polite-crawler stays near {usd(S.mcp.medianCostUsd)} on most pages. The cost of WebFetch grows with the page, because its small model reads the whole page.
+Select a model and a version of polite-crawler-mcp. With {second.mcp}, the figure shows the two arms of that run and the WebFetch arm of the run of {first.mcp}. The ▼ marks a claim on which the arm `mcp` costs less than WebFetch.
 
-With Sonnet, polite-crawler costs less on only {less(sonnet).length} of {count} claims: {names(less(sonnet))}. They are two of the longest pages. With Opus and one session in each arm, it costs less on {names(less(opus))}.
+The count of part A gives the order: the claims go from the shortest page to the longest. With Sonnet, the cost of polite-crawler stays near its median on most pages. The cost of WebFetch grows with the page, because its small model reads the whole page.
+
+With Sonnet, polite-crawler costs less on only {less(sonnet).length} of {count} claims: {names(less(sonnet))}. They are two of the longest pages. With {second.mcp}, the two arms of polite-crawler cost less on the same {less(lean, "mcp-quote").length} claims. With Opus and one session in each arm, it costs less on {names(less(opus))}.
 
 The most expensive sessions of polite-crawler are on pages where the agent searched and read many times. Examples are the status code 418 of RFC 9110, and the Wikipedia articles about Python and Alan Turing.
 
 ## The two models
 
-A session with Opus costs approximately two times as much as a session with Sonnet, in each arm. The median session of polite-crawler costs {times(O.mcp.medianCostUsd, S.mcp.medianCostUsd)} times as much with Opus, and the median session of WebFetch {times(O.webfetch.medianCostUsd, S.webfetch.medianCostUsd)} times. The ratio between the arms stays almost the same: WebFetch costs approximately half.
+A session with Opus costs approximately two times as much as a session with Sonnet, in each arm. The median session of polite-crawler costs {times(O.mcp.medianCostUsd, S.mcp.medianCostUsd)} times as much with Opus, and the median session of WebFetch {times(O.webfetch.medianCostUsd, W.medianCostUsd)} times. The ratio between the arms stays almost the same: with {first.mcp}, WebFetch costs approximately half.
 
-With Opus, each claim has only one session in each arm. Thus with Opus, the cost of one claim can change more when the eval starts again.
+With Opus, each claim has only one session in each arm. Thus with Opus, the cost of one claim can change more when the eval starts again. The eval did not start Opus with {second.mcp}.
 
 ## The method
 
@@ -97,20 +174,23 @@ With Opus, each claim has only one session in each arm. Thus with Opus, the cost
 2. **The prompt.** The prompt gives the URL and the question. It asks for the exact words of the page between `<quote>` and `</quote>`.
 3. **The usage.** The record of a session takes the tokens and the cost from the result of Claude Code. The record counts each model, also the small model of WebFetch.
 4. **The checks.** The check of the claim compares the quote of the answer with the quote of the claim. For the check of the page, the summary fetches each page one time with the crawler. It looks for each quote of each answer on the page, word for word. It also accepts a quote with no inline Markdown.
-5. **The repeats.** With Sonnet, each claim got {sonnet.repeat} sessions in each arm. With Opus, it got {opus.repeat} session in each arm.
+5. **The repeats.** With Sonnet, each claim got {sonnet.repeat} sessions in each arm of each run. With Opus, it got {opus.repeat} session in each arm.
 6. **The stops.** `--max-turns` stops a session after 12 turns, and `--max-budget-usd` stops a session at 1 USD.
+7. **The second run.** The run of {second.mcp} started only the arms `mcp` and `mcp-quote`, with the same claims, prompt, model and Claude Code. <a href={leanPr}>Pull request 38</a> made the tool text shorter. Part A counts these tokens with a proxy tokenizer. In that count, the text that the API gets on each turn went from 3,351 tokens to 2,372. With `--tools quote`, it went to 1,039.
 
-The <a href={readme}>README of the eval</a> gives each step. The code of commit <code>{evalB.commit}</code> made the summaries again, in <a href={runUrl(sonnet.summary)}>workflow {sonnet.summary}</a> and <a href={runUrl(opus.summary)}>workflow {opus.summary}</a>. The numbers of this page are in <a href={dataFile}><code>eval-b.json</code></a>.
+The <a href={readme}>README of the eval</a> gives each step. The code of commit <code>{first.commit}</code> made the summaries of {first.mcp} again, in <a href={runUrl(sonnet.summary)}>workflow {sonnet.summary}</a> and <a href={runUrl(opus.summary)}>workflow {opus.summary}</a>. The run of {second.mcp} made its own summary, with the code of commit <code>{second.commit}</code>. The numbers of this page are in <a href={dataFile}><code>eval-b.json</code></a>.
 
 ## The limits
 
-- **One run on one day.** The eval started each session one time, on {day}. The pages, the models and Claude Code change, so a different day can give different numbers.
-- **Opus has only one session for each claim.** Sonnet has {sonnet.repeat} sessions for each claim in each arm.
+- **The eval started each arm one time.** The runs started on {day}. The pages, the models and Claude Code change, so a different day can give different numbers.
+- **The eval did not start the WebFetch arm again.** For {second.mcp}, the comparison with WebFetch uses the sessions of the run of {first.mcp}. The two runs used the same model, Claude Code and claims, on the same day, approximately three hours apart.
+- **Opus has only one session for each claim, and only with {first.mcp}.** Sonnet has {sonnet.repeat} sessions for each claim in each arm.
 - **The claims are short single facts.** Each session proves one fact on one page. Thus each claim pays the fixed cost of the MCP server one time. Part A counts that cost one time for a session of {count} claims.
 - **The prompt gives the URL.** The agent does not search for the page.
 - **The small model of WebFetch does the reading.** The main model sees only the answer of that small model. The eval checks the answer against the page, but the agent cannot.
-- **Claude Code is in the two arms.** Its own system prompt is in each session of each arm, so it adds to the cost of the two arms. A different agent gives different costs.
+- **Claude Code is in each arm.** Its own system prompt is in each session of each arm, so it adds to the cost of each arm. A different agent gives different costs.
+- **The split by the kind of token is a count, not a test of a cause.** The eval did not start sessions with a different read window or with smaller search results.
 
 ## The next step
 
-The next step makes the fixed cost of the MCP server smaller in each session: the definitions of its nine tools and its instructions. Then the eval starts part B again, and this page gets the new numbers.
+The shorter tool text is done: {second.mcp} has it, and `--tools quote` gives only four tools. The data point at the tool results. A smaller result of `crawl_find` and `crawl_read` writes fewer tokens to the cache, if the session needs no more turns. Part B can measure such a change with the same workflow.

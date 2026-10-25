@@ -194,3 +194,22 @@ The sessions of 2026-10-25 used Claude Code 2.1.296 and `polite-crawler-mcp` 0.2
 | Opus | `webfetch` | 30 of 30 | 0.0201 USD | 0.0244 USD |
 
 WebFetch costs approximately half as much, because a small model (`claude-haiku-5-5`) reads the page and the main model reads only its answer. The page [Real Claude Code sessions](https://mark1russell7.github.io/crawler/notes/claude-code-sessions/) gives each claim and the limits.
+
+#### The run of `polite-crawler-mcp` 0.2.3
+
+`polite-crawler-mcp` 0.2.3 made the tool text and the instructions shorter. The sessions of 2026-10-25 in [workflow 40163619030](https://github.com/mark1russell7/crawler/actions/runs/40163619030) used Claude Code 2.1.296, Sonnet (`claude-sonnet-5-5`) and `polite-crawler-mcp` 0.2.3. The run started only the arms `mcp` and `mcp-quote`, with 3 sessions for each claim in each arm: 180 sessions. The run cost 3.3529 USD, with a dry run of 0.0879 USD ([workflow 40163467327](https://github.com/mark1russell7/crawler/actions/runs/40163467327)).
+
+The run did not start the WebFetch arm again, because it changed nothing for WebFetch. The rows of `webfetch` and of `mcp` 0.2.1 come from the Sonnet run of 0.2.1 above.
+
+| Arm | Run | Quotes on the page | The quote of the claim | Median cost of a session | Cost for each quote on the page | Median tokens that the models read |
+| --- | --- | ---: | ---: | ---: | ---: | ---: |
+| `mcp` | 0.2.1 | 88 of 90 | 79 | 0.0177 USD | 0.0220 USD | 35,628 |
+| `mcp` | 0.2.3 | 86 of 90 | 81 | 0.0166 USD | 0.0197 USD | 24,829 |
+| `mcp-quote` | 0.2.3 | 88 of 90 | 81 | 0.0158 USD | 0.0188 USD | 21,752 |
+| `webfetch` | 0.2.1 | 82 of 90 | 83 | 0.0099 USD | 0.0132 USD | 19,945 |
+
+- 0.2.3 cut the median tokens of a session by 30%, and by 39% with `--tools quote`. It cut the median cost of a session by 6% and 11%, and the cost for each quote on the page by 10% and 14%.
+- The quotes on the page stayed almost the same. The misses are almost all on the status code 418 of RFC 9110, whose quote is past the cut of 50,000 characters. One session of `mcp` gave a quote on WCAG 2.1 that is not on the page.
+- WebFetch still costs less. A token that Sonnet writes to its cache costs 25 times a token that it reads from the cache (2.50 USD against 0.10 USD for one million). The writes to the cache are 69% of the cost of the arm `mcp-quote`.
+- A median session of `mcp-quote` writes 4,502 tokens to the cache. The main model of WebFetch writes 2,206. The small model of WebFetch reads the page (a median of 13,133 tokens) as input, at 0.10 USD for one million.
+- For 90 sessions, `mcp-quote` cost 0.5717 USD more than WebFetch, and its writes to the cache cost 0.6215 USD more. The shorter tool text cut mostly the reads from the cache, the cheapest kind of token.

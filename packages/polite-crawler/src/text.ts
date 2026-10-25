@@ -37,6 +37,23 @@ const charsetOf = (contentType: string | null): string | undefined => {
   return match?.[1] ?? match?.[2] ?? undefined;
 };
 
+/**
+ * This function removes each comment (`<!--` to the next `-->`) of a text, in one pass from the
+ * start. It uses no regular expression, so its time is linear.
+ */
+const withoutComments = (text: string): string => {
+  let out = "";
+  let at = 0;
+  for (let open = text.indexOf("<!--"); open !== -1; open = text.indexOf("<!--", at)) {
+    const close = text.indexOf("-->", open + 4);
+    // a comment that does not close stays, and no later comment can close
+    if (close === -1) break;
+    out += text.slice(at, open);
+    at = close + 3;
+  }
+  return out + text.slice(at);
+};
+
 /** This function reads the encoding that the start of an HTML or XML document declares. */
 const declaredCharset = (bytes: Uint8Array): string | undefined => {
   let head = "";
@@ -45,7 +62,7 @@ const declaredCharset = (bytes: Uint8Array): string | undefined => {
   const xml = /^\s*<\?xml[^>]*?\bencoding\s*=\s*["']([^"']+)["']/i.exec(head);
   if (xml !== null) return xml[1];
   // a declaration inside a comment declares nothing
-  const markup = head.replace(/<!--[\s\S]*?-->/g, "");
+  const markup = withoutComments(head);
   // `<meta charset=x>`, and `<meta http-equiv="Content-Type" content="text/html; charset=x">`
   const meta = /<meta\b[^>]*?\bcharset\s*=\s*["']?\s*([A-Za-z0-9_:.+-]+)/i.exec(markup);
   return meta?.[1];

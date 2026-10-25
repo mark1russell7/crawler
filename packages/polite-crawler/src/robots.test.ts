@@ -299,3 +299,65 @@ describe("the fixes of the review", () => {
     expect(allowed("User-agent: MyBot\nDisallow: /\n", "OtherBot/1.0", "/")).toBe(true);
   });
 });
+
+describe("comments and usage lines", () => {
+  it("cuts a comment at the first #, to the end of the line", () => {
+    const robots = parseRobots(
+      [
+        "# a comment line",
+        "User-agent: bot # the crawler",
+        "Disallow: /a # a note",
+        "Disallow: /b#c",
+        "Allow: # all of it is a comment",
+        "Disallow: /d # one # two",
+      ].join("\n"),
+    );
+    expect(robots.groups).toHaveLength(1);
+    expect(robots.groups[0]!.agents).toEqual(["bot"]);
+    expect(robots.groups[0]!.rules.map((rule) => rule.pattern)).toEqual(["/a", "/b", "/d"]);
+    // RFC 9309 ends a line only at CR or LF, so a U+2028 character is a part of the comment
+    const separator = parseRobots("User-agent: *\nDisallow: /e # note more\n");
+    expect(separator.groups[0]!.rules.map((rule) => rule.pattern)).toEqual(["/e"]);
+  });
+
+  it("reads the optional path of a usage line", () => {
+    const robots = parseRobots(
+      [
+        "Content-Signal: search=yes",
+        "Content-Signal: /only",
+        "User-agent: *",
+        "Content-Usage: /images/ train-ai=n",
+        "Content-Usage: /news/\t \tai-use=n  , search=y",
+        "Content-Usage: news/ train-ai=y",
+        "Content-Usage: /caf%c3%a9/ train-ai=n # a comment",
+      ].join("\n"),
+    );
+    expect(robots.fileSignals).toEqual([
+      { key: "content-signal", value: "search=yes", path: undefined, line: 1 },
+      { key: "content-signal", value: "/only", path: undefined, line: 2 },
+    ]);
+    expect(robots.groups[0]!.signals).toEqual([
+      { key: "content-usage", value: "train-ai=n", path: "/images/", line: 4 },
+      { key: "content-usage", value: "ai-use=n  , search=y", path: "/news/", line: 5 },
+      { key: "content-usage", value: "news/ train-ai=y", path: undefined, line: 6 },
+      { key: "content-usage", value: "train-ai=n", path: "/caf%C3%A9/", line: 7 },
+    ]);
+  });
+
+  // CodeQL found these inputs (alerts 20 and 21). A regular expression took 6 and 10 seconds for them.
+  it("reads a line of 100,000 # characters in linear time", () => {
+    const started = performance.now();
+    const robots = parseRobots(`${"#".repeat(100_000)} \nUser-agent: *\nDisallow: /x\n`);
+    expect(performance.now() - started).toBeLessThan(200);
+    expect(robots.groups[0]!.rules.map((rule) => rule.pattern)).toEqual(["/x"]);
+  });
+
+  it("reads a usage line with 100,000 spaces after its path in linear time", () => {
+    const started = performance.now();
+    const robots = parseRobots(`User-agent: *\nContent-Signal: /${" ".repeat(100_000)}a a\n`);
+    expect(performance.now() - started).toBeLessThan(200);
+    expect(robots.groups[0]!.signals).toEqual([
+      { key: "content-signal", value: "a a", path: "/", line: 2 },
+    ]);
+  });
+});

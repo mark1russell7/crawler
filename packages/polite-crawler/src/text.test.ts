@@ -78,3 +78,23 @@ describe("decoding a body in the encoding the page declares", () => {
     expect(decodeBody(new Uint8Array(0), null)).toBe("");
   });
 });
+
+describe("the comments before a declaration", () => {
+  const html = (head: string): Uint8Array => new TextEncoder().encode(head);
+
+  it("hide only the declarations inside them", () => {
+    expect(bodyEncoding(html("<!-- a --><meta charset=koi8-r><!-- b -->"), "text/html")).toBe(
+      "koi8-r",
+    );
+    expect(bodyEncoding(html("<!-- <meta charset=koi8-r> --><p>"), "text/html")).toBe("utf-8");
+    expect(
+      bodyEncoding(html("<!----><!-- <meta charset=koi8-r> --><meta charset=shift_jis>"), null),
+    ).toBe("shift_jis");
+  });
+
+  it("read a head full of comments that do not close", () => {
+    // the prescan reads 2,048 bytes, so this input is always short (CodeQL alerts 3 and 6)
+    const head = html(`${"<!--".repeat(100_000)}<meta charset=koi8-r>`);
+    expect(bodyEncoding(head, "text/html")).toBe("utf-8");
+  });
+});

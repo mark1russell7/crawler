@@ -14,7 +14,7 @@ allowBuilds:
 # The release age does not apply to the packages of the owner of this repository: the shared MCP
 # host of @procedures/mcp-server is a first-party dependency, as in the client repository.
 minimumReleaseAgeExclude:
+  # Our own packages: the release train updates them, so the release age check of pnpm does not apply to them.
+  - "@mark1russell7/*"
+  - "@procedures/*"
   - zod@4.6.6
-  - "@procedures/client@0.14.1"
-  - "@procedures/mcp@0.14.1"
-  - "@procedures/mcp-server@0.14.1"

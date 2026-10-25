@@ -1,6 +1,6 @@
 # The eval: tokens per verified claim
 
-This folder holds part A of the eval of polite-crawler. Part A is a count in CI, with no model. It counts the text that an agent reads to verify a claim with polite-crawler, and the text of the WebFetch way. Part B, real sessions of Claude Code, comes later.
+This folder holds the two parts of the eval of polite-crawler. Part A is a count in CI, with no model. It counts the text that an agent reads to verify a claim with polite-crawler, and the text of the WebFetch way. Part B starts real sessions of Claude Code in CI. It measures the tokens and the cost with the count of the API.
 
 The eval asks one question. To prove an answer with an exact quote from a page, how many tokens does an agent read?
 
@@ -101,6 +101,57 @@ The other options are `--claims` (a different question set), `--out`, `--markdow
 - Each tool result has a random envelope id. The count replaces it with an id of the same length, from a hash of the claim and the tool.
 - The online run measures from its own WACZ file, the same way. The step "Measure again from the WACZ file" then does the replay a second time and compares the two results.
 
+## Part B: real sessions of Claude Code
+
+Part B gives the same claims to Claude Code (`claude -p`), and measures the tokens that the API counts. Each session costs money on the API. Thus part B starts only when a person starts it, in CI.
+
+### The arms
+
+Each claim gets one session in each arm. The two arms use the same model and the same prompt.
+
+| Arm | The tools of the session |
+| --- | --- |
+| `mcp` | The tools of `polite-crawler-mcp`, with a new store. The session has no built-in tool. |
+| `webfetch` | The built-in tool WebFetch. The session has no MCP server. |
+
+The prompt gives the URL and the question. It asks for the exact words of the page between `<quote>` and `</quote>`. `session-result.mts` has the prompt.
+
+### The method of part B
+
+1. A job for each arm starts the sessions one after the other. Thus each site gets no more than two sessions at the same time.
+2. Each session starts in a new empty folder, with no settings and no `CLAUDE.md`.
+3. The session operates with `--output-format stream-json`. The job keeps the stream of each session.
+4. The record of a session takes the tokens and the cost from the result of the stream. The tokens include each model of the session. WebFetch gives each page to a small model, and the record counts that model too.
+5. The check normalizes the quote marks, the dashes and the white space. Then it compares the quote of the answer with the quote of the claim.
+
+The check gives one of these values:
+
+| Check | What it tells |
+| --- | --- |
+| `verified` | A quote of the answer holds the quote of the claim. |
+| `partial` | A quote of the answer is a part of the quote of the claim, with 20 characters or more. |
+| `wrong` | The answer has a quote, but the quote of the claim is not in it. |
+| `no-quote` | The answer has no quote. |
+
+### The limits
+
+- `--max-turns` stops a session after 12 turns.
+- `--max-budget-usd` stops a session at 1 USD.
+- The budget of each arm (20 USD) stops the arm before its next session. The remaining claims get the status `skipped`.
+- The workflow pins the versions of Claude Code and `polite-crawler-mcp`.
+
+### Start part B
+
+Start a dry run with two claims first:
+
+```sh
+gh workflow run eval-sessions.yml -R mark1russell7/crawler -f limit=2
+```
+
+The inputs are `limit`, `only` (claim ids), `model`, `budget`, `max_turns` and `max_session_usd`. The job summary shows the tables. The artifact `eval-b` holds `eval-b-result.json` and `eval-b-summary.md`. The artifacts `sessions-mcp` and `sessions-webfetch` hold the stream of each session.
+
+The table "Projected for the set" gives the cost of the 30 claims at the mean cost of a session. Use it to decide on the full run.
+
 ## The test
 
 `measure.test.ts` makes a small WACZ file from a mock site. The site has a long page, a page longer than the cut, a short page and a redirect. `pnpm test` starts the test. The test measures five claims two times, and it checks these facts:
@@ -125,4 +176,4 @@ The eval of 2026-10-18 ([workflow 39085336453](https://github.com/mark1russell7/
 - On a long page, the difference is large: RFC 9110 has approximately 57 times the tokens, and a long Wikipedia article approximately 49 times.
 - On a very short page, polite-crawler costs more. Its search snippets and its read window are larger than the page.
 - The tool definitions of the MCP server cost 8,539 tokens, one time in each session. The table does not include them.
-- The tokenizer is `cl100k_base`, a proxy. Part B of the eval measures the real cost with Claude Code.
+- The tokenizer is `cl100k_base`, a proxy. Part B of the eval measures the real cost with Claude Code. The section "Part B: real sessions of Claude Code" tells how.

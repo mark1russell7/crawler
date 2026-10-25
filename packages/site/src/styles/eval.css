@@ -458,3 +458,121 @@
     grid-template-rows: 14rem auto;
   }
 }
+
+/* ---------------------------------------------- part B: the cost of a session */
+
+/*
+ * The figure of "Real Claude Code sessions" (components/EvalSessions.tsx) keeps the colors and the
+ * shapes of part A: polite-crawler is a blue dot and WebFetch an orange square. A hollow mark is one
+ * session, and the full mark is the median of the sessions. A ▼ beside the ratio marks a claim on
+ * which polite-crawler costs less.
+ */
+.pc-evalb-mcp {
+  --eval-color: var(--series-1);
+}
+.pc-evalb-webfetch {
+  --eval-color: var(--series-2);
+}
+.pc-evalb-key {
+  display: inline-block;
+  flex: none;
+  width: 10px;
+  height: 10px;
+  background: var(--eval-color);
+}
+.pc-evalb-key.pc-evalb-mcp {
+  border-radius: 50%;
+}
+.pc-evalb-key.pc-evalb-webfetch {
+  border-radius: 2px;
+}
+.pc-evalb-key.pc-evalb-one {
+  border: 2px solid var(--eval-color);
+  background: transparent;
+}
+.pc-evalb-less-key {
+  font-size: 0.75rem;
+  color: var(--color-ink);
+}
+.pc-evalb-mark,
+.pc-evalb-one {
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+}
+.pc-evalb-mark {
+  width: 11px;
+  height: 11px;
+  background: var(--eval-color);
+  box-shadow: 0 0 0 2px var(--color-surface);
+}
+.pc-evalb-one {
+  width: 8px;
+  height: 8px;
+  border: 1.5px solid var(--eval-color);
+  opacity: 0.7;
+}
+.pc-evalb-mark.pc-evalb-mcp,
+.pc-evalb-one.pc-evalb-mcp {
+  border-radius: 50%;
+}
+.pc-evalb-mark.pc-evalb-webfetch,
+.pc-evalb-one.pc-evalb-webfetch {
+  border-radius: 2px;
+}
+.pc-evalb-less .pc-eval-ratio {
+  font-weight: 600;
+  color: var(--color-ink);
+}
+.pc-evalb-scale span:first-child {
+  transform: none;
+}
+.pc-evalb-arms {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+.pc-evalb-arm {
+  display: grid;
+  gap: 0.25rem;
+  align-content: start;
+}
+.pc-evalb-arm p {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+}
+.pc-evalb-arm ul {
+  margin: 0;
+  padding-inline-start: 1.1rem;
+  font-size: var(--text-xs);
+  font-variant-numeric: tabular-nums;
+  color: var(--color-ink-secondary);
+}
+.pc-evalb-arm li {
+  margin: 0;
+}
+/* the box that scrolls holds the text for a screen reader, as in the table of part A */
+.pc-evalb .pc-table-wrap {
+  position: relative;
+  min-width: 0;
+}
+.pc-evalb-table td {
+  font-variant-numeric: tabular-nums;
+  text-align: end;
+}
+.pc-evalb-table th[scope="row"] {
+  min-width: 14rem;
+  font-weight: 400;
+  white-space: normal;
+}
+
+@media (max-width: 40rem) {
+  .pc-evalb-scale .pc-evalb-minor {
+    display: none;
+  }
+  .pc-evalb-arms {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

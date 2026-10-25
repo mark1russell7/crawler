@@ -1,0 +1,2185 @@
+{
+  "date": "2026-10-25",
+  "commit": "aa97ae2",
+  "claudeCode": "2.1.296",
+  "mcp": "0.2.1",
+  "helper": "claude-haiku-5-5",
+  "costUsd": 5.175489,
+  "dryRun": {
+    "run": 40152547898,
+    "sessions": 4,
+    "costUsd": 0.0804
+  },
+  "models": [
+    {
+      "id": "sonnet",
+      "name": "Sonnet",
+      "model": "claude-sonnet-5-5",
+      "repeat": 3,
+      "run": 40153411428,
+      "summary": 40155103977,
+      "costUsd": 3.017506,
+      "arms": {
+        "mcp": {
+          "sessions": 90,
+          "verified": 79,
+          "partial": 0,
+          "wrong": 10,
+          "noQuote": 1,
+          "onPage": 88,
+          "turnLimit": 1,
+          "costUsd": 1.932132,
+          "mainUsd": 1.932132,
+          "helperUsd": 0,
+          "medianCostUsd": 0.017678,
+          "costPerVerifiedUsd": 0.024457,
+          "costPerOnPageUsd": 0.021956,
+          "medianReadTokens": 35628,
+          "medianOutputTokens": 337,
+          "medianTurns": 4,
+          "toolCalls": 286
+        },
+        "webfetch": {
+          "sessions": 90,
+          "verified": 83,
+          "partial": 1,
+          "wrong": 6,
+          "noQuote": 0,
+          "onPage": 82,
+          "turnLimit": 0,
+          "costUsd": 1.085374,
+          "mainUsd": 0.801917,
+          "helperUsd": 0.283456,
+          "medianCostUsd": 0.009924,
+          "costPerVerifiedUsd": 0.013077,
+          "costPerOnPageUsd": 0.013236,
+          "medianReadTokens": 19945,
+          "medianOutputTokens": 684,
+          "medianTurns": 2,
+          "toolCalls": 107
+        }
+      }
+    },
+    {
+      "id": "opus",
+      "name": "Opus",
+      "model": "claude-opus-5-5",
+      "repeat": 1,
+      "run": 40154501047,
+      "summary": 40155110580,
+      "costUsd": 2.077583,
+      "arms": {
+        "mcp": {
+          "sessions": 30,
+          "verified": 26,
+          "partial": 0,
+          "wrong": 3,
+          "noQuote": 1,
+          "onPage": 29,
+          "turnLimit": 1,
+          "costUsd": 1.344916,
+          "mainUsd": 1.344916,
+          "helperUsd": 0,
+          "medianCostUsd": 0.040756,
+          "costPerVerifiedUsd": 0.051728,
+          "costPerOnPageUsd": 0.046376,
+          "medianReadTokens": 37630,
+          "medianOutputTokens": 398,
+          "medianTurns": 4,
+          "toolCalls": 104
+        },
+        "webfetch": {
+          "sessions": 30,
+          "verified": 28,
+          "partial": 0,
+          "wrong": 2,
+          "noQuote": 0,
+          "onPage": 30,
+          "turnLimit": 0,
+          "costUsd": 0.732666,
+          "mainUsd": 0.608768,
+          "helperUsd": 0.123899,
+          "medianCostUsd": 0.020146,
+          "costPerVerifiedUsd": 0.026167,
+          "costPerOnPageUsd": 0.024422,
+          "medianReadTokens": 21186,
+          "medianOutputTokens": 1190,
+          "medianTurns": 2,
+          "toolCalls": 43
+        }
+      }
+    }
+  ],
+  "claims": [
+    {
+      "id": "rfc9309-parse-limit",
+      "url": "https://www.rfc-editor.org/rfc/rfc9309.html",
+      "page": "RFC 9309",
+      "question": "What is the smallest robots.txt parsing limit that a crawler can use?",
+      "markdown": 7935,
+      "sessions": {
+        "sonnet": {
+          "mcp": [
+            {
+              "usd": 0.041388,
+              "turns": 6,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.017685,
+              "turns": 4,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.023396,
+              "turns": 6,
+              "check": "verified",
+              "onPage": true
+            }
+          ],
+          "webfetch": [
+            {
+              "usd": 0.00985,
+              "turns": 2,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.010824,
+              "turns": 2,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.010063,
+              "turns": 2,
+              "check": "verified",
+              "onPage": true
+            }
+          ]
+        },
+        "opus": {
+          "mcp": [
+            {
+              "usd": 0.059072,
+              "turns": 4,
+              "check": "verified",
+              "onPage": true
+            }
+          ],
+          "webfetch": [
+            {
+              "usd": 0.0232,
+              "turns": 2,
+              "check": "verified",
+              "onPage": true
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "rfc9309-cache-age",
+      "url": "https://www.rfc-editor.org/rfc/rfc9309.html",
+      "page": "RFC 9309",
+      "question": "How long can a crawler use a cached robots.txt file?",
+      "markdown": 7935,
+      "sessions": {
+        "sonnet": {
+          "mcp": [
+            {
+              "usd": 0.017357,
+              "turns": 4,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.017308,
+              "turns": 4,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.017342,
+              "turns": 4,
+              "check": "verified",
+              "onPage": true
+            }
+          ],
+          "webfetch": [
+            {
+              "usd": 0.009287,
+              "turns": 2,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.009198,
+              "turns": 2,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.009163,
+              "turns": 2,
+              "check": "verified",
+              "onPage": true
+            }
+          ]
+        },
+        "opus": {
+          "mcp": [
+            {
+              "usd": 0.034626,
+              "turns": 4,
+              "check": "verified",
+              "onPage": true
+            }
+          ],
+          "webfetch": [
+            {
+              "usd": 0.022215,
+              "turns": 2,
+              "check": "verified",
+              "onPage": true
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "rfc2119-must",
+      "url": "https://www.rfc-editor.org/rfc/rfc2119.html",
+      "page": "RFC 2119",
+      "question": "What does the key word MUST mean in an RFC?",
+      "markdown": 1061,
+      "sessions": {
+        "sonnet": {
+          "mcp": [
+            {
+              "usd": 0.017171,
+              "turns": 3,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.017163,
+              "turns": 3,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.017185,
+              "turns": 3,
+              "check": "verified",
+              "onPage": true
+            }
+          ],
+          "webfetch": [
+            {
+              "usd": 0.008219,
+              "turns": 2,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.007934,
+              "turns": 2,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.008081,
+              "turns": 2,
+              "check": "verified",
+              "onPage": true
+            }
+          ]
+        },
+        "opus": {
+          "mcp": [
+            {
+              "usd": 0.043991,
+              "turns": 4,
+              "check": "verified",
+              "onPage": true
+            }
+          ],
+          "webfetch": [
+            {
+              "usd": 0.018959,
+              "turns": 2,
+              "check": "verified",
+              "onPage": true
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "rfc9110-404",
+      "url": "https://www.rfc-editor.org/rfc/rfc9110.html",
+      "page": "RFC 9110",
+      "question": "What does the 404 Not Found status code mean?",
+      "markdown": 161837,
+      "sessions": {
+        "sonnet": {
+          "mcp": [
+            {
+              "usd": 0.017613,
+              "turns": 4,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.017806,
+              "turns": 4,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.017752,
+              "turns": 4,
+              "check": "verified",
+              "onPage": true
+            }
+          ],
+          "webfetch": [
+            {
+              "usd": 0.019985,
+              "turns": 3,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.027142,
+              "turns": 4,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.019882,
+              "turns": 3,
+              "check": "verified",
+              "onPage": true
+            }
+          ]
+        },
+        "opus": {
+          "mcp": [
+            {
+              "usd": 0.029199,
+              "turns": 3,
+              "check": "verified",
+              "onPage": true
+            }
+          ],
+          "webfetch": [
+            {
+              "usd": 0.042464,
+              "turns": 4,
+              "check": "verified",
+              "onPage": true
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "rfc9110-418",
+      "url": "https://www.rfc-editor.org/rfc/rfc9110.html",
+      "page": "RFC 9110",
+      "question": "Why can HTTP not use the 418 status code?",
+      "markdown": 161837,
+      "sessions": {
+        "sonnet": {
+          "mcp": [
+            {
+              "usd": 0.058971,
+              "turns": 11,
+              "check": "wrong",
+              "onPage": false
+            },
+            {
+              "usd": 0.06181,
+              "turns": 15,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.077417,
+              "turns": 13,
+              "check": "no-quote",
+              "onPage": null
+            }
+          ],
+          "webfetch": [
+            {
+              "usd": 0.032723,
+              "turns": 4,
+              "check": "wrong",
+              "onPage": false
+            },
+            {
+              "usd": 0.023008,
+              "turns": 3,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.041565,
+              "turns": 5,
+              "check": "verified",
+              "onPage": true
+            }
+          ]
+        },
+        "opus": {
+          "mcp": [
+            {
+              "usd": 0.119372,
+              "turns": 13,
+              "check": "no-quote",
+              "onPage": null
+            }
+          ],
+          "webfetch": [
+            {
+              "usd": 0.07312,
+              "turns": 6,
+              "check": "verified",
+              "onPage": true
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "rfc1149-service",
+      "url": "https://www.rfc-editor.org/rfc/rfc1149.html",
+      "page": "RFC 1149",
+      "question": "What kind of service do avian carriers provide for IP datagrams?",
+      "markdown": 701,
+      "sessions": {
+        "sonnet": {
+          "mcp": [
+            {
+              "usd": 0.015934,
+              "turns": 3,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.015881,
+              "turns": 3,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.015935,
+              "turns": 3,
+              "check": "verified",
+              "onPage": true
+            }
+          ],
+          "webfetch": [
+            {
+              "usd": 0.007783,
+              "turns": 2,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.007942,
+              "turns": 2,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.00765,
+              "turns": 2,
+              "check": "verified",
+              "onPage": true
+            }
+          ]
+        },
+        "opus": {
+          "mcp": [
+            {
+              "usd": 0.04102,
+              "turns": 4,
+              "check": "verified",
+              "onPage": true
+            }
+          ],
+          "webfetch": [
+            {
+              "usd": 0.015642,
+              "turns": 2,
+              "check": "verified",
+              "onPage": true
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "rfc2324-teapot",
+      "url": "https://www.rfc-editor.org/rfc/rfc2324.html",
+      "page": "RFC 2324",
+      "question": "What happens when someone tries to brew coffee with a teapot?",
+      "markdown": 5364,
+      "sessions": {
+        "sonnet": {
+          "mcp": [
+            {
+              "usd": 0.017131,
+              "turns": 4,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.017697,
+              "turns": 4,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.017258,
+              "turns": 4,
+              "check": "verified",
+              "onPage": true
+            }
+          ],
+          "webfetch": [
+            {
+              "usd": 0.008675,
+              "turns": 2,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.008866,
+              "turns": 2,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.008637,
+              "turns": 2,
+              "check": "verified",
+              "onPage": true
+            }
+          ]
+        },
+        "opus": {
+          "mcp": [
+            {
+              "usd": 0.027629,
+              "turns": 3,
+              "check": "verified",
+              "onPage": true
+            }
+          ],
+          "webfetch": [
+            {
+              "usd": 0.020769,
+              "turns": 2,
+              "check": "verified",
+              "onPage": true
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "rfc8259-utf8",
+      "url": "https://www.rfc-editor.org/rfc/rfc8259.html",
+      "page": "RFC 8259",
+      "question": "Which character encoding must JSON text use between systems?",
+      "markdown": 8655,
+      "sessions": {
+        "sonnet": {
+          "mcp": [
+            {
+              "usd": 0.017661,
+              "turns": 4,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.01732,
+              "turns": 4,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.025945,
+              "turns": 7,
+              "check": "verified",
+              "onPage": true
+            }
+          ],
+          "webfetch": [
+            {
+              "usd": 0.009078,
+              "turns": 2,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.009313,
+              "turns": 2,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.009127,
+              "turns": 2,
+              "check": "verified",
+              "onPage": true
+            }
+          ]
+        },
+        "opus": {
+          "mcp": [
+            {
+              "usd": 0.027916,
+              "turns": 3,
+              "check": "verified",
+              "onPage": true
+            }
+          ],
+          "webfetch": [
+            {
+              "usd": 0.018869,
+              "turns": 2,
+              "check": "verified",
+              "onPage": true
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "rfc6585-429",
+      "url": "https://www.rfc-editor.org/rfc/rfc6585.html",
+      "page": "RFC 6585",
+      "question": "What does the HTTP status code 429 mean?",
+      "markdown": 4820,
+      "sessions": {
+        "sonnet": {
+          "mcp": [
+            {
+              "usd": 0.027693,
+              "turns": 5,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.01702,
+              "turns": 4,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.01719,
+              "turns": 4,
+              "check": "verified",
+              "onPage": true
+            }
+          ],
+          "webfetch": [
+            {
+              "usd": 0.008449,
+              "turns": 2,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.008455,
+              "turns": 2,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.008996,
+              "turns": 2,
+              "check": "verified",
+              "onPage": true
+            }
+          ]
+        },
+        "opus": {
+          "mcp": [
+            {
+              "usd": 0.02757,
+              "turns": 3,
+              "check": "verified",
+              "onPage": true
+            }
+          ],
+          "webfetch": [
+            {
+              "usd": 0.016686,
+              "turns": 2,
+              "check": "verified",
+              "onPage": true
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "rfc4180-records",
+      "url": "https://www.rfc-editor.org/rfc/rfc4180.html",
+      "page": "RFC 4180",
+      "question": "How are the records of a CSV file separated?",
+      "markdown": 3929,
+      "sessions": {
+        "sonnet": {
+          "mcp": [
+            {
+              "usd": 0.024352,
+              "turns": 5,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.016845,
+              "turns": 4,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.013545,
+              "turns": 3,
+              "check": "verified",
+              "onPage": true
+            }
+          ],
+          "webfetch": [
+            {
+              "usd": 0.0082,
+              "turns": 2,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.008119,
+              "turns": 2,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.008067,
+              "turns": 2,
+              "check": "verified",
+              "onPage": true
+            }
+          ]
+        },
+        "opus": {
+          "mcp": [
+            {
+              "usd": 0.033006,
+              "turns": 4,
+              "check": "verified",
+              "onPage": true
+            }
+          ],
+          "webfetch": [
+            {
+              "usd": 0.018777,
+              "turns": 2,
+              "check": "verified",
+              "onPage": true
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "rfc8446-goal",
+      "url": "https://www.rfc-editor.org/rfc/rfc8446.html",
+      "page": "RFC 8446",
+      "question": "What is the primary goal of TLS 1.3?",
+      "markdown": 90750,
+      "sessions": {
+        "sonnet": {
+          "mcp": [
+            {
+              "usd": 0.016929,
+              "turns": 4,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.016846,
+              "turns": 4,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.017636,
+              "turns": 4,
+              "check": "verified",
+              "onPage": true
+            }
+          ],
+          "webfetch": [
+            {
+              "usd": 0.01335,
+              "turns": 2,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.012558,
+              "turns": 2,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.013143,
+              "turns": 2,
+              "check": "verified",
+              "onPage": true
+            }
+          ]
+        },
+        "opus": {
+          "mcp": [
+            {
+              "usd": 0.029281,
+              "turns": 3,
+              "check": "verified",
+              "onPage": true
+            }
+          ],
+          "webfetch": [
+            {
+              "usd": 0.022378,
+              "turns": 2,
+              "check": "verified",
+              "onPage": true
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "wikipedia-web-crawler",
+      "url": "https://en.wikipedia.org/wiki/Web_crawler",
+      "page": "Wikipedia: Web crawler",
+      "question": "What is a web crawler?",
+      "markdown": 27635,
+      "sessions": {
+        "sonnet": {
+          "mcp": [
+            {
+              "usd": 0.018797,
+              "turns": 3,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.018076,
+              "turns": 3,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.018826,
+              "turns": 3,
+              "check": "verified",
+              "onPage": true
+            }
+          ],
+          "webfetch": [
+            {
+              "usd": 0.021914,
+              "turns": 3,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.0142,
+              "turns": 2,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.014905,
+              "turns": 2,
+              "check": "verified",
+              "onPage": true
+            }
+          ]
+        },
+        "opus": {
+          "mcp": [
+            {
+              "usd": 0.040324,
+              "turns": 4,
+              "check": "verified",
+              "onPage": true
+            }
+          ],
+          "webfetch": [
+            {
+              "usd": 0.044255,
+              "turns": 4,
+              "check": "verified",
+              "onPage": true
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "wikipedia-robots-txt",
+      "url": "https://en.wikipedia.org/wiki/Robots.txt",
+      "page": "Wikipedia: Robots.txt",
+      "question": "What is the file robots.txt for?",
+      "markdown": 19829,
+      "sessions": {
+        "sonnet": {
+          "mcp": [
+            {
+              "usd": 0.019522,
+              "turns": 3,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.019533,
+              "turns": 3,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.019485,
+              "turns": 3,
+              "check": "verified",
+              "onPage": true
+            }
+          ],
+          "webfetch": [
+            {
+              "usd": 0.012544,
+              "turns": 2,
+              "check": "wrong",
+              "onPage": false
+            },
+            {
+              "usd": 0.012418,
+              "turns": 2,
+              "check": "partial",
+              "onPage": true
+            },
+            {
+              "usd": 0.018745,
+              "turns": 3,
+              "check": "wrong",
+              "onPage": false
+            }
+          ]
+        },
+        "opus": {
+          "mcp": [
+            {
+              "usd": 0.040493,
+              "turns": 4,
+              "check": "verified",
+              "onPage": true
+            }
+          ],
+          "webfetch": [
+            {
+              "usd": 0.031515,
+              "turns": 3,
+              "check": "verified",
+              "onPage": true
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "wikipedia-turing-born",
+      "url": "https://en.wikipedia.org/wiki/Alan_Turing",
+      "page": "Wikipedia: Alan Turing",
+      "question": "When was Alan Turing born?",
+      "markdown": 98133,
+      "sessions": {
+        "sonnet": {
+          "mcp": [
+            {
+              "usd": 0.032246,
+              "turns": 5,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.032417,
+              "turns": 5,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.0328,
+              "turns": 5,
+              "check": "verified",
+              "onPage": true
+            }
+          ],
+          "webfetch": [
+            {
+              "usd": 0.021079,
+              "turns": 3,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.012828,
+              "turns": 2,
+              "check": "verified",
+              "onPage": false
+            },
+            {
+              "usd": 0.020999,
+              "turns": 3,
+              "check": "verified",
+              "onPage": false
+            }
+          ]
+        },
+        "opus": {
+          "mcp": [
+            {
+              "usd": 0.074176,
+              "turns": 6,
+              "check": "verified",
+              "onPage": true
+            }
+          ],
+          "webfetch": [
+            {
+              "usd": 0.037047,
+              "turns": 3,
+              "check": "verified",
+              "onPage": true
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "wikipedia-python-abc",
+      "url": "https://en.wikipedia.org/wiki/Python_(programming_language)",
+      "page": "Wikipedia: Python (programming language)",
+      "question": "Which language did Python succeed?",
+      "markdown": 71201,
+      "sessions": {
+        "sonnet": {
+          "mcp": [
+            {
+              "usd": 0.032606,
+              "turns": 6,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.036433,
+              "turns": 9,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.04152,
+              "turns": 7,
+              "check": "verified",
+              "onPage": true
+            }
+          ],
+          "webfetch": [
+            {
+              "usd": 0.012546,
+              "turns": 2,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.012632,
+              "turns": 2,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.01252,
+              "turns": 2,
+              "check": "verified",
+              "onPage": true
+            }
+          ]
+        },
+        "opus": {
+          "mcp": [
+            {
+              "usd": 0.064128,
+              "turns": 5,
+              "check": "verified",
+              "onPage": true
+            }
+          ],
+          "webfetch": [
+            {
+              "usd": 0.032335,
+              "turns": 3,
+              "check": "verified",
+              "onPage": true
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "mdn-array-map",
+      "url": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/map",
+      "page": "MDN: Array.map",
+      "question": "What does the map method of an array return?",
+      "markdown": 8165,
+      "sessions": {
+        "sonnet": {
+          "mcp": [
+            {
+              "usd": 0.019659,
+              "turns": 3,
+              "check": "wrong",
+              "onPage": true
+            },
+            {
+              "usd": 0.023625,
+              "turns": 4,
+              "check": "wrong",
+              "onPage": true
+            },
+            {
+              "usd": 0.020142,
+              "turns": 3,
+              "check": "wrong",
+              "onPage": true
+            }
+          ],
+          "webfetch": [
+            {
+              "usd": 0.009266,
+              "turns": 2,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.009199,
+              "turns": 2,
+              "check": "wrong",
+              "onPage": true
+            },
+            {
+              "usd": 0.009582,
+              "turns": 2,
+              "check": "verified",
+              "onPage": true
+            }
+          ]
+        },
+        "opus": {
+          "mcp": [
+            {
+              "usd": 0.054056,
+              "turns": 4,
+              "check": "wrong",
+              "onPage": true
+            }
+          ],
+          "webfetch": [
+            {
+              "usd": 0.016991,
+              "turns": 2,
+              "check": "wrong",
+              "onPage": true
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "mdn-json-parse",
+      "url": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/JSON/parse",
+      "page": "MDN: JSON.parse",
+      "question": "What does JSON.parse do?",
+      "markdown": 5531,
+      "sessions": {
+        "sonnet": {
+          "mcp": [
+            {
+              "usd": 0.019114,
+              "turns": 3,
+              "check": "wrong",
+              "onPage": true
+            },
+            {
+              "usd": 0.01931,
+              "turns": 3,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.019924,
+              "turns": 3,
+              "check": "wrong",
+              "onPage": true
+            }
+          ],
+          "webfetch": [
+            {
+              "usd": 0.009334,
+              "turns": 2,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.009059,
+              "turns": 2,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.009403,
+              "turns": 2,
+              "check": "verified",
+              "onPage": true
+            }
+          ]
+        },
+        "opus": {
+          "mcp": [
+            {
+              "usd": 0.043383,
+              "turns": 4,
+              "check": "wrong",
+              "onPage": true
+            }
+          ],
+          "webfetch": [
+            {
+              "usd": 0.016891,
+              "turns": 2,
+              "check": "verified",
+              "onPage": true
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "mdn-promise-all",
+      "url": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise/all",
+      "page": "MDN: Promise.all",
+      "question": "What does Promise.all take as input?",
+      "markdown": 7443,
+      "sessions": {
+        "sonnet": {
+          "mcp": [
+            {
+              "usd": 0.020422,
+              "turns": 3,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.020392,
+              "turns": 3,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.020636,
+              "turns": 3,
+              "check": "wrong",
+              "onPage": true
+            }
+          ],
+          "webfetch": [
+            {
+              "usd": 0.00938,
+              "turns": 2,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.009915,
+              "turns": 2,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.009751,
+              "turns": 2,
+              "check": "verified",
+              "onPage": true
+            }
+          ]
+        },
+        "opus": {
+          "mcp": [
+            {
+              "usd": 0.059987,
+              "turns": 6,
+              "check": "verified",
+              "onPage": true
+            }
+          ],
+          "webfetch": [
+            {
+              "usd": 0.018948,
+              "turns": 2,
+              "check": "verified",
+              "onPage": true
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "node-fs-posix",
+      "url": "https://nodejs.org/api/fs.html",
+      "page": "Node.js: fs",
+      "question": "What is the Node.js fs module modeled on?",
+      "markdown": 121232,
+      "sessions": {
+        "sonnet": {
+          "mcp": [
+            {
+              "usd": 0.016506,
+              "turns": 4,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.016467,
+              "turns": 4,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.0165,
+              "turns": 4,
+              "check": "verified",
+              "onPage": true
+            }
+          ],
+          "webfetch": [
+            {
+              "usd": 0.011943,
+              "turns": 2,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.011943,
+              "turns": 2,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.012064,
+              "turns": 2,
+              "check": "verified",
+              "onPage": true
+            }
+          ]
+        },
+        "opus": {
+          "mcp": [
+            {
+              "usd": 0.041676,
+              "turns": 4,
+              "check": "verified",
+              "onPage": true
+            }
+          ],
+          "webfetch": [
+            {
+              "usd": 0.021149,
+              "turns": 2,
+              "check": "verified",
+              "onPage": true
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "node-path-purpose",
+      "url": "https://nodejs.org/api/path.html",
+      "page": "Node.js: path",
+      "question": "What does the Node.js path module do?",
+      "markdown": 8011,
+      "sessions": {
+        "sonnet": {
+          "mcp": [
+            {
+              "usd": 0.016633,
+              "turns": 3,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.016574,
+              "turns": 3,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.012855,
+              "turns": 3,
+              "check": "verified",
+              "onPage": true
+            }
+          ],
+          "webfetch": [
+            {
+              "usd": 0.008577,
+              "turns": 2,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.008404,
+              "turns": 2,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.008552,
+              "turns": 2,
+              "check": "verified",
+              "onPage": true
+            }
+          ]
+        },
+        "opus": {
+          "mcp": [
+            {
+              "usd": 0.042859,
+              "turns": 4,
+              "check": "verified",
+              "onPage": true
+            }
+          ],
+          "webfetch": [
+            {
+              "usd": 0.017193,
+              "turns": 2,
+              "check": "verified",
+              "onPage": true
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "node-events-architecture",
+      "url": "https://nodejs.org/api/events.html",
+      "page": "Node.js: events",
+      "question": "Which architecture is the Node.js core API built around?",
+      "markdown": 26733,
+      "sessions": {
+        "sonnet": {
+          "mcp": [
+            {
+              "usd": 0.016518,
+              "turns": 4,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.01648,
+              "turns": 4,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.036848,
+              "turns": 6,
+              "check": "verified",
+              "onPage": true
+            }
+          ],
+          "webfetch": [
+            {
+              "usd": 0.012265,
+              "turns": 2,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.012216,
+              "turns": 2,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.012165,
+              "turns": 2,
+              "check": "verified",
+              "onPage": true
+            }
+          ]
+        },
+        "opus": {
+          "mcp": [
+            {
+              "usd": 0.05069,
+              "turns": 6,
+              "check": "verified",
+              "onPage": true
+            }
+          ],
+          "webfetch": [
+            {
+              "usd": 0.021616,
+              "turns": 2,
+              "check": "verified",
+              "onPage": true
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "python-json-format",
+      "url": "https://docs.python.org/3/library/json.html",
+      "page": "Python: json",
+      "question": "What kind of format is JSON, according to the Python documentation?",
+      "markdown": 9689,
+      "sessions": {
+        "sonnet": {
+          "mcp": [
+            {
+              "usd": 0.018258,
+              "turns": 3,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.018319,
+              "turns": 3,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.019539,
+              "turns": 3,
+              "check": "verified",
+              "onPage": true
+            }
+          ],
+          "webfetch": [
+            {
+              "usd": 0.009852,
+              "turns": 2,
+              "check": "verified",
+              "onPage": false
+            },
+            {
+              "usd": 0.009969,
+              "turns": 2,
+              "check": "verified",
+              "onPage": false
+            },
+            {
+              "usd": 0.009932,
+              "turns": 2,
+              "check": "verified",
+              "onPage": false
+            }
+          ]
+        },
+        "opus": {
+          "mcp": [
+            {
+              "usd": 0.041531,
+              "turns": 4,
+              "check": "verified",
+              "onPage": true
+            }
+          ],
+          "webfetch": [
+            {
+              "usd": 0.019358,
+              "turns": 2,
+              "check": "verified",
+              "onPage": true
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "python-builtins-available",
+      "url": "https://docs.python.org/3/library/functions.html",
+      "page": "Python: functions",
+      "question": "Are the built-in functions of Python always available?",
+      "markdown": 27691,
+      "sessions": {
+        "sonnet": {
+          "mcp": [
+            {
+              "usd": 0.01771,
+              "turns": 3,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.017649,
+              "turns": 3,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.017672,
+              "turns": 3,
+              "check": "verified",
+              "onPage": true
+            }
+          ],
+          "webfetch": [
+            {
+              "usd": 0.011267,
+              "turns": 2,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.011336,
+              "turns": 2,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.01128,
+              "turns": 2,
+              "check": "verified",
+              "onPage": true
+            }
+          ]
+        },
+        "opus": {
+          "mcp": [
+            {
+              "usd": 0.044983,
+              "turns": 4,
+              "check": "verified",
+              "onPage": true
+            }
+          ],
+          "webfetch": [
+            {
+              "usd": 0.018626,
+              "turns": 2,
+              "check": "verified",
+              "onPage": true
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "python-collections-purpose",
+      "url": "https://docs.python.org/3/library/collections.html",
+      "page": "Python: collections",
+      "question": "What does the Python collections module implement?",
+      "markdown": 16111,
+      "sessions": {
+        "sonnet": {
+          "mcp": [
+            {
+              "usd": 0.017344,
+              "turns": 3,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.017086,
+              "turns": 3,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.017105,
+              "turns": 3,
+              "check": "verified",
+              "onPage": true
+            }
+          ],
+          "webfetch": [
+            {
+              "usd": 0.010646,
+              "turns": 2,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.010449,
+              "turns": 2,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.010428,
+              "turns": 2,
+              "check": "verified",
+              "onPage": true
+            }
+          ]
+        },
+        "opus": {
+          "mcp": [
+            {
+              "usd": 0.03724,
+              "turns": 4,
+              "check": "verified",
+              "onPage": true
+            }
+          ],
+          "webfetch": [
+            {
+              "usd": 0.019522,
+              "turns": 2,
+              "check": "verified",
+              "onPage": true
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "python-zen-first",
+      "url": "https://peps.python.org/pep-0020/",
+      "page": "PEP 20",
+      "question": "What is the first aphorism of the Zen of Python?",
+      "markdown": 735,
+      "sessions": {
+        "sonnet": {
+          "mcp": [
+            {
+              "usd": 0.015659,
+              "turns": 3,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.015659,
+              "turns": 3,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.015629,
+              "turns": 3,
+              "check": "verified",
+              "onPage": true
+            }
+          ],
+          "webfetch": [
+            {
+              "usd": 0.007145,
+              "turns": 2,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.00735,
+              "turns": 2,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.00717,
+              "turns": 2,
+              "check": "verified",
+              "onPage": true
+            }
+          ]
+        },
+        "opus": {
+          "mcp": [
+            {
+              "usd": 0.038535,
+              "turns": 4,
+              "check": "verified",
+              "onPage": true
+            }
+          ],
+          "webfetch": [
+            {
+              "usd": 0.014347,
+              "turns": 2,
+              "check": "verified",
+              "onPage": true
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "gov-declaration-equal",
+      "url": "https://www.archives.gov/founding-docs/declaration-transcript",
+      "page": "Declaration of Independence",
+      "question": "Which truths does the Declaration of Independence hold to be self-evident?",
+      "markdown": 3737,
+      "sessions": {
+        "sonnet": {
+          "mcp": [
+            {
+              "usd": 0.017761,
+              "turns": 4,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.017404,
+              "turns": 4,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.014525,
+              "turns": 3,
+              "check": "verified",
+              "onPage": true
+            }
+          ],
+          "webfetch": [
+            {
+              "usd": 0.008959,
+              "turns": 2,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.014862,
+              "turns": 3,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.010371,
+              "turns": 2,
+              "check": "verified",
+              "onPage": true
+            }
+          ]
+        },
+        "opus": {
+          "mcp": [
+            {
+              "usd": 0.054551,
+              "turns": 6,
+              "check": "verified",
+              "onPage": true
+            }
+          ],
+          "webfetch": [
+            {
+              "usd": 0.023844,
+              "turns": 3,
+              "check": "verified",
+              "onPage": true
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "gov-constitution-union",
+      "url": "https://www.archives.gov/founding-docs/constitution-transcript",
+      "page": "US Constitution",
+      "question": "Why did the people of the United States ordain the Constitution?",
+      "markdown": 8531,
+      "sessions": {
+        "sonnet": {
+          "mcp": [
+            {
+              "usd": 0.015387,
+              "turns": 3,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.015387,
+              "turns": 3,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.015341,
+              "turns": 3,
+              "check": "verified",
+              "onPage": true
+            }
+          ],
+          "webfetch": [
+            {
+              "usd": 0.011675,
+              "turns": 2,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.011308,
+              "turns": 2,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.011447,
+              "turns": 2,
+              "check": "verified",
+              "onPage": true
+            }
+          ]
+        },
+        "opus": {
+          "mcp": [
+            {
+              "usd": 0.037487,
+              "turns": 4,
+              "check": "verified",
+              "onPage": true
+            }
+          ],
+          "webfetch": [
+            {
+              "usd": 0.030191,
+              "turns": 3,
+              "check": "verified",
+              "onPage": true
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "gov-uk-data-protection",
+      "url": "https://www.legislation.gov.uk/ukpga/2018/12/section/1",
+      "page": "Data Protection Act 2018",
+      "question": "What does the UK Data Protection Act 2018 make provision about?",
+      "markdown": 5838,
+      "sessions": {
+        "sonnet": {
+          "mcp": [
+            {
+              "usd": 0.018973,
+              "turns": 3,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.018979,
+              "turns": 3,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.018986,
+              "turns": 3,
+              "check": "verified",
+              "onPage": true
+            }
+          ],
+          "webfetch": [
+            {
+              "usd": 0.008258,
+              "turns": 2,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.009807,
+              "turns": 2,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.008369,
+              "turns": 2,
+              "check": "verified",
+              "onPage": true
+            }
+          ]
+        },
+        "opus": {
+          "mcp": [
+            {
+              "usd": 0.032927,
+              "turns": 4,
+              "check": "verified",
+              "onPage": true
+            }
+          ],
+          "webfetch": [
+            {
+              "usd": 0.018008,
+              "turns": 2,
+              "check": "verified",
+              "onPage": true
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "gov-uk-right-to-life",
+      "url": "https://www.legislation.gov.uk/ukpga/1998/42/schedule/1",
+      "page": "Human Rights Act 1998",
+      "question": "Does the UK Human Rights Act protect the right to life?",
+      "markdown": 5100,
+      "sessions": {
+        "sonnet": {
+          "mcp": [
+            {
+              "usd": 0.01799,
+              "turns": 4,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.02904,
+              "turns": 6,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.016614,
+              "turns": 4,
+              "check": "verified",
+              "onPage": true
+            }
+          ],
+          "webfetch": [
+            {
+              "usd": 0.00867,
+              "turns": 2,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.009676,
+              "turns": 2,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.008801,
+              "turns": 2,
+              "check": "verified",
+              "onPage": true
+            }
+          ]
+        },
+        "opus": {
+          "mcp": [
+            {
+              "usd": 0.033185,
+              "turns": 4,
+              "check": "verified",
+              "onPage": true
+            }
+          ],
+          "webfetch": [
+            {
+              "usd": 0.016404,
+              "turns": 2,
+              "check": "verified",
+              "onPage": true
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "w3c-wcag21-scope",
+      "url": "https://www.w3.org/TR/WCAG21/",
+      "page": "WCAG 2.1",
+      "question": "What does WCAG 2.1 cover?",
+      "markdown": 63111,
+      "sessions": {
+        "sonnet": {
+          "mcp": [
+            {
+              "usd": 0.017403,
+              "turns": 4,
+              "check": "wrong",
+              "onPage": true
+            },
+            {
+              "usd": 0.036337,
+              "turns": 7,
+              "check": "wrong",
+              "onPage": true
+            },
+            {
+              "usd": 0.017334,
+              "turns": 4,
+              "check": "wrong",
+              "onPage": true
+            }
+          ],
+          "webfetch": [
+            {
+              "usd": 0.025028,
+              "turns": 3,
+              "check": "wrong",
+              "onPage": true
+            },
+            {
+              "usd": 0.02537,
+              "turns": 3,
+              "check": "verified",
+              "onPage": true
+            },
+            {
+              "usd": 0.012272,
+              "turns": 2,
+              "check": "wrong",
+              "onPage": true
+            }
+          ]
+        },
+        "opus": {
+          "mcp": [
+            {
+              "usd": 0.040024,
+              "turns": 4,
+              "check": "wrong",
+              "onPage": true
+            }
+          ],
+          "webfetch": [
+            {
+              "usd": 0.021347,
+              "turns": 2,
+              "check": "wrong",
+              "onPage": true
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

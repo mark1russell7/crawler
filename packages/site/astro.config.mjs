@@ -284,6 +284,7 @@ export default defineConfig({
             "notes/robots-txt-ai-agents",
             "notes/restaurant-websites",
             "notes/tokens-per-claim",
+            "notes/claude-code-sessions",
           ],
         },
         { label: "Reference", items: ["reference/api", "reference/cli", "reference/standards"] },

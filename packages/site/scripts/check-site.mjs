@@ -446,6 +446,18 @@ const INTERACTIONS = [
         .waitFor({ timeout: 10_000 });
     },
   },
+  {
+    path: `${BASE}/notes/claude-code-sessions/`,
+    name: "figure-eval-sessions",
+    figure: ".pc-evalb",
+    act: async (page) => {
+      await page.locator(".pc-evalb").getByRole("button", { name: "Opus", exact: true }).click();
+      await page
+        .locator(".pc-evalb .pc-eval-detail")
+        .getByText(/With Opus, a session with polite-crawler cost/)
+        .waitFor({ timeout: 10_000 });
+    },
+  },
 ];
 for (const { scheme, viewport, device } of shots === undefined
   ? [{ scheme: "light", viewport: { width: 1280, height: 900 }, device: "desktop" }]

@@ -179,4 +179,17 @@ The eval of 2026-10-18 ([workflow 39085336453](https://github.com/mark1russell7/
 - On a long page, the difference is large: RFC 9110 has approximately 57 times the tokens, and a long Wikipedia article approximately 49 times.
 - On a very short page, polite-crawler costs more. Its search snippets and its read window are larger than the page.
 - The tool definitions of the MCP server cost 8,539 tokens, one time in each session. The table does not include them.
-- The tokenizer is `cl100k_base`, a proxy. Part B of the eval measures the real cost with Claude Code. The section "Part B: real sessions of Claude Code" tells how.
+- The tokenizer is `cl100k_base`, a proxy. The subsection "Part B" below gives the real cost in Claude Code.
+
+### Part B
+
+The sessions of 2026-10-25 used Claude Code 2.1.296 and `polite-crawler-mcp` 0.2.1: 180 sessions with Sonnet ([workflow 40153411428](https://github.com/mark1russell7/crawler/actions/runs/40153411428)) and 60 with Opus ([workflow 40154501047](https://github.com/mark1russell7/crawler/actions/runs/40154501047)). Each claim got 3 sessions in each arm with Sonnet, and 1 with Opus. The whole eval cost 5.1755 USD, with a dry run of 0.0804 USD.
+
+| Model | Arm | Quotes on the page | Median cost of a session | Cost for each quote on the page |
+| --- | --- | ---: | ---: | ---: |
+| Sonnet | `mcp` | 88 of 90 | 0.0177 USD | 0.0220 USD |
+| Sonnet | `webfetch` | 82 of 90 | 0.0099 USD | 0.0132 USD |
+| Opus | `mcp` | 29 of 30 | 0.0408 USD | 0.0464 USD |
+| Opus | `webfetch` | 30 of 30 | 0.0201 USD | 0.0244 USD |
+
+WebFetch costs approximately half as much, because a small model (`claude-haiku-5-5`) reads the page and the main model reads only its answer. The page [Real Claude Code sessions](https://mark1russell7.github.io/crawler/notes/claude-code-sessions/) gives each claim and the limits.

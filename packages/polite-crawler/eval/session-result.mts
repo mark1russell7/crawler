@@ -88,6 +88,18 @@ export const normalize = (text: string): string =>
 export const quotesOf = (answer: string): string[] =>
   [...answer.matchAll(/<quote>([\s\S]*?)<\/quote>/g)].map((match) => (match[1] ?? "").trim());
 
+/**
+ * This function removes the inline Markdown of a quote: code marks, bold and italic marks, and the
+ * address of a link. WebFetch gives the page as Markdown, so its quotes can have this markup, but the
+ * text of the page has none.
+ */
+export const plainOf = (quote: string): string =>
+  quote
+    .replace(/!?\[([^\]]*)\]\([^)]*\)/g, "$1")
+    .replace(/`+/g, "")
+    .replace(/(\*\*|__)(.+?)\1/g, "$2")
+    .replace(/(^|[^\w*])[*_]([^*_\n]+)[*_](?=[^\w*]|$)/g, "$1$2");
+
 /** This function compares the quotes of an answer with the quote of the claim. */
 export const checkAnswer = (answer: string, quote: string): Check => {
   const quotes = quotesOf(answer).map(normalize);

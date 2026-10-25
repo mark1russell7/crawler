@@ -36,9 +36,14 @@ on:
       max_session_usd:
         description: The limit of one session in USD
         default: "1"
+      summary_of:
+        description: The id of an earlier run. Make only its summary again, with no sessions (empty for a new run).
+        default: ""
 
 permissions:
   contents: read
+  # the summary downloads the records of an earlier run (summary_of)
+  actions: read
 
 # One run at a time, so two runs never fetch from the same sites at the same time.
 concurrency:
@@ -53,6 +58,7 @@ env:
 jobs:
   arm:
     name: Sessions (${{ matrix.arm }})
+    if: inputs.summary_of == ''
     runs-on: ubuntu-latest
     timeout-minutes: 120
     strategy:
@@ -126,6 +132,8 @@ jobs:
         with:
           pattern: sessions-*
           path: downloaded
+          run-id: ${{ inputs.summary_of || github.run_id }}
+          github-token: ${{ github.token }}
       - name: The records of the two arms
         run: |
           mkdir -p sessions

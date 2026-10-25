@@ -123,7 +123,7 @@ The prompt gives the URL and the question. It asks for the exact words of the pa
 3. The session operates with `--output-format stream-json`. The job keeps the stream of each session.
 4. The record of a session takes the tokens and the cost from the result of the stream. The tokens include each model of the session. WebFetch gives each page to a small model, and the record counts that model too.
 5. The check normalizes the quote marks, the dashes and the white space. Then it compares the quote of the answer with the quote of the claim.
-6. The summary fetches each page one time with the crawler. It examines each quote of each answer on the page, word for word. A quote on the page proves an answer, also when it is not the sentence of the claim.
+6. The summary fetches each page one time with the crawler. It examines each quote of each answer on the page, word for word. A quote on the page proves an answer, also when it is not the sentence of the claim. WebFetch gives the page as Markdown. Thus the check also tries the quote with no inline Markdown: no code marks, bold or italic marks, or link addresses.
 
 The check of the claim gives one of these values:
 
@@ -151,7 +151,7 @@ Start a dry run with two claims first:
 gh workflow run eval-sessions.yml -R mark1russell7/crawler -f limit=2
 ```
 
-The inputs are `limit`, `only` (claim ids), `repeat` (the sessions of each claim in each arm), `model`, `budget`, `max_turns` and `max_session_usd`. The job summary shows the tables. The artifact `eval-b` holds `eval-b-result.json` and `eval-b-summary.md`. The artifacts `sessions-mcp` and `sessions-webfetch` hold the stream of each session.
+The inputs are `limit`, `only` (claim ids), `repeat` (the sessions of each claim in each arm), `model`, `budget`, `max_turns`, `max_session_usd` and `summary_of`. With the id of an earlier run in `summary_of`, the workflow starts no session. It makes the summary of that run again, with the code of the branch. The job summary shows the tables. The artifact `eval-b` holds `eval-b-result.json` and `eval-b-summary.md`. The artifacts `sessions-mcp` and `sessions-webfetch` hold the stream of each session.
 
 The table "Projected for the set" gives the cost of the 30 claims at the mean cost of a session. Use it to decide on the full run.
 

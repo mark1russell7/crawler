@@ -1,7 +1,7 @@
 {
   "$schema": "https://json.schemastore.org/package",
   "name": "polite-crawler-mcp",
-  "version": "0.2.3",
+  "version": "0.2.4",
   "mcpName": "io.github.mark1russell7/polite-crawler",
   "description": "The MCP server of polite-crawler: nine tools that fetch web pages politely, keep them, search them and verify quotes, for Claude and other MCP clients.",
   "keywords": [

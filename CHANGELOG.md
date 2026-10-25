@@ -15,6 +15,8 @@ A prerelease version (`0.2.0-beta.1`) goes to the npm tag `next`. Each other ver
 
 ## Unreleased
 
+## 0.2.4 - 2026-10-25
+
 - **A server can no longer stop the process through undici.** polite-crawler needs undici 8.12.3 or later. With an earlier undici, a server stopped the process when it sent more than five content codings and then closed the connection (CVE-2026-109869). The lockfile of the repository also gets the fixed versions of body-parser, fast-uri, ip-address and postcss.
 - **A robots.txt from a site can no longer stop the crawler for seconds or minutes.** Two regular expressions of the robots.txt parser took polynomial time. With this version, the parser reads each line in linear time.
   - A line of 100,000 `#` characters and a U+2028 character took 6 seconds. A usage line with 100,000 spaces after its path took 10 seconds. The time increased as the square of the length, and the parser reads 500 KiB.

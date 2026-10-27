@@ -1,0 +1,3588 @@
+# The public API of polite-crawler
+#
+# The names of each entry of the exports field, and the declaration of each name, without comments
+# and private members. The command `api-report check` compares this file with the built .d.ts files.
+# To accept a change of the API, start the build, then `api-report update`, and review the diff.
+
+## . (build/index.d.mts): 370 names
+
+ALLOW_ALL: build/robots.d.mts#ALLOW_ALL
+type AiInput: build/signals.d.mts#AiInput
+type ArchiveCounts: build/index.d.mts#ArchiveCounts
+type ArchiveFilter: build/index.d.mts#ArchiveFilter
+type ArchiveOptions: build/index.d.mts#ArchiveOptions
+type ArchiveSource: build/index.d.mts#ArchiveSource
+type Archived: build/index.d.mts#Archived
+BOT_PAGE: build/index.d.mts#BOT_PAGE
+type BlobStore: build/index.d.mts#BlobStore
+CAPTURE_SCHEMA: build/index.d.mts#CAPTURE_SCHEMA
+CHUNK_LIMITS: build/index.d.mts#CHUNK_LIMITS
+CRAWL_LIMITS: build/index.d.mts#CRAWL_LIMITS
+type CacheEntry: build/index.d.mts#CacheEntry
+type CacheIndex: build/index.d.mts#CacheIndex
+type CaptureFilter: build/index.d.mts#CaptureFilter
+CaptureLog: build/index.d.mts#CaptureLog
+type CaptureLogOptions: build/index.d.mts#CaptureLogOptions
+type CapturePayload: build/index.d.mts#CapturePayload
+type CaptureReader: build/index.d.mts#CaptureReader
+type CaptureRecord: build/index.d.mts#CaptureRecord
+type CaptureWriter: build/index.d.mts#CaptureWriter
+type CatchUpResult: build/index.d.mts#CatchUpResult
+type ChangeCommandOptions: build/index.d.mts#ChangeCommandOptions
+type Changefreq: build/index.d.mts#Changefreq
+type ChunkOptions: build/index.d.mts#ChunkOptions
+type Clock: build/politeness.d.mts#Clock
+type CrawlEvent: build/index.d.mts#CrawlEvent
+type CrawlOptions: build/index.d.mts#CrawlOptions
+type CrawlPage: build/index.d.mts#CrawlPage
+type CrawlRun: build/index.d.mts#CrawlRun
+type CrawlRunOptions: build/index.d.mts#CrawlRunOptions
+type CrawlRuntime: build/index.d.mts#CrawlRuntime
+type CrawlStop: build/index.d.mts#CrawlStop
+type CrawlSummary: build/index.d.mts#CrawlSummary
+Crawler: build/index.d.mts#Crawler
+type CrawlerOptions: build/index.d.mts#CrawlerOptions
+DAEMON_DEFAULTS: build/index.d.mts#DAEMON_DEFAULTS
+DAEMON_STATE_SCHEMA: build/index.d.mts#DAEMON_STATE_SCHEMA
+DAYS: build/hours.d.mts#DAYS
+DEADLINE_NOTE: build/index.d.mts#DEADLINE_NOTE
+DEFAULT_POLICY: build/politeness.d.mts#DEFAULT_POLICY
+DEFAULT_SECRET_PARAMS: build/index.d.mts#DEFAULT_SECRET_PARAMS
+DEFAULT_TOKEN: build/index.d.mts#DEFAULT_TOKEN
+DIFF_LIMITS: build/index.d.mts#DIFF_LIMITS
+DISCOVER_LIMITS: build/index.d.mts#DISCOVER_LIMITS
+type Daemon: build/index.d.mts#Daemon
+type DaemonDue: build/index.d.mts#DaemonDue
+type DaemonMcpHooks: build/index.d.mts#DaemonMcpHooks
+type DaemonMcpHost: build/index.d.mts#DaemonMcpHost
+type DaemonMcpOptions: build/index.d.mts#DaemonMcpOptions
+type DaemonMcpService: build/index.d.mts#DaemonMcpService
+type DaemonOptions: build/index.d.mts#DaemonOptions
+type DaemonState: build/index.d.mts#DaemonState
+type DaemonStatus: build/index.d.mts#DaemonStatus
+type DaemonTask: build/index.d.mts#DaemonTask
+type DaemonTick: build/index.d.mts#DaemonTick
+type DamagedLine: build/index.d.mts#DamagedLine
+type Day: build/hours.d.mts#Day
+type DiffHunk: build/index.d.mts#DiffHunk
+type DiffInput: build/index.d.mts#DiffInput
+type DiffLimits: build/index.d.mts#DiffLimits
+type DiffLine: build/index.d.mts#DiffLine
+type DiffOptions: build/index.d.mts#DiffOptions
+type DiffResult: build/index.d.mts#DiffResult
+type DiffSide: build/index.d.mts#DiffSide
+type DiffSummary: build/index.d.mts#DiffSummary
+type DigestOptions: build/index.d.mts#DigestOptions
+type DirectoryKey: build/index.d.mts#DirectoryKey
+type DiscoverOptions: build/index.d.mts#DiscoverOptions
+type DiscoverResult: build/index.d.mts#DiscoverResult
+type DiscoverRunOptions: build/index.d.mts#DiscoverRunOptions
+type DiscoverSource: build/index.d.mts#DiscoverSource
+type DiscoverStop: build/index.d.mts#DiscoverStop
+type DiscoveredUrl: build/index.d.mts#DiscoveredUrl
+type Doc: build/index.d.mts#Doc
+type DocDigest: build/index.d.mts#DocDigest
+DocIndex: build/index.d.mts#DocIndex
+type DocIndexOptions: build/index.d.mts#DocIndexOptions
+type DocInput: build/index.d.mts#DocInput
+type DocVersion: build/index.d.mts#DocVersion
+type Duration: build/index.d.mts#Duration
+type EgressOptions: build/index.d.mts#EgressOptions
+EgressRefused: build/index.d.mts#EgressRefused
+type EgressResolve: build/index.d.mts#EgressResolve
+type EmbedCallOptions: build/index.d.mts#EmbedCallOptions
+type EmbedOptions: build/index.d.mts#EmbedOptions
+type EmbedResult: build/index.d.mts#EmbedResult
+type EmbedStop: build/index.d.mts#EmbedStop
+type Embedder: build/index.d.mts#Embedder
+type EmbeddingModel: build/index.d.mts#EmbeddingModel
+type ExtractOptions: build/index.d.mts#ExtractOptions
+type ExtractResult: build/index.d.mts#ExtractResult
+type ExtractSource: build/index.d.mts#ExtractSource
+type ExtractSummary: build/index.d.mts#ExtractSummary
+type ExtractedDoc: build/index.d.mts#ExtractedDoc
+type Extractor: build/index.d.mts#Extractor
+Extractors: build/index.d.mts#Extractors
+FAST_RANK_SHARE: build/index.d.mts#FAST_RANK_SHARE
+FIELD_KINDS: build/index.d.mts#FIELD_KINDS
+type FeatureExtractor: build/index.d.mts#FeatureExtractor
+type FetchOptions: build/index.d.mts#FetchOptions
+type FetchOutcome: build/index.d.mts#FetchOutcome
+type FetchRequest: build/index.d.mts#FetchRequest
+type Fetched: build/index.d.mts#Fetched
+type FieldCandidate: build/index.d.mts#FieldCandidate
+type FieldCheck: build/index.d.mts#FieldCheck
+type FieldClaim: build/index.d.mts#FieldClaim
+type FieldKind: build/index.d.mts#FieldKind
+type FieldResult: build/index.d.mts#FieldResult
+type FieldSpan: build/index.d.mts#FieldSpan
+type FieldStatus: build/index.d.mts#FieldStatus
+type FieldsChecked: build/index.d.mts#FieldsChecked
+FileBlobStore: build/index.d.mts#FileBlobStore
+type FileBlobStoreOptions: build/index.d.mts#FileBlobStoreOptions
+type FindIndexOptions: build/index.d.mts#FindIndexOptions
+type FindOptions: build/index.d.mts#FindOptions
+type Found: build/index.d.mts#Found
+type FusedRank: build/index.d.mts#FusedRank
+HELD_BACK: build/index.d.mts#HELD_BACK
+HYBRID_DEFAULTS: build/index.d.mts#HYBRID_DEFAULTS
+type HostCounts: build/politeness.d.mts#HostCounts
+type HostResult: build/politeness.d.mts#HostResult
+type HostStateStore: build/politeness.d.mts#HostStateStore
+type HostStop: build/politeness.d.mts#HostStop
+type Hours: build/hours.d.mts#Hours
+type HoursComparison: build/hours.d.mts#HoursComparison
+type HybridCrawler: build/index.d.mts#HybridCrawler
+type HybridFindOptions: build/index.d.mts#HybridFindOptions
+type HybridOptions: build/index.d.mts#HybridOptions
+type HybridSearch: build/index.d.mts#HybridSearch
+type HybridSearchOptions: build/index.d.mts#HybridSearchOptions
+type IndexBuild: build/index.d.mts#IndexBuild
+type IndexCounts: build/index.d.mts#IndexCounts
+type Indexed: build/index.d.mts#Indexed
+type Interval: build/hours.d.mts#Interval
+type JsonRecord: build/index.d.mts#JsonRecord
+type JwkInput: build/index.d.mts#JwkInput
+KEY_DIRECTORY_PATH: build/index.d.mts#KEY_DIRECTORY_PATH
+KEY_DIRECTORY_TYPE: build/index.d.mts#KEY_DIRECTORY_TYPE
+type KeyDirectory: build/index.d.mts#KeyDirectory
+type KeyInput: build/index.d.mts#KeyInput
+type Latest: build/index.d.mts#Latest
+MemoryHostStateStore: build/politeness.d.mts#MemoryHostStateStore
+type MetaChange: build/index.d.mts#MetaChange
+type Money: build/index.d.mts#Money
+NO_EMBEDDER: build/index.d.mts#NO_EMBEDDER
+NO_OLLAMA: build/index.d.mts#NO_OLLAMA
+NO_PLAYWRIGHT: build/index.d.mts#NO_PLAYWRIGHT
+NO_TRANSFORMERS: build/index.d.mts#NO_TRANSFORMERS
+OLLAMA_MODELS: build/index.d.mts#OLLAMA_MODELS
+type OllamaEmbedderOptions: build/index.d.mts#OllamaEmbedderOptions
+type OpenOptions: build/index.d.mts#OpenOptions
+type OpenedCrawler: build/index.d.mts#OpenedCrawler
+type Outcome: build/classify.d.mts#Outcome
+PRODUCT_LIMITS: build/index.d.mts#PRODUCT_LIMITS
+type PageExtract: build/html-o5bDHjNi.d.mts#PageExtract
+type PageLink: build/html-o5bDHjNi.d.mts#PageLink
+type PageOptions: build/index.d.mts#PageOptions
+type PageResult: build/index.d.mts#PageResult
+type Passage: build/index.d.mts#Passage
+type PdfOptions: build/index.d.mts#PdfOptions
+type PdfText: build/index.d.mts#PdfText
+type PlaywrightRenderer: build/index.d.mts#PlaywrightRenderer
+type PolicyOptions: build/politeness.d.mts#PolicyOptions
+type PoliteCrawler: build/index.d.mts#PoliteCrawler
+type PolitenessPolicy: build/politeness.d.mts#PolitenessPolicy
+type Pooling: build/index.d.mts#Pooling
+type ProductOptions: build/index.d.mts#ProductOptions
+type ProductRead: build/index.d.mts#ProductRead
+type ProductResult: build/index.d.mts#ProductResult
+type ProductVariant: build/index.d.mts#ProductVariant
+RECIPE_LIMITS: build/index.d.mts#RECIPE_LIMITS
+RESERVED_RECIPES: build/index.d.mts#RESERVED_RECIPES
+type RankMode: build/index.d.mts#RankMode
+type RankOptions: build/index.d.mts#RankOptions
+type Ranked: build/index.d.mts#Ranked
+type ReadOptions: build/index.d.mts#ReadOptions
+type ReadResult: build/index.d.mts#ReadResult
+type ReadingIndex: build/index.d.mts#ReadingIndex
+type Recipe: build/index.d.mts#Recipe
+type RecipeCapture: build/index.d.mts#RecipeCapture
+type RecipeDefinition: build/index.d.mts#RecipeDefinition
+type RecipeDoc: build/index.d.mts#RecipeDoc
+type RecipeExtract: build/index.d.mts#RecipeExtract
+type RecipeRequest: build/index.d.mts#RecipeRequest
+type RecipeRequestOptions: build/index.d.mts#RecipeRequestOptions
+type RecipeResult: build/index.d.mts#RecipeResult
+type RecipeRunOptions: build/index.d.mts#RecipeRunOptions
+type RecipeTarget: build/index.d.mts#RecipeTarget
+type RecordInput: build/index.d.mts#RecordInput
+type RefusedReason: build/index.d.mts#RefusedReason
+type ReindexResult: build/index.d.mts#ReindexResult
+type RenderOptions: build/index.d.mts#RenderOptions
+RenderRefused: build/index.d.mts#RenderRefused
+type RenderRequest: build/index.d.mts#RenderRequest
+type Rendered: build/index.d.mts#Rendered
+type Renderer: build/index.d.mts#Renderer
+type RequestSigner: build/index.d.mts#RequestSigner
+type Robots: build/robots.d.mts#Robots
+type RobotsDecision: build/robots.d.mts#RobotsDecision
+type RobotsGroup: build/robots.d.mts#RobotsGroup
+type RobotsRule: build/robots.d.mts#RobotsRule
+type RobotsSignal: build/robots.d.mts#RobotsSignal
+type RuntimeOptions: build/index.d.mts#RuntimeOptions
+SITEMAP_LIMITS: build/index.d.mts#SITEMAP_LIMITS
+type ScanOptions: build/index.d.mts#ScanOptions
+type ScheduleOptions: build/index.d.mts#ScheduleOptions
+type ScheduleResult: build/index.d.mts#ScheduleResult
+type ScopeOptions: build/html-o5bDHjNi.d.mts#ScopeOptions
+type SearchOptions: build/index.d.mts#SearchOptions
+type SearchRank: build/index.d.mts#SearchRank
+type Signals: build/signals.d.mts#Signals
+type SignatureAgentType: build/index.d.mts#SignatureAgentType
+type SignatureCheck: build/index.d.mts#SignatureCheck
+type SignedRequest: build/index.d.mts#SignedRequest
+type SitemapEntry: build/index.d.mts#SitemapEntry
+type SitemapKind: build/index.d.mts#SitemapKind
+type SitemapLimits: build/index.d.mts#SitemapLimits
+type SitemapRead: build/index.d.mts#SitemapRead
+type SqliteHostStateOptions: build/index.d.mts#SqliteHostStateOptions
+SqliteHostStateStore: build/index.d.mts#SqliteHostStateStore
+type StoreRuntime: build/index.d.mts#StoreRuntime
+type StoredChunk: build/index.d.mts#StoredChunk
+TRANSFORMERS_MODELS: build/index.d.mts#TRANSFORMERS_MODELS
+type TextChunk: build/index.d.mts#TextChunk
+type TextDiff: build/index.d.mts#TextDiff
+type TransformersEmbedderOptions: build/index.d.mts#TransformersEmbedderOptions
+type TransformersModule: build/index.d.mts#TransformersModule
+type UrlPattern: build/index.d.mts#UrlPattern
+VALIDATOR_MEMO: build/politeness.d.mts#VALIDATOR_MEMO
+VECTORS_SCHEMA: build/index.d.mts#VECTORS_SCHEMA
+VENUE_LIMITS: build/index.d.mts#VENUE_LIMITS
+VERSION: build/index.d.mts#VERSION
+type ValidatorAnswer: build/politeness.d.mts#ValidatorAnswer
+type ValidatorLimits: build/politeness.d.mts#ValidatorLimits
+type ValidatorMemo: build/politeness.d.mts#ValidatorMemo
+type ValidatorReport: build/politeness.d.mts#ValidatorReport
+type ValidatorVerdict: build/politeness.d.mts#ValidatorVerdict
+type Variant: build/index.d.mts#Variant
+type VectorCounts: build/index.d.mts#VectorCounts
+type VectorHit: build/index.d.mts#VectorHit
+VectorStore: build/index.d.mts#VectorStore
+type VectorStoreOptions: build/index.d.mts#VectorStoreOptions
+type VectorWrite: build/index.d.mts#VectorWrite
+type VenueLink: build/index.d.mts#VenueLink
+type VenueLocation: build/index.d.mts#VenueLocation
+type VenueOptions: build/index.d.mts#VenueOptions
+type VenueOsm: build/index.d.mts#VenueOsm
+type VenuePage: build/index.d.mts#VenuePage
+type VenueRead: build/index.d.mts#VenueRead
+type VenueReading: build/index.d.mts#VenueReading
+type VenueResult: build/index.d.mts#VenueResult
+type VenueSource: build/index.d.mts#VenueSource
+type Verified: build/index.d.mts#Verified
+type VerifyOptions: build/index.d.mts#VerifyOptions
+type VerifyResult: build/index.d.mts#VerifyResult
+type VersionAt: build/index.d.mts#VersionAt
+type VersionChoice: build/index.d.mts#VersionChoice
+type VersionText: build/index.d.mts#VersionText
+WATCH_LIMITS: build/index.d.mts#WATCH_LIMITS
+WATCH_SCHEMA: build/index.d.mts#WATCH_SCHEMA
+type WaczResult: build/index.d.mts#WaczResult
+type WarcResult: build/index.d.mts#WarcResult
+type WatchEntry: build/index.d.mts#WatchEntry
+type WatchEvent: build/index.d.mts#WatchEvent
+type WatchKind: build/index.d.mts#WatchKind
+type WatchList: build/index.d.mts#WatchList
+type WatchOptions: build/index.d.mts#WatchOptions
+type WatchPending: build/index.d.mts#WatchPending
+type WatchRescheduleOptions: build/index.d.mts#WatchRescheduleOptions
+type WatchRow: build/index.d.mts#WatchRow
+type WatchRun: build/index.d.mts#WatchRun
+type WatchRunOptions: build/index.d.mts#WatchRunOptions
+type WatchRunnerOptions: build/index.d.mts#WatchRunnerOptions
+type WatchSchedule: build/index.d.mts#WatchSchedule
+type WatchState: build/index.d.mts#WatchState
+type WatchStop: build/index.d.mts#WatchStop
+WatchStore: build/index.d.mts#WatchStore
+type WatchStoreOptions: build/index.d.mts#WatchStoreOptions
+type WatchSummary: build/index.d.mts#WatchSummary
+type WatchUpdate: build/index.d.mts#WatchUpdate
+type WebArchive: build/index.d.mts#WebArchive
+type WebBotAuthOptions: build/index.d.mts#WebBotAuthOptions
+type WebBotAuthSigner: build/index.d.mts#WebBotAuthSigner
+type Week: build/hours.d.mts#Week
+type WordPart: build/index.d.mts#WordPart
+archiveExtractor: build/index.d.mts#archiveExtractor
+archivedDocId: build/index.d.mts#archivedDocId
+bodyEncoding: build/html-o5bDHjNi.d.mts#bodyEncoding
+browserMissing: build/index.d.mts#browserMissing
+catchUpIndex: build/index.d.mts#catchUpIndex
+changeCommand: build/index.d.mts#changeCommand
+checkFields: build/index.d.mts#checkFields
+chunkText: build/index.d.mts#chunkText
+chunkTokensOf: build/index.d.mts#chunkTokensOf
+compareHours: build/hours.d.mts#compareHours
+crawlSite: build/index.d.mts#crawlSite
+createHybridSearch: build/index.d.mts#createHybridSearch
+createRuntime: build/index.d.mts#createRuntime
+createWebBotAuthSigner: build/index.d.mts#createWebBotAuthSigner
+daemonStateFile: build/index.d.mts#daemonStateFile
+decide: build/robots.d.mts#decide
+decodeBody: build/html-o5bDHjNi.d.mts#decodeBody
+defaultUserAgent: build/index.d.mts#defaultUserAgent
+defineRecipe: build/index.d.mts#defineRecipe
+describeWeek: build/hours.d.mts#describeWeek
+diffDocument: build/index.d.mts#diffDocument
+diffTexts: build/index.d.mts#diffTexts
+disagreements: build/hours.d.mts#disagreements
+discoverSite: build/index.d.mts#discoverSite
+durationMs: build/index.d.mts#durationMs
+egressLookup: build/index.d.mts#egressLookup
+estimateTokens: build/index.d.mts#estimateTokens
+exportWacz: build/index.d.mts#exportWacz
+exportWarc: build/index.d.mts#exportWarc
+extractDocument: build/index.d.mts#extractDocument
+extractPage: build/html-o5bDHjNi.d.mts#extractPage
+feedDate: build/index.d.mts#feedDate
+fetchAndIndex: build/index.d.mts#fetchAndIndex
+fetchPage: build/index.d.mts#fetchPage
+findDocuments: build/index.d.mts#findDocuments
+formatDiff: build/index.d.mts#formatDiff
+fromCompact: build/hours.d.mts#fromCompact
+fromSchemaOrg: build/hours.d.mts#fromSchemaOrg
+fromText: build/hours.d.mts#fromText
+fuseRanks: build/index.d.mts#fuseRanks
+heldBackMeta: build/index.d.mts#heldBackMeta
+isHeldBack: build/index.d.mts#isHeldBack
+isLoopback: build/index.d.mts#isLoopback
+isMailbox: build/index.d.mts#isMailbox
+isPdf: build/index.d.mts#isPdf
+isoTime: build/index.d.mts#isoTime
+keyDirectory: build/index.d.mts#keyDirectory
+locate: build/index.d.mts#locate
+locationMatches: build/index.d.mts#locationMatches
+makeRecord: build/index.d.mts#makeRecord
+namesVenue: build/index.d.mts#namesVenue
+nextValidatorMemo: build/politeness.d.mts#nextValidatorMemo
+ollamaEmbedder: build/index.d.mts#ollamaEmbedder
+openCrawler: build/index.d.mts#openCrawler
+parseRobots: build/robots.d.mts#parseRobots
+pickProduct: build/index.d.mts#pickProduct
+pickVariant: build/index.d.mts#pickVariant
+playwrightRenderer: build/index.d.mts#playwrightRenderer
+productOf: build/index.d.mts#productOf
+rankHoursLinks: build/index.d.mts#rankHoursLinks
+readAmount: build/index.d.mts#readAmount
+readDaemonState: build/index.d.mts#readDaemonState
+readDocument: build/index.d.mts#readDocument
+readJson: build/index.d.mts#readJson
+readPdf: build/index.d.mts#readPdf
+readProduct: build/index.d.mts#readProduct
+readSitemap: build/index.d.mts#readSitemap
+readVenue: build/index.d.mts#readVenue
+realClock: build/politeness.d.mts#realClock
+recordOverride: build/index.d.mts#recordOverride
+registerRecipe: build/index.d.mts#registerRecipe
+reindex: build/index.d.mts#reindex
+runRecipe: build/index.d.mts#runRecipe
+runWatch: build/index.d.mts#runWatch
+scheduleWatches: build/index.d.mts#scheduleWatches
+startDaemon: build/index.d.mts#startDaemon
+toHoursWeek: build/hours.d.mts#toHoursWeek
+transformersEmbedder: build/index.d.mts#transformersEmbedder
+typesOf: build/html-o5bDHjNi.d.mts#typesOf
+unitVector: build/index.d.mts#unitVector
+venueReadingsOf: build/index.d.mts#venueReadingsOf
+verifyQuote: build/index.d.mts#verifyQuote
+verifySignature: build/index.d.mts#verifySignature
+versionAtTime: build/index.d.mts#versionAtTime
+
+## ./robots (build/robots.d.mts): 20 names
+
+ALLOW_ALL: build/robots.d.mts#ALLOW_ALL
+DISALLOW_ALL: build/robots.d.mts#DISALLOW_ALL
+HTML_ROBOTS: build/robots.d.mts#HTML_ROBOTS
+ROBOTS_MAX_BYTES: build/robots.d.mts#ROBOTS_MAX_BYTES
+Robots: build/robots.d.mts#Robots
+RobotsDecision: build/robots.d.mts#RobotsDecision
+RobotsGroup: build/robots.d.mts#RobotsGroup
+RobotsRule: build/robots.d.mts#RobotsRule
+RobotsSignal: build/robots.d.mts#RobotsSignal
+decide: build/robots.d.mts#decide
+isHtmlRobots: build/robots.d.mts#isHtmlRobots
+isProductToken: build/robots.d.mts#isProductToken
+matchesPattern: build/robots.d.mts#matchesPattern
+normalizePath: build/robots.d.mts#normalizePath
+parseRobots: build/robots.d.mts#parseRobots
+productToken: build/robots.d.mts#productToken
+robotsFromResponse: build/robots.d.mts#robotsFromResponse
+robotsFromStatus: build/robots.d.mts#robotsFromStatus
+signalsFor: build/robots.d.mts#signalsFor
+unreachableRobots: build/robots.d.mts#unreachableRobots
+
+## ./hours (build/hours.d.mts): 15 names
+
+DAYS: build/hours.d.mts#DAYS
+Day: build/hours.d.mts#Day
+Hours: build/hours.d.mts#Hours
+HoursComparison: build/hours.d.mts#HoursComparison
+Interval: build/hours.d.mts#Interval
+Week: build/hours.d.mts#Week
+compareHours: build/hours.d.mts#compareHours
+dayRange: build/hours.d.mts#dayRange
+describeWeek: build/hours.d.mts#describeWeek
+disagreements: build/hours.d.mts#disagreements
+fromCompact: build/hours.d.mts#fromCompact
+fromSchemaOrg: build/hours.d.mts#fromSchemaOrg
+fromText: build/hours.d.mts#fromText
+readRange: build/hours.d.mts#readRange
+toHoursWeek: build/hours.d.mts#toHoursWeek
+
+## ./html (build/html.d.mts): 10 names
+
+DomNode: build/html-o5bDHjNi.d.mts#DomNode
+PageExtract: build/html-o5bDHjNi.d.mts#PageExtract
+PageLink: build/html-o5bDHjNi.d.mts#PageLink
+bodyEncoding: build/html-o5bDHjNi.d.mts#bodyEncoding
+canonicalUrl: build/html-o5bDHjNi.d.mts#canonicalUrl
+decodeBody: build/html-o5bDHjNi.d.mts#decodeBody
+extractPage: build/html-o5bDHjNi.d.mts#extractPage
+readJsonLd: build/html-o5bDHjNi.d.mts#readJsonLd
+typesOf: build/html-o5bDHjNi.d.mts#typesOf
+visibleText: build/html-o5bDHjNi.d.mts#visibleText
+
+## ./classify (build/classify.d.mts): 7 names
+
+Classified: build/classify.d.mts#Classified
+Outcome: build/classify.d.mts#Outcome
+STOPS_HOST: build/classify.d.mts#STOPS_HOST
+classify: build/classify.d.mts#classify
+isClientError: build/classify.d.mts#isClientError
+parseHttpDate: build/classify.d.mts#parseHttpDate
+parseRetryAfter: build/classify.d.mts#parseRetryAfter
+
+## ./politeness (build/politeness.d.mts): 30 names
+
+Clock: build/politeness.d.mts#Clock
+DEFAULT_POLICY: build/politeness.d.mts#DEFAULT_POLICY
+HostCounts: build/politeness.d.mts#HostCounts
+HostResult: build/politeness.d.mts#HostResult
+HostScheduler: build/politeness.d.mts#HostScheduler
+HostStateStore: build/politeness.d.mts#HostStateStore
+HostStop: build/politeness.d.mts#HostStop
+HostStopped: build/politeness.d.mts#HostStopped
+MAX_STOP_MS: build/politeness.d.mts#MAX_STOP_MS
+MemoryHostStateStore: build/politeness.d.mts#MemoryHostStateStore
+Paced: build/politeness.d.mts#Paced
+PolicyOptions: build/politeness.d.mts#PolicyOptions
+PolitenessPolicy: build/politeness.d.mts#PolitenessPolicy
+Rest: build/politeness.d.mts#Rest
+RestInput: build/politeness.d.mts#RestInput
+SchedulerOptions: build/politeness.d.mts#SchedulerOptions
+VALIDATOR_MEMO: build/politeness.d.mts#VALIDATOR_MEMO
+ValidatorAnswer: build/politeness.d.mts#ValidatorAnswer
+ValidatorLimits: build/politeness.d.mts#ValidatorLimits
+ValidatorMemo: build/politeness.d.mts#ValidatorMemo
+ValidatorReport: build/politeness.d.mts#ValidatorReport
+ValidatorVerdict: build/politeness.d.mts#ValidatorVerdict
+backoffMs: build/politeness.d.mts#backoffMs
+checkPolicy: build/politeness.d.mts#checkPolicy
+equalJitterMs: build/politeness.d.mts#equalJitterMs
+nextValidatorMemo: build/politeness.d.mts#nextValidatorMemo
+policyFor: build/politeness.d.mts#policyFor
+realClock: build/politeness.d.mts#realClock
+restAfter: build/politeness.d.mts#restAfter
+validatorsToSend: build/politeness.d.mts#validatorsToSend
+
+## ./signals (build/signals.d.mts): 5 names
+
+AiInput: build/signals.d.mts#AiInput
+NO_SIGNALS: build/signals.d.mts#NO_SIGNALS
+Signals: build/signals.d.mts#Signals
+metaSignals: build/signals.d.mts#metaSignals
+readSignals: build/signals.d.mts#readSignals
+
+## ./record.schema.json: no declaration file for ./record.schema.json
+
+file ./record.schema.json: record.schema.json
+
+## bin: 1 commands
+
+polite-crawler: ./build/cli.mjs
+
+## Declarations
+
+### build/classify.d.mts#Classified
+export interface Classified {
+  readonly outcome: Outcome;
+  readonly retryAfterMs: number | undefined;
+  readonly note: string | undefined;
+}
+
+### build/classify.d.mts#Outcome
+export type Outcome = "ok" | "not-modified" | "redirect" | "challenge" | "payment-required" | "blocked" | "not-found" | "rate-limited" | "unavailable" | "error";
+
+### build/classify.d.mts#STOPS_HOST
+export declare const STOPS_HOST: ReadonlySet<Outcome>;
+
+### build/classify.d.mts#classify
+export declare const classify: (status: number, header: (name: string) => string | undefined, now: number) => Classified;
+
+### build/classify.d.mts#isClientError
+export declare const isClientError: (status: number) => boolean;
+
+### build/classify.d.mts#parseHttpDate
+export declare const parseHttpDate: (value: string | undefined) => number | undefined;
+
+### build/classify.d.mts#parseRetryAfter
+export declare const parseRetryAfter: (value: string | undefined, now: number) => number | undefined;
+
+### build/hours.d.mts#DAYS
+export declare const DAYS: readonly Day[];
+
+### build/hours.d.mts#Day
+export type Day = "mon" | "tue" | "wed" | "thu" | "fri" | "sat" | "sun";
+
+### build/hours.d.mts#Hours
+export interface Hours {
+  readonly week: Week;
+  readonly from: "jsonld" | "osm" | "text";
+  readonly raw: string;
+  readonly inferred: boolean;
+  readonly partial?: boolean;
+  readonly season?: string;
+}
+
+### build/hours.d.mts#HoursComparison
+export interface HoursComparison {
+  readonly status: "same" | "changed" | "new";
+  readonly days: readonly Day[];
+  readonly added: readonly Day[];
+  readonly skipped: readonly Day[];
+}
+
+### build/hours.d.mts#Interval
+export type Interval = readonly [string, string];
+
+### build/hours.d.mts#Week
+export type Week = Partial<Record<Day, readonly Interval[]>>;
+
+### build/hours.d.mts#compareHours
+export declare const compareHours: (stored: Week | undefined, reading: Week, options?: {
+  readonly skipSplit?: boolean | undefined;
+}) => HoursComparison;
+
+### build/hours.d.mts#dayRange
+export declare const dayRange: (from: Day, to: Day) => Day[];
+
+### build/hours.d.mts#describeWeek
+export declare const describeWeek: (week: Week) => string;
+
+### build/hours.d.mts#disagreements
+export declare const disagreements: (a: Week, b: Week) => Day[];
+
+### build/hours.d.mts#fromCompact
+export declare const fromCompact: (value: string, from?: "osm" | "jsonld") => Hours | undefined;
+
+### build/hours.d.mts#fromSchemaOrg
+export declare const fromSchemaOrg: (record: Readonly<Record<string, unknown>>, options?: {
+  readonly at?: string | Date | undefined;
+}) => Hours | undefined;
+
+### build/hours.d.mts#fromText
+export declare const fromText: (text: string) => Array<Hours & {
+  readonly label: string | null;
+}>;
+
+### build/hours.d.mts#readRange
+export declare const readRange: (start: string, end: string) => {
+  readonly interval: Interval;
+  readonly inferred: boolean;
+} | undefined;
+
+### build/hours.d.mts#toHoursWeek
+export declare const toHoursWeek: (week: Week) => {
+  readonly hours_week: Partial<Record<Day, readonly [string, string] | null>>;
+  readonly split: readonly Day[];
+};
+
+### build/html-o5bDHjNi.d.mts#DomNode
+interface DomNode {
+  readonly nodeType: number;
+  readonly nodeName: string;
+  readonly textContent: string | null;
+  readonly childNodes: ArrayLike<DomNode>;
+  readonly firstChild?: DomNode | null | undefined;
+  readonly nextSibling?: DomNode | null | undefined;
+  readonly parentNode?: DomNode | null | undefined;
+  readonly remove?: (() => void) | undefined;
+}
+
+### build/html-o5bDHjNi.d.mts#PageExtract
+interface PageExtract {
+  readonly title: string;
+  readonly description: string | null;
+  readonly text: string;
+  readonly fullText?: string | undefined;
+  readonly jsonld: readonly Record<string, unknown>[];
+  readonly links: readonly PageLink[];
+  readonly lang: string | null;
+  readonly visibleChars: number;
+  readonly embedded: readonly string[];
+  readonly needsRender: boolean;
+  readonly renderReason: string | null;
+  readonly canonical: string | null;
+  readonly feeds?: readonly string[] | undefined;
+  readonly redirect: string | null;
+  readonly blocked: string | null;
+  readonly notes: readonly string[];
+}
+
+### build/html-o5bDHjNi.d.mts#PageLink
+interface PageLink {
+  readonly href: string;
+  readonly text: string;
+}
+
+### build/html-o5bDHjNi.d.mts#ScopeOptions
+interface ScopeOptions {
+  readonly sameSite?: boolean | undefined;
+  readonly allowHosts?: readonly string[] | undefined;
+}
+
+### build/html-o5bDHjNi.d.mts#bodyEncoding
+declare const bodyEncoding: (bytes: Uint8Array, contentType: string | null) => string;
+
+### build/html-o5bDHjNi.d.mts#canonicalUrl
+declare const canonicalUrl: (value: string) => string;
+
+### build/html-o5bDHjNi.d.mts#decodeBody
+declare const decodeBody: (bytes: Uint8Array, contentType: string | null) => string;
+
+### build/html-o5bDHjNi.d.mts#extractPage
+declare const extractPage: (html: string, pageUrl: string) => PageExtract;
+
+### build/html-o5bDHjNi.d.mts#readJsonLd
+declare const readJsonLd: (sources: readonly string[]) => Record<string, unknown>[];
+
+### build/html-o5bDHjNi.d.mts#typesOf
+declare const typesOf: (record: Record<string, unknown>) => string[];
+
+### build/html-o5bDHjNi.d.mts#visibleText
+declare const visibleText: (root: DomNode) => string;
+
+### build/index.d.mts#ArchiveCounts
+interface ArchiveCounts {
+  readonly captures: number;
+  readonly responses: number;
+  readonly revisits: number;
+  readonly conversions: number;
+  readonly metadata: number;
+  readonly bodiless: number;
+  readonly missing: number;
+  readonly damaged: number;
+}
+
+### build/index.d.mts#ArchiveFilter
+interface ArchiveFilter {
+  readonly since?: string | Date | undefined;
+  readonly until?: string | Date | undefined;
+  readonly host?: string | undefined;
+  readonly urlPrefix?: string | undefined;
+  readonly ids?: readonly string[] | undefined;
+}
+
+### build/index.d.mts#ArchiveOptions
+interface ArchiveOptions extends ArchiveFilter {
+  readonly out: string;
+  readonly includeRefusals?: boolean | undefined;
+  readonly overwrite?: boolean | undefined;
+}
+
+### build/index.d.mts#ArchiveSource
+type ArchiveSource = string | {
+  readonly captures: CaptureReader;
+  readonly blobs: BlobStore;
+};
+
+### build/index.d.mts#Archived
+interface Archived {
+  readonly source: WebArchive;
+  readonly timestamp: string;
+  readonly url: string;
+  readonly original: string;
+  readonly record?: string | undefined;
+}
+
+### build/index.d.mts#BOT_PAGE
+export declare const BOT_PAGE = "https://mark1russell7.github.io/crawler/bot/";
+
+### build/index.d.mts#BlobStore
+interface BlobStore {
+  put(bytes: Uint8Array): Promise<{
+    readonly hash: string;
+  }>;
+  get(hash: string): Promise<Uint8Array | undefined>;
+}
+
+### build/index.d.mts#CAPTURE_SCHEMA
+export declare const CAPTURE_SCHEMA = 2;
+
+### build/index.d.mts#CHUNK_LIMITS
+export declare const CHUNK_LIMITS: {
+  readonly maxTokens: number;
+  readonly defaultTokens: number;
+  readonly fill: number;
+  readonly overlap: number;
+  readonly maxChunks: number;
+};
+
+### build/index.d.mts#CRAWL_LIMITS
+export declare const CRAWL_LIMITS: {
+  readonly maxPages: 100;
+  readonly maxDepth: 3;
+  readonly budgetMs: 600_000;
+  readonly hostsAtOnce: 16;
+  readonly maxQueue: 10_000;
+  readonly maxSeen: 100_000;
+};
+
+### build/index.d.mts#CacheEntry
+interface CacheEntry {
+  readonly url: string;
+  readonly capture: string;
+  readonly blob: string | null;
+  readonly etag: string | null;
+  readonly last_modified: string | null;
+  readonly content_type: string | null;
+  readonly fetched_at: string;
+  readonly status: number;
+  readonly ai_input: AiInput;
+  readonly location?: string | null | undefined;
+  readonly truncated?: boolean | undefined;
+  readonly fresh_until?: string | null | undefined;
+  readonly vary_key?: string | null | undefined;
+  readonly variant?: Variant | undefined;
+}
+
+### build/index.d.mts#CacheIndex
+interface CacheIndex {
+  latest(url: string, variant?: Variant): CacheEntry | undefined;
+  setLatest(entry: CacheEntry): void;
+}
+
+### build/index.d.mts#CaptureFilter
+interface CaptureFilter {
+  readonly source?: string | undefined;
+  readonly kind?: string | undefined;
+  readonly since?: string | undefined;
+}
+
+### build/index.d.mts#CaptureLog
+export declare class CaptureLog implements CaptureReader {
+  readonly dir: string;
+  constructor(dir: string, options?: CaptureLogOptions);
+  append(record: CaptureRecord): Promise<void>;
+  flush(): Promise<void>;
+  scan(filter?: CaptureFilter, options?: ScanOptions): AsyncIterable<CaptureRecord>;
+  close(): Promise<void>;
+}
+
+### build/index.d.mts#CaptureLogOptions
+interface CaptureLogOptions {
+  readonly sync?: boolean | undefined;
+}
+
+### build/index.d.mts#CapturePayload
+interface CapturePayload {
+  readonly url: string;
+  readonly recipe: string;
+  readonly mode: "api" | "page";
+  readonly status?: number;
+  readonly outcome?: string;
+  readonly blob?: string | null;
+  readonly content_type?: string | null;
+  readonly etag?: string | null;
+  readonly last_modified?: string | null;
+  readonly fetched_at: string;
+  readonly signals?: {
+    readonly ai_input?: AiInput;
+  };
+  readonly rendered?: boolean;
+  readonly truncated?: boolean;
+  readonly cut?: boolean;
+  readonly unasked?: boolean;
+  readonly fresh_until?: string | null;
+  readonly vary_key?: string | null;
+  readonly location?: string | null;
+  readonly note?: string;
+  readonly range?: string;
+}
+
+### build/index.d.mts#CaptureReader
+interface CaptureReader {
+  scan(filter?: CaptureFilter, options?: ScanOptions): AsyncIterable<CaptureRecord>;
+}
+
+### build/index.d.mts#CaptureRecord
+interface CaptureRecord {
+  readonly id: string;
+  readonly source: string;
+  readonly kind: string;
+  readonly external_id?: string | undefined;
+  readonly occurred_at?: string | undefined;
+  readonly received_at: string;
+  readonly payload: unknown;
+  readonly content_hash: string;
+  readonly scope?: string | undefined;
+  readonly labels?: Readonly<Record<string, string>> | undefined;
+}
+
+### build/index.d.mts#CaptureWriter
+interface CaptureWriter {
+  append(record: CaptureRecord): Promise<void>;
+  close?(): Promise<void>;
+}
+
+### build/index.d.mts#CatchUpResult
+interface CatchUpResult extends ReindexResult {
+  readonly mode: "rebuild" | "tail";
+}
+
+### build/index.d.mts#ChangeCommandOptions
+interface ChangeCommandOptions {
+  readonly timeout?: Duration | undefined;
+  readonly cwd?: string | undefined;
+}
+
+### build/index.d.mts#Changefreq
+type Changefreq = "always" | "hourly" | "daily" | "weekly" | "monthly" | "yearly" | "never";
+
+### build/index.d.mts#ChunkOptions
+interface ChunkOptions {
+  readonly maxTokens: number;
+  readonly overlapTokens?: number | undefined;
+  readonly maxChunks?: number | undefined;
+}
+
+### build/index.d.mts#CrawlEvent
+type CrawlEvent = {
+  readonly type: "request";
+  readonly url: string;
+  readonly host: string;
+  readonly transport: "http" | "browser";
+} | {
+  readonly type: "response";
+  readonly url: string;
+  readonly host: string;
+  readonly status: number;
+  readonly outcome: FetchOutcome;
+  readonly elapsedMs: number;
+} | {
+  readonly type: "wait";
+  readonly host: string;
+  readonly ms: number;
+  readonly reason: string;
+} | {
+  readonly type: "stop";
+  readonly host: string;
+  readonly until: number;
+  readonly reason: string;
+} | {
+  readonly type: "skip";
+  readonly url: string;
+  readonly note: string;
+};
+
+### build/index.d.mts#CrawlOptions
+interface CrawlOptions extends ScopeOptions {
+  readonly maxPages?: number | undefined;
+  readonly maxDepth?: number | undefined;
+  readonly budgetMs?: number | undefined;
+  readonly include?: readonly UrlPattern[] | undefined;
+  readonly exclude?: readonly UrlPattern[] | undefined;
+  readonly useSitemaps?: boolean | undefined;
+  readonly render?: "auto" | "never" | "always" | undefined;
+  readonly maxAge?: Duration | undefined;
+  readonly onBehalfOf?: readonly string[] | undefined;
+  readonly signal?: AbortSignal | undefined;
+  readonly scope?: string | undefined;
+  readonly labels?: Readonly<Record<string, string>> | undefined;
+}
+
+### build/index.d.mts#CrawlPage
+interface CrawlPage extends PageResult {
+  readonly depth: number;
+  readonly source: "seed" | "sitemap" | "link";
+  readonly referrer: string | null;
+}
+
+### build/index.d.mts#CrawlRun
+interface CrawlRun extends AsyncIterable<CrawlPage> {
+  readonly summary: Promise<CrawlSummary>;
+}
+
+### build/index.d.mts#CrawlRunOptions
+interface CrawlRunOptions extends CrawlOptions {
+  readonly ready?: (() => Promise<void>) | undefined;
+}
+
+### build/index.d.mts#CrawlRuntime
+interface CrawlRuntime {
+  readonly crawler: Crawler;
+  readonly index: ReadingIndex;
+  readonly blobs: BlobStore;
+  readonly captures: CaptureReader;
+  readonly log: CaptureLog;
+  readonly extractors: Extractors;
+  readonly now: () => string;
+}
+
+### build/index.d.mts#CrawlStop
+type CrawlStop = "done" | "max-pages" | "budget" | "cancelled" | "closed" | "error";
+
+### build/index.d.mts#CrawlSummary
+interface CrawlSummary {
+  readonly pages: number;
+  readonly fetched: number;
+  readonly from_cache: number;
+  readonly refused: number;
+  readonly failed: number;
+  readonly skipped: number;
+  readonly skips: {
+    readonly scope: number;
+    readonly pattern: number;
+    readonly depth: number;
+    readonly held_back: number;
+    readonly limit: number;
+    readonly duplicate: number;
+  };
+  readonly queued: number;
+  readonly sitemap_urls: number;
+  readonly stopped: CrawlStop;
+  readonly reason: string;
+  readonly elapsed_ms: number;
+}
+
+### build/index.d.mts#Crawler
+export declare class Crawler {
+  constructor(options: CrawlerOptions);
+  reportBlocked(url: string, what: string): void;
+  fetch(request_: FetchRequest): Promise<Fetched>;
+  readRobots(url: string, marks?: {
+    readonly scope?: string | undefined;
+    readonly labels?: Readonly<Record<string, string>> | undefined;
+  }): Promise<{
+    readonly robots: Robots;
+    readonly capture: string | undefined;
+    readonly stale?: string | undefined;
+  }>;
+  robotsAllow(url: string, options?: {
+    readonly onBehalfOf?: readonly string[] | undefined;
+    readonly scope?: string | undefined;
+    readonly labels?: Readonly<Record<string, string>> | undefined;
+    readonly signal?: AbortSignal | undefined;
+  }): Promise<{
+    readonly allowed: boolean;
+    readonly note: string | undefined;
+    readonly signals?: readonly string[] | undefined;
+  }>;
+  render(request_: RenderRequest): Promise<Fetched>;
+  resetHosts(host?: string): void;
+  hostStop(url: string): ReturnType<HostStateStore["stopped"]>;
+  close(): Promise<void>;
+}
+
+### build/index.d.mts#CrawlerOptions
+interface CrawlerOptions {
+  readonly token: string;
+  readonly userAgent: string;
+  readonly from?: string | undefined;
+  readonly log: CaptureWriter;
+  readonly blobs: BlobStore;
+  readonly index: CacheIndex;
+  readonly clock?: Clock | undefined;
+  readonly random?: (() => number) | undefined;
+  readonly maxActive?: number | undefined;
+  readonly obeyDefaultToken?: boolean | undefined;
+  readonly maxRenders?: number | undefined;
+  readonly dispatcher?: Dispatcher | undefined;
+  readonly scope?: string | undefined;
+  readonly scopeRank?: ((scope: string) => number) | undefined;
+  readonly renderer?: Renderer | undefined;
+  readonly egress?: EgressOptions | undefined;
+  readonly politeness?: PolicyOptions | undefined;
+  readonly hostState?: HostStateStore | undefined;
+  readonly onEvent?: ((event: CrawlEvent) => void) | undefined;
+  readonly signer?: RequestSigner | WebBotAuthOptions | undefined;
+}
+
+### build/index.d.mts#DAEMON_DEFAULTS
+export declare const DAEMON_DEFAULTS: {
+  readonly tickMs: 60_000;
+  readonly jitterMs: 10_000;
+  readonly budgetMs: 600_000;
+  readonly maxPages: 100;
+  readonly graceMs: 10_000;
+  readonly minGapMs: 1_000;
+  readonly minTickMs: 1_000;
+  readonly dueShown: 10;
+  readonly hookTimeoutMs: 60_000;
+};
+
+### build/index.d.mts#DAEMON_STATE_SCHEMA
+export declare const DAEMON_STATE_SCHEMA = 1;
+
+### build/index.d.mts#DEADLINE_NOTE
+export declare const DEADLINE_NOTE = "deadline reached";
+
+### build/index.d.mts#DEFAULT_SECRET_PARAMS
+export declare const DEFAULT_SECRET_PARAMS: readonly string[];
+
+### build/index.d.mts#DEFAULT_TOKEN
+export declare const DEFAULT_TOKEN = "PoliteCrawler";
+
+### build/index.d.mts#DIFF_LIMITS
+export declare const DIFF_LIMITS: {
+  readonly maxChars: 1_000_000;
+  readonly maxLines: 50_000;
+  readonly maxSteps: 1_000_000;
+  readonly maxWordSteps: 1_000_000;
+  readonly maxLineWords: 5_000;
+  readonly context: 2;
+  readonly maxHunkLines: 2_000;
+  readonly maxMetaChanges: 200;
+  readonly maxMetaDepth: 16;
+  readonly maxValueChars: 300;
+};
+
+### build/index.d.mts#DISCOVER_LIMITS
+export declare const DISCOVER_LIMITS: {
+  readonly maxFiles: 20;
+  readonly maxUrls: 10_000;
+  readonly maxBytes: 10_485_760;
+  readonly maxNesting: 3;
+  readonly budgetMs: 60_000;
+  readonly maxOrigins: 10;
+  readonly maxLinkedFeeds: 5;
+};
+
+### build/index.d.mts#Daemon
+interface Daemon {
+  readonly crawler: OpenedCrawler;
+  readonly stateFile: string;
+  readonly mcp: DaemonMcpService | undefined;
+  status(): DaemonStatus;
+  stop(grace?: Duration): Promise<DaemonStatus>;
+  readonly done: Promise<DaemonStatus>;
+}
+
+### build/index.d.mts#DaemonDue
+interface DaemonDue {
+  readonly url: string;
+  readonly next_at: string;
+  readonly every_ms: number;
+  readonly last_kind: string | null;
+}
+
+### build/index.d.mts#DaemonMcpHooks
+interface DaemonMcpHooks {
+  readonly status: () => DaemonStatus;
+  readonly onTasks: () => void;
+  readonly log: (line: string) => void;
+}
+
+### build/index.d.mts#DaemonMcpHost
+interface DaemonMcpHost {
+  start(crawler: OpenedCrawler, options: DaemonMcpOptions, hooks: DaemonMcpHooks): Promise<DaemonMcpService>;
+}
+
+### build/index.d.mts#DaemonMcpOptions
+interface DaemonMcpOptions {
+  readonly port?: number | undefined;
+  readonly host?: string | undefined;
+  readonly allowRemote?: boolean | undefined;
+  readonly token?: string | undefined;
+  readonly tokenFile?: string | undefined;
+  readonly onBehalfOf?: readonly string[] | undefined;
+  readonly allowUserProvided?: boolean | undefined;
+  readonly renderOff?: string | undefined;
+}
+
+### build/index.d.mts#DaemonMcpService
+interface DaemonMcpService {
+  readonly url: string;
+  tasks(): readonly DaemonTask[];
+  close(): Promise<void>;
+}
+
+### build/index.d.mts#DaemonOptions
+interface DaemonOptions extends OpenOptions {
+  readonly tick?: Duration | undefined;
+  readonly jitter?: Duration | undefined;
+  readonly budget?: Duration | undefined;
+  readonly maxPages?: number | undefined;
+  readonly grace?: Duration | undefined;
+  readonly events?: string | ((line: string) => void) | false | undefined;
+  readonly onChange?: ((event: WatchEvent) => void | Promise<void>) | undefined;
+  readonly mcp?: DaemonMcpOptions | undefined;
+  readonly mcpHost?: DaemonMcpHost | undefined;
+  readonly signals?: boolean | undefined;
+  readonly stateFile?: string | undefined;
+  readonly log?: ((line: string) => void) | undefined;
+}
+
+### build/index.d.mts#DaemonState
+interface DaemonState extends DaemonStatus {
+  readonly alive: boolean;
+}
+
+### build/index.d.mts#DaemonStatus
+interface DaemonStatus {
+  readonly schema: number;
+  readonly version: string;
+  readonly pid: number;
+  readonly store: string;
+  readonly running: boolean;
+  readonly started_at: string;
+  readonly updated_at: string;
+  readonly stopped_at: string | null;
+  readonly tick_ms: number;
+  readonly jitter_ms: number;
+  readonly budget_ms: number;
+  readonly max_pages: number;
+  readonly ticks: number;
+  readonly checked: number;
+  readonly changes: number;
+  readonly last_tick: DaemonTick | null;
+  readonly next_tick_at: string | null;
+  readonly next_due: readonly DaemonDue[];
+  readonly tasks: readonly DaemonTask[];
+  readonly mcp: {
+    readonly url: string;
+    readonly token_file: string | null;
+  } | null;
+  readonly last_error: {
+    readonly at: string;
+    readonly message: string;
+  } | null;
+}
+
+### build/index.d.mts#DaemonTask
+interface DaemonTask {
+  readonly id: string;
+  readonly tool: string;
+  readonly status: string;
+  readonly message: string | null;
+  readonly created_at: string;
+  readonly updated_at: string;
+}
+
+### build/index.d.mts#DaemonTick
+interface DaemonTick {
+  readonly started_at: string;
+  readonly ended_at: string;
+  readonly summary: WatchSummary | null;
+  readonly error: string | null;
+  readonly next_at: string | null;
+  readonly due: readonly DaemonDue[];
+}
+
+### build/index.d.mts#DamagedLine
+interface DamagedLine {
+  readonly path: string;
+  readonly line: number;
+}
+
+### build/index.d.mts#DiffHunk
+interface DiffHunk {
+  readonly from_line: number;
+  readonly from_count: number;
+  readonly to_line: number;
+  readonly to_count: number;
+  readonly lines: readonly DiffLine[];
+}
+
+### build/index.d.mts#DiffInput
+interface DiffInput {
+  readonly text: string;
+  readonly fields: Readonly<Record<string, unknown>>;
+}
+
+### build/index.d.mts#DiffLimits
+type DiffLimits = { readonly [K in keyof typeof DIFF_LIMITS]: number; };
+
+### build/index.d.mts#DiffLine
+type DiffLine = {
+  readonly op: "same" | "added" | "removed";
+  readonly text: string;
+} | {
+  readonly op: "changed";
+  readonly before: string;
+  readonly after: string;
+  readonly words: readonly WordPart[] | null;
+};
+
+### build/index.d.mts#DiffOptions
+interface DiffOptions {
+  readonly from?: VersionChoice | undefined;
+  readonly to?: VersionChoice | undefined;
+  readonly limits?: Partial<DiffLimits> | undefined;
+}
+
+### build/index.d.mts#DiffResult
+interface DiffResult {
+  readonly doc: string;
+  readonly url: string | null;
+  readonly from: DiffSide;
+  readonly to: DiffSide;
+  readonly same: boolean | null;
+  readonly summary: DiffSummary;
+  readonly hunks: readonly DiffHunk[];
+  readonly meta: readonly MetaChange[];
+  readonly held_back: boolean;
+  readonly exact: boolean;
+  readonly truncated: boolean;
+  readonly steps: number;
+  readonly note: string | null;
+}
+
+### build/index.d.mts#DiffSide
+interface DiffSide {
+  readonly capture: string;
+  readonly fetched_at: string;
+  readonly chars: number;
+  readonly rendered: boolean;
+  readonly held_back: boolean;
+  readonly at: string | null;
+}
+
+### build/index.d.mts#DiffSummary
+interface DiffSummary {
+  readonly lines_added: number;
+  readonly lines_removed: number;
+  readonly lines_changed: number;
+  readonly words_added: number;
+  readonly words_removed: number;
+  readonly meta_changes: number;
+}
+
+### build/index.d.mts#DigestOptions
+interface DigestOptions {
+  readonly docs?: readonly string[] | undefined;
+  readonly after?: string | undefined;
+  readonly limit?: number | undefined;
+}
+
+### build/index.d.mts#DirectoryKey
+interface DirectoryKey {
+  readonly kty: "OKP";
+  readonly crv: "Ed25519";
+  readonly kid: string;
+  readonly x: string;
+  readonly use: "sig";
+}
+
+### build/index.d.mts#DiscoverOptions
+interface DiscoverOptions extends ScopeOptions {
+  readonly maxFiles?: number | undefined;
+  readonly maxUrls?: number | undefined;
+  readonly maxBytes?: number | undefined;
+  readonly maxNesting?: number | undefined;
+  readonly budgetMs?: number | undefined;
+  readonly sitemaps?: readonly string[] | undefined;
+  readonly feeds?: readonly string[] | undefined;
+  readonly linkedFeeds?: boolean | undefined;
+  readonly maxAge?: Duration | undefined;
+  readonly onBehalfOf?: readonly string[] | undefined;
+  readonly signal?: AbortSignal | undefined;
+  readonly scope?: string | undefined;
+  readonly labels?: Readonly<Record<string, string>> | undefined;
+}
+
+### build/index.d.mts#DiscoverResult
+interface DiscoverResult {
+  readonly site: string;
+  readonly urls: readonly DiscoveredUrl[];
+  readonly sources: readonly DiscoverSource[];
+  readonly dropped: {
+    readonly scope: number;
+    readonly robots: number;
+    readonly duplicate: number;
+    readonly invalid: number;
+    readonly limit: number;
+  };
+  readonly stopped: DiscoverStop;
+  readonly note: string | null;
+}
+
+### build/index.d.mts#DiscoverRunOptions
+interface DiscoverRunOptions extends DiscoverOptions {
+  readonly deadline?: number | undefined;
+}
+
+### build/index.d.mts#DiscoverSource
+interface DiscoverSource {
+  readonly url: string;
+  readonly via: "sitemap" | "feed";
+  readonly from: "robots.txt" | "default" | "given" | "page" | "index";
+  readonly kind: SitemapKind | null;
+  readonly outcome: string;
+  readonly status: number;
+  readonly capture: string | null;
+  readonly fetched_at: string | null;
+  readonly from_cache: boolean;
+  readonly entries: number;
+  readonly urls: number;
+  readonly truncated: boolean;
+  readonly note: string | null;
+}
+
+### build/index.d.mts#DiscoverStop
+type DiscoverStop = "done" | "max-files" | "max-urls" | "budget" | "cancelled" | "closed" | "robots";
+
+### build/index.d.mts#DiscoveredUrl
+interface DiscoveredUrl {
+  readonly url: string;
+  readonly lastmod: string | null;
+  readonly changefreq: Changefreq | null;
+  readonly via: "sitemap" | "feed";
+  readonly source: string;
+}
+
+### build/index.d.mts#Doc
+interface Doc {
+  readonly doc: string;
+  readonly kind: string;
+  readonly title: string;
+  readonly text: string;
+  readonly url: string | null;
+  readonly meta: Readonly<Record<string, unknown>>;
+  readonly captures: readonly string[];
+  readonly capture_count: number;
+  readonly capture: string;
+  readonly blob: string | null;
+  readonly fetched_at: string;
+  readonly recipe: string;
+  readonly rendered: boolean;
+  readonly ai_input: AiInput;
+  readonly cut: boolean;
+  readonly scope?: string | undefined;
+  readonly labels?: Readonly<Record<string, string>> | undefined;
+  readonly updated_at: string;
+}
+
+### build/index.d.mts#DocDigest
+interface DocDigest {
+  readonly doc: string;
+  readonly kind: string;
+  readonly ai_input: AiInput;
+  readonly text_sha: string;
+}
+
+### build/index.d.mts#DocIndex
+export declare class DocIndex implements ReadingIndex {
+  readonly path: string;
+  get stale(): boolean;
+  constructor(path: string, options?: DocIndexOptions);
+  get(doc: string): Doc | undefined;
+  upsert(input: DocInput, now: string): Doc;
+  versions(doc: string, options?: {
+    readonly limit?: number;
+  }): DocVersion[];
+  versionText(doc: string, capture?: string): VersionText | undefined;
+  versionAt(doc: string, at: string): VersionAt;
+  earlierTexts(doc: string, options?: {
+    readonly limit?: number;
+  }): VersionText[];
+  hasVersion(capture: string): boolean;
+  digests(options?: DigestOptions): DocDigest[];
+  newestFetch(): string | undefined;
+  docsOfCapture(capture: string): Doc[];
+  find(q: string, options: FindIndexOptions): Found[];
+  rankWithin(q: string, docs: readonly string[], options?: {
+    readonly rank?: RankMode | undefined;
+  }): Array<{
+    readonly doc: string;
+    readonly score: number;
+  }>;
+  latest(url: string, variant?: Variant): Latest | undefined;
+  setLatest(entry: Latest): void;
+  counts(): IndexCounts;
+  reset(): void;
+  beginRebuild(options?: {
+    readonly batch?: number;
+  }): IndexBuild;
+  close(): void;
+}
+
+### build/index.d.mts#DocIndexOptions
+interface DocIndexOptions {
+  readonly busyTimeoutMs?: number | undefined;
+}
+
+### build/index.d.mts#DocInput
+interface DocInput extends ExtractedDoc {
+  readonly captures: readonly string[];
+  readonly ai_input?: AiInput | undefined;
+  readonly capture?: string | undefined;
+  readonly fetched_at?: string | undefined;
+  readonly blob?: string | null | undefined;
+  readonly recipe?: string | undefined;
+  readonly rendered?: boolean | undefined;
+  readonly scope?: string | undefined;
+  readonly labels?: Readonly<Record<string, string>> | undefined;
+}
+
+### build/index.d.mts#DocVersion
+interface DocVersion {
+  readonly doc: string;
+  readonly capture: string;
+  readonly recipe: string;
+  readonly rendered: boolean;
+  readonly fetched_at: string;
+  readonly blob: string | null;
+  readonly kind: string;
+  readonly title: string;
+  readonly url: string | null;
+  readonly ai_input: AiInput;
+  readonly chars: number;
+  readonly cut: boolean;
+}
+
+### build/index.d.mts#Duration
+type Duration = number | string;
+
+### build/index.d.mts#EgressOptions
+interface EgressOptions {
+  readonly allowPrivate?: boolean | undefined;
+  readonly allowHosts?: readonly string[] | undefined;
+}
+
+### build/index.d.mts#EgressRefused
+export declare class EgressRefused extends Error {
+  readonly address: string;
+  readonly kind: string;
+  readonly code: string;
+  constructor(address: string, kind: string);
+}
+
+### build/index.d.mts#EgressResolve
+type EgressResolve = (host: string, options: LookupAllOptions, callback: (error: NodeJS.ErrnoException | null, addresses: LookupAddress[]) => void) => void;
+
+### build/index.d.mts#EmbedCallOptions
+interface EmbedCallOptions {
+  readonly signal?: AbortSignal | undefined;
+  readonly purpose?: "document" | "query" | undefined;
+}
+
+### build/index.d.mts#EmbedOptions
+interface EmbedOptions {
+  readonly budget?: Duration | undefined;
+  readonly maxDocs?: number | undefined;
+  readonly kind?: string | null | undefined;
+  readonly signal?: AbortSignal | undefined;
+}
+
+### build/index.d.mts#EmbedResult
+interface EmbedResult {
+  readonly embedder: string;
+  readonly docs: number;
+  readonly embedded: number;
+  readonly reused: number;
+  readonly held_back: number;
+  readonly chunks: number;
+  readonly stopped: EmbedStop;
+  readonly ms: number;
+}
+
+### build/index.d.mts#EmbedStop
+type EmbedStop = "done" | "budget" | "max-docs" | "signal";
+
+### build/index.d.mts#Embedder
+interface Embedder {
+  readonly id: string;
+  readonly dimensions: number;
+  readonly maxInputTokens?: number | undefined;
+  embed(texts: readonly string[], options: EmbedCallOptions): Promise<Float32Array[]>;
+  close?(): Promise<void>;
+}
+
+### build/index.d.mts#EmbeddingModel
+interface EmbeddingModel {
+  readonly dimensions: number;
+  readonly maxInputTokens: number;
+  readonly queryPrefix?: string | undefined;
+  readonly documentPrefix?: string | undefined;
+}
+
+### build/index.d.mts#ExtractOptions
+interface ExtractOptions {
+  readonly capture?: string | undefined;
+  readonly at?: string | Date | undefined;
+  readonly userProvided?: boolean | undefined;
+}
+
+### build/index.d.mts#ExtractResult
+interface ExtractResult {
+  readonly doc: string;
+  readonly url: string | null;
+  readonly captures: readonly string[];
+  readonly capture: string | null;
+  readonly blob: string | null;
+  readonly fetched_at: string | null;
+  readonly held_back: boolean;
+  readonly fields: Readonly<Record<string, FieldResult>>;
+  readonly summary: ExtractSummary;
+  readonly note: string | null;
+  readonly at?: string | undefined;
+  readonly before_first?: boolean | undefined;
+  readonly archived?: Archived | undefined;
+}
+
+### build/index.d.mts#ExtractSource
+interface ExtractSource {
+  readonly text: string;
+  readonly full_text?: string | undefined;
+  readonly url?: string | null | undefined;
+  readonly meta?: Readonly<Record<string, unknown>> | undefined;
+}
+
+### build/index.d.mts#ExtractSummary
+interface ExtractSummary {
+  readonly fields: number;
+  readonly verified: number;
+  readonly normalized: number;
+  readonly ambiguous: number;
+  readonly not_found: number;
+  readonly held_back: number;
+  readonly invalid: number;
+}
+
+### build/index.d.mts#ExtractedDoc
+interface ExtractedDoc {
+  readonly doc: string;
+  readonly kind: string;
+  readonly title: string;
+  readonly text: string;
+  readonly url: string | null;
+  readonly meta: Readonly<Record<string, unknown>>;
+  readonly merge?: "latest" | "richest" | undefined;
+  readonly full_text?: string | undefined;
+  readonly ai_input?: AiInput | undefined;
+}
+
+### build/index.d.mts#Extractor
+type Extractor = (body: Uint8Array, capture: {
+  readonly url: string;
+  readonly contentType: string | null;
+}) => ReadonlyArray<ExtractedDoc> | Promise<ReadonlyArray<ExtractedDoc>>;
+
+### build/index.d.mts#Extractors
+export declare class Extractors {
+  register(recipe: string, extractor: Extractor): void;
+  get(recipe: string): Extractor | undefined;
+  recipes(): string[];
+}
+
+### build/index.d.mts#FAST_RANK_SHARE
+export declare const FAST_RANK_SHARE = .2;
+
+### build/index.d.mts#FIELD_KINDS
+export declare const FIELD_KINDS: readonly string[];
+
+### build/index.d.mts#FeatureExtractor
+interface FeatureExtractor {
+  (texts: string[], options: {
+    readonly pooling: Pooling;
+    readonly normalize: boolean;
+  }): Promise<{
+    readonly data: ArrayLike<number>;
+    readonly dims: readonly number[];
+  }>;
+  dispose?(): Promise<unknown>;
+}
+
+### build/index.d.mts#FetchOptions
+interface FetchOptions {
+  readonly render?: "auto" | "never" | "always" | undefined;
+  readonly maxAge?: Duration | undefined;
+  readonly onBehalfOf?: readonly string[] | undefined;
+  readonly signal?: AbortSignal | undefined;
+  readonly scope?: string | undefined;
+  readonly labels?: Readonly<Record<string, string>> | undefined;
+  readonly fallback?: "archive" | "none" | undefined;
+  readonly archiveDespiteRobots?: boolean | undefined;
+}
+
+### build/index.d.mts#FetchOutcome
+type FetchOutcome = Outcome | "skipped" | "not-html";
+
+### build/index.d.mts#FetchRequest
+interface FetchRequest {
+  readonly url: string;
+  readonly mode: "api" | "page";
+  readonly recipe: string;
+  readonly accept?: string | undefined;
+  readonly headers?: Readonly<Record<string, string>> | undefined;
+  readonly secretParams?: readonly string[] | undefined;
+  readonly minIntervalMs?: number | undefined;
+  readonly maxAgeMs?: number | "auto" | undefined;
+  readonly maxBytes?: number | undefined;
+  readonly onBehalfOf?: readonly string[] | undefined;
+  readonly job?: string | undefined;
+  readonly signal?: AbortSignal | undefined;
+  readonly scope?: string | undefined;
+  readonly labels?: Readonly<Record<string, string>> | undefined;
+  readonly deadline?: number | undefined;
+  readonly range?: {
+    readonly offset: number;
+    readonly length: number;
+  } | undefined;
+  readonly signalLines?: readonly string[] | undefined;
+  readonly originalHeaderPrefix?: string | undefined;
+}
+
+### build/index.d.mts#Fetched
+interface Fetched {
+  readonly url: string;
+  readonly status: number;
+  readonly outcome: FetchOutcome;
+  readonly fromCache: boolean;
+  readonly capture: string | undefined;
+  readonly blob: string | undefined;
+  readonly body: Uint8Array | undefined;
+  readonly contentType: string | undefined;
+  readonly signals: Signals;
+  readonly note: string | undefined;
+  readonly truncated?: boolean | undefined;
+  readonly fetchedAt?: string | undefined;
+  readonly scope?: string | undefined;
+  readonly labels?: Readonly<Record<string, string>> | undefined;
+}
+
+### build/index.d.mts#FieldCandidate
+interface FieldCandidate {
+  readonly span: FieldSpan | null;
+  readonly path: string | null;
+  readonly raw: string | number | boolean;
+  readonly excerpt: string;
+  readonly readings: readonly string[];
+}
+
+### build/index.d.mts#FieldCheck
+interface FieldCheck {
+  readonly status: FieldStatus;
+  readonly kind: string;
+  readonly span: FieldSpan | null;
+  readonly path: string | null;
+  readonly raw: string | number | boolean | null;
+  readonly excerpt: string | null;
+  readonly normalization: string | null;
+  readonly reading: string | null;
+  readonly count: number;
+  readonly candidates: readonly FieldCandidate[];
+  readonly note: string | null;
+}
+
+### build/index.d.mts#FieldClaim
+interface FieldClaim {
+  readonly value: string | number;
+  readonly kind?: FieldKind | undefined;
+}
+
+### build/index.d.mts#FieldKind
+type FieldKind = "text" | "number" | "money" | "date" | "url" | "email" | "phone" | `json-ld:${string}`;
+
+### build/index.d.mts#FieldResult
+interface FieldResult extends FieldCheck {
+  readonly capture: string | null;
+  readonly fetched_at: string | null;
+}
+
+### build/index.d.mts#FieldSpan
+interface FieldSpan {
+  readonly start: number;
+  readonly end: number;
+  readonly in: "text" | "full_text";
+}
+
+### build/index.d.mts#FieldStatus
+type FieldStatus = "verified" | "normalized" | "ambiguous" | "not-found" | "held-back" | "invalid";
+
+### build/index.d.mts#FieldsChecked
+interface FieldsChecked {
+  readonly fields: Readonly<Record<string, FieldCheck>>;
+  readonly summary: ExtractSummary;
+  readonly steps: number;
+}
+
+### build/index.d.mts#FileBlobStore
+export declare class FileBlobStore implements BlobStore {
+  readonly dir: string;
+  constructor(dir: string, options?: FileBlobStoreOptions);
+  put(bytes: Uint8Array): Promise<{
+    readonly hash: string;
+    readonly existed: boolean;
+  }>;
+  get(hash: string): Promise<Uint8Array | undefined>;
+}
+
+### build/index.d.mts#FileBlobStoreOptions
+interface FileBlobStoreOptions {
+  readonly sync?: boolean | undefined;
+}
+
+### build/index.d.mts#FindIndexOptions
+interface FindIndexOptions {
+  readonly limit: number;
+  readonly kind?: string | null | undefined;
+  readonly rank?: RankMode | undefined;
+}
+
+### build/index.d.mts#FindOptions
+interface FindOptions {
+  readonly limit?: number | undefined;
+  readonly kind?: string | null | undefined;
+  readonly rank?: RankMode | undefined;
+}
+
+### build/index.d.mts#Found
+interface Found {
+  readonly doc: string;
+  readonly kind: string;
+  readonly title: string;
+  readonly url: string | null;
+  readonly snippet: string;
+  readonly score: number;
+  readonly ai_input: AiInput;
+  readonly fetched_at: string;
+  readonly capture: string;
+  readonly archived?: Archived | undefined;
+  readonly passage?: Passage | undefined;
+}
+
+### build/index.d.mts#FusedRank
+interface FusedRank {
+  readonly id: string;
+  readonly score: number;
+  readonly ranks: ReadonlyArray<number | null>;
+}
+
+### build/index.d.mts#HELD_BACK
+export declare const HELD_BACK = "This page asked not to be used as AI input, so its text is held back. Open the URL to read it, or read again with userProvided when a person gave this URL directly (the crawler logs that).";
+
+### build/index.d.mts#HYBRID_DEFAULTS
+export declare const HYBRID_DEFAULTS: {
+  readonly candidates: number;
+  readonly neighbors: number;
+  readonly fusionK: number;
+};
+
+### build/index.d.mts#HybridCrawler
+interface HybridCrawler extends OpenedCrawler {
+  find(q: string, options?: SearchOptions): Promise<Found[]>;
+  readonly watch: Required<WatchList>;
+  readonly hybrid: HybridSearch | undefined;
+  embed(options?: EmbedOptions): Promise<EmbedResult>;
+  rankWithin(q: string, docs: readonly string[], options?: RankOptions): Promise<Ranked[]>;
+}
+
+### build/index.d.mts#HybridFindOptions
+interface HybridFindOptions extends HybridOptions {
+  readonly limit?: number | undefined;
+  readonly kind?: string | null | undefined;
+}
+
+### build/index.d.mts#HybridOptions
+interface HybridOptions {
+  readonly candidates?: number | undefined;
+  readonly neighbors?: number | undefined;
+  readonly fusionK?: number | undefined;
+  readonly signal?: AbortSignal | undefined;
+}
+
+### build/index.d.mts#HybridSearch
+interface HybridSearch {
+  readonly embedder: Embedder;
+  find(q: string, options?: HybridFindOptions): Promise<Found[]>;
+  rankWithin(q: string, docs: readonly string[], options?: HybridOptions): Promise<Ranked[]>;
+  embed(options?: EmbedOptions): Promise<EmbedResult>;
+}
+
+### build/index.d.mts#HybridSearchOptions
+interface HybridSearchOptions {
+  readonly embedder: Embedder;
+  readonly store: VectorStore;
+}
+
+### build/index.d.mts#IndexBuild
+interface IndexBuild {
+  upsert(input: DocInput, now: string): void;
+  setLatest(entry: Latest): void;
+  latest(url: string, variant?: Variant): Latest | undefined;
+  flush(): void;
+  carry(recipes: ReadonlySet<string>): number;
+  commit(since: string): IndexCounts;
+  abort(): void;
+}
+
+### build/index.d.mts#IndexCounts
+interface IndexCounts {
+  readonly docs: number;
+  readonly urls: number;
+}
+
+### build/index.d.mts#Indexed
+interface Indexed {
+  readonly fetched: Fetched;
+  readonly docs: readonly Doc[];
+  readonly error?: string | undefined;
+  readonly blocked?: string | undefined;
+}
+
+### build/index.d.mts#JsonRecord
+type JsonRecord = Readonly<Record<string, unknown>>;
+
+### build/index.d.mts#JwkInput
+type JwkInput = JsonWebKeyInput["key"];
+
+### build/index.d.mts#KEY_DIRECTORY_PATH
+export declare const KEY_DIRECTORY_PATH = "/.well-known/http-message-signatures-directory";
+
+### build/index.d.mts#KEY_DIRECTORY_TYPE
+export declare const KEY_DIRECTORY_TYPE = "application/http-message-signatures-directory+json";
+
+### build/index.d.mts#KeyDirectory
+interface KeyDirectory {
+  readonly keys: readonly DirectoryKey[];
+}
+
+### build/index.d.mts#KeyInput
+type KeyInput = KeyObject | string | Uint8Array | JwkInput;
+
+### build/index.d.mts#Latest
+interface Latest {
+  readonly url: string;
+  readonly capture: string;
+  readonly blob: string | null;
+  readonly etag: string | null;
+  readonly last_modified: string | null;
+  readonly content_type: string | null;
+  readonly fetched_at: string;
+  readonly status: number;
+  readonly ai_input: AiInput;
+  readonly location?: string | null | undefined;
+  readonly truncated?: boolean | undefined;
+  readonly fresh_until?: string | null | undefined;
+  readonly vary_key?: string | null | undefined;
+  readonly variant?: Variant | undefined;
+}
+
+### build/index.d.mts#MetaChange
+interface MetaChange {
+  readonly path: string;
+  readonly change: "added" | "removed" | "changed";
+  readonly before: string | null;
+  readonly after: string | null;
+}
+
+### build/index.d.mts#Money
+interface Money {
+  readonly amount: number;
+  readonly currency: string;
+  readonly raw: string;
+}
+
+### build/index.d.mts#NO_EMBEDDER
+export declare const NO_EMBEDDER = "hybrid search needs an embedder: open the crawler with the option embedder (transformersEmbedder or ollamaEmbedder), or give --embedder transformers or ollama to the command line";
+
+### build/index.d.mts#NO_OLLAMA
+export declare const NO_OLLAMA = "Ollama does not answer: install it from https://ollama.com, then start it with ollama serve";
+
+### build/index.d.mts#NO_PLAYWRIGHT
+export declare const NO_PLAYWRIGHT = "rendering needs the package playwright-core and a browser: npm install playwright-core, then npx playwright-core install chromium-headless-shell. For the MCP server with npx, start it with npx -y -p polite-crawler-mcp -p playwright-core polite-crawler-mcp";
+
+### build/index.d.mts#NO_TRANSFORMERS
+export declare const NO_TRANSFORMERS = "the transformers embedder needs the package @huggingface/transformers: npm install @huggingface/transformers. For the MCP server with npx, start it with npx -y -p polite-crawler-mcp -p @huggingface/transformers polite-crawler-mcp --embedder transformers";
+
+### build/index.d.mts#OLLAMA_MODELS
+export declare const OLLAMA_MODELS: Readonly<Record<string, EmbeddingModel>>;
+
+### build/index.d.mts#OllamaEmbedderOptions
+interface OllamaEmbedderOptions {
+  readonly model?: string | undefined;
+  readonly baseUrl?: string | undefined;
+  readonly batch?: number | undefined;
+  readonly allowRemote?: boolean | undefined;
+  readonly dimensions?: number | undefined;
+  readonly maxInputTokens?: number | undefined;
+  readonly queryPrefix?: string | undefined;
+  readonly documentPrefix?: string | undefined;
+  readonly timeoutMs?: number | undefined;
+}
+
+### build/index.d.mts#OpenOptions
+interface OpenOptions extends Omit<RuntimeOptions, "dir" | "log" | "blobs" | "index"> {
+  readonly dir: string;
+  readonly onBehalfOf?: readonly string[] | undefined;
+  readonly watchFloor?: Duration | undefined;
+  readonly embedder?: Embedder | undefined;
+}
+
+### build/index.d.mts#OpenedCrawler
+interface OpenedCrawler extends PoliteCrawler {
+  discover(site: string, options?: DiscoverOptions): Promise<DiscoverResult>;
+  crawl(seeds: string | readonly string[], options?: CrawlOptions): CrawlRun;
+  diff(doc: string, options?: DiffOptions): Promise<DiffResult>;
+  readonly watch: WatchList;
+  extract(doc: string, fields: Readonly<Record<string, FieldClaim>>, options?: ExtractOptions): Promise<ExtractResult>;
+}
+
+### build/index.d.mts#PRODUCT_LIMITS
+export declare const PRODUCT_LIMITS: {
+  readonly records: number;
+  readonly offers: number;
+  readonly variants: number;
+  readonly depth: number;
+  readonly priceChars: number;
+};
+
+### build/index.d.mts#PageOptions
+interface PageOptions {
+  readonly render: "auto" | "never" | "always";
+  readonly maxAgeMs?: number | "auto" | undefined;
+  readonly onBehalfOf?: readonly string[] | undefined;
+  readonly job?: string | undefined;
+  readonly signal?: AbortSignal | undefined;
+  readonly scope?: string | undefined;
+  readonly labels?: Readonly<Record<string, string>> | undefined;
+  readonly deadline?: number | undefined;
+  readonly fallback?: "archive" | "none" | undefined;
+  readonly archiveDespiteRobots?: boolean | undefined;
+}
+
+### build/index.d.mts#PageResult
+interface PageResult {
+  readonly url: string;
+  readonly doc: string | null;
+  readonly outcome: string;
+  readonly status: number;
+  readonly title: string | null;
+  readonly chars: number;
+  readonly rendered: boolean;
+  readonly structured: readonly string[];
+  readonly links: number;
+  readonly captures: readonly string[];
+  readonly capture: string | null;
+  readonly capture_count: number;
+  readonly fetched_at: string | null;
+  readonly from_cache: boolean;
+  readonly held_back: boolean;
+  readonly note: string | null;
+  readonly archived?: Archived | undefined;
+}
+
+### build/index.d.mts#Passage
+interface Passage {
+  readonly start: number;
+  readonly end: number;
+  readonly similarity: number;
+}
+
+### build/index.d.mts#PdfOptions
+interface PdfOptions {
+  readonly maxPages?: number | undefined;
+  readonly maxChars?: number | undefined;
+  readonly timeBudgetMs?: number | undefined;
+  readonly maxInflatedBytes?: number | undefined;
+}
+
+### build/index.d.mts#PdfText
+interface PdfText {
+  readonly title: string | null;
+  readonly text: string;
+  readonly pages: number;
+  readonly truncated: boolean;
+  readonly note: string | null;
+}
+
+### build/index.d.mts#PlaywrightRenderer
+interface PlaywrightRenderer extends Renderer {
+  readonly open: () => boolean;
+}
+
+### build/index.d.mts#PoliteCrawler
+interface PoliteCrawler {
+  readonly runtime: StoreRuntime;
+  fetch(url: string, options?: FetchOptions): Promise<PageResult>;
+  find(q: string, options?: FindOptions): Promise<Found[]>;
+  read(doc: string, options?: ReadOptions): Promise<ReadResult>;
+  verify(doc: string, quote: string, options?: VerifyOptions): Promise<VerifyResult>;
+  versions(doc: string, options?: {
+    readonly limit?: number;
+  }): Promise<DocVersion[]>;
+  reindex(): Promise<ReindexResult>;
+  close(): Promise<void>;
+  discover?(site: string, options?: DiscoverOptions): Promise<DiscoverResult>;
+  crawl?(seeds: string | readonly string[], options?: CrawlOptions): CrawlRun;
+  diff?(doc: string, options?: DiffOptions): Promise<DiffResult>;
+  readonly watch?: WatchList;
+  extract?(doc: string, fields: Readonly<Record<string, FieldClaim>>, options?: ExtractOptions): Promise<ExtractResult>;
+  readonly hybrid?: HybridSearch | undefined;
+  embed?(options?: EmbedOptions): Promise<EmbedResult>;
+  rankWithin?(q: string, docs: readonly string[], options?: RankOptions): Promise<Ranked[]>;
+}
+
+### build/index.d.mts#Pooling
+type Pooling = "mean" | "cls";
+
+### build/index.d.mts#ProductOptions
+interface ProductOptions {
+  readonly render?: "auto" | "never" | "always" | undefined;
+  readonly maxAge?: Duration | undefined;
+  readonly onBehalfOf?: readonly string[] | undefined;
+  readonly signal?: AbortSignal | undefined;
+  readonly budget?: Duration | undefined;
+  readonly scope?: string | undefined;
+  readonly labels?: Readonly<Record<string, string>> | undefined;
+  readonly job?: string | undefined;
+  readonly userProvided?: boolean | undefined;
+  readonly fallback?: "archive" | "none" | undefined;
+  readonly archiveDespiteRobots?: boolean | undefined;
+}
+
+### build/index.d.mts#ProductRead
+interface ProductRead {
+  readonly found: boolean;
+  readonly name: string | null;
+  readonly brand: string | null;
+  readonly sku: string | null;
+  readonly gtin: string | null;
+  readonly price: Money | null;
+  readonly price_to: Money | null;
+  readonly availability: string | null;
+  readonly availabilities: readonly string[];
+  readonly variant: ProductVariant | null;
+  readonly seller: string | null;
+  readonly image: string | null;
+  readonly notes: readonly string[];
+  readonly steps: number;
+}
+
+### build/index.d.mts#ProductResult
+interface ProductResult extends Omit<ProductRead, "steps" | "notes"> {
+  readonly url: string;
+  readonly verified: boolean;
+  readonly wall: boolean;
+  readonly outcome: string;
+  readonly status: number;
+  readonly rendered: boolean;
+  readonly doc: string | null;
+  readonly capture: string | null;
+  readonly fetched_at: string | null;
+  readonly captures: readonly string[];
+  readonly from_cache: boolean;
+  readonly held_back: boolean;
+  readonly archived?: Archived | undefined;
+  readonly note: string | null;
+}
+
+### build/index.d.mts#ProductVariant
+interface ProductVariant {
+  readonly name: string | null;
+  readonly sku: string | null;
+  readonly price: Money | null;
+  readonly availability: string | null;
+}
+
+### build/index.d.mts#RECIPE_LIMITS
+export declare const RECIPE_LIMITS: {
+  readonly nameChars: number;
+  readonly docIdChars: number;
+};
+
+### build/index.d.mts#RESERVED_RECIPES
+export declare const RESERVED_RECIPES: readonly string[];
+
+### build/index.d.mts#RankMode
+type RankMode = "exact" | "fast";
+
+### build/index.d.mts#RankOptions
+interface RankOptions extends HybridOptions {
+  readonly rank?: SearchRank | undefined;
+}
+
+### build/index.d.mts#Ranked
+interface Ranked {
+  readonly doc: string;
+  readonly score: number;
+  readonly passage?: Passage | undefined;
+}
+
+### build/index.d.mts#ReadOptions
+interface ReadOptions {
+  readonly from?: number | undefined;
+  readonly length?: number | undefined;
+  readonly userProvided?: boolean | undefined;
+  readonly capture?: string | undefined;
+  readonly at?: string | Date | undefined;
+}
+
+### build/index.d.mts#ReadResult
+interface ReadResult {
+  readonly doc: string;
+  readonly kind: string;
+  readonly title: string;
+  readonly url: string | null;
+  readonly meta: Readonly<Record<string, unknown>>;
+  readonly from: number;
+  readonly to: number;
+  readonly total: number;
+  readonly text: string;
+  readonly captures: readonly string[];
+  readonly capture: string;
+  readonly fetched_at: string;
+  readonly ai_input: AiInput;
+  readonly held_back: boolean;
+  readonly note: string | null;
+  readonly at?: string | undefined;
+  readonly before_first?: boolean | undefined;
+  readonly archived?: Archived | undefined;
+}
+
+### build/index.d.mts#ReadingIndex
+interface ReadingIndex {
+  readonly stale: boolean;
+  get(doc: string): Doc | undefined;
+  upsert(input: DocInput, now: string): Doc;
+  versions(doc: string, options?: {
+    readonly limit?: number;
+  }): DocVersion[];
+  versionText(doc: string, capture?: string): VersionText | undefined;
+  versionAt?(doc: string, at: string): VersionAt;
+  earlierTexts(doc: string, options?: {
+    readonly limit?: number;
+  }): VersionText[];
+  docsOfCapture(capture: string): Doc[];
+  hasVersion(capture: string): boolean;
+  digests?(options: DigestOptions): DocDigest[];
+  find(q: string, options: FindIndexOptions): Found[];
+  rankWithin(q: string, docs: readonly string[], options?: {
+    readonly rank?: RankMode | undefined;
+  }): Array<{
+    readonly doc: string;
+    readonly score: number;
+  }>;
+  latest(url: string, variant?: Variant): Latest | undefined;
+  setLatest(entry: Latest): void;
+  newestFetch(): string | undefined;
+  counts(): IndexCounts;
+  beginRebuild(options?: {
+    readonly batch?: number;
+  }): IndexBuild;
+}
+
+### build/index.d.mts#Recipe
+interface Recipe<Input = string> {
+  readonly name: string;
+  readonly description: string | null;
+  readonly mode: "api" | "page";
+  readonly accept: string;
+  readonly extractor: Extractor;
+  request(input: Input, options?: RecipeRequestOptions): FetchRequest;
+}
+
+### build/index.d.mts#RecipeCapture
+interface RecipeCapture {
+  readonly url: string;
+  readonly contentType: string | null;
+}
+
+### build/index.d.mts#RecipeDefinition
+interface RecipeDefinition<Input = string> {
+  readonly name: string;
+  readonly description?: string | undefined;
+  readonly mode?: "api" | "page" | undefined;
+  readonly accept?: string | undefined;
+  readonly minInterval?: Duration | undefined;
+  readonly maxAge?: Duration | undefined;
+  readonly maxBytes?: number | undefined;
+  readonly fetch?: ((input: Input) => string | RecipeRequest) | undefined;
+  readonly extract: RecipeExtract;
+}
+
+### build/index.d.mts#RecipeDoc
+interface RecipeDoc {
+  readonly doc: string;
+  readonly kind: string;
+  readonly title: string;
+  readonly url: string | null;
+  readonly meta: Readonly<Record<string, unknown>>;
+  readonly chars: number;
+  readonly capture: string;
+  readonly fetched_at: string;
+  readonly held_back: boolean;
+  readonly archived?: Archived | undefined;
+}
+
+### build/index.d.mts#RecipeExtract
+type RecipeExtract = (body: Uint8Array, capture: RecipeCapture) => ReadonlyArray<ExtractedDoc> | Promise<ReadonlyArray<ExtractedDoc>>;
+
+### build/index.d.mts#RecipeRequest
+interface RecipeRequest {
+  readonly url: string;
+  readonly accept?: string | undefined;
+  readonly headers?: Readonly<Record<string, string>> | undefined;
+  readonly secretParams?: readonly string[] | undefined;
+}
+
+### build/index.d.mts#RecipeRequestOptions
+interface RecipeRequestOptions {
+  readonly maxAge?: Duration | undefined;
+  readonly onBehalfOf?: readonly string[] | undefined;
+  readonly job?: string | undefined;
+  readonly signal?: AbortSignal | undefined;
+  readonly scope?: string | undefined;
+  readonly labels?: Readonly<Record<string, string>> | undefined;
+  readonly deadline?: number | undefined;
+}
+
+### build/index.d.mts#RecipeResult
+interface RecipeResult {
+  readonly recipe: string;
+  readonly url: string;
+  readonly outcome: string;
+  readonly status: number;
+  readonly docs: readonly RecipeDoc[];
+  readonly capture: string | null;
+  readonly fetched_at: string | null;
+  readonly from_cache: boolean;
+  readonly held_back: boolean;
+  readonly error: string | null;
+  readonly archived?: Archived | undefined;
+  readonly note: string | null;
+}
+
+### build/index.d.mts#RecipeRunOptions
+interface RecipeRunOptions extends Omit<RecipeRequestOptions, "deadline"> {
+  readonly budget?: Duration | undefined;
+  readonly userProvided?: boolean | undefined;
+  readonly fallback?: "archive" | "none" | undefined;
+  readonly archiveDespiteRobots?: boolean | undefined;
+}
+
+### build/index.d.mts#RecipeTarget
+type RecipeTarget = CrawlRuntime | {
+  readonly runtime: CrawlRuntime;
+};
+
+### build/index.d.mts#RecordInput
+interface RecordInput {
+  readonly source: string;
+  readonly kind: string;
+  readonly payload: unknown;
+  readonly received_at: string;
+  readonly external_id?: string | undefined;
+  readonly occurred_at?: string | undefined;
+  readonly scope?: string | undefined;
+  readonly labels?: Readonly<Record<string, string>> | undefined;
+}
+
+### build/index.d.mts#RefusedReason
+type RefusedReason = "refused" | "download" | "scheme" | "browser";
+
+### build/index.d.mts#ReindexResult
+interface ReindexResult {
+  readonly captures: number;
+  readonly docs: number;
+  readonly urls: number;
+  readonly failed: number;
+  readonly missing: number;
+  readonly damaged: number;
+  readonly carried: number;
+  readonly unknown_recipes: readonly string[];
+  readonly errors: ReadonlyArray<{
+    readonly capture: string;
+    readonly error: string;
+  }>;
+}
+
+### build/index.d.mts#RenderOptions
+interface RenderOptions {
+  readonly userAgent: string;
+  readonly timeoutMs: number;
+  readonly headers?: Readonly<Record<string, string>> | undefined;
+  readonly allowRequest?: ((url: string) => Promise<boolean> | boolean) | undefined;
+  readonly maxRedirects?: number | undefined;
+  readonly signal?: AbortSignal | undefined;
+  readonly sign?: ((url: string) => Readonly<Record<string, string>> | undefined) | undefined;
+}
+
+### build/index.d.mts#RenderRefused
+export declare class RenderRefused extends Error {
+  readonly reason: RefusedReason;
+  readonly url: string | undefined;
+  constructor(reason: RefusedReason, message: string, url?: string);
+}
+
+### build/index.d.mts#RenderRequest
+interface RenderRequest {
+  readonly url: string;
+  readonly recipe: string;
+  readonly maxAgeMs?: number | "auto" | undefined;
+  readonly onBehalfOf?: readonly string[] | undefined;
+  readonly job?: string | undefined;
+  readonly signal?: AbortSignal | undefined;
+  readonly scope?: string | undefined;
+  readonly labels?: Readonly<Record<string, string>> | undefined;
+  readonly deadline?: number | undefined;
+}
+
+### build/index.d.mts#Rendered
+interface Rendered {
+  readonly html: string;
+  readonly finalUrl: string;
+  readonly status: number | null;
+  readonly headers: Readonly<Record<string, string>>;
+}
+
+### build/index.d.mts#Renderer
+interface Renderer {
+  render(url: string, options: RenderOptions): Promise<Rendered>;
+  close(): Promise<void>;
+}
+
+### build/index.d.mts#RequestSigner
+interface RequestSigner {
+  readonly keyId: string;
+  readonly signatureAgent: string;
+  sign(url: URL, now: number): Readonly<Record<string, string>>;
+}
+
+### build/index.d.mts#RuntimeOptions
+interface RuntimeOptions {
+  readonly dir?: string | undefined;
+  readonly log?: CaptureLog | undefined;
+  readonly blobs?: BlobStore | undefined;
+  readonly index?: ReadingIndex | undefined;
+  readonly hostState?: HostStateStore | undefined;
+  readonly token?: string | undefined;
+  readonly userAgent?: string | undefined;
+  readonly contact?: string | undefined;
+  readonly renderer?: Renderer | false | undefined;
+  readonly maxActive?: number | undefined;
+  readonly maxRenders?: number | undefined;
+  readonly dispatcher?: Dispatcher | undefined;
+  readonly egress?: EgressOptions | undefined;
+  readonly politeness?: PolicyOptions | undefined;
+  readonly clock?: Clock | undefined;
+  readonly random?: (() => number) | undefined;
+  readonly scope?: string | undefined;
+  readonly obeyDefaultToken?: boolean | undefined;
+  readonly scopeRank?: ((scope: string) => number) | undefined;
+  readonly onEvent?: ((event: CrawlEvent) => void) | undefined;
+  readonly extractors?: Readonly<Record<string, Extractor>> | undefined;
+  readonly recipes?: ReadonlyArray<Recipe<never>> | undefined;
+  readonly signer?: RequestSigner | WebBotAuthOptions | undefined;
+}
+
+### build/index.d.mts#SITEMAP_LIMITS
+export declare const SITEMAP_LIMITS: {
+  readonly maxEntries: 50_000;
+  readonly maxDepth: 32;
+  readonly maxValue: 4096;
+};
+
+### build/index.d.mts#ScanOptions
+interface ScanOptions {
+  readonly onDamaged?: ((damaged: DamagedLine) => void) | undefined;
+}
+
+### build/index.d.mts#ScheduleOptions
+interface ScheduleOptions {
+  readonly tick?: Duration | undefined;
+  readonly jitter?: Duration | undefined;
+  readonly budget?: Duration | undefined;
+  readonly maxPages?: number | undefined;
+  readonly clock?: Clock | undefined;
+  readonly random?: (() => number) | undefined;
+  readonly onEvent?: ((event: WatchEvent) => void) | undefined;
+  readonly onTick?: ((tick: DaemonTick) => void) | undefined;
+  readonly onError?: ((error: Error) => void) | undefined;
+}
+
+### build/index.d.mts#ScheduleResult
+interface ScheduleResult {
+  readonly ticks: number;
+  readonly checked: number;
+  readonly changes: number;
+  readonly last: DaemonTick | null;
+}
+
+### build/index.d.mts#SearchOptions
+interface SearchOptions extends Omit<FindOptions, "rank">, HybridFindOptions {
+  readonly rank?: SearchRank | undefined;
+}
+
+### build/index.d.mts#SearchRank
+type SearchRank = RankMode | "hybrid";
+
+### build/index.d.mts#SignatureAgentType
+type SignatureAgentType = "directory" | "jwks_uri";
+
+### build/index.d.mts#SignatureCheck
+interface SignatureCheck {
+  readonly verified: boolean;
+  readonly label: string | null;
+  readonly keyId: string | null;
+  readonly agent: string | null;
+  readonly reason: string | null;
+}
+
+### build/index.d.mts#SignedRequest
+interface SignedRequest {
+  readonly url: string;
+  readonly method?: string | undefined;
+  readonly headers: Readonly<Record<string, string | readonly string[] | undefined>>;
+}
+
+### build/index.d.mts#SitemapEntry
+interface SitemapEntry {
+  readonly url: string;
+  readonly lastmod: string | null;
+  readonly changefreq: Changefreq | null;
+}
+
+### build/index.d.mts#SitemapKind
+type SitemapKind = "urlset" | "sitemapindex" | "rss" | "atom" | "rdf" | "text" | "unknown";
+
+### build/index.d.mts#SitemapLimits
+interface SitemapLimits {
+  readonly maxEntries?: number | undefined;
+  readonly maxDepth?: number | undefined;
+}
+
+### build/index.d.mts#SitemapRead
+interface SitemapRead {
+  readonly kind: SitemapKind;
+  readonly entries: readonly SitemapEntry[];
+  readonly invalid: number;
+  readonly complete: boolean;
+  readonly notes: readonly string[];
+}
+
+### build/index.d.mts#SqliteHostStateOptions
+interface SqliteHostStateOptions {
+  readonly busyTimeoutMs?: number | undefined;
+  readonly pollMs?: number | undefined;
+}
+
+### build/index.d.mts#SqliteHostStateStore
+export declare class SqliteHostStateStore implements HostStateStore {
+  readonly path: string;
+  constructor(path: string, options?: SqliteHostStateOptions);
+  reserve(host: string, now: number, leaseMs: number): number;
+  record(host: string, result: HostResult): HostCounts;
+  release(host: string, nextAt: number): void;
+  defer(host: string, until: number): void;
+  stop(host: string, until: number, reason: string): void;
+  stopped(host: string, now: number): HostStop | undefined;
+  reset(host?: string): void;
+  validators(host: string): ValidatorMemo | undefined;
+  noteValidators(host: string, report: ValidatorReport, now: number): ValidatorMemo;
+  get size(): number;
+  close(): void;
+}
+
+### build/index.d.mts#StoreRuntime
+interface StoreRuntime extends CrawlRuntime {
+  readonly hostState: HostStateStore;
+  close(): Promise<void>;
+}
+
+### build/index.d.mts#StoredChunk
+interface StoredChunk {
+  readonly chunk: number;
+  readonly start: number;
+  readonly end: number;
+  readonly vector: Float32Array;
+}
+
+### build/index.d.mts#TRANSFORMERS_MODELS
+export declare const TRANSFORMERS_MODELS: Readonly<Record<string, EmbeddingModel & {
+  readonly pooling: Pooling;
+}>>;
+
+### build/index.d.mts#TextChunk
+interface TextChunk {
+  readonly index: number;
+  readonly start: number;
+  readonly end: number;
+  readonly text: string;
+}
+
+### build/index.d.mts#TextDiff
+interface TextDiff {
+  readonly summary: DiffSummary;
+  readonly hunks: readonly DiffHunk[];
+  readonly meta: readonly MetaChange[];
+  readonly same: boolean;
+  readonly exact: boolean;
+  readonly truncated: boolean;
+  readonly steps: number;
+  readonly notes: readonly string[];
+}
+
+### build/index.d.mts#TransformersEmbedderOptions
+interface TransformersEmbedderOptions {
+  readonly model?: string | undefined;
+  readonly quantized?: boolean | undefined;
+  readonly cacheDir?: string | undefined;
+  readonly localOnly?: boolean | undefined;
+  readonly pooling?: Pooling | undefined;
+  readonly dimensions?: number | undefined;
+  readonly maxInputTokens?: number | undefined;
+  readonly queryPrefix?: string | undefined;
+  readonly documentPrefix?: string | undefined;
+  readonly batch?: number | undefined;
+}
+
+### build/index.d.mts#TransformersModule
+interface TransformersModule {
+  pipeline(task: "feature-extraction", model: string, options: {
+    readonly dtype: "q8" | "fp32";
+    readonly cache_dir?: string | undefined;
+    readonly local_files_only?: boolean | undefined;
+  }): Promise<FeatureExtractor>;
+}
+
+### build/index.d.mts#UrlPattern
+type UrlPattern = string | RegExp;
+
+### build/index.d.mts#VECTORS_SCHEMA
+export declare const VECTORS_SCHEMA = 1;
+
+### build/index.d.mts#VENUE_LIMITS
+export declare const VENUE_LIMITS: {
+  readonly pages: number;
+  readonly maxPages: number;
+  readonly menus: number;
+  readonly readingsPerPage: number;
+  readonly links: number;
+  readonly nearMetres: number;
+};
+
+### build/index.d.mts#VERSION
+export declare const VERSION = "0.2.4";
+
+### build/index.d.mts#Variant
+type Variant = "plain" | "rendered";
+
+### build/index.d.mts#VectorCounts
+interface VectorCounts {
+  readonly texts: number;
+  readonly chunks: number;
+  readonly docs: number;
+  readonly bytes: number;
+}
+
+### build/index.d.mts#VectorHit
+interface VectorHit {
+  readonly sha: string;
+  readonly chunk: number;
+  readonly start: number;
+  readonly end: number;
+  readonly similarity: number;
+  readonly docs: readonly string[];
+}
+
+### build/index.d.mts#VectorStore
+export declare class VectorStore {
+  readonly path: string;
+  constructor(path: string, options?: VectorStoreOptions);
+  plan(embedder: string, sha: string): string | undefined;
+  pointed(embedder: string, doc: string): string | undefined;
+  dimensions(embedder: string): number | undefined;
+  put(input: VectorWrite): void;
+  point(embedder: string, doc: string, sha: string, at: string): void;
+  forget(embedder: string, doc: string): void;
+  chunks(embedder: string, sha: string): StoredChunk[];
+  best(embedder: string, sha: string, query: Float32Array): VectorHit | undefined;
+  search(embedder: string, query: Float32Array, options?: {
+    readonly within?: Iterable<string> | undefined;
+  }): VectorHit[];
+  counts(embedder?: string): VectorCounts;
+  close(): void;
+}
+
+### build/index.d.mts#VectorStoreOptions
+interface VectorStoreOptions {
+  readonly busyTimeoutMs?: number | undefined;
+}
+
+### build/index.d.mts#VectorWrite
+interface VectorWrite {
+  readonly embedder: string;
+  readonly dimensions: number;
+  readonly sha: string;
+  readonly plan: string;
+  readonly chars: number;
+  readonly chunks: ReadonlyArray<Omit<StoredChunk, "chunk">>;
+  readonly docs: readonly string[];
+  readonly at: string;
+}
+
+### build/index.d.mts#VenueLink
+interface VenueLink {
+  readonly url: string;
+  readonly text: string;
+}
+
+### build/index.d.mts#VenueLocation
+interface VenueLocation {
+  readonly address?: string | undefined;
+  readonly lat?: number | undefined;
+  readonly lon?: number | undefined;
+}
+
+### build/index.d.mts#VenueOptions
+interface VenueOptions {
+  readonly pages?: number | undefined;
+  readonly name?: string | undefined;
+  readonly requireName?: boolean | undefined;
+  readonly location?: VenueLocation | undefined;
+  readonly osm?: string | VenueOsm | undefined;
+  readonly render?: "auto" | "never" | "always" | undefined;
+  readonly maxAge?: Duration | undefined;
+  readonly onBehalfOf?: readonly string[] | undefined;
+  readonly signal?: AbortSignal | undefined;
+  readonly budget?: Duration | undefined;
+  readonly scope?: string | undefined;
+  readonly labels?: Readonly<Record<string, string>> | undefined;
+  readonly job?: string | undefined;
+  readonly userProvided?: boolean | undefined;
+  readonly fallback?: "archive" | "none" | undefined;
+  readonly archiveDespiteRobots?: boolean | undefined;
+}
+
+### build/index.d.mts#VenueOsm
+interface VenueOsm {
+  readonly value: string;
+  readonly url?: string | null | undefined;
+  readonly doc?: string | null | undefined;
+  readonly capture?: string | null | undefined;
+  readonly fetched_at?: string | null | undefined;
+}
+
+### build/index.d.mts#VenuePage
+interface VenuePage {
+  readonly url: string;
+  readonly doc: string | null;
+  readonly outcome: string;
+  readonly status: number;
+  readonly rendered: boolean;
+  readonly capture: string | null;
+  readonly fetched_at: string | null;
+  readonly from_cache: boolean;
+  readonly held_back: boolean;
+  readonly archived?: Archived | undefined;
+  readonly note: string | null;
+}
+
+### build/index.d.mts#VenueRead
+interface VenueRead {
+  readonly readings: readonly VenueReading[];
+  readonly phone: string | null;
+  readonly menus: readonly VenueLink[];
+  readonly notes: readonly string[];
+  readonly steps: number;
+}
+
+### build/index.d.mts#VenueReading
+interface VenueReading {
+  readonly from: "jsonld" | "osm" | "text";
+  readonly rank: number;
+  readonly schedule: "opening" | "other";
+  readonly label: string | null;
+  readonly hours: string;
+  readonly week: Week;
+  readonly inferred: boolean;
+  readonly partial: boolean;
+  readonly season: string | null;
+  readonly raw: string;
+  readonly path: string | null;
+  readonly url: string | null;
+  readonly doc: string | null;
+  readonly capture: string | null;
+  readonly fetched_at: string | null;
+  readonly archived?: Archived | undefined;
+}
+
+### build/index.d.mts#VenueResult
+interface VenueResult {
+  readonly url: string;
+  readonly home: string | null;
+  readonly moved: string | null;
+  readonly names_venue: boolean | null;
+  readonly pages: readonly VenuePage[];
+  readonly readings: readonly VenueReading[];
+  readonly best: VenueReading | null;
+  readonly from_site: VenueReading | null;
+  readonly disagree: readonly Day[];
+  readonly menus: readonly VenueLink[];
+  readonly phone: string | null;
+  readonly captures: readonly string[];
+  readonly held_back: boolean;
+  readonly note: string | null;
+}
+
+### build/index.d.mts#VenueSource
+interface VenueSource {
+  readonly doc?: string | null | undefined;
+  readonly url: string | null;
+  readonly text: string;
+  readonly meta: Readonly<Record<string, unknown>>;
+  readonly capture?: string | null | undefined;
+  readonly fetched_at?: string | null | undefined;
+}
+
+### build/index.d.mts#Verified
+interface Verified {
+  readonly found: boolean;
+  readonly start: number | null;
+  readonly end: number | null;
+  readonly excerpt: string | null;
+  readonly count: number;
+}
+
+### build/index.d.mts#VerifyOptions
+interface VerifyOptions {
+  readonly capture?: string | undefined;
+  readonly userProvided?: boolean | undefined;
+  readonly at?: string | Date | undefined;
+}
+
+### build/index.d.mts#VerifyResult
+interface VerifyResult {
+  readonly doc: string;
+  readonly found: boolean;
+  readonly start: number | null;
+  readonly end: number | null;
+  readonly excerpt: string | null;
+  readonly url: string | null;
+  readonly captures: readonly string[];
+  readonly capture: string | null;
+  readonly blob: string | null;
+  readonly fetched_at: string | null;
+  readonly stale: boolean;
+  readonly in_full_text: boolean;
+  readonly complete: boolean;
+  readonly count: number;
+  readonly held_back: boolean;
+  readonly note: string | null;
+  readonly at?: string | undefined;
+  readonly before_first?: boolean | undefined;
+  readonly archived?: Archived | undefined;
+}
+
+### build/index.d.mts#VersionAt
+interface VersionAt {
+  readonly version: VersionText | undefined;
+  readonly first: string | undefined;
+}
+
+### build/index.d.mts#VersionChoice
+type VersionChoice = string | {
+  readonly at: string | Date;
+};
+
+### build/index.d.mts#VersionText
+interface VersionText extends DocVersion {
+  readonly text: string;
+  readonly full_text: string | undefined;
+  readonly meta: Readonly<Record<string, unknown>>;
+}
+
+### build/index.d.mts#WATCH_LIMITS
+export declare const WATCH_LIMITS: {
+  readonly floorMs: 3_600_000;
+  readonly everyMs: 86_400_000;
+  readonly budgetMs: 600_000;
+  readonly maxPages: 100;
+  readonly hostsAtOnce: 8;
+  readonly leaseMs: 120_000;
+};
+
+### build/index.d.mts#WATCH_SCHEMA
+export declare const WATCH_SCHEMA = 1;
+
+### build/index.d.mts#WaczResult
+interface WaczResult extends ArchiveCounts {
+  readonly format: "wacz";
+  readonly out: string;
+  readonly bytes: number;
+  readonly pages: number;
+}
+
+### build/index.d.mts#WarcResult
+interface WarcResult extends ArchiveCounts {
+  readonly format: "warc";
+  readonly out: string;
+  readonly bytes: number;
+}
+
+### build/index.d.mts#WatchEntry
+interface WatchEntry {
+  readonly url: string;
+  readonly every_ms: number;
+  readonly render: "auto" | "never" | "always";
+  readonly confirm: 1 | 2;
+  readonly scope: string | null;
+  readonly labels: Readonly<Record<string, string>> | null;
+  readonly on_behalf_of: readonly string[];
+  readonly added_at: string;
+  readonly next_at: string;
+  readonly checked_at: string | null;
+  readonly last_kind: WatchKind | null;
+  readonly last_note: string | null;
+  readonly checks: number;
+  readonly changes: number;
+  readonly doc: string | null;
+  readonly capture: string | null;
+  readonly fetched_at: string | null;
+  readonly gone: boolean;
+  readonly pending: WatchPending | null;
+  readonly leased_until: string | null;
+}
+
+### build/index.d.mts#WatchEvent
+interface WatchEvent {
+  readonly url: string;
+  readonly doc: string | null;
+  readonly kind: WatchKind;
+  readonly suspected: boolean;
+  readonly confirmed: boolean;
+  readonly capture: string | null;
+  readonly fetched_at: string | null;
+  readonly previous: string | null;
+  readonly previous_fetched_at: string | null;
+  readonly outcome: string;
+  readonly status: number;
+  readonly diff: DiffSummary | null;
+  readonly held_back: boolean;
+  readonly next_at: string;
+  readonly note: string | null;
+}
+
+### build/index.d.mts#WatchKind
+type WatchKind = "new" | "changed" | "unchanged" | "gone" | "refused" | "error";
+
+### build/index.d.mts#WatchList
+interface WatchList {
+  add(url: string, options?: WatchOptions): Promise<WatchEntry>;
+  remove(url: string): Promise<boolean>;
+  list(): Promise<WatchEntry[]>;
+  run(options?: WatchRunOptions): WatchRun;
+  reschedule?(url: string, options: WatchRescheduleOptions): Promise<WatchEntry | undefined>;
+}
+
+### build/index.d.mts#WatchOptions
+interface WatchOptions {
+  readonly every?: Duration | undefined;
+  readonly render?: "auto" | "never" | "always" | undefined;
+  readonly labels?: Readonly<Record<string, string>> | undefined;
+  readonly scope?: string | undefined;
+  readonly onBehalfOf?: readonly string[] | undefined;
+  readonly confirm?: 1 | 2 | undefined;
+  readonly keepSchedule?: boolean | undefined;
+}
+
+### build/index.d.mts#WatchPending
+interface WatchPending {
+  readonly kind: "changed" | "gone" | "new";
+  readonly capture: string | null;
+  readonly since: string;
+}
+
+### build/index.d.mts#WatchRescheduleOptions
+interface WatchRescheduleOptions {
+  readonly at: string | Date;
+}
+
+### build/index.d.mts#WatchRow
+interface WatchRow {
+  url: string;
+  target: string;
+  host: string;
+  every_ms: number;
+  render: string;
+  confirm: number;
+  scope: string | null;
+  labels: string | null;
+  on_behalf_of: string | null;
+  added_at: number;
+  next_at: number;
+  lease_until: number;
+  lease_owner: string | null;
+  checks: number;
+  changes: number;
+  last_at: number | null;
+  last_kind: string | null;
+  last_note: string | null;
+  doc: string | null;
+  base_state: string | null;
+  base_sha: string | null;
+  base_capture: string | null;
+  base_fetched_at: string | null;
+  pend_state: string | null;
+  pend_sha: string | null;
+  pend_capture: string | null;
+  pend_fetched_at: string | null;
+  pend_since: number | null;
+}
+
+### build/index.d.mts#WatchRun
+interface WatchRun extends AsyncIterable<WatchEvent> {
+  readonly summary: Promise<WatchSummary>;
+}
+
+### build/index.d.mts#WatchRunOptions
+interface WatchRunOptions {
+  readonly budgetMs?: number | undefined;
+  readonly maxPages?: number | undefined;
+  readonly signal?: AbortSignal | undefined;
+  readonly drain?: AbortSignal | undefined;
+}
+
+### build/index.d.mts#WatchRunnerOptions
+interface WatchRunnerOptions extends WatchRunOptions {
+  readonly onBehalfOf?: readonly string[] | undefined;
+  readonly job?: string | undefined;
+  readonly ready?: (() => Promise<void>) | undefined;
+}
+
+### build/index.d.mts#WatchSchedule
+interface WatchSchedule {
+  readonly done: Promise<ScheduleResult>;
+  stop(grace?: Duration): Promise<ScheduleResult>;
+  result(): ScheduleResult;
+}
+
+### build/index.d.mts#WatchState
+interface WatchState {
+  readonly state: "present" | "gone";
+  readonly sha: string | null;
+  readonly capture: string | null;
+  readonly fetched_at: string | null;
+}
+
+### build/index.d.mts#WatchStop
+type WatchStop = "done" | "max-pages" | "budget" | "cancelled" | "closed" | "error";
+
+### build/index.d.mts#WatchStore
+export declare class WatchStore {
+  readonly path: string;
+  readonly floorMs: number;
+  constructor(path: string, options?: WatchStoreOptions);
+  add(url: string, options: WatchOptions, now: number): WatchEntry;
+  reschedule(url: string, options: WatchRescheduleOptions, now: number): WatchEntry | undefined;
+  remove(url: string): boolean;
+  get(url: string, now: number): WatchEntry | undefined;
+  list(now: number): WatchEntry[];
+  due(now: number): number;
+  claim(now: number, owner: string, until: number, busy: readonly string[]): WatchRow | undefined;
+  release(key: string, owner: string): void;
+  settle(key: string, owner: string, update: WatchUpdate): boolean;
+  close(): void;
+}
+
+### build/index.d.mts#WatchStoreOptions
+interface WatchStoreOptions {
+  readonly busyTimeoutMs?: number | undefined;
+  readonly floorMs?: number | undefined;
+}
+
+### build/index.d.mts#WatchSummary
+interface WatchSummary {
+  readonly checked: number;
+  readonly new: number;
+  readonly changed: number;
+  readonly unchanged: number;
+  readonly gone: number;
+  readonly refused: number;
+  readonly error: number;
+  readonly suspected: number;
+  readonly confirmed: number;
+  readonly due: number;
+  readonly stopped: WatchStop;
+  readonly reason: string;
+  readonly elapsed_ms: number;
+}
+
+### build/index.d.mts#WatchUpdate
+interface WatchUpdate {
+  readonly next_at: number;
+  readonly last_at: number;
+  readonly last_kind: WatchKind;
+  readonly last_note: string | null;
+  readonly changed: boolean;
+  readonly doc: string | null;
+  readonly base?: WatchState | undefined;
+  readonly pending?: (WatchState & {
+    readonly since: number;
+  }) | null | undefined;
+}
+
+### build/index.d.mts#WebArchive
+type WebArchive = "wayback" | "commoncrawl";
+
+### build/index.d.mts#WebBotAuthOptions
+interface WebBotAuthOptions {
+  readonly privateKey: KeyInput;
+  readonly keyId?: string | undefined;
+  readonly signatureAgent: string;
+  readonly agentType?: SignatureAgentType | undefined;
+  readonly lifetimeMs?: number | undefined;
+  readonly label?: string | undefined;
+}
+
+### build/index.d.mts#WebBotAuthSigner
+interface WebBotAuthSigner extends RequestSigner {
+  readonly publicKey: JwkInput;
+}
+
+### build/index.d.mts#WordPart
+interface WordPart {
+  readonly op: "same" | "added" | "removed";
+  readonly text: string;
+}
+
+### build/index.d.mts#archiveExtractor
+export declare const archiveExtractor: Extractor;
+
+### build/index.d.mts#archivedDocId
+export declare const archivedDocId: (url: string) => string;
+
+### build/index.d.mts#browserMissing
+export declare const browserMissing: (load?: () => Promise<{
+  readonly chromium: {
+    executablePath(): string;
+  };
+}>) => Promise<string | undefined>;
+
+### build/index.d.mts#catchUpIndex
+export declare const catchUpIndex: (runtime: CrawlRuntime) => Promise<CatchUpResult | undefined>;
+
+### build/index.d.mts#changeCommand
+export declare const changeCommand: (command: string, options?: ChangeCommandOptions) => ((event: WatchEvent) => Promise<void>);
+
+### build/index.d.mts#checkFields
+export declare const checkFields: (source: ExtractSource, fields: Readonly<Record<string, FieldClaim>>) => FieldsChecked;
+
+### build/index.d.mts#chunkText
+export declare const chunkText: (text: string, options: ChunkOptions) => TextChunk[];
+
+### build/index.d.mts#chunkTokensOf
+export declare const chunkTokensOf: (embedder: Pick<Embedder, "maxInputTokens">) => number;
+
+### build/index.d.mts#crawlSite
+export declare const crawlSite: (runtime: CrawlRuntime, seeds: string | readonly string[], options?: CrawlRunOptions) => CrawlRun;
+
+### build/index.d.mts#createHybridSearch
+export declare const createHybridSearch: (runtime: CrawlRuntime, options: HybridSearchOptions) => HybridSearch;
+
+### build/index.d.mts#createRuntime
+export declare const createRuntime: (options: RuntimeOptions) => StoreRuntime;
+
+### build/index.d.mts#createWebBotAuthSigner
+export declare const createWebBotAuthSigner: (options: WebBotAuthOptions) => WebBotAuthSigner;
+
+### build/index.d.mts#daemonStateFile
+export declare const daemonStateFile: (dir: string) => string;
+
+### build/index.d.mts#defaultUserAgent
+export declare const defaultUserAgent: (contact?: string) => string;
+
+### build/index.d.mts#defineRecipe
+export declare const defineRecipe: <Input = string>(definition: RecipeDefinition<Input>) => Recipe<Input>;
+
+### build/index.d.mts#diffDocument
+export declare const diffDocument: (runtime: CrawlRuntime, id: string, options?: DiffOptions) => Promise<DiffResult>;
+
+### build/index.d.mts#diffTexts
+export declare const diffTexts: (before: DiffInput, after: DiffInput, given?: Partial<DiffLimits>) => TextDiff;
+
+### build/index.d.mts#discoverSite
+export declare const discoverSite: (runtime: CrawlRuntime, site: string, options?: DiscoverRunOptions) => Promise<DiscoverResult>;
+
+### build/index.d.mts#durationMs
+export declare const durationMs: (duration: Duration) => number;
+
+### build/index.d.mts#egressLookup
+export declare const egressLookup: (policy: EgressOptions, resolve?: EgressResolve) => LookupFunction;
+
+### build/index.d.mts#estimateTokens
+export declare const estimateTokens: (text: string, start?: number, end?: number) => number;
+
+### build/index.d.mts#exportWacz
+export declare const exportWacz: (source: ArchiveSource, options: ArchiveOptions) => Promise<WaczResult>;
+
+### build/index.d.mts#exportWarc
+export declare const exportWarc: (source: ArchiveSource, options: ArchiveOptions) => Promise<WarcResult>;
+
+### build/index.d.mts#extractDocument
+export declare const extractDocument: (runtime: CrawlRuntime, id: string, fields: Readonly<Record<string, FieldClaim>>, options?: ExtractOptions) => Promise<ExtractResult>;
+
+### build/index.d.mts#feedDate
+export declare const feedDate: (value: string) => string | null;
+
+### build/index.d.mts#fetchAndIndex
+export declare const fetchAndIndex: (runtime: CrawlRuntime, request: FetchRequest) => Promise<Indexed>;
+
+### build/index.d.mts#fetchPage
+export declare const fetchPage: (runtime: CrawlRuntime, url: string, options: PageOptions) => Promise<PageResult>;
+
+### build/index.d.mts#findDocuments
+export declare const findDocuments: (runtime: CrawlRuntime, q: string, options?: {
+  readonly limit?: number | undefined;
+  readonly kind?: string | null | undefined;
+  readonly rank?: RankMode | undefined;
+}) => Promise<Found[]>;
+
+### build/index.d.mts#formatDiff
+export declare const formatDiff: (diff: Pick<DiffResult, "summary" | "hunks" | "meta">) => string;
+
+### build/index.d.mts#fuseRanks
+export declare const fuseRanks: (lists: ReadonlyArray<readonly string[]>, k?: number) => FusedRank[];
+
+### build/index.d.mts#heldBackMeta
+export declare const heldBackMeta: (meta: Readonly<Record<string, unknown>>) => Record<string, unknown>;
+
+### build/index.d.mts#isHeldBack
+export declare const isHeldBack: (doc: {
+  readonly ai_input: AiInput;
+}, userProvided?: boolean) => boolean;
+
+### build/index.d.mts#isLoopback
+export declare const isLoopback: (host: string) => boolean;
+
+### build/index.d.mts#isMailbox
+export declare const isMailbox: (contact: string) => boolean;
+
+### build/index.d.mts#isPdf
+export declare const isPdf: (body: Uint8Array, contentType: string | null) => boolean;
+
+### build/index.d.mts#isoTime
+export declare const isoTime: (name: string, value: string | Date) => string;
+
+### build/index.d.mts#keyDirectory
+export declare const keyDirectory: (publicKeys: readonly KeyInput[]) => KeyDirectory;
+
+### build/index.d.mts#locate
+export declare const locate: (text: string, quote: string) => Verified;
+
+### build/index.d.mts#locationMatches
+export declare const locationMatches: (record: Readonly<Record<string, unknown>>, location: VenueLocation) => boolean;
+
+### build/index.d.mts#makeRecord
+export declare const makeRecord: (input: RecordInput) => CaptureRecord;
+
+### build/index.d.mts#namesVenue
+export declare const namesVenue: (name: string, page: {
+  readonly title: string;
+  readonly text: string;
+}) => boolean | undefined;
+
+### build/index.d.mts#ollamaEmbedder
+export declare const ollamaEmbedder: (options?: OllamaEmbedderOptions) => Embedder;
+
+### build/index.d.mts#openCrawler
+export declare const openCrawler: (options: OpenOptions) => HybridCrawler;
+
+### build/index.d.mts#pickProduct
+export declare const pickProduct: (records: readonly JsonRecord[], page: string) => {
+  readonly product: JsonRecord | undefined;
+  readonly steps: number;
+};
+
+### build/index.d.mts#pickVariant
+export declare const pickVariant: (product: JsonRecord, page: string) => JsonRecord | undefined;
+
+### build/index.d.mts#playwrightRenderer
+export declare const playwrightRenderer: (options?: {
+  readonly idleMs?: number;
+  readonly launch?: (() => Promise<object>) | undefined;
+}) => PlaywrightRenderer;
+
+### build/index.d.mts#productOf
+export declare const productOf: (records: readonly JsonRecord[], page: string) => ProductRead;
+
+### build/index.d.mts#rankHoursLinks
+export declare const rankHoursLinks: (links: readonly PageLink[], home: string) => PageLink[];
+
+### build/index.d.mts#readAmount
+export declare const readAmount: (value: unknown, currency?: string) => number | undefined;
+
+### build/index.d.mts#readDaemonState
+export declare const readDaemonState: (dir: string, file?: string) => DaemonState | undefined;
+
+### build/index.d.mts#readDocument
+export declare const readDocument: (runtime: CrawlRuntime, id: string, options?: ReadOptions) => Promise<ReadResult>;
+
+### build/index.d.mts#readJson
+export declare const readJson: (body: Uint8Array, capture: RecipeCapture) => unknown;
+
+### build/index.d.mts#readPdf
+export declare const readPdf: (bytes: Uint8Array, options?: PdfOptions) => Promise<PdfText>;
+
+### build/index.d.mts#readProduct
+export declare const readProduct: (target: RecipeTarget, url: string, options?: ProductOptions) => Promise<ProductResult>;
+
+### build/index.d.mts#readSitemap
+export declare const readSitemap: (text: string, base: string, limits?: SitemapLimits) => SitemapRead;
+
+### build/index.d.mts#readVenue
+export declare const readVenue: (target: RecipeTarget, url: string, options?: VenueOptions) => Promise<VenueResult>;
+
+### build/index.d.mts#recordOverride
+export declare const recordOverride: (runtime: CrawlRuntime, doc: {
+  readonly doc: string;
+  readonly url: string | null;
+  readonly scope?: string | undefined;
+  readonly labels?: Readonly<Record<string, string>> | undefined;
+}, action: string, marks?: {
+  readonly scope?: string | undefined;
+  readonly labels?: Readonly<Record<string, string>> | undefined;
+}) => Promise<void>;
+
+### build/index.d.mts#registerRecipe
+export declare const registerRecipe: <Input>(extractors: Extractors, recipe: Recipe<Input>) => void;
+
+### build/index.d.mts#reindex
+export declare const reindex: (runtime: CrawlRuntime, options?: {
+  readonly batch?: number | undefined;
+}) => Promise<ReindexResult>;
+
+### build/index.d.mts#runRecipe
+export declare const runRecipe: <Input>(target: RecipeTarget, recipe: Recipe<Input>, input: Input, options?: RecipeRunOptions) => Promise<RecipeResult>;
+
+### build/index.d.mts#runWatch
+export declare const runWatch: (runtime: CrawlRuntime, source: WatchStore | (() => Promise<WatchStore>), options?: WatchRunnerOptions) => WatchRun;
+
+### build/index.d.mts#scheduleWatches
+export declare const scheduleWatches: (watch: WatchList, options?: ScheduleOptions) => WatchSchedule;
+
+### build/index.d.mts#startDaemon
+export declare const startDaemon: (options: DaemonOptions) => Promise<Daemon>;
+
+### build/index.d.mts#transformersEmbedder
+export declare const transformersEmbedder: (options?: TransformersEmbedderOptions, load?: () => Promise<TransformersModule>) => Embedder;
+
+### build/index.d.mts#unitVector
+export declare const unitVector: (vector: ArrayLike<number>) => Float32Array;
+
+### build/index.d.mts#venueReadingsOf
+export declare const venueReadingsOf: (source: VenueSource, options?: {
+  readonly location?: VenueLocation | undefined;
+}) => VenueRead;
+
+### build/index.d.mts#verifyQuote
+export declare const verifyQuote: (runtime: CrawlRuntime, id: string, quote: string, options?: VerifyOptions) => Promise<VerifyResult>;
+
+### build/index.d.mts#verifySignature
+export declare const verifySignature: (request: SignedRequest, directory: KeyDirectory, options?: {
+  readonly now?: number | undefined;
+}) => SignatureCheck;
+
+### build/index.d.mts#versionAtTime
+export declare const versionAtTime: (runtime: CrawlRuntime, id: string, at: string) => VersionAt;
+
+### build/politeness.d.mts#Clock
+export interface Clock {
+  readonly now: () => number;
+  readonly sleep: (ms: number, signal?: AbortSignal) => Promise<void>;
+}
+
+### build/politeness.d.mts#DEFAULT_POLICY
+export declare const DEFAULT_POLICY: PolitenessPolicy;
+
+### build/politeness.d.mts#HostCounts
+export interface HostCounts {
+  readonly failures: number;
+  readonly waits: number;
+}
+
+### build/politeness.d.mts#HostResult
+export type HostResult = "success" | "failure" | "wait" | "neutral";
+
+### build/politeness.d.mts#HostScheduler
+export declare class HostScheduler {
+  readonly store: HostStateStore;
+  constructor(clock: Clock, maxActive: number, options?: SchedulerOptions);
+  run<T>(host: string, task: () => Promise<Paced<T>>, signal?: AbortSignal): Promise<T>;
+  park(host: string, untilMs: number): void;
+  stop(host: string, reason: string, untilMs?: number): void;
+  stoppedReason(host: string): string | undefined;
+  stopOf(host: string): HostStop | undefined;
+  failed(host: string): number;
+  waited(host: string): number;
+  succeeded(host: string): void;
+  reset(host?: string): void;
+}
+
+### build/politeness.d.mts#HostStateStore
+export interface HostStateStore {
+  reserve(host: string, now: number, leaseMs: number): number;
+  record(host: string, result: HostResult): HostCounts;
+  release(host: string, nextAt: number): void;
+  defer(host: string, until: number): void;
+  stop(host: string, until: number, reason: string): void;
+  stopped(host: string, now: number): HostStop | undefined;
+  reset(host?: string): void;
+  validators?(host: string): ValidatorMemo | undefined;
+  noteValidators?(host: string, report: ValidatorReport, now: number): ValidatorMemo;
+}
+
+### build/politeness.d.mts#HostStop
+export interface HostStop {
+  readonly until: number;
+  readonly reason: string;
+}
+
+### build/politeness.d.mts#HostStopped
+export declare class HostStopped extends Error {
+  readonly host: string;
+  readonly reason: string;
+  readonly until: number;
+  constructor(host: string, reason: string, until?: number);
+}
+
+### build/politeness.d.mts#MAX_STOP_MS
+export declare const MAX_STOP_MS: number;
+
+### build/politeness.d.mts#MemoryHostStateStore
+export declare class MemoryHostStateStore implements HostStateStore {
+  constructor(maxHosts?: number);
+  get size(): number;
+  reserve(host: string, now: number, leaseMs: number): number;
+  record(host: string, result: HostResult): HostCounts;
+  release(host: string, nextAt: number): void;
+  defer(host: string, until: number): void;
+  stop(host: string, until: number, reason: string): void;
+  stopped(host: string, now: number): HostStop | undefined;
+  reset(host?: string): void;
+  validators(host: string): ValidatorMemo | undefined;
+  noteValidators(host: string, report: ValidatorReport, now: number): ValidatorMemo;
+}
+
+### build/politeness.d.mts#Paced
+export interface Paced<T> {
+  readonly value: T;
+  readonly delayMs: number;
+}
+
+### build/politeness.d.mts#PolicyOptions
+export interface PolicyOptions extends Partial<PolitenessPolicy> {
+  readonly hosts?: Readonly<Record<string, Partial<PolitenessPolicy>>> | undefined;
+}
+
+### build/politeness.d.mts#PolitenessPolicy
+export interface PolitenessPolicy {
+  readonly pageIntervalMs: number;
+  readonly apiIntervalMs: number;
+  readonly renderIntervalMs: number;
+  readonly elapsedFactor: number;
+  readonly elapsedCapMs: number;
+  readonly crawlDelayCapMs: number;
+  readonly maxRedirects: number;
+  readonly maxBytes: number;
+  readonly requestTimeoutMs: number;
+  readonly renderTimeoutMs: number;
+  readonly maxFailures: number;
+  readonly failureStopMs: number;
+  readonly blockedStopMs: number;
+  readonly challengeStopMs: number;
+  readonly paymentStopMs: number;
+  readonly maxRetryAfterMs: number;
+  readonly backoffBaseMs: number;
+  readonly backoffCapMs: number;
+  readonly robotsTtlMs: number;
+  readonly robotsRetryMs: number;
+  readonly robotsRetryCapMs: number;
+  readonly robotsStaleMs: number;
+  readonly heuristicFreshnessCapMs: number;
+}
+
+### build/politeness.d.mts#Rest
+export interface Rest {
+  readonly ms: number;
+  readonly reason: "pace" | "slow" | "retry-after" | "crawl-delay";
+}
+
+### build/politeness.d.mts#RestInput
+export interface RestInput {
+  readonly kind: "page" | "api" | "render";
+  readonly elapsedMs: number;
+  readonly crawlDelaySeconds?: number | undefined;
+  readonly minIntervalMs?: number | undefined;
+  readonly retryAfterMs?: number | undefined;
+}
+
+### build/politeness.d.mts#SchedulerOptions
+export interface SchedulerOptions {
+  readonly store?: HostStateStore | undefined;
+  readonly leaseMs?: number | undefined;
+  readonly fallbackDelayMs?: number | undefined;
+}
+
+### build/politeness.d.mts#VALIDATOR_MEMO
+export declare const VALIDATOR_MEMO: ValidatorLimits;
+
+### build/politeness.d.mts#ValidatorAnswer
+export type ValidatorAnswer = "not-modified" | "same" | "changed";
+
+### build/politeness.d.mts#ValidatorLimits
+export interface ValidatorLimits {
+  readonly misses: number;
+  readonly probeEvery: number;
+  readonly probeAgeMs: number;
+}
+
+### build/politeness.d.mts#ValidatorMemo
+export interface ValidatorMemo {
+  readonly skipEtag: boolean;
+  readonly etag: ValidatorVerdict;
+  readonly lastModified: ValidatorVerdict;
+  readonly etagMisses: number;
+  readonly dateMisses: number;
+  readonly sinceProbe: number;
+  readonly changedAt: number;
+}
+
+### build/politeness.d.mts#ValidatorReport
+export interface ValidatorReport {
+  readonly etag: boolean;
+  readonly lastModified: boolean;
+  readonly answer: ValidatorAnswer;
+}
+
+### build/politeness.d.mts#ValidatorVerdict
+export type ValidatorVerdict = "unknown" | "works" | "fails";
+
+### build/politeness.d.mts#backoffMs
+export declare const backoffMs: (attempt: number, baseMs: number, capMs: number, random: () => number) => number;
+
+### build/politeness.d.mts#checkPolicy
+export declare const checkPolicy: (options: PolicyOptions | undefined) => void;
+
+### build/politeness.d.mts#equalJitterMs
+export declare const equalJitterMs: (attempt: number, baseMs: number, capMs: number, random: () => number) => number;
+
+### build/politeness.d.mts#nextValidatorMemo
+export declare const nextValidatorMemo: (memo: ValidatorMemo | undefined, report: ValidatorReport, now: number) => ValidatorMemo;
+
+### build/politeness.d.mts#policyFor
+export declare const policyFor: (options: PolicyOptions | undefined, host: string) => PolitenessPolicy;
+
+### build/politeness.d.mts#realClock
+export declare const realClock: Clock;
+
+### build/politeness.d.mts#restAfter
+export declare const restAfter: (policy: PolitenessPolicy, input: RestInput) => Rest;
+
+### build/politeness.d.mts#validatorsToSend
+export declare const validatorsToSend: (memo: ValidatorMemo | undefined, stored: {
+  readonly etag: boolean;
+  readonly lastModified: boolean;
+}, now: number) => {
+  readonly etag: boolean;
+  readonly lastModified: boolean;
+};
+
+### build/robots.d.mts#ALLOW_ALL
+export declare const ALLOW_ALL: Robots;
+
+### build/robots.d.mts#DISALLOW_ALL
+export declare const DISALLOW_ALL: Robots;
+
+### build/robots.d.mts#HTML_ROBOTS
+export declare const HTML_ROBOTS = "robots.txt is a web page, not a robots.txt file (a login or challenge page)";
+
+### build/robots.d.mts#ROBOTS_MAX_BYTES
+export declare const ROBOTS_MAX_BYTES: number;
+
+### build/robots.d.mts#Robots
+export interface Robots {
+  readonly groups: readonly RobotsGroup[];
+  readonly sitemaps: readonly string[];
+  readonly signals: readonly string[];
+  readonly fileSignals?: readonly RobotsSignal[] | undefined;
+  readonly unreachable?: string | undefined;
+}
+
+### build/robots.d.mts#RobotsDecision
+export interface RobotsDecision {
+  readonly allowed: boolean;
+  readonly by: string | undefined;
+  readonly crawlDelaySeconds: number | undefined;
+  readonly rule?: RobotsRule | undefined;
+  readonly groups?: readonly RobotsGroup[] | undefined;
+}
+
+### build/robots.d.mts#RobotsGroup
+export interface RobotsGroup {
+  readonly agents: readonly string[];
+  readonly line?: number | undefined;
+  readonly rules: readonly RobotsRule[];
+  readonly crawlDelaySeconds: number | undefined;
+  readonly signals?: readonly RobotsSignal[] | undefined;
+}
+
+### build/robots.d.mts#RobotsRule
+export interface RobotsRule {
+  readonly allow: boolean;
+  readonly pattern: string;
+  readonly line?: number | undefined;
+}
+
+### build/robots.d.mts#RobotsSignal
+export interface RobotsSignal {
+  readonly key: string;
+  readonly value: string;
+  readonly path: string | undefined;
+  readonly line: number;
+}
+
+### build/robots.d.mts#decide
+export declare const decide: (robots: Robots, tokens: readonly string[], pathAndQuery: string) => RobotsDecision;
+
+### build/robots.d.mts#isHtmlRobots
+export declare const isHtmlRobots: (contentType: string | null | undefined, text: string) => boolean;
+
+### build/robots.d.mts#isProductToken
+export declare const isProductToken: (value: string) => boolean;
+
+### build/robots.d.mts#matchesPattern
+export declare const matchesPattern: (pattern: string, path: string) => boolean;
+
+### build/robots.d.mts#normalizePath
+export declare const normalizePath: (value: string) => string;
+
+### build/robots.d.mts#parseRobots
+export declare const parseRobots: (input: string) => Robots;
+
+### build/robots.d.mts#productToken
+export declare const productToken: (value: string) => string;
+
+### build/robots.d.mts#robotsFromResponse
+export declare const robotsFromResponse: (status: number, contentType: string | null | undefined, body: Uint8Array | string) => Robots;
+
+### build/robots.d.mts#robotsFromStatus
+export declare const robotsFromStatus: (status: number, body: string | undefined) => Robots;
+
+### build/robots.d.mts#signalsFor
+export declare const signalsFor: (robots: Robots, tokens: readonly string[], pathAndQuery: string) => string[];
+
+### build/robots.d.mts#unreachableRobots
+export declare const unreachableRobots: (reason: string) => Robots;
+
+### build/signals.d.mts#AiInput
+export type AiInput = "yes" | "no" | "unset";
+
+### build/signals.d.mts#NO_SIGNALS
+export declare const NO_SIGNALS: Signals;
+
+### build/signals.d.mts#Signals
+export interface Signals {
+  readonly ai_input: AiInput;
+  readonly raw: readonly string[];
+  readonly ai_train?: AiInput | undefined;
+  readonly deciding?: string | undefined;
+}
+
+### build/signals.d.mts#metaSignals
+export declare const metaSignals: (html: string) => string[];
+
+### build/signals.d.mts#readSignals
+export declare const readSignals: (robotsLines: readonly string[], header: (name: string) => string | undefined, pageLines?: readonly string[]) => Signals;

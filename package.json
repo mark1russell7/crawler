@@ -21,12 +21,16 @@
     "roadmap": "node scripts/roadmap.mjs",
     "smoke": "node scripts/smoke.mjs",
     "test": "pnpm -r run test",
-    "typecheck": "pnpm -r run typecheck"
+    "typecheck": "pnpm -r run typecheck",
+    "check:conventions": "conventions check",
+    "check:api": "api-report check"
   },
   "devDependencies": {
     "@arethetypeswrong/cli": "^0.18.5",
-    "@mark1russell7/cue": "github:mark1russell7/cue",
-    "@mark1russell7/ste-lint": "github:mark1russell7/ste-lint",
+    "@mark1russell7/api-report": "^0.2.0",
+    "@mark1russell7/conventions": "^0.2.0",
+    "@mark1russell7/cue": "github:mark1russell7/cue#f2bb6026e14fcfb782eef3e02771ce983d4bff55",
+    "@mark1russell7/ste-lint": "github:mark1russell7/ste-lint#f597d6c1e09bcfcb487bb575825d6d5f29e9e0c7",
     "@mark1russell7/template-cli": "^0.1.2",
     "esbuild": "0.28.2",
     "oxlint": "^1.87.0",
@@ -35,5 +39,15 @@
     "publint": "^0.3.25",
     "tsx": "^4.23.15",
     "typescript": "^7.0.2"
+  },
+  "conventions": {
+    "rules": {
+      "no-local-paths": {
+        "ignore": [
+          "packages/polite-crawler/test/corpus/robots/**"
+        ],
+        "reason": "The robots corpus keeps real robots.txt files of web sites, byte for byte, as test fixtures. A path in them that starts with /home is a URL path of the site, not the home folder of a user."
+      }
+    }
   }
 }

@@ -62,7 +62,7 @@
     "zod": "^4.6.6"
   },
   "devDependencies": {
-    "@mark1russell7/cue": "github:mark1russell7/cue",
+    "@mark1russell7/cue": "github:mark1russell7/cue#d4fc4d708b2cfeae91e194b18466455ccad875b7",
     "@types/node": "^22.19.0",
     "tsdown": "^0.23.1",
     "typescript": "^7.0.2",

@@ -20,5 +20,5 @@
     }
   },
   "include": ["src/**/*.ts", "src/**/*.tsx"],
-  "exclude": ["src/content.config.ts", "dist", ".astro"]
+  "exclude": ["src/content.config.ts", "src/**/*.test.ts", "dist", ".astro"]
 }

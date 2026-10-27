@@ -137,6 +137,8 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+          # The rule release-files of check:conventions reads the two parents of the merge commit of a pull request.
+          fetch-depth: 2
       - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
@@ -150,9 +152,13 @@ jobs:
       - run: pnpm lint
       # The writing rules (ASD-STE100) of the README files and the doc comments
       - run: pnpm lint:ste
+      # The conventions of the docs (@mark1russell7/conventions): exceptions are in the field conventions of package.json
+      - run: pnpm check:conventions
       # The public API: the build of the package against the reports in packages/polite-crawler/api/
       - run: pnpm build
       - run: pnpm api --check
+      # The report of each public package in packages/<package>/test/api/public-api.txt (@mark1russell7/api-report)
+      - run: pnpm check:api
       # When the check fails, the new reports are an artifact: download them, look at the change,
       # and commit them to packages/polite-crawler/api/ (or start `pnpm api` with a build).
       - name: Upload the new API reports

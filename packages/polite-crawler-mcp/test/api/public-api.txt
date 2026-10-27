@@ -1,0 +1,146 @@
+# The public API of polite-crawler-mcp
+#
+# The names of each entry of the exports field, and the declaration of each name, without comments
+# and private members. The command `api-report check` compares this file with the built .d.ts files.
+# To accept a change of the API, start the build, then `api-report update`, and review the diff.
+
+## . (build/index.d.mts): 25 names
+
+type CrawlMcpServer: build/index.d.mts#CrawlMcpServer
+type CrawlServerOptions: build/index.d.mts#CrawlServerOptions
+type CrawlToolOptions: build/index.d.mts#CrawlToolOptions
+INSTRUCTIONS: build/index.d.mts#INSTRUCTIONS
+MCP_HTTP_DEFAULTS: build/index.d.mts#MCP_HTTP_DEFAULTS
+type McpHttpOptions: build/index.d.mts#McpHttpOptions
+type McpHttpServer: build/index.d.mts#McpHttpServer
+type McpTaskInfo: @procedures/mcp-server#McpTaskInfo (external)
+McpTaskStore: @procedures/mcp-server#McpTaskStore (external)
+type McpTaskStoreOptions: @procedures/mcp-server#McpTaskStoreOptions (external)
+SERVER_NAME: build/index.d.mts#SERVER_NAME
+type StartMcpHttpOptions: build/index.d.mts#StartMcpHttpOptions
+type StartMcpOptions: build/index.d.mts#StartMcpOptions
+VERSION: build/index.d.mts#VERSION
+checkToken: build/index.d.mts#checkToken
+crawlContent: build/index.d.mts#crawlContent
+crawlHostOptions: build/index.d.mts#crawlHostOptions
+crawlTools: build/index.d.mts#crawlTools
+createMcpServer: build/index.d.mts#createMcpServer
+makeToken: build/index.d.mts#makeToken
+mcpHttpHost: build/index.d.mts#mcpHttpHost
+sameToken: build/index.d.mts#sameToken
+serveMcpHttp: build/index.d.mts#serveMcpHttp
+startMcpHttpServer: build/index.d.mts#startMcpHttpServer
+startMcpServer: build/index.d.mts#startMcpServer
+
+## bin: 1 commands
+
+polite-crawler-mcp: ./build/cli.mjs
+
+## Declarations
+
+### build/index.d.mts#CrawlMcpServer
+interface CrawlMcpServer {
+  connect(transport: Transport): Promise<void>;
+  close(): Promise<void>;
+  readonly host: McpHost | undefined;
+}
+
+### build/index.d.mts#CrawlServerOptions
+interface CrawlServerOptions extends CrawlToolOptions {
+  readonly tasks?: McpTaskStore$1 | undefined;
+}
+
+### build/index.d.mts#CrawlToolOptions
+interface CrawlToolOptions {
+  readonly onBehalfOf?: readonly string[] | undefined;
+  readonly allowUserProvided?: boolean | undefined;
+  readonly renderOff?: string | undefined;
+  readonly tools?: readonly string[] | undefined;
+}
+
+### build/index.d.mts#INSTRUCTIONS
+export declare const INSTRUCTIONS: string;
+
+### build/index.d.mts#MCP_HTTP_DEFAULTS
+export declare const MCP_HTTP_DEFAULTS: {
+  readonly port: 9307;
+  readonly host: "127.0.0.1";
+  readonly path: "/mcp";
+  readonly statusPath: "/status";
+  readonly maxSessions: 32;
+  readonly maxBodyBytes: 4_194_304;
+  readonly minTokenLength: 16;
+};
+
+### build/index.d.mts#McpHttpOptions
+interface McpHttpOptions {
+  readonly port?: number | undefined;
+  readonly host?: string | undefined;
+  readonly allowRemote?: boolean | undefined;
+  readonly token?: string | undefined;
+  readonly tokenFile?: string | undefined;
+  readonly status?: (() => unknown) | undefined;
+  readonly tasks?: McpTaskStore$1 | undefined;
+  readonly log?: ((line: string) => void) | undefined;
+}
+
+### build/index.d.mts#McpHttpServer
+interface McpHttpServer {
+  readonly url: string;
+  readonly host: string;
+  readonly port: number;
+  readonly token: string;
+  readonly tasks: McpTaskStore$1;
+  sessions(): number;
+  close(): Promise<void>;
+}
+
+### build/index.d.mts#SERVER_NAME
+export declare const SERVER_NAME = "polite-crawler";
+
+### build/index.d.mts#StartMcpHttpOptions
+interface StartMcpHttpOptions extends McpHttpOptions, CrawlToolOptions {}
+
+### build/index.d.mts#StartMcpOptions
+interface StartMcpOptions extends OpenOptions, CrawlToolOptions {
+  readonly log?: ((line: string) => void) | undefined;
+}
+
+### build/index.d.mts#VERSION
+export declare const VERSION = "0.2.4";
+
+### build/index.d.mts#checkToken
+export declare const checkToken: (token: string, source: string) => string;
+
+### build/index.d.mts#crawlContent
+export declare const crawlContent: McpToolContentHook;
+
+### build/index.d.mts#crawlHostOptions
+export declare const crawlHostOptions: (crawler: PoliteCrawler, options?: CrawlServerOptions) => McpHostOptions;
+
+### build/index.d.mts#crawlTools
+export declare const crawlTools: (crawler: PoliteCrawler, options?: CrawlToolOptions) => AnyProcedure[];
+
+### build/index.d.mts#createMcpServer
+export declare const createMcpServer: (crawler: PoliteCrawler, options?: CrawlServerOptions) => CrawlMcpServer;
+
+### build/index.d.mts#makeToken
+export declare const makeToken: () => string;
+
+### build/index.d.mts#mcpHttpHost
+export declare const mcpHttpHost: DaemonMcpHost;
+
+### build/index.d.mts#sameToken
+export declare const sameToken: (given: string, token: string) => boolean;
+
+### build/index.d.mts#serveMcpHttp
+export declare const serveMcpHttp: (makeHost: (face: {
+  readonly token: string;
+  readonly tasks: McpTaskStore$1;
+}) => McpHost, options?: McpHttpOptions) => Promise<McpHttpServer>;
+
+### build/index.d.mts#startMcpHttpServer
+export declare const startMcpHttpServer: (crawler: PoliteCrawler, options?: StartMcpHttpOptions) => Promise<McpHttpServer>;
+
+### build/index.d.mts#startMcpServer
+export declare const startMcpServer: (options: StartMcpOptions) => Promise<void>;

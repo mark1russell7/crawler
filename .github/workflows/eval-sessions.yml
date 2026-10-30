@@ -59,7 +59,7 @@ concurrency:
 
 env:
   # Claude Code and polite-crawler-mcp at fixed versions, so that a run can be done again
-  CLAUDE_CODE_VERSION: 2.1.296
+  CLAUDE_CODE_VERSION: 2.1.312
   MCP_VERSION: ${{ inputs.mcp_version }}
 
 jobs:

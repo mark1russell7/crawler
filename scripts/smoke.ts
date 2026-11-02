@@ -100,8 +100,14 @@ const show = (text: string): void => {
 };
 
 // One command line. On Windows npm, pnpm and the bin shims are .cmd files, which need a shell.
-const quote = (arg: string): string =>
-  /^[\w./:=@\\-]+$/.test(arg) ? arg : `"${arg.replace(/"/g, '\\"')}"`;
+// An argument with other characters goes in double quotes. cmd.exe does not treat a backslash
+// as an escape, so on Windows a quote in the argument becomes two quotes. sh gets a backslash
+// before each \, ", $ and `.
+const quote = (arg: string): string => {
+  if (/^[\w./:=@\\-]+$/.test(arg)) return arg;
+  if (process.platform === "win32") return `"${arg.replace(/"/g, '""')}"`;
+  return `"${arg.replace(/[\\"$`]/g, "\\$&")}"`;
+};
 const run = (
   command: string,
   args: readonly string[],
@@ -476,14 +482,15 @@ export const start: typeof startMcpServer = startMcpServer;
   // 3c. The entry points that a browser uses stay small: the gzip size of each one, bundled and minified
   step("the size of the entry points for a browser");
   const { build } = await import("esbuild");
-  // the sizes of version 0.1.0, and 20 percent more
+  // the sizes of version 0.1.0, and 20 percent more. The budget of html is the size with
+  // linkedom 0.18.15, and 20 percent more: that version bundles the CSS parser cssomnom.
   const budgets: Readonly<Record<string, number>> = {
     robots: 2900,
     hours: 8700,
     classify: 1300,
     politeness: 3000,
     signals: 1100,
-    html: 138_000,
+    html: 192_000,
   };
   for (const [name, budget] of Object.entries(budgets)) {
     const bundled = await build({

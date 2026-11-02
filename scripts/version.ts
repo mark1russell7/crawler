@@ -158,12 +158,7 @@ export const syncVersion = (root: string, date: string): SyncResult => {
       `packages/${name}/test/api/public-api.txt`,
     ]) {
       edit(file, (text) =>
-        replaceIn(
-          file,
-          text,
-          /^(export (?:declare )?const VERSION = )"[^"]*";$/m,
-          `$1${quoted};`,
-        ),
+        replaceIn(file, text, /^(export (?:declare )?const VERSION = )"[^"]*";$/m, `$1${quoted};`),
       );
     }
   }

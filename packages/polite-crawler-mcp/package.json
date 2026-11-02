@@ -52,7 +52,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc -p tsconfig.json --noEmit --emitDeclarationOnly false && tsc -p tsconfig.test.json",
-    "prepublishOnly": "node ../../scripts/publish-guard.mjs && pnpm build"
+    "prepublishOnly": "node ../../scripts/publish-guard.ts && pnpm build",
+    "version": "node ../../scripts/version.ts"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.32.1",

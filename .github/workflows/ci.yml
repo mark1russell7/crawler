@@ -22,7 +22,7 @@ on:
         default: false
   schedule:
     # Each Monday. The smoke test installs the tarball with the newest versions of its dependencies.
-    - cron: "17 6 * * 1"
+    - cron: "54 6 * * 1"
 
 permissions:
   contents: read
@@ -36,6 +36,7 @@ jobs:
   test:
     name: Test (${{ matrix.os }}, Node.js ${{ matrix.node }})
     strategy:
+      max-parallel: 3
       fail-fast: false
       matrix:
         os: [ubuntu-latest]
@@ -127,7 +128,7 @@ jobs:
 
       # The npm builds, packed and installed into an empty project the way a user gets them
       - run: pnpm build
-      - run: node scripts/smoke.mjs
+      - run: node scripts/smoke.ts
 
   checks:
     name: Checks
@@ -191,7 +192,7 @@ jobs:
       - name: Check the site
         run: |
           if [ "$SHOTS" = true ]; then
-            pnpm --filter @crawler/site exec node scripts/check-site.mjs --shots "$RUNNER_TEMP/shots"
+            pnpm --filter @crawler/site exec node scripts/check-site.ts --shots "$RUNNER_TEMP/shots"
           else
             pnpm --filter @crawler/site run check
           fi

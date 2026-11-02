@@ -73,7 +73,8 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "typecheck": "tsc -p tsconfig.json --noEmit --emitDeclarationOnly false && tsc -p tsconfig.test.json && tsc -p eval/tsconfig.json",
-    "prepublishOnly": "node ../../scripts/publish-guard.mjs && pnpm build"
+    "prepublishOnly": "node ../../scripts/publish-guard.ts && pnpm build",
+    "version": "node ../../scripts/version.ts"
   },
   "dependencies": {
     "@mozilla/readability": "^0.6.0",

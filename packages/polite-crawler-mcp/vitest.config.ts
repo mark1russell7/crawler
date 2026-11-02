@@ -7,7 +7,6 @@ const limit = process.env["CI"] === undefined ? 15_000 : 30_000;
 export default defineConfig({
   test: {
     include: ["src/**/*.{test,spec}.{ts,tsx}"],
-    passWithNoTests: true,
     testTimeout: limit,
     hookTimeout: limit,
   },

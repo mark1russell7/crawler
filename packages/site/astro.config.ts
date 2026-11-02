@@ -6,21 +6,51 @@ import { fileURLToPath } from "node:url";
 import preact from "@astrojs/preact";
 import sitemap from "@astrojs/sitemap";
 import starlight from "@astrojs/starlight";
+import type { AstroIntegration } from "astro";
 import { defineConfig } from "astro/config";
-import { pureCrawler } from "./pure-crawler.mjs";
+import { pureCrawler } from "./pure-crawler.ts";
 
-const base = process.env.SITE_BASE ?? "/crawler";
+const base = process.env["SITE_BASE"] ?? "/crawler";
 const site = "https://mark1russell7.github.io";
-// The share card of each page (Open Graph and Twitter). scripts/og-image.mjs renders it.
+// The share card of each page (Open Graph and Twitter). scripts/og-image.ts renders it.
 const card = `${site}${base}/og.png`;
 
 const docs = fileURLToPath(new URL("./src/content/docs/", import.meta.url));
 
 /**
+ * A node of the HTML tree (hast), as the Sätteri plugins read it. The site does not depend on the
+ * package satteri, so these types give only the fields that the plugins use.
+ */
+interface HastNode {
+  readonly type: string;
+  readonly tagName?: string;
+  readonly properties?: Readonly<Record<string, unknown>>;
+  readonly children?: readonly HastNode[];
+  readonly value?: string;
+}
+
+/** The context that Sätteri gives to the visit function of a plugin. */
+interface VisitContext {
+  parent(node: HastNode): HastNode | undefined;
+  textContent(node: HastNode): string;
+  setProperty(node: HastNode, key: string, value: unknown): void;
+  indexOf(node: HastNode): number | undefined;
+}
+
+/** A Sätteri plugin of the HTML tree: a visit function for the elements of some tag names. */
+interface HastPlugin {
+  readonly name: string;
+  readonly element: ReadonlyArray<{
+    readonly filter: readonly string[];
+    visit(node: HastNode, ctx: VisitContext): HastNode | undefined;
+  }>;
+}
+
+/**
  * This function gives the date of the last commit of the page of a URL, as "Last updated" shows it.
  * With no git history (a shallow clone), it gives no date, and the sitemap has no lastmod.
  */
-const lastmodOf = (url) => {
+const lastmodOf = (url: string): string | undefined => {
   const path = new URL(url).pathname.slice(base.length).replace(/^\/+|\/+$/g, "") || "index";
   for (const file of [`${path}.mdx`, `${path}.md`, `${path}/index.mdx`, `${path}/index.md`]) {
     const full = join(docs, file);
@@ -39,22 +69,22 @@ const lastmodOf = (url) => {
 };
 
 /** This function tells if a node of the HTML tree is in an element of one of these names. */
-const isIn = (node, names, ctx) => {
+const isIn = (node: HastNode, names: readonly string[], ctx: VisitContext): boolean => {
   for (let parent = ctx.parent(node); parent !== undefined; parent = ctx.parent(parent)) {
-    if (parent.type === "element" && names.includes(parent.tagName)) return true;
+    if (parent.type === "element" && names.includes(parent.tagName ?? "")) return true;
   }
   return false;
 };
 
 /**
- * A break is good after these characters of a long name: `$POLITE_CRAWLER_DIR`, a path, `A=1`, and
- * a "-" inside a word (`--allow-user-provided`), but not between the two "-" at the start.
+ * A long name can break after these characters: "_" (`$POLITE_CRAWLER_DIR`), "/" (a path) and "=" (`A=1`).
+ * It can also break after a "-" inside a word (`--allow-user-provided`), but not between the two "-" at the start.
  */
 const BREAK_AFTER = /(?<=[_/=]|[^-]-)/;
 
 /** The children of a code element: the parts of its text, with a <wbr> between two parts. */
-const withBreaks = (parts) => {
-  const children = [];
+const withBreaks = (parts: readonly string[]): HastNode[] => {
+  const children: HastNode[] = [];
   for (const [index, part] of parts.entries()) {
     if (index > 0) children.push({ type: "element", tagName: "wbr", properties: {}, children: [] });
     children.push({ type: "text", value: part });
@@ -67,10 +97,10 @@ const withBreaks = (parts) => {
  * - A short code name with no space, for example `--allow-user-provided`, gets the class `pc-name`.
  *   The CSS keeps it on one line on a wide screen, so a line does not end with a lone "-".
  * - An option in a table cell (it starts with "-") gets the class `pc-option`, and it stays whole.
- * - In a table cell, a long name gets a <wbr> after each "_", "/", "=" and inner "-", so it breaks
- *   there and not in the middle of a word.
+ * - In a table cell, a long name gets a <wbr> after each "_", "/", "=" and inner "-".
+ *   Thus it breaks there and not in the middle of a word.
  */
-const proseCode = {
+const proseCode: HastPlugin = {
   name: "polite-crawler-prose-code",
   element: [
     {
@@ -79,7 +109,7 @@ const proseCode = {
         if (isIn(node, ["pre"], ctx)) return undefined;
         const text = ctx.textContent(node);
         const inCell = isIn(node, ["td", "th"], ctx);
-        const classes = [];
+        const classes: string[] = [];
         if (text.length <= 40 && !/\s/.test(text)) classes.push("pc-name");
         if (inCell && text.startsWith("-") && text.length <= 28) classes.push("pc-option");
         if (classes.length === 0 && !inCell) return undefined;
@@ -99,8 +129,8 @@ const proseCode = {
 const CARD_COLUMNS = 3;
 
 /**
- * The class of a card table. Do not use a class of a figure here: the class `pc-stack` of the
- * stacked bars (`display: flex` and a height of 28px) once made the rows of the tables disappear.
+ * The class of a card table. Do not use a class of a figure here.
+ * The class `pc-stack` of the stacked bars (`display: flex` and a height of 28px) once made the rows of the tables disappear.
  */
 const CARDS = "pc-cards";
 
@@ -108,7 +138,7 @@ const CARDS = "pc-cards";
  * The roles of the parts of a card table. A phone shows a card table with `display: block`, and some
  * browsers then do not tell a screen reader that it is a table. The roles keep the table for them.
  */
-const ROLES = {
+const ROLES: Readonly<Record<string, string>> = {
   table: "table",
   thead: "rowgroup",
   tbody: "rowgroup",
@@ -118,19 +148,19 @@ const ROLES = {
 };
 
 /** The element children of a node of the HTML tree (hast), all of them or those of one tag name. */
-const elementsOf = (node, tagName) =>
+const elementsOf = (node: HastNode | undefined, tagName?: string): HastNode[] =>
   (node?.children ?? []).filter(
     (child) => child.type === "element" && (tagName === undefined || child.tagName === tagName),
   );
 
 /** The names of the columns of a table: the text of each cell of the first row of its head. */
-const columnsOf = (table, ctx) => {
+const columnsOf = (table: HastNode, ctx: VisitContext): string[] => {
   const head = elementsOf(elementsOf(table, "thead")[0], "tr")[0];
   return elementsOf(head, "th").map((th) => ctx.textContent(th).trim());
 };
 
 /** The nearest table around a node of the HTML tree, or undefined. */
-const tableOf = (node, ctx) => {
+const tableOf = (node: HastNode, ctx: VisitContext): HastNode | undefined => {
   for (let parent = ctx.parent(node); parent !== undefined; parent = ctx.parent(parent)) {
     if (parent.type === "element" && parent.tagName === "table") return parent;
   }
@@ -144,30 +174,32 @@ const tableOf = (node, ctx) => {
  * - Each part of the table gets its role (ROLES).
  * At each other width, a card table looks as a table with no class. A table of two columns stays a table.
  */
-const proseTables = {
+const proseTables: HastPlugin = {
   name: "polite-crawler-prose-tables",
   element: [
     {
       filter: ["table"],
       visit(node, ctx) {
-        if (columnsOf(node, ctx).length < CARD_COLUMNS) return;
+        if (columnsOf(node, ctx).length < CARD_COLUMNS) return undefined;
         ctx.setProperty(node, "class", CARDS);
-        ctx.setProperty(node, "role", ROLES.table);
+        ctx.setProperty(node, "role", ROLES["table"]);
+        return undefined;
       },
     },
     {
       filter: ["thead", "tbody", "tr", "th", "td"],
       visit(node, ctx) {
         const table = tableOf(node, ctx);
-        if (table === undefined) return;
+        if (table === undefined) return undefined;
         const columns = columnsOf(table, ctx);
-        if (columns.length < CARD_COLUMNS) return;
-        ctx.setProperty(node, "role", ROLES[node.tagName]);
-        if (node.tagName !== "td") return;
+        if (columns.length < CARD_COLUMNS) return undefined;
+        ctx.setProperty(node, "role", ROLES[node.tagName ?? ""]);
+        if (node.tagName !== "td") return undefined;
         // the column of the cell: the number of the element cells before it in its row
-        const before = (ctx.parent(node).children ?? []).slice(0, ctx.indexOf(node) ?? 0);
+        const before = (ctx.parent(node)?.children ?? []).slice(0, ctx.indexOf(node) ?? 0);
         const column = before.filter((child) => child.type === "element").length;
         ctx.setProperty(node, "data-label", columns[column] ?? "");
+        return undefined;
       },
     },
   ],
@@ -176,14 +208,31 @@ const proseTables = {
 const NO_PLUGINS =
   "the Markdown processor has no hastPlugins: the code of the prose wraps as before, and no table is a card table";
 
+/** The list of the hast plugins of the Markdown processor, when the processor has one. */
+const hastPluginsOf = (markdown: unknown): unknown[] | undefined => {
+  const processor: unknown =
+    typeof markdown === "object" && markdown !== null && "processor" in markdown
+      ? markdown.processor
+      : undefined;
+  const options: unknown =
+    typeof processor === "object" && processor !== null && "options" in processor
+      ? processor.options
+      : undefined;
+  const plugins: unknown =
+    typeof options === "object" && options !== null && "hastPlugins" in options
+      ? options.hastPlugins
+      : undefined;
+  return Array.isArray(plugins) ? (plugins as unknown[]) : undefined;
+};
+
 /** This integration adds `proseCode` and `proseTables` to the Markdown processor (Sätteri), as Starlight does. */
-const proseCodeIntegration = {
+const proseCodeIntegration: AstroIntegration = {
   name: "polite-crawler-prose-code",
   hooks: {
     "astro:config:setup": ({ config, logger }) => {
-      const plugins = config.markdown?.processor?.options?.hastPlugins;
-      if (Array.isArray(plugins)) plugins.push(proseCode, proseTables);
-      else logger.warn(NO_PLUGINS);
+      const plugins = hastPluginsOf(config.markdown);
+      if (plugins === undefined) logger.warn(NO_PLUGINS);
+      else plugins.push(proseCode, proseTables);
     },
   },
 };
@@ -192,7 +241,7 @@ export default defineConfig({
   site,
   base,
   trailingSlash: "ignore",
-  // the islands and their workers use the pure parts of polite-crawler, with no Node.js part (pure-crawler.mjs)
+  // the islands and their workers use the pure parts of polite-crawler, with no Node.js part (pure-crawler.ts)
   // the workers are ES modules ({ type: "module" }), so a worker can have chunks of its own
   vite: { plugins: [pureCrawler()], worker: { format: "es", plugins: () => [pureCrawler()] } },
   integrations: [

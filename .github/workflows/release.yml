@@ -75,7 +75,7 @@ jobs:
       node-version-file: .nvmrc
       # 1. The MCP server package of server.json. Its outputs (server, server-version, mcp-package,
       #    mcp-version) go to the output after-pack, for mcp-registry.
-      # 2. The tarballs that go to npm. When the MCP server is a package of its own, smoke.mjs
+      # 2. The tarballs that go to npm. When the MCP server is a package of its own, smoke.ts
       #    tests its tarball too (--mcp-tarball). pnpm writes the publishConfig entry points
       #    (build/) into the packed package.json.
       # 3. The registry examines server.json before npm gets the version. This step needs no token.
@@ -106,7 +106,7 @@ jobs:
         if [ "$mcp_package" != polite-crawler ]; then
           args+=(--mcp-tarball "$RELEASE_DIR/$(tarball_of "$mcp_package")")
         fi
-        node scripts/smoke.mjs "${args[@]}"
+        node scripts/smoke.ts "${args[@]}"
         MCP_PUBLISHER_VERSION=1.8.1
         MCP_PUBLISHER_SHA256=a06c9096dcb9727c13555b6be26c7effa707b01f06a4c561ba7a3635443cf2cc
         curl -fsSL -o "$RUNNER_TEMP/mcp-publisher.tar.gz" "https://github.com/modelcontextprotocol/registry/releases/download/v${MCP_PUBLISHER_VERSION}/mcp-publisher_linux_amd64.tar.gz"

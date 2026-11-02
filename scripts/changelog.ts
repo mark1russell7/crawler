@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Prints the section of CHANGELOG.md for one version, for the notes of a GitHub release.
 //
-//   node scripts/changelog.mjs 0.2.0
+//   node scripts/changelog.ts 0.2.0
 //
 // The section starts at the heading "## 0.2.0" (a date can follow it) and ends at the next "## " heading.
 // The script exits with 1 when the section is missing or empty, so a release cannot go out without notes.
@@ -12,7 +12,7 @@ import { fileURLToPath } from "node:url";
 
 const version = process.argv[2];
 if (version === undefined || !/^\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?$/.test(version)) {
-  process.stderr.write("usage: node scripts/changelog.mjs <version>\n");
+  process.stderr.write("usage: node scripts/changelog.ts <version>\n");
   process.exit(2);
 }
 

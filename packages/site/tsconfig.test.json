@@ -1,6 +1,10 @@
 {
   "$schema": "https://json.schemastore.org/tsconfig",
   "extends": "./tsconfig.json",
-  "include": ["src/**/*.ts", "src/**/*.tsx", "vitest.config.ts"],
-  "exclude": ["src/content.config.ts", "dist", ".astro"]
+  "compilerOptions": {
+    // astro/client declares the virtual module astro:content of src/content.config.ts
+    "types": ["astro/client", "node"]
+  },
+  "include": ["src/**/*.ts", "src/**/*.tsx", "*.config.ts", "pure-crawler.ts", "scripts/**/*.ts"],
+  "exclude": ["dist", ".astro"]
 }

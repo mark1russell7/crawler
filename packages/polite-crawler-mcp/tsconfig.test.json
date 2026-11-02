@@ -11,6 +11,6 @@
     // The tests use the test helpers of polite-crawler (its local sites and stores), so the root is packages/.
     "rootDir": ".."
   },
-  "include": ["src/**/*"],
+  "include": ["src/**/*", "*.config.ts"],
   "exclude": []
 }

@@ -16,6 +16,7 @@
 //
 // The tests of the site (vitest) do not use this plugin: they use the real modules.
 import { readFileSync } from "node:fs";
+import type { Plugin } from "vite";
 
 /** A module of the source of polite-crawler. */
 const SOURCE = /[\\/]polite-crawler[\\/]src[\\/][^\\/]+\.ts$/;
@@ -27,17 +28,17 @@ const PACKAGE = /^(?:node:|(?:@[\w.~-]+\/)?[\w~-][\w.~-]*(?:\/|$))/;
 const BROWSER_SAFE = new Set(["linkedom", "@mozilla/readability"]);
 const STAND_IN = "\0polite-crawler-stand-in:";
 
-const escape = (text) => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+const escape = (text: string): string => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 /** The names that a module imports from a source, so that the stand-in can export each one. */
-const namesOf = (file, source) => {
+const namesOf = (file: string, source: string): string[] => {
   let code = "";
   try {
     code = readFileSync(file, "utf8");
   } catch {
     return [];
   }
-  const names = new Set();
+  const names = new Set<string>();
   const from = new RegExp(
     `import\\s+(?!type\\b)([^;]*?)\\s+from\\s+["']${escape(source)}["']`,
     "g",
@@ -47,8 +48,9 @@ const namesOf = (file, source) => {
     for (const part of (braces?.[1] ?? "").split(",")) {
       // "a as b" imports the export a
       const words = part.trim().split(/\s+/);
-      if (words[0] === "type" || words[0] === "") continue;
-      names.add(words[0]);
+      const name = words[0];
+      if (name === undefined || name === "type" || name === "") continue;
+      names.add(name);
     }
   }
   // "import * as zlib": the stand-in exports each property that the module reads
@@ -57,7 +59,7 @@ const namesOf = (file, source) => {
   ).exec(code)?.[1];
   if (namespace !== undefined) {
     const read = new RegExp(`\\b${escape(namespace)}\\.([\\w$]+)`, "g");
-    for (const [, name] of code.matchAll(read)) names.add(name);
+    for (const [, name] of code.matchAll(read)) if (name !== undefined) names.add(name);
   }
   return [...names].filter((name) => /^[A-Za-z_$][\w$]*$/.test(name) && name !== "default");
 };
@@ -66,7 +68,7 @@ const namesOf = (file, source) => {
  * The stand-in of a module: each property gives the stand-in again, and a call or a `new` throws.
  * Thus a module loads, and a use of the missing part stops with an error, not with a wrong value.
  */
-const standIn = (source, names) =>
+const standIn = (source: string, names: readonly string[]): string =>
   [
     `const missing = () => { throw new Error(${JSON.stringify(`${source} is not part of the site build`)}); };`,
     "const nothing = new Proxy(function () {}, {",
@@ -79,7 +81,7 @@ const standIn = (source, names) =>
   ].join("\n");
 
 /** This plugin of Vite gives the pure parts of polite-crawler to the build, with no Node.js part. */
-export const pureCrawler = () => ({
+export const pureCrawler = (): Plugin => ({
   name: "pure-crawler",
   enforce: "pre",
   async resolveId(source, importer, options) {
@@ -97,7 +99,7 @@ export const pureCrawler = () => ({
       const resolved = await this.resolve(source, importer, { ...options, skipSelf: true });
       return resolved === null ? null : { ...resolved, moduleSideEffects: false };
     }
-    const names = namesOf(importer, source);
+    const names = importer === undefined ? [] : namesOf(importer, source);
     return { id: `${STAND_IN}${source}?${names.join(",")}`, moduleSideEffects: false };
   },
   load(id) {
@@ -110,7 +112,7 @@ export const pureCrawler = () => ({
     if (!SOURCE.test(id) || !code.includes("Buffer.from(")) return null;
     const next = code.replace(
       BUFFER_CONSTANT,
-      (_, head, args) =>
+      (_: string, head: string, args: string) =>
         `${head}/* @__PURE__ */ (() => (typeof Buffer === "undefined" ? undefined : Buffer.from(${args})))();`,
     );
     return next === code ? null : { code: next, map: null };

@@ -14,8 +14,8 @@ name: Study each month
 
 on:
   schedule:
-    # 06:17 UTC on day 2 of each month. Tranco makes the list of day 1 at the end of day 1.
-    - cron: "17 6 2 * *"
+    # 06:39 UTC on day 2 of each month. Tranco makes the list of day 1 at the end of day 1.
+    - cron: "39 6 2 * *"
   workflow_dispatch:
 
 permissions: {}
@@ -78,7 +78,7 @@ jobs:
 
       # The share card of the study shows the date of the run and the share of GPTBot
       - name: Render the share card of the study
-        run: pnpm --filter @crawler/site exec node scripts/og-image.mjs --study
+        run: pnpm --filter @crawler/site exec node scripts/og-image.ts --study
 
       # The checks of the site, as in ci.yml, on the new data
       - name: Typecheck the site
@@ -93,7 +93,7 @@ jobs:
       # The links, the width on a phone, the console, the JavaScript budget and the feed. It also
       # saves a screenshot of each page for the review of the pull request.
       - name: Check the site
-        run: pnpm --filter @crawler/site exec node scripts/check-site.mjs --shots "$RUNNER_TEMP/shots"
+        run: pnpm --filter @crawler/site exec node scripts/check-site.ts --shots "$RUNNER_TEMP/shots"
 
       # The change has only the data of the study and its share card. A change to another file stays
       # out of the change, and the log names it.

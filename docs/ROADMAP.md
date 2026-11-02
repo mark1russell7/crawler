@@ -43,6 +43,13 @@ Two `polite-crawler daemon` starts at the same moment on one store both pass the
 
 - Area: Package
 
+### `html-size`: The html entry grew 25 % with linkedom 0.18.15
+
+linkedom 0.18.15 (2026-11-01) bundles the CSS parser cssomnom in place of @acemir/cssom. The gzip size of polite-crawler/html went from 128362 to 160188 bytes (+25 %), over the 138000 budget. #80 raised the budget to 192000 to unblock CI, so the regression is real and open. To do: measure what the html entry uses of the CSS parser; then pin linkedom below 0.18.15, drop the CSS parser from the bundle, or accept the size with a reason. Put the budget back to the measured size plus a margin from its noise.
+
+- Area: Package
+- [crawler #80 (budget raised to 192000)](https://github.com/mark1russell7/crawler/pull/80)
+
 ## Shipped
 
 ### `mcp-lean`: MCP server: a smaller fixed cost in each session
@@ -56,6 +63,20 @@ Shipped in 0.2.3 (#38). The re-run of part B (run 40163619030, Sonnet, 90 sessio
 - [crawler #38](https://github.com/mark1russell7/crawler/pull/38)
 - [crawler #41 (the numbers on the site)](https://github.com/mark1russell7/crawler/pull/41)
 - [Real Claude Code sessions](https://mark1russell7.github.io/crawler/notes/claude-code-sessions/)
+
+### `security-alerts`: Security alerts: undici and body-parser CVEs, CodeQL findings
+
+Fixed in #44 (undici ^8.12.3 for CVE-2026-109869, so a server can no longer stop the process, plus the fixed body-parser, fast-uri, ip-address and postcss) and #45 (linear time for robots.txt comments and usage lines: up to 10 s on one 100k-character line before; query stars; charset comments). The other CodeQL alerts were dismissed with reasons (the WARC record-id SHA-1, test-only code, our own build data). The postcss-selector-parser alert is build-only for the site and needs a major. Release takes the eval.yml alerts. Shipped in 0.2.4 (#46), and a clean npx works. jarvis is told.
+
+- Area: Package
+- Started: 2026-10-25
+- Shipped: 2026-10-25
+- [crawler #43 (the security workflow)](https://github.com/mark1russell7/crawler/pull/43)
+- [Code scanning alerts](https://github.com/mark1russell7/crawler/security/code-scanning)
+- [crawler #44 (dependencies)](https://github.com/mark1russell7/crawler/pull/44)
+- [crawler #45 (CodeQL fixes)](https://github.com/mark1russell7/crawler/pull/45)
+- [release PR #46 (0.2.4)](https://github.com/mark1russell7/crawler/pull/46)
+- [v0.2.4 release](https://github.com/mark1russell7/crawler/releases/tag/v0.2.4)
 
 ### `watch-api`: Watch API: a job for runWatch, a schedule setter, and add that keeps next_at
 

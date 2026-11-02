@@ -63,8 +63,10 @@ const declaredCharset = (bytes: Uint8Array): string | undefined => {
   if (xml !== null) return xml[1];
   // a declaration inside a comment declares nothing
   const markup = withoutComments(head);
-  // `<meta charset=x>`, and `<meta http-equiv="Content-Type" content="text/html; charset=x">`
-  const meta = /<meta\b[^>]*?\bcharset\s*=\s*["']?\s*([A-Za-z0-9_:.+-]+)/i.exec(markup);
+  // `<meta charset=x>`, and `<meta http-equiv="Content-Type" content="text/html; charset=x">`.
+  // The spaces after a quote are a separate group, so two runs of spaces are never next to each
+  // other. The time is linear in the length of the head (CodeQL alert 32).
+  const meta = /<meta\b[^>]*?\bcharset\s*=\s*(?:["']\s*)?([A-Za-z0-9_:.+-]+)/i.exec(markup);
   return meta?.[1];
 };
 

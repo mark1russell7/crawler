@@ -97,4 +97,16 @@ describe("the comments before a declaration", () => {
     const head = html(`${"<!--".repeat(100_000)}<meta charset=koi8-r>`);
     expect(bodyEncoding(head, "text/html")).toBe("utf-8");
   });
+
+  it("read a declaration with spaces around its quote, and a head of spaces with no value (CodeQL alert 32)", () => {
+    expect(bodyEncoding(html('<meta charset= " koi8-r">'), "text/html")).toBe("koi8-r");
+    expect(bodyEncoding(html("<meta charset=  koi8-r>"), "text/html")).toBe("koi8-r");
+    const spaces = html(`<meta charset=${" ".repeat(2_000)}`);
+    const started = performance.now();
+    for (let round = 0; round < 1_000; round += 1) {
+      expect(bodyEncoding(spaces, "text/html")).toBe("utf-8");
+    }
+    // 1,000 heads of 2,000 spaces: the linear regex takes about 5 ms, the old quadratic regex about 2.3 s
+    expect(performance.now() - started).toBeLessThan(500);
+  });
 });

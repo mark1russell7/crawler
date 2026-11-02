@@ -24,6 +24,7 @@ const FILES = [
     `packages/${name}/package.json`,
     `packages/${name}/src/version.ts`,
     `packages/${name}/api/index.api.md`,
+    `packages/${name}/test/api/public-api.txt`,
   ]),
   "server.json",
   ...CHANGELOGS,
@@ -127,6 +128,10 @@ void describe("syncVersion", () => {
       assert.match(
         read(`packages/${name}/api/index.api.md`),
         /^export const VERSION = "9\.8\.7";$/m,
+      );
+      assert.match(
+        read(`packages/${name}/test/api/public-api.txt`),
+        /^export declare const VERSION = "9\.8\.7";$/m,
       );
     }
     const server = JSON.parse(read("server.json")) as {

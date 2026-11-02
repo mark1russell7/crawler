@@ -7,7 +7,8 @@
 // The two packages always have the same version. The script reads the version of each package.json,
 // takes the higher one, and writes it to each place that names the version:
 //   - "version" of packages/polite-crawler/package.json and packages/polite-crawler-mcp/package.json
-//   - VERSION of src/version.ts and of the API report api/index.api.md of each package
+//   - VERSION of src/version.ts and of the two API reports of each package: api/index.api.md
+//     (scripts/api.ts) and test/api/public-api.txt (api-report)
 //   - the two "version" fields of server.json
 // Then CHANGELOG.md and packages/polite-crawler-mcp/CHANGELOG.md get "## <version> - <date>" directly
 // below "## Unreleased", with the notes of Unreleased. A second run changes nothing.
@@ -150,13 +151,18 @@ export const syncVersion = (root: string, date: string): SyncResult => {
     edit(`packages/${name}/package.json`, (text) =>
       replaceIn(name, text, /^ {2}"version": "[^"]*"/m, `  "version": ${quoted}`),
     );
-    for (const file of [`packages/${name}/src/version.ts`, `packages/${name}/api/index.api.md`]) {
+    // the report of api-report has `export declare const`
+    for (const file of [
+      `packages/${name}/src/version.ts`,
+      `packages/${name}/api/index.api.md`,
+      `packages/${name}/test/api/public-api.txt`,
+    ]) {
       edit(file, (text) =>
         replaceIn(
           file,
           text,
-          /^export const VERSION = "[^"]*";$/m,
-          `export const VERSION = ${quoted};`,
+          /^(export (?:declare )?const VERSION = )"[^"]*";$/m,
+          `$1${quoted};`,
         ),
       );
     }

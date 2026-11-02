@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 // The smoke test of the published artifacts of polite-crawler and polite-crawler-mcp.
 //
-//   node scripts/smoke.mjs                         pack the two packages (build them first if needed)
-//   node scripts/smoke.mjs --tarball <file>        test this tarball of polite-crawler
-//   node scripts/smoke.mjs --mcp-tarball <file>    test this tarball of polite-crawler-mcp
-//   node scripts/smoke.mjs --keep                  keep the temporary folder, and print its path
+//   node scripts/smoke.ts                         pack the two packages (build them first if needed)
+//   node scripts/smoke.ts --tarball <file>        test this tarball of polite-crawler
+//   node scripts/smoke.ts --mcp-tarball <file>    test this tarball of polite-crawler-mcp
+//   node scripts/smoke.ts --keep                  keep the temporary folder, and print its path
 //
 // It checks the tarballs the way a user gets them:
 //   1. The packed manifests: every entry point is in its tarball, the root entry point of
@@ -18,6 +18,7 @@
 //   7. attw (the esm-only profile) and publint examine each tarball.
 
 import { spawn, spawnSync } from "node:child_process";
+import type { ChildProcessWithoutNullStreams, SpawnSyncOptions } from "node:child_process";
 import {
   mkdtempSync,
   readFileSync,
@@ -45,30 +46,80 @@ const { values } = parseArgs({
   },
 });
 
+/** The fields of a packed package.json that the smoke test reads. */
+interface Manifest {
+  readonly name: string;
+  readonly version: string;
+  readonly main?: string;
+  readonly mcpName?: string;
+  readonly bin?: string | Readonly<Record<string, string>>;
+  readonly exports?: Readonly<Record<string, unknown>>;
+  readonly engines?: { readonly node?: unknown };
+  readonly dependencies?: Readonly<Record<string, string>>;
+  readonly [field: string]: unknown;
+}
+/** The fields of server.json that the smoke test reads. */
+interface Registry {
+  readonly name?: string;
+  readonly version?: string;
+  readonly packages?: ReadonlyArray<{
+    readonly registryType?: string;
+    readonly identifier?: string;
+    readonly version?: string;
+  }>;
+}
+/** A message of JSON-RPC from the MCP server. */
+interface RpcMessage {
+  readonly id?: number;
+  readonly result?: {
+    readonly serverInfo?: { readonly name?: string; readonly version?: string };
+    readonly tools?: ReadonlyArray<{ readonly name: string }>;
+  };
+}
+/** The result of one command. */
+interface RunResult {
+  readonly status: number | null;
+  readonly stdout: string;
+  readonly stderr: string;
+}
+
 let failures = 0;
-const step = (text) => process.stdout.write(`\n== ${text}\n`);
-const ok = (text) => process.stdout.write(`  ok    ${text}\n`);
-const bad = (text) => {
+const step = (text: string): void => {
+  process.stdout.write(`\n== ${text}\n`);
+};
+const ok = (text: string): void => {
+  process.stdout.write(`  ok    ${text}\n`);
+};
+const bad = (text: string): void => {
   failures += 1;
   process.stdout.write(`  FAIL  ${text}\n`);
 };
-const check = (condition, text) => (condition ? ok(text) : bad(text));
-const show = (text) => {
+const check = (condition: boolean, text: string): void => (condition ? ok(text) : bad(text));
+const show = (text: string): void => {
   if (text.trim() !== "") process.stdout.write(`${text.trimEnd().replace(/^/gm, "        ")}\n`);
 };
 
 // One command line. On Windows npm, pnpm and the bin shims are .cmd files, which need a shell.
-const quote = (arg) => (/^[\w./:=@\\-]+$/.test(arg) ? arg : `"${arg.replace(/"/g, '\\"')}"`);
-const run = (command, args, options = {}) => {
+const quote = (arg: string): string =>
+  /^[\w./:=@\\-]+$/.test(arg) ? arg : `"${arg.replace(/"/g, '\\"')}"`;
+const run = (
+  command: string,
+  args: readonly string[],
+  options: SpawnSyncOptions = {},
+): RunResult => {
   const result = spawnSync([command, ...args].map(quote).join(" "), {
     shell: true,
     encoding: "utf8",
     maxBuffer: 64 * 1024 * 1024,
     ...options,
   });
-  return { status: result.status, stdout: result.stdout ?? "", stderr: result.stderr ?? "" };
+  return {
+    status: result.status,
+    stdout: String(result.stdout ?? ""),
+    stderr: String(result.stderr ?? ""),
+  };
 };
-const must = (label, result) => {
+const must = (label: string, result: RunResult): RunResult => {
   if (result.status !== 0) {
     bad(`${label} (exit ${String(result.status)})`);
     show(result.stdout + result.stderr);
@@ -79,14 +130,14 @@ const must = (label, result) => {
 };
 
 // A tarball is a gzip of 512-byte blocks: a header, then the content of the file.
-const readTarball = (file) => {
+const readTarball = (file: string): Map<string, Buffer> => {
   const data = gunzipSync(readFileSync(file));
-  const files = new Map();
+  const files = new Map<string, Buffer>();
   let offset = 0;
   while (offset + 512 <= data.length) {
     const header = data.subarray(offset, offset + 512);
     if (header.every((byte) => byte === 0)) break;
-    const field = (start, length) => {
+    const field = (start: number, length: number): string => {
       const text = header.subarray(start, start + length).toString("utf8");
       const end = text.indexOf("\0");
       return end === -1 ? text : text.slice(0, end);
@@ -102,7 +153,11 @@ const readTarball = (file) => {
   return files;
 };
 
-const targetsOf = (value, where, into) => {
+const targetsOf = (
+  value: unknown,
+  where: string,
+  into: Array<[where: string, target: string]>,
+): Array<[where: string, target: string]> => {
   if (typeof value === "string") into.push([where, value]);
   else if (value !== null && typeof value === "object") {
     for (const [key, item] of Object.entries(value))
@@ -112,11 +167,11 @@ const targetsOf = (value, where, into) => {
 };
 
 const work = mkdtempSync(join(tmpdir(), "polite-crawler-smoke-"));
-let server;
+let server: ChildProcessWithoutNullStreams | undefined;
 try {
   // 1. The tarballs and their manifests
   /** This function packs a package of the workspace (it builds it first if needed), or takes the given tarball. */
-  const tarballOf = (name, dir, given) => {
+  const tarballOf = (name: string, dir: string, given: string | undefined): string => {
     if (given !== undefined) return resolve(given);
     if (!existsSync(join(dir, "build", "cli.mjs"))) {
       must(`pnpm --filter ${name} build`, run("pnpm", ["--filter", name, "build"], { cwd: root }));
@@ -128,14 +183,17 @@ try {
       run("pnpm", ["--filter", name, "pack", "--pack-destination", out], { cwd: root }),
     );
     const packed = readdirSync(out).filter((file) => file.endsWith(".tgz"));
-    if (packed.length !== 1) throw new Error(`pnpm pack made ${String(packed.length)} tarballs`);
+    if (packed.length !== 1 || packed[0] === undefined)
+      throw new Error(`pnpm pack made ${String(packed.length)} tarballs`);
     return join(out, packed[0]);
   };
   /** This function checks the manifest of a tarball: each entry point is in it, with no src/ and no declaration maps. */
-  const examine = (tarball) => {
+  const examine = (tarball: string): { files: Map<string, Buffer>; manifest: Manifest } => {
     ok(tarball);
     const files = readTarball(tarball);
-    const manifest = JSON.parse(files.get("package.json").toString("utf8"));
+    const packed = files.get("package.json");
+    if (packed === undefined) throw new Error(`${tarball} has no package.json`);
+    const manifest = JSON.parse(packed.toString("utf8")) as Manifest;
     ok(`${manifest.name}@${manifest.version}, ${String(files.size)} files`);
     const targets = ["main", "types", "bin", "exports"].flatMap((field) =>
       targetsOf(manifest[field], field, []),
@@ -170,13 +228,23 @@ try {
 
   // The root entry point must not load the MCP SDK or zod: polite-crawler-mcp does. This walks
   // the static imports of the root module through the files of the tarball.
-  const rootTarget = manifest.exports?.["."]?.default ?? manifest.main;
-  const graph = new Set();
-  const packages = new Set();
-  const walk = (file) => {
-    if (graph.has(file) || !files.has(file)) return;
+  const rootExport = manifest.exports?.["."];
+  const rootTarget =
+    (typeof rootExport === "object" &&
+    rootExport !== null &&
+    "default" in rootExport &&
+    typeof rootExport.default === "string"
+      ? rootExport.default
+      : undefined) ??
+    manifest.main ??
+    "";
+  const graph = new Set<string>();
+  const packages = new Set<string>();
+  const walk = (file: string): void => {
+    const content = files.get(file);
+    if (graph.has(file) || content === undefined) return;
     graph.add(file);
-    const source = files.get(file).toString("utf8");
+    const source = content.toString("utf8");
     for (const [, specifier] of source.matchAll(
       /^\s*(?:import|export)\b[^"'`]*?\bfrom\s*["']([^"']+)["']|^\s*import\s*["']([^"']+)["']/gm,
     )) {
@@ -186,7 +254,7 @@ try {
         packages.add(
           specifier.startsWith("@")
             ? specifier.split("/").slice(0, 2).join("/")
-            : specifier.split("/")[0],
+            : (specifier.split("/")[0] ?? specifier),
         );
     }
   };
@@ -215,7 +283,7 @@ try {
     mcpManifest.version === manifest.version,
     `polite-crawler-mcp ${String(mcpManifest.version)} has the version of polite-crawler ${String(manifest.version)}`,
   );
-  const registry = JSON.parse(readFileSync(join(root, "server.json"), "utf8"));
+  const registry = JSON.parse(readFileSync(join(root, "server.json"), "utf8")) as Registry;
   const entry = registry.packages?.find((item) => item.registryType === "npm");
   check(
     mcpManifest.mcpName === registry.name,
@@ -239,7 +307,7 @@ try {
     join(consumer, "package.json"),
     `${JSON.stringify({ name: "smoke-consumer", private: true, type: "module" }, null, 2)}\n`,
   );
-  const install = (file) =>
+  const install = (file: string): RunResult =>
     run(
       "npm",
       ["install", file, "--no-audit", "--no-fund", "--ignore-scripts", "--loglevel=error"],
@@ -345,18 +413,25 @@ export const start: typeof startMcpServer = startMcpServer;
   // The check uses the oldest and the newest @types/node of the workspace: the types of the lowest
   // Node.js in engines, and the types that a new project gets. A declaration file of the package can
   // name a type that only one of them has (0.1.3 imported JsonWebKey, which @types/node 26 removed).
-  const versionOf = (dir) =>
-    JSON.parse(readFileSync(join(dir, "node", "package.json"), "utf8")).version;
-  const newer = (a, b) => {
-    const [x, y] = [a, b].map((version) => version.split(".").map(Number));
-    return x[0] - y[0] || x[1] - y[1] || x[2] - y[2];
+  const versionOf = (dir: string): string =>
+    (JSON.parse(readFileSync(join(dir, "node", "package.json"), "utf8")) as Manifest).version;
+  const newer = (a: string, b: string): number => {
+    const x = a.split(".").map(Number);
+    const y = b.split(".").map(Number);
+    for (const index of [0, 1, 2]) {
+      const difference = (x[index] ?? 0) - (y[index] ?? 0);
+      if (difference !== 0) return difference;
+    }
+    return 0;
   };
   const nodeTypes = readdirSync(join(root, "packages"))
     .map((name) => join(root, "packages", name, "node_modules", "@types"))
     .filter((dir) => existsSync(join(dir, "node", "package.json")))
     .sort((a, b) => newer(versionOf(a), versionOf(b)));
   if (nodeTypes.length === 0) nodeTypes.push(join(packageDir, "node_modules", "@types"));
-  const typeSets = [...new Set([nodeTypes[0], nodeTypes.at(-1)])];
+  const typeSets = [
+    ...new Set([nodeTypes[0], nodeTypes.at(-1)].filter((dir) => dir !== undefined)),
+  ];
   const tsc = join(root, "node_modules", "typescript", "bin", "tsc");
   for (const types of typeSets) {
     const version = versionOf(types);
@@ -402,7 +477,7 @@ export const start: typeof startMcpServer = startMcpServer;
   step("the size of the entry points for a browser");
   const { build } = await import("esbuild");
   // the sizes of version 0.1.0, and 20 percent more
-  const budgets = {
+  const budgets: Readonly<Record<string, number>> = {
     robots: 2900,
     hours: 8700,
     classify: 1300,
@@ -424,7 +499,9 @@ export const start: typeof startMcpServer = startMcpServer;
       write: false,
       logLevel: "silent",
     });
-    const size = gzipSync(bundled.outputFiles[0].contents).length;
+    const output = bundled.outputFiles[0];
+    if (output === undefined) throw new Error(`esbuild gave no output for ${name}`);
+    const size = gzipSync(output.contents).length;
     check(
       size <= budget,
       `${manifest.name}/${name}: ${String(size)} bytes after gzip, the budget is ${String(budget)}`,
@@ -434,10 +511,11 @@ export const start: typeof startMcpServer = startMcpServer;
   // 4. The command
   step("the command line");
   const bins = join(consumer, "node_modules", ".bin");
-  const env = { ...process.env, PATH: `${bins}${delimiter}${process.env.PATH ?? ""}` };
-  const command = Object.keys(
-    typeof manifest.bin === "string" ? { [manifest.name]: 0 } : manifest.bin,
-  )[0];
+  const env = { ...process.env, PATH: `${bins}${delimiter}${process.env["PATH"] ?? ""}` };
+  const command =
+    Object.keys(
+      typeof manifest.bin === "string" ? { [manifest.name]: 0 } : (manifest.bin ?? {}),
+    )[0] ?? manifest.name;
   const version = must(`${command} --version`, run(command, ["--version"], { cwd: consumer, env }));
   check(version.stdout.trim() === manifest.version, `--version prints ${version.stdout.trim()}`);
   const help = must(`${command} --help`, run(command, ["--help"], { cwd: consumer, env }));
@@ -456,7 +534,9 @@ export const start: typeof startMcpServer = startMcpServer;
   );
 
   // The MCP server: initialize, then tools/list. Each line of stdout must be JSON-RPC.
-  const mcpCommand = Object.keys(mcpManifest.bin)[0];
+  const mcpCommand =
+    (typeof mcpManifest.bin === "object" ? Object.keys(mcpManifest.bin)[0] : undefined) ??
+    mcpManifest.name;
   const mcpVersion = must(
     `${mcpCommand} --version`,
     run(mcpCommand, ["--version"], { cwd: consumer, env }),
@@ -465,10 +545,13 @@ export const start: typeof startMcpServer = startMcpServer;
     mcpVersion.stdout.trim() === mcpManifest.version,
     `--version prints ${mcpVersion.stdout.trim()}`,
   );
-  const handshake = (args, label) =>
+  const handshake = (
+    args: readonly string[],
+    label: string,
+  ): Promise<{ tools: string[]; stderr: () => string }> =>
     new Promise((done, fail) => {
       let stderr = "";
-      server = spawn(args.map(quote).join(" "), {
+      const child = spawn(args.map(quote).join(" "), {
         cwd: consumer,
         env,
         shell: true,
@@ -479,18 +562,19 @@ export const start: typeof startMcpServer = startMcpServer;
         () => fail(new Error(`${label} gave no tool list in 30 s. stderr: ${stderr}`)),
         30_000,
       );
-      server.stderr.on("data", (chunk) => (stderr += chunk));
-      server.on("error", fail);
-      server.stdout.on("data", (chunk) => {
-        buffer += chunk;
+      server = child;
+      child.stderr.on("data", (chunk: Buffer) => (stderr += chunk.toString("utf8")));
+      child.on("error", fail);
+      child.stdout.on("data", (chunk: Buffer) => {
+        buffer += chunk.toString("utf8");
         let newline;
         while ((newline = buffer.indexOf("\n")) !== -1) {
           const line = buffer.slice(0, newline).trim();
           buffer = buffer.slice(newline + 1);
           if (line === "") continue;
-          let message;
+          let message: RpcMessage;
           try {
-            message = JSON.parse(line);
+            message = JSON.parse(line) as RpcMessage;
           } catch {
             bad(`${label} wrote a line that is not JSON: ${line.slice(0, 200)}`);
             continue;
@@ -499,10 +583,10 @@ export const start: typeof startMcpServer = startMcpServer;
             ok(
               `${label}: initialize: ${String(message.result?.serverInfo?.name)} ${String(message.result?.serverInfo?.version)}`,
             );
-            server.stdin.write(
+            child.stdin.write(
               `${JSON.stringify({ jsonrpc: "2.0", method: "notifications/initialized" })}\n`,
             );
-            server.stdin.write(
+            child.stdin.write(
               `${JSON.stringify({ jsonrpc: "2.0", id: 2, method: "tools/list" })}\n`,
             );
           } else if (message.id === 2) {
@@ -514,7 +598,7 @@ export const start: typeof startMcpServer = startMcpServer;
           }
         }
       });
-      server.stdin.write(
+      child.stdin.write(
         `${JSON.stringify({
           jsonrpc: "2.0",
           id: 1,
@@ -527,14 +611,19 @@ export const start: typeof startMcpServer = startMcpServer;
         })}\n`,
       );
     });
-  const stopped = () =>
+  const stopped = (): Promise<boolean> =>
     new Promise((done) => {
+      const child = server;
+      if (child === undefined) {
+        done(false);
+        return;
+      }
       const timer = setTimeout(() => done(false), 10_000);
-      server.on("exit", () => {
+      child.on("exit", () => {
         clearTimeout(timer);
         done(true);
       });
-      server.stdin.end();
+      child.stdin.end();
     });
   const TOOLS = [
     "crawl_fetch",
@@ -547,8 +636,7 @@ export const start: typeof startMcpServer = startMcpServer;
     "crawl_watch_list",
     "crawl_extract",
   ];
-  /** @type {Array<[string[], string]>} */
-  const servers = [
+  const servers: Array<[args: string[], label: string]> = [
     [[mcpCommand, "--dir", "./store-mcp", "--no-browser"], mcpCommand],
     [[command, "mcp", "--dir", "./store-mcp", "--no-browser"], `${command} mcp`],
   ];

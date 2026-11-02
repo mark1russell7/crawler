@@ -39,7 +39,7 @@ The owner (Mark) and one Claude session that the owner names are responsible for
 1. Choose the next version with the SemVer rules. A breaking change increases MAJOR, a new feature MINOR, and a fix PATCH.
 2. Before `1.0.0`, a breaking change increases MINOR. A feature or a fix increases PATCH. Do not go to `1.0.0` without the owner.
 3. For a prerelease, add a hyphen suffix, for example `1.2.0-rc.1`.
-4. Change the version in the four places that `CLAUDE.md` names, and add the section of the version to `CHANGELOG.md`. In the pull request, give the SemVer reason.
+4. Change `version` in one `package.json`. Then start `pnpm --filter polite-crawler run version`. The script `scripts/version.ts` writes the version to each place that `CLAUDE.md` names, and adds the sections of the version to the two changelogs. In the pull request, give the SemVer reason.
 5. Get the approval of the owner, and merge the change to `main`.
 
 The push to `main` starts `release.yml`. The workflow starts the CI gates, builds and packs each published package, and publishes each version that is not on npm. Then it makes a git tag and a GitHub release for each new version. A version with a hyphen, for example `1.2.0-rc.1`, gets the dist-tag `next`. The other versions get `latest`.

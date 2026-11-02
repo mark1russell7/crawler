@@ -1,5 +1,5 @@
 <!doctype html>
-<!-- The share card of the robots.txt study, 1200 by 630. scripts/og-image.mjs renders it to public/og-robots-study.png and gives it the verdicts of GPTBot. -->
+<!-- The share card of the robots.txt study, 1200 by 630. scripts/og-image.ts renders it to public/og-robots-study.png and gives it the verdicts of GPTBot. -->
 <html lang="en">
   <head>
     <meta charset="utf-8" />
@@ -183,7 +183,7 @@
       </div>
     </div>
     <script>
-      // og-image.mjs sets window.study before the page loads: { date, share, answered, codes }
+      // og-image.ts sets window.study before the page loads: { date, share, answered, codes }
       const study = window.study;
       document.getElementById("date").textContent = study.date;
       document.getElementById("share").textContent = study.share;

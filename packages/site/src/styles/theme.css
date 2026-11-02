@@ -1211,7 +1211,7 @@ header.header {
 }
 /*
  * On a wide screen, a short code name in a sentence stays on one line: no lone "-" at the end of a
- * line. The plugin proseCode of astro.config.mjs marks these names. A long code span can still wrap.
+ * line. The plugin proseCode of astro.config.ts marks these names. A long code span can still wrap.
  */
 @media (min-width: 50rem) {
   .sl-markdown-content :is(p, li) > code.pc-name {
@@ -1243,7 +1243,7 @@ header.header {
 /* ================================================================================================ */
 
 /*
- * A card table is a table of the prose with three or more columns (proseTables of astro.config.mjs
+ * A card table is a table of the prose with three or more columns (proseTables of astro.config.ts
  * gives it the class pc-cards, and each cell the data-label of its column), or the table of the runs
  * of the study. On a phone, each row is a card, and each cell is a line with the name of its column.
  * At each other width, no rule here applies, and a card table looks as a table.

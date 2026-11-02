@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 // The reports of the public API: one file for each entry point of each npm package, from API Extractor.
 //
-//   node scripts/api.mjs           write packages/<package>/api/<entry>.api.md from the build
-//   node scripts/api.mjs --check   fail when a report is not the API of the build
+//   node scripts/api.ts           write packages/<package>/api/<entry>.api.md from the build
+//   node scripts/api.ts --check   fail when a report is not the API of the build
 //
 // Build the packages first (`pnpm build`): API Extractor reads the declarations in build/. The script reads
 // the entry points from "publishConfig.exports" of each package, so each new entry point gets a report.
@@ -22,32 +22,76 @@ const REPORT_MESSAGES = new Set([
   "console-api-report-created",
 ]);
 
+/** The part of API Extractor that this script uses. The root of the repository has no copy of its types. */
+interface ApiExtractor {
+  readonly Extractor: {
+    invoke(
+      config: unknown,
+      options: { localBuild: boolean; messageCallback(message: ExtractorMessage): void },
+    ): { readonly succeeded: boolean; readonly apiReportChanged: boolean };
+  };
+  readonly ExtractorConfig: { prepare(options: Record<string, unknown>): unknown };
+  readonly ExtractorLogLevel: { readonly Info: string; readonly Verbose: string };
+}
+/** A message of API Extractor. A handled message does not go to the console. */
+interface ExtractorMessage {
+  readonly logLevel: string;
+  readonly messageId: string;
+  handled: boolean;
+}
+/** An entry point of a package that has declarations. */
+interface Entry {
+  readonly subpath: string;
+  readonly types: string;
+  readonly name: string;
+}
+/** The field of package.json that names the entry points of the build. */
+interface Manifest {
+  readonly publishConfig: { readonly exports: Readonly<Record<string, unknown>> };
+}
+
 // API Extractor is a devDependency of polite-crawler. One copy reads each package.
 const { Extractor, ExtractorConfig, ExtractorLogLevel } = createRequire(
   join(ROOT, "packages", "polite-crawler", "package.json"),
-)("@microsoft/api-extractor");
+)("@microsoft/api-extractor") as ApiExtractor;
 
-const failed = [];
+const typesOf = (target: unknown): string | undefined =>
+  typeof target === "object" &&
+  target !== null &&
+  "types" in target &&
+  typeof target.types === "string" &&
+  target.types !== ""
+    ? target.types
+    : undefined;
+
+const failed: string[] = [];
 for (const name of PACKAGES) {
   const PKG = join(ROOT, "packages", name);
   const REPORTS = join(PKG, "api");
   // temp/ is in .gitignore. In a check, API Extractor writes the new report there.
   const TEMP = join(PKG, "temp", "api");
-  const manifest = JSON.parse(readFileSync(join(PKG, "package.json"), "utf8"));
-  const entries = Object.entries(manifest.publishConfig.exports)
-    .filter(([, target]) => typeof target === "object" && target.types)
-    .map(([subpath, target]) => ({
-      subpath,
-      types: join(PKG, target.types),
-      name: basename(target.types, ".d.mts"),
-    }));
+  const manifest = JSON.parse(readFileSync(join(PKG, "package.json"), "utf8")) as Manifest;
+  const entries = Object.entries(manifest.publishConfig.exports).flatMap(
+    ([subpath, target]): Entry[] => {
+      const types = typesOf(target);
+      return types === undefined
+        ? []
+        : [{ subpath, types: join(PKG, types), name: basename(types, ".d.mts") }];
+    },
+  );
   mkdirSync(REPORTS, { recursive: true });
   mkdirSync(TEMP, { recursive: true });
   report(PKG, REPORTS, TEMP, name, entries);
 }
 
 /** This function writes or checks the reports of one package. */
-function report(PKG, REPORTS, TEMP, packageName, entries) {
+function report(
+  PKG: string,
+  REPORTS: string,
+  TEMP: string,
+  packageName: string,
+  entries: readonly Entry[],
+): void {
   for (const entry of entries) {
     if (!existsSync(entry.types)) {
       console.error(`${entry.types} is missing. Start \`pnpm build\` first.`);

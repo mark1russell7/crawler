@@ -18,6 +18,30 @@ import { extname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { gzipSync } from "node:zlib";
 import { chromium } from "playwright-core";
+import type { Page } from "playwright-core";
+
+/** A figure of a page, and the click that makes it answer. */
+interface Interaction {
+  readonly path: string;
+  readonly name: string;
+  readonly figure: string;
+  readonly shot?: string;
+  readonly act: (page: Page) => Promise<void>;
+}
+
+/** A node of the JSON-LD graph of the study page, with the fields that this check reads. */
+interface GraphNode {
+  readonly "@type"?: string;
+  readonly sameAs?: readonly string[];
+  readonly identifier?: unknown;
+  readonly creator?: {
+    readonly contactPoint?: {
+      readonly "@type"?: string;
+      readonly contactType?: string;
+      readonly email?: string;
+    };
+  };
+}
 
 const BASE = "/crawler";
 // The JavaScript of a page with each island hydrated, gzip. Preact gives 21 KB at most; React gave 82 KB.
@@ -25,7 +49,7 @@ const JS_BUDGET = 40_000;
 const dist = fileURLToPath(new URL("../dist/", import.meta.url));
 const shotsAt = process.argv.indexOf("--shots");
 const shots = shotsAt === -1 ? undefined : process.argv[shotsAt + 1];
-const TYPES = {
+const TYPES: Readonly<Record<string, string>> = {
   ".html": "text/html; charset=utf-8",
   ".js": "text/javascript",
   ".css": "text/css",
@@ -39,7 +63,7 @@ const TYPES = {
 };
 
 /** The file of the build for a path of the site, or undefined. */
-const fileOf = (path) => {
+const fileOf = (path: string): string | undefined => {
   if (!path.startsWith(`${BASE}/`) && path !== BASE) return undefined;
   const rest = decodeURIComponent(path.slice(BASE.length)).replace(/^\//, "");
   for (const candidate of [rest, join(rest, "index.html"), `${rest}.html`]) {
@@ -60,12 +84,14 @@ const server = createServer((request, response) => {
   response.writeHead(200, { "content-type": TYPES[extname(file)] ?? "application/octet-stream" });
   response.end(readFileSync(file));
 });
-await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
-const origin = `http://127.0.0.1:${String(server.address().port)}`;
+await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+const address = server.address();
+if (address === null || typeof address === "string") throw new Error("the server has no port");
+const origin = `http://127.0.0.1:${String(address.port)}`;
 
 // the pages: each index.html of the build, and the 404 page
-const pages = [];
-const walk = (dir, prefix) => {
+const pages: string[] = [];
+const walk = (dir: string, prefix: string): void => {
   for (const name of readdirSync(dir)) {
     const full = join(dir, name);
     if (statSync(full).isDirectory()) {
@@ -76,10 +102,10 @@ const walk = (dir, prefix) => {
 walk(dist, "");
 pages.sort((a, b) => a.localeCompare(b));
 
-const problems = [];
+const problems: string[] = [];
 let most = { path: "", bytes: 0 };
 // the JavaScript of each page, for the log
-const sizes = [];
+const sizes: Array<{ path: string; bytes: number }> = [];
 
 // one sitemap, with each page and the date of its last change (a shallow clone has no dates, so it is not checked)
 const sitemaps = readdirSync(dist)
@@ -90,7 +116,7 @@ if (sitemaps.join(" ") !== "sitemap-0.xml sitemap-index.xml")
 else {
   const xml = readFileSync(join(dist, "sitemap-0.xml"), "utf8");
   const listed = [...xml.matchAll(/<url><loc>([^<]*)<\/loc>(<lastmod>[^<]+<\/lastmod>)?/g)];
-  const inSitemap = new Set(listed.map(([, loc]) => new URL(loc).pathname));
+  const inSitemap = new Set(listed.map(([, loc]) => new URL(loc ?? "").pathname));
   for (const path of pages.filter((path) => path !== `${BASE}/404/`)) {
     if (!inSitemap.has(path)) problems.push(`${path}: not in the sitemap`);
   }
@@ -105,7 +131,9 @@ else {
 const study = readFileSync(join(dist, "notes", "robots-txt-ai-agents", "index.html"), "utf8");
 const graphs = [
   ...study.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g),
-].flatMap(([, json]) => JSON.parse(json)["@graph"] ?? []);
+].flatMap(
+  ([, json]) => (JSON.parse(json ?? "{}") as { "@graph"?: readonly GraphNode[] })["@graph"] ?? [],
+);
 const dataset = graphs.find((node) => node["@type"] === "Dataset");
 for (const same of [
   "https://github.com/mark1russell7/crawler/",
@@ -125,9 +153,11 @@ if (
 // a DOI is an address at doi.org, and the page shows no DOI before study-doi.json names one
 if (
   dataset?.identifier !== undefined &&
-  !String(dataset.identifier).startsWith("https://doi.org/10.")
+  !(typeof dataset.identifier === "string" && dataset.identifier.startsWith("https://doi.org/10."))
 )
-  problems.push(`the Dataset of the study has the identifier ${String(dataset.identifier)}`);
+  problems.push(
+    `the Dataset of the study has the identifier ${JSON.stringify(dataset.identifier)}`,
+  );
 
 /**
  * The tables of the prose and the card tables with a row that a reader cannot see: a row with no
@@ -135,9 +165,9 @@ if (
  * table 28px high: the rows were in a scroll box on a wide screen, and they covered the next
  * sections on a phone. A row that a filter hides (`hidden`) does not count.
  */
-const lostRows = (page) =>
+const lostRows = (page: Page): Promise<number[]> =>
   page.evaluate(() => {
-    const lost = [];
+    const lost: number[] = [];
     const tables = document.querySelectorAll(
       ".sl-markdown-content table:not(:where(.not-content *)), table.pc-cards",
     );
@@ -164,8 +194,8 @@ const browser = await chromium.launch();
 const context = await browser.newContext();
 for (const path of pages) {
   const page = await context.newPage();
-  const errors = [];
-  const scripts = new Set();
+  const errors: string[] = [];
+  const scripts = new Set<string>();
   page.on("request", (request) => {
     if (request.resourceType() === "script") scripts.add(new URL(request.url()).pathname);
   });
@@ -189,12 +219,12 @@ for (const path of pages) {
   await page.evaluate(async () => {
     for (let y = 0; y < document.body.scrollHeight; y += 600) {
       window.scrollTo(0, y);
-      await new Promise((resolve) => setTimeout(resolve, 60));
+      await new Promise<void>((resolve) => setTimeout(resolve, 60));
     }
     window.scrollTo(0, 0);
   });
   await page.waitForLoadState("networkidle");
-  const bytes = [...scripts].reduce((sum, script) => {
+  const bytes = [...scripts].reduce((sum: number, script) => {
     const file = fileOf(script);
     return file === undefined ? sum : sum + gzipSync(readFileSync(file)).length;
   }, 0);
@@ -305,12 +335,12 @@ for (const path of pages) {
 }
 
 // the figures answer a reader: a click, then the result that the code of the package gives
-const INTERACTIONS = [
+const INTERACTIONS: readonly Interaction[] = [
   {
     path: `${BASE}/guide/search/`,
     name: "figure-search-k0",
     figure: ".pc-hy",
-    act: async (page) => {
+    act: async (page: Page) => {
       await page.getByRole("button", { name: "wheelchair access" }).click();
       await page.locator(".pc-hy input[type=range]").first().fill("0");
       await page.getByText("Fused: rank 2 of").waitFor({ timeout: 10_000 });
@@ -320,7 +350,7 @@ const INTERACTIONS = [
     path: `${BASE}/tools/recipe-reader/`,
     name: "figure-recipe-product",
     figure: ".pc-tool",
-    act: async (page) => {
+    act: async (page: Page) => {
       await page.getByRole("button", { name: "Shop: variants, sale, related" }).click();
       await page
         .getByText("Without that url, the reader takes Aceto Esempio")
@@ -331,7 +361,7 @@ const INTERACTIONS = [
     path: `${BASE}/guide/recipes/`,
     name: "figure-recipe-error",
     figure: ".pc-rb",
-    act: async (page) => {
+    act: async (page: Page) => {
       await page.getByRole("button", { name: "An item with no name" }).click();
       await page.getByText("title must be a text").waitFor({ timeout: 10_000 });
     },
@@ -342,7 +372,7 @@ const INTERACTIONS = [
     name: "figure-cli-options",
     figure: ".pc-optx",
     shot: ".pc-optx-wrap",
-    act: async (page) => {
+    act: async (page: Page) => {
       await page.getByRole("radio", { name: "crawl", exact: true }).click();
       // the arrow keys move in the chips: to the next command, and back
       await page.keyboard.press("ArrowRight");
@@ -350,7 +380,9 @@ const INTERACTIONS = [
       await page.getByRole("searchbox", { name: "Option name" }).fill("max");
       await page.waitForFunction(
         () => {
-          const rows = [...document.querySelectorAll(".pc-optx-wrap tbody tr")];
+          const rows = [
+            ...document.querySelectorAll<HTMLTableRowElement>(".pc-optx-wrap tbody tr"),
+          ];
           const shown = rows.filter((row) => !row.hidden);
           const count = document.querySelector(".pc-optx-status strong")?.textContent;
           return (
@@ -359,9 +391,9 @@ const INTERACTIONS = [
             count === String(shown.length) &&
             shown.every(
               (row) =>
-                [...row.cells[0].querySelectorAll("code")].some(
+                [...(row.cells[0]?.querySelectorAll("code") ?? [])].some(
                   (code) => code.textContent === "crawl" && code.classList.contains("pc-hit"),
-                ) && row.cells[1].textContent.includes("--max"),
+                ) && (row.cells[1]?.textContent ?? "").includes("--max"),
             ) &&
             window.location.hash === "#command=crawl&option=max"
           );
@@ -375,7 +407,7 @@ const INTERACTIONS = [
     path: `${BASE}/guide/daemon/`,
     name: "figure-daemon-end",
     figure: ".pc-dm",
-    act: async (page) => {
+    act: async (page: Page) => {
       // with reduced motion, the figure shows the whole schedule at once
       await page.getByText('"confirmed":true').waitFor({ timeout: 20_000 });
     },
@@ -384,7 +416,7 @@ const INTERACTIONS = [
     path: `${BASE}/block-ai-training-crawlers/`,
     name: "figure-robots-builder",
     figure: ".pc-rbuild",
-    act: async (page) => {
+    act: async (page: Page) => {
       // keep the assistants out: the MCP server obeys Claude-User, so it is refused too
       await page
         .getByRole("group", { name: "AI assistants" })
@@ -399,7 +431,7 @@ const INTERACTIONS = [
     path: `${BASE}/bot/`,
     name: "figure-site-visit",
     figure: ".pc-visit",
-    act: async (page) => {
+    act: async (page: Page) => {
       await page.getByRole("button", { name: "A small crawl" }).click();
       await page.locator(".pc-visit select").first().selectOption("403");
       // with reduced motion, the figure shows the whole hour at once
@@ -413,7 +445,7 @@ const INTERACTIONS = [
     path: `${BASE}/guide/compare/`,
     name: "figure-pace",
     figure: ".pc-pace",
-    act: async (page) => {
+    act: async (page: Page) => {
       await page.getByRole("button", { name: "A slow site: 2 s" }).click();
       await page
         .locator(".pc-pace .pc-crawl-verdict")
@@ -425,7 +457,7 @@ const INTERACTIONS = [
     path: `${BASE}/notes/tokens-per-claim/`,
     name: "figure-eval-claims",
     figure: ".pc-eval-claims",
-    act: async (page) => {
+    act: async (page: Page) => {
       await page.locator(".pc-eval-claims .pc-eval-plot").focus();
       await page.keyboard.press("Home");
       await page
@@ -438,7 +470,7 @@ const INTERACTIONS = [
     path: `${BASE}/notes/tokens-per-claim/`,
     name: "figure-eval-session",
     figure: ".pc-eval-session",
-    act: async (page) => {
+    act: async (page: Page) => {
       await page.getByRole("button", { name: "Short pages first" }).click();
       await page
         .locator(".pc-eval-session .pc-crawl-verdict")
@@ -450,7 +482,7 @@ const INTERACTIONS = [
     path: `${BASE}/notes/claude-code-sessions/`,
     name: "figure-eval-sessions",
     figure: ".pc-evalb",
-    act: async (page) => {
+    act: async (page: Page) => {
       await page.locator(".pc-evalb").getByRole("button", { name: "Opus", exact: true }).click();
       await page
         .locator(".pc-evalb .pc-eval-detail")
@@ -459,12 +491,18 @@ const INTERACTIONS = [
     },
   },
 ];
-for (const { scheme, viewport, device } of shots === undefined
-  ? [{ scheme: "light", viewport: { width: 1280, height: 900 }, device: "desktop" }]
-  : [
-      { scheme: "light", viewport: { width: 1280, height: 900 }, device: "desktop" },
-      { scheme: "dark", viewport: { width: 375, height: 812 }, device: "phone" },
-    ]) {
+const SCHEMES: ReadonlyArray<{
+  scheme: "light" | "dark";
+  viewport: { width: number; height: number };
+  device: string;
+}> =
+  shots === undefined
+    ? [{ scheme: "light", viewport: { width: 1280, height: 900 }, device: "desktop" }]
+    : [
+        { scheme: "light", viewport: { width: 1280, height: 900 }, device: "desktop" },
+        { scheme: "dark", viewport: { width: 375, height: 812 }, device: "phone" },
+      ];
+for (const { scheme, viewport, device } of SCHEMES) {
   const context = await browser.newContext({
     viewport,
     colorScheme: scheme,
@@ -512,7 +550,7 @@ for (const { scheme, viewport, device } of shots === undefined
 
 if (shots !== undefined) {
   mkdirSync(shots, { recursive: true });
-  for (const scheme of ["light", "dark"]) {
+  for (const scheme of ["light", "dark"] as const) {
     for (const { device, viewport } of [
       { device: "desktop", viewport: { width: 1440, height: 900 } },
       { device: "phone", viewport: { width: 375, height: 812 } },
@@ -530,7 +568,7 @@ if (shots !== undefined) {
         await page.evaluate(async () => {
           for (let y = 0; y < document.body.scrollHeight; y += 600) {
             window.scrollTo(0, y);
-            await new Promise((resolve) => setTimeout(resolve, 60));
+            await new Promise<void>((resolve) => setTimeout(resolve, 60));
           }
           window.scrollTo(0, 0);
         });

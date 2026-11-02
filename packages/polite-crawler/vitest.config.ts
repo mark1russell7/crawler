@@ -8,7 +8,6 @@ export default defineConfig({
   test: {
     // The test of the eval (`eval/measure.test.ts`) makes its own WACZ file. It uses no network.
     include: ["src/**/*.{test,spec}.{ts,tsx}", "eval/**/*.test.ts"],
-    passWithNoTests: true,
     testTimeout: limit,
     hookTimeout: limit,
     // `pnpm test:coverage` measures the source. Each threshold is a little below the measured value.

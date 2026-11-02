@@ -12,25 +12,32 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
-const manifest = JSON.parse(readFileSync(join(process.cwd(), "package.json"), "utf8"));
-const agent = process.env.npm_config_user_agent ?? "";
+/** The fields of a manifest that this guard reads. */
+interface Manifest {
+  readonly name: string;
+  readonly publishConfig?: Readonly<Record<string, unknown>>;
+  readonly [field: string]: unknown;
+}
+
+const manifest = JSON.parse(readFileSync(join(process.cwd(), "package.json"), "utf8")) as Manifest;
+const agent = process.env["npm_config_user_agent"] ?? "";
 const tool = agent.split("/")[0] || "an unknown tool";
 
 // The fields that pnpm takes from publishConfig. Other tools keep the top-level fields.
-const OVERRIDES = ["main", "module", "types", "typings", "browser", "bin", "exports"];
-const packed = { ...manifest };
+const OVERRIDES = ["main", "module", "types", "typings", "browser", "bin", "exports"] as const;
+const packed: Record<string, unknown> = { ...manifest };
 if (tool === "pnpm") {
   for (const field of OVERRIDES) {
-    if (manifest.publishConfig?.[field] !== undefined)
-      packed[field] = manifest.publishConfig[field];
+    const value = manifest.publishConfig?.[field];
+    if (value !== undefined) packed[field] = value;
   }
 }
 
-const targets = [];
-const collect = (where, value) => {
+const targets: Array<[where: string, target: string]> = [];
+const collect = (where: string, value: unknown): void => {
   if (typeof value === "string") targets.push([where, value]);
   else if (Array.isArray(value))
-    value.forEach((item, index) => collect(`${where}[${index}]`, item));
+    value.forEach((item: unknown, index) => collect(`${where}[${String(index)}]`, item));
   else if (value !== null && typeof value === "object") {
     for (const [key, item] of Object.entries(value))
       collect(`${where}[${JSON.stringify(key)}]`, item);
@@ -40,7 +47,8 @@ for (const field of OVERRIDES) {
   if (packed[field] !== undefined) collect(field, packed[field]);
 }
 
-const inBuild = (target) => /^(\.\/)?build\//.test(target) || target === "./package.json";
+const inBuild = (target: string): boolean =>
+  /^(\.\/)?build\//.test(target) || target === "./package.json";
 const wrong = targets.filter(([, target]) => !inBuild(target));
 
 if (wrong.length > 0) {
@@ -55,5 +63,5 @@ if (wrong.length > 0) {
   process.exit(1);
 }
 process.stdout.write(
-  `${manifest.name}: ${targets.length} entry points, all in build/ (${tool}).\n`,
+  `${manifest.name}: ${String(targets.length)} entry points, all in build/ (${tool}).\n`,
 );

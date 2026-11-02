@@ -20,9 +20,9 @@ Write all prose of this repository in the style of ASD-STE100 Simplified Technic
 ## Checks
 
 - `pnpm check` does the checks of CI in sequence: `format:check`, `typecheck`, `lint` (oxlint), `test`, `lint:ste`, `build`, `api --check` and `smoke`.
-- `pnpm api` (`scripts/api.mjs`) makes the reports of the public API in `packages/polite-crawler/api/` and `packages/polite-crawler-mcp/api/` from the build, one for each entry point. CI fails when a report is not the API of the build. After a change to the API, start `pnpm build` and `pnpm api`, and commit the reports.
+- `pnpm api` (`scripts/api.ts`) makes the reports of the public API in `packages/polite-crawler/api/` and `packages/polite-crawler-mcp/api/` from the build, one for each entry point. CI fails when a report is not the API of the build. After a change to the API, start `pnpm build` and `pnpm api`, and commit the reports.
 - An export with the TSDoc tag `@beta` is the engine: a minor version can change it. An export with no tag is stable. `docs/API-REVIEW.md` gives the tier of each export. Tag each new export of the engine.
-- `pnpm smoke` (`scripts/smoke.mjs`) installs the packed tarball into an empty project and uses it the way a user does.
+- `pnpm smoke` (`scripts/smoke.ts`) installs the packed tarball into an empty project and uses it the way a user does.
 - CI does the tests on Ubuntu with Node.js 22.19, 24 and 26, and on Windows and macOS with Node.js 24.
 - CI fails when the code is not in the format of Prettier. Start `pnpm format` before a commit.
 - Pin each GitHub action to a full commit SHA, with the version in a comment. Renovate updates them. `renovate.json` extends the shared preset `github>mark1russell7/template//renovate/default` (its README is `renovate/README.md` of the template repository) and adds only the rules of this repository.
@@ -39,7 +39,7 @@ Write all prose of this repository in the style of ASD-STE100 Simplified Technic
 - `packages/polite-crawler` is the published package `polite-crawler`. The workspace uses its source, and `pnpm --filter polite-crawler build` makes `build/` for npm with `tsdown`.
 - The package needs Node.js 22.19 or later (`engines`). Older versions of Node.js 22 have no FTS5 in their SQLite, and undici 8 needs 22.19.
 - `publishConfig` points `main`, `types`, `exports` and `bin` at `build/`. pnpm applies these fields when it packs, and npm ignores them.
-- Thus the `prepublishOnly` guard (`scripts/publish-guard.mjs`) stops `npm publish` in the package folder. Publish the tarball of `pnpm pack`.
+- Thus the `prepublishOnly` guard (`scripts/publish-guard.ts`) stops `npm publish` in the package folder. Publish the tarball of `pnpm pack`.
 - The package depends on no package of the owner. Keep it so.
 - A capture id is a hash of the record (`record.ts`). Do not change the hash. Old citations name these ids.
 - `playwright-core` is an optional peer. The renderer loads it only when a page needs a browser.
@@ -54,10 +54,17 @@ Since 0.2.0 the repository publishes two packages with the same version: `polite
 
 `polite-crawler-mcp` depends on `polite-crawler` with `workspace:^`, so its tarball names `^<version>` of polite-crawler. The smoke test makes sure that the two versions agree and that the range is `^<version>`. Tests make sure that each package and its `version.ts` agree.
 
+Do not edit these places by hand. The script `scripts/version.ts` writes them:
+
+- It reads the version of the two `package.json` files, and writes the higher version to each place.
+- In `CHANGELOG.md` and in `packages/polite-crawler-mcp/CHANGELOG.md`, it adds `## <version> - <date>` directly below `## Unreleased`. The notes of `Unreleased` go into that section.
+- A second run of the script changes nothing.
+- The `version` script of each `package.json` starts it. Thus `npm version` and `pnpm version` start it after they change the version.
+
 To make a release:
 
-1. Change the version in each of these places.
-2. In `CHANGELOG.md` and in `packages/polite-crawler-mcp/CHANGELOG.md`, add `## <version> - <date>` below `## Unreleased`, above the notes of the version.
+1. Change `version` in one `package.json` of the two packages.
+2. Start `pnpm --filter polite-crawler run version`. Then examine the changelog sections.
 3. Open a pull request with the changes. Wait until CI passes.
 4. Get the approval of the owner. Then the release session merges the pull request to main.
 
@@ -82,7 +89,7 @@ The rules for versions:
 
 ## Study
 
-`.github/workflows/study-monthly.yml` does the robots.txt study again at 06:17 UTC on day 2 of each month.
+`.github/workflows/study-monthly.yml` does the robots.txt study again at 06:39 UTC on day 2 of each month.
 
 The files of the study are in `packages/site`:
 

@@ -6,8 +6,8 @@
 //
 // With --doi, the README and the CITATION.cff name the DOI. The workflow study-zenodo.yml writes
 // the folder again with the DOI that Zenodo reserved, before it puts the files in the draft.
-import { mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
-import { join, resolve } from "node:path";
+import { mkdirSync, readFileSync, readdirSync, writeFileSync, realpathSync } from "node:fs";
+import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { StudyDoi } from "../src/lib/cite.ts";
 import { conceptOf } from "../src/lib/cite.ts";
@@ -54,5 +54,8 @@ const main = (args: readonly string[]): void => {
   for (const file of files) console.info(`${file.name}  ${String(file.bytes.byteLength)} bytes`);
 };
 
-if (process.argv[1] !== undefined && resolve(process.argv[1]) === fileURLToPath(import.meta.url))
+if (
+  process.argv[1] !== undefined &&
+  realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url))
+)
   main(process.argv.slice(2));

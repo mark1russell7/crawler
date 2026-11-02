@@ -7,32 +7,45 @@
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { chromium } from "playwright-core";
+import type { Study } from "../src/lib/study.ts";
 import { formatDay, headline } from "../src/lib/study.ts";
+
+/** The facts that the card of the study shows. The card reads them from `window.study`. */
+interface Facts {
+  readonly date: string;
+  readonly share: string;
+  readonly answered: string;
+  /** The verdict of GPTBot at each site: one character of `StudySite.p`. */
+  readonly codes: ReadonlyArray<string | undefined>;
+}
 
 const study = JSON.parse(
   readFileSync(new URL("../src/data/robots-study.json", import.meta.url), "utf8"),
-);
+) as Study;
 const gpt = study.agents.findIndex((agent) => agent.token === "GPTBot");
 const { gpt: row, summary } = headline(study);
-const facts = {
+const facts: Facts = {
   date: formatDay(study.fetched.from),
   share: `${String(Math.round(row.share))}%`,
   answered: String(summary.answered),
   codes: study.sites.map((site) => site.p[gpt]),
 };
 
-const cards = [
+const cards: ReadonlyArray<readonly [card: string, png: string]> = [
   ["./og-card.html", "../public/og.png"],
   ["./og-study.html", "../public/og-robots-study.png"],
-].filter(([card]) => !process.argv.includes("--study") || card === "./og-study.html");
+] as const;
+const chosen = cards.filter(
+  ([card]) => !process.argv.includes("--study") || card === "./og-study.html",
+);
 const browser = await chromium.launch();
-for (const [card, png] of cards) {
+for (const [card, png] of chosen) {
   const page = await browser.newPage({
     viewport: { width: 1200, height: 630 },
     deviceScaleFactor: 1,
   });
-  await page.addInitScript((value) => {
-    window.study = value;
+  await page.addInitScript((value: Facts) => {
+    (window as Window & { study?: Facts }).study = value;
   }, facts);
   await page.goto(new URL(card, import.meta.url).href);
   const out = fileURLToPath(new URL(png, import.meta.url));

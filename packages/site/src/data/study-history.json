@@ -15,5 +15,22 @@
 {"token":"Perplexity-User","refused":81,"byName":37,"byStar":44,"welcomed":21,"share":14.5},
 {"token":"Googlebot","refused":23,"byName":6,"byStar":17,"welcomed":76,"share":4.1},
 {"token":"PoliteCrawler","refused":47,"byName":0,"byStar":47,"welcomed":0,"share":8.4}
+]},
+{"version":"2026-11-02","doi":null,"fetched":{"from":"2026-11-02T06:57:08.499Z","to":"2026-11-02T06:58:42.988Z"},"list":{"id":"V354N","date":"2026-11-01","size":1000},"runner":"a GitHub Actions runner, ubuntu-latest","answered":557,"states":{"file":509,"none":48,"blocked":85,"unreachable":358},"agents":[
+{"token":"GPTBot","refused":121,"byName":90,"byStar":31,"welcomed":45,"share":21.7},
+{"token":"ClaudeBot","refused":118,"byName":85,"byStar":33,"welcomed":41,"share":21.2},
+{"token":"Google-Extended","refused":104,"byName":74,"byStar":30,"welcomed":39,"share":18.7},
+{"token":"CCBot","refused":134,"byName":94,"byStar":40,"welcomed":22,"share":24.1},
+{"token":"Applebot-Extended","refused":102,"byName":68,"byStar":34,"welcomed":21,"share":18.3},
+{"token":"Bytespider","refused":135,"byName":96,"byStar":39,"welcomed":13,"share":24.2},
+{"token":"meta-externalagent","refused":112,"byName":73,"byStar":39,"welcomed":16,"share":20.1},
+{"token":"OAI-SearchBot","refused":70,"byName":37,"byStar":33,"welcomed":54,"share":12.6},
+{"token":"Claude-SearchBot","refused":78,"byName":41,"byStar":37,"welcomed":30,"share":14},
+{"token":"PerplexityBot","refused":96,"byName":66,"byStar":30,"welcomed":55,"share":17.2},
+{"token":"ChatGPT-User","refused":78,"byName":45,"byStar":33,"welcomed":52,"share":14},
+{"token":"Claude-User","refused":79,"byName":43,"byStar":36,"welcomed":26,"share":14.2},
+{"token":"Perplexity-User","refused":82,"byName":39,"byStar":43,"welcomed":21,"share":14.7},
+{"token":"Googlebot","refused":22,"byName":4,"byStar":18,"welcomed":77,"share":3.9},
+{"token":"PoliteCrawler","refused":46,"byName":0,"byStar":46,"welcomed":0,"share":8.3}
 ]}
 ]}

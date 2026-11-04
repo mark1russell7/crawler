@@ -11,12 +11,14 @@ on:
   schedule:
     - cron: "28 */3 * * *"
   workflow_dispatch:
+  pull_request:
 
 permissions: {}
 
 # One deployment at a time. A newer push cancels a deployment that waits.
+# Each pull request has its own group, and a newer push cancels its run.
 concurrency:
-  group: pages
+  group: pages-${{ github.event_name == 'pull_request' && github.ref || 'deploy' }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
@@ -38,8 +40,14 @@ jobs:
       build: pnpm --filter @crawler/site run build
       out: packages/site/dist
       env: '{"SITE_BASE": "/${{ github.event.repository.name }}", "ASTRO_TELEMETRY_DISABLED": "1"}'
+      deploy: ${{ github.event_name != 'pull_request' }}
       # The Releases page and the Status page (releases/, status/ and their data/*.json), at deploy time
       roadmap: docs/ROADMAP.md
       changesets: CHANGELOG.md
       packages: polite-crawler,polite-crawler-mcp
       site-name: polite-crawler
+      # A pull request builds and checks the site in a browser, with no deploy. The probe drives the live crawl of the
+      # home page. The check reads the TypeScript source and removes its types.
+      site-check: true
+      site-check-pages: /,/releases/,/status/
+      site-check-probe: packages/site/src/check-probe.ts

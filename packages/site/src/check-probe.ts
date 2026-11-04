@@ -20,7 +20,7 @@ declare const click: (target: string | Element) => void;
 const CRAWL_MS = 30000;
 
 const verdict = (): string => $(".pc-crawl-verdict")?.textContent ?? "";
-/** This function gives a number of the statistics, in the order of the page: requests, stored, peak, time. */
+/** This function gives one statistic, by its place on the page: requests, stored, peak, time. */
 const stat = (index: number): number => Number($$(".pc-stats dd")[index]?.textContent ?? "");
 const button = (name: string): HTMLButtonElement | undefined =>
   $$(".pc-crawl button").find((el) => el.textContent?.trim() === name) as

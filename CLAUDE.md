@@ -30,9 +30,7 @@ Write all prose of this repository in the style of ASD-STE100 Simplified Technic
 ## Roadmap
 
 - `docs/ROADMAP.md` is the roadmap. The tracker page shows the same items, with a dependency map and a timeline.
-- The files of the tracker are in the private repository of the owner, in `~/git/fleet/artifacts/crawler-roadmap`. The page is a view of these files.
-- To change an item, change its file in `db/items`. Write the file to the page with the `artifact-sync` skill.
-- Then start `pnpm roadmap`, and commit `docs/ROADMAP.md`. Do not edit that file by hand.
+- Start `pnpm roadmap`, and commit `docs/ROADMAP.md`. Do not edit that file by hand.
 
 ## The package
 

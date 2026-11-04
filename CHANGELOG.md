@@ -15,6 +15,10 @@ A prerelease version (`0.2.0-beta.1`) goes to the npm tag `next`. Each other ver
 
 ## Unreleased
 
+## 0.3.0 - 2026-11-02
+
+- New versions of the dependencies (the release train).
+
 ## 0.2.4 - 2026-10-25
 
 - **A server can no longer stop the process through undici.** polite-crawler needs undici 8.12.3 or later. With an earlier undici, a server stopped the process when it sent more than five content codings and then closed the connection (CVE-2026-109869). The lockfile of the repository also gets the fixed versions of body-parser, fast-uri, ip-address and postcss.

@@ -107,7 +107,7 @@ interface StartMcpOptions extends OpenOptions, CrawlToolOptions {
 }
 
 ### build/index.d.mts#VERSION
-export declare const VERSION = "0.2.4";
+export declare const VERSION = "0.3.0";
 
 ### build/index.d.mts#checkToken
 export declare const checkToken: (token: string, source: string) => string;

@@ -129,7 +129,7 @@ export interface StartMcpOptions extends OpenOptions, CrawlToolOptions {
 export const startMcpServer: (options: StartMcpOptions) => Promise<void>;
 
 // @public
-export const VERSION = "0.2.4";
+export const VERSION = "0.3.0";
 
 // (No @packageDocumentation comment for this package)
 

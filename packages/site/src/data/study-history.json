@@ -16,7 +16,7 @@
 {"token":"Googlebot","refused":23,"byName":6,"byStar":17,"welcomed":76,"share":4.1},
 {"token":"PoliteCrawler","refused":47,"byName":0,"byStar":47,"welcomed":0,"share":8.4}
 ]},
-{"version":"2026-11-02","doi":null,"fetched":{"from":"2026-11-02T06:57:08.499Z","to":"2026-11-02T06:58:42.988Z"},"list":{"id":"V354N","date":"2026-11-01","size":1000},"runner":"a GitHub Actions runner, ubuntu-latest","answered":557,"states":{"file":509,"none":48,"blocked":85,"unreachable":358},"agents":[
+{"version":"2026-11-02","doi":"10.5281/zenodo.23940089","fetched":{"from":"2026-11-02T06:57:08.499Z","to":"2026-11-02T06:58:42.988Z"},"list":{"id":"V354N","date":"2026-11-01","size":1000},"runner":"a GitHub Actions runner, ubuntu-latest","answered":557,"states":{"file":509,"none":48,"blocked":85,"unreachable":358},"agents":[
 {"token":"GPTBot","refused":121,"byName":90,"byStar":31,"welcomed":45,"share":21.7},
 {"token":"ClaudeBot","refused":118,"byName":85,"byStar":33,"welcomed":41,"share":21.2},
 {"token":"Google-Extended","refused":104,"byName":74,"byStar":30,"welcomed":39,"share":18.7},

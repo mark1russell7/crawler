@@ -12,7 +12,7 @@ List the MCP server in the directories that need a submission, then post polite-
 
 - Area: Site and growth
 - Waits for: `eval`, `eval-b`
-- What Mark does: Say go in the Fleet Hub (ask crawler-eval). I send you the title and the first comment, then you post from your Hacker News account.
+- What Mark does: Read the post text that the strategist gave you, then post it from your Hacker News account.
 
 ## Later
 

@@ -223,7 +223,7 @@ export function TrendChart({ trend }: { readonly trend: Trend }): ReactElement {
       <details className="pc-table-view">
         <summary>Show the numbers as a table</summary>
         <div
-          className="pc-table-wrap"
+          className="pc-table-wrap scroll-cue"
           tabIndex={0}
           role="region"
           aria-label="The share that refuses each agent, in each run"

@@ -114,7 +114,7 @@ export function BuildersChart(): ReactElement {
       <details className="pc-table-view">
         <summary>The numbers as a table</summary>
         <div
-          className="pc-table-wrap"
+          className="pc-table-wrap scroll-cue"
           tabIndex={0}
           role="region"
           aria-label="The sites with hours, by site builder"

@@ -1,34 +1,24 @@
 declare const check: (name: string, ok: unknown, detail?: unknown) => boolean;
 
-const rules: string[] = [];
-const keyframes: string[] = [];
-const walk = (list: CSSRuleList, where: string): void => {
-  for (const rule of Array.from(list)) {
-    if (rule instanceof CSSKeyframesRule) {
-      if (rule.name.includes("scroll-cue")) keyframes.push(`${where} ${rule.name} ${rule.cssRules.length}`);
-      continue;
-    }
-    if (rule instanceof CSSStyleRule) {
-      const style = rule.style;
-      const animated = style.getPropertyValue("animation-name") !== "" || style.getPropertyValue("animation-timeline") !== "";
-      if (rule.selectorText.includes("scroll-cue") || rule.selectorText.includes("pc-table-wrap") || (animated && rule.selectorText.length < 40)) {
-        rules.push(`${where} ${rule.cssText.slice(0, 400)}`);
-      }
-    }
-    if ("cssRules" in rule) walk((rule as CSSGroupingRule).cssRules, `${where} ${rule.constructor.name}`);
+// This probe reads the text of each served sheet, because the rules of the browser hold no animation for the cue.
+const links = Array.from(document.querySelectorAll('link[rel="stylesheet"]')) as HTMLLinkElement[];
+const hits: string[] = [];
+for (const link of links) {
+  const text = await (await fetch(link.href)).text();
+  const name = link.href.split("/").pop() ?? "";
+  const timeline = text.split("animation-timeline").length - 1;
+  const fades = text.split("scroll-cue-fades").length - 1;
+  hits.push(`${name} length ${text.length}, animation-timeline ${timeline}, scroll-cue-fades ${fades}`);
+  let from = 0;
+  for (let round = 0; round < 3; round++) {
+    const at = text.indexOf("@supports", from);
+    if (at < 0) break;
+    from = at + 9;
+    if (text.slice(at, at + 400).includes("scroll-cue")) hits.push(`${name} at ${at}: ${text.slice(at, at + 420)}`);
   }
-};
-const sheets = Array.from(document.styleSheets);
-sheets.forEach((sheet, at) => {
-  try {
-    walk(sheet.cssRules, `sheet${at}`);
-  } catch (error) {
-    rules.push(`sheet${at} unread ${String(error).slice(0, 80)}`);
-  }
-});
-const box = document.querySelector(".scroll-cue") as HTMLElement | null;
-const animated = Array.from(document.querySelectorAll("*")).filter((el) => getComputedStyle(el).animationName !== "none").length;
-check("E: sheets and keyframes", false, JSON.stringify({ sheets: sheets.length, keyframes, animatedElements: animated, inlineStyle: box?.getAttribute("style") ?? null, classes: box?.className ?? null }));
-rules.slice(0, 14).forEach((text, at) => check(`F${at}`, false, text));
+  const key = text.indexOf("scroll-cue-fades");
+  if (key >= 0) hits.push(`${name} first fades at ${key}: ${text.slice(Math.max(0, key - 240), key + 200)}`);
+}
+hits.slice(0, 14).forEach((text, at) => check(`G${at}`, false, text));
 
 export {};

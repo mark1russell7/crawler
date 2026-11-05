@@ -163,7 +163,7 @@ export function RefusalChart({
       <details className="pc-table-view">
         <summary>Show the numbers as a table</summary>
         <div
-          className="pc-table-wrap"
+          className="pc-table-wrap scroll-cue"
           tabIndex={0}
           role="region"
           aria-label="The refusals for each agent"
@@ -297,7 +297,7 @@ export function CompanyChart({
       <details className="pc-table-view">
         <summary>Show the numbers as a table</summary>
         <div
-          className="pc-table-wrap"
+          className="pc-table-wrap scroll-cue"
           tabIndex={0}
           role="region"
           aria-label="The refusals for each company"
@@ -745,7 +745,7 @@ export function StudyTable({
         domain to see the lines that decided.
       </p>
       <div
-        className="pc-table-wrap pc-scroll"
+        className="pc-table-wrap scroll-cue pc-scroll"
         tabIndex={0}
         role="region"
         aria-label="The verdicts of each domain"

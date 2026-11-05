@@ -321,6 +321,9 @@ importers:
       '@fontsource-variable/atkinson-hyperlegible-next':
         specifier: ^5.3.0
         version: 5.3.0
+      '@mark1russell7/site-pages':
+        specifier: ^0.2.26
+        version: 0.2.26
       '@pagefind/default-ui':
         specifier: ^1.5.2
         version: 1.5.2
@@ -1105,6 +1108,14 @@ packages:
     resolution: {integrity: sha512-hn2C5jjOFCGKJqFQPHt57C/Cn1l9Lb9MltVNtL71KSu+nRrfPOmg8ujYB5n3oDFFWNdNA4bE/8LLT4tG3lmrGA==}
     engines: {node: '>=22'}
 
+  '@mark1russell7/rigor-generators@0.1.5':
+    resolution: {integrity: sha512-YkABrG6+AV4oZKWoSIayDGxKTqcTMbp/eGa+3u00X09Jv9TfpHFDeqHlEQARMBzJ/kvy/EMNIXQZMGa3Nobuzw==}
+    engines: {node: '>=22'}
+
+  '@mark1russell7/rigor-statistics@0.1.11':
+    resolution: {integrity: sha512-5tD7QqLE7Y6wWsoImXuszH3JA5VHwGDHjVzobn/JGtYgo24AFTzXlngEPxfW9A5kHD9GFXgWbkgUCNa0RlLToA==}
+    engines: {node: '>=22'}
+
   '@mark1russell7/service@0.6.3':
     resolution: {integrity: sha512-PN8dNgqh6SyCyKN5r+x/ilr5GXyq8d0lxQJsTEDIGBSe42n3edmsK/5qcqAQ4iMI7iLBRv97aF4AIXJxTbnyLw==}
     engines: {node: '>=22.19'}
@@ -1131,6 +1142,11 @@ packages:
         optional: true
       zod:
         optional: true
+
+  '@mark1russell7/site-pages@0.2.26':
+    resolution: {integrity: sha512-1FJ62NQOv74kFqdI8rCPXlzq+Oy4rDa6q/FxwzsT52RHFYapEL8O7upaEQeSfnVibzfFzqocouOVEi10Nw3DQg==}
+    engines: {node: '>=22'}
+    hasBin: true
 
   '@mark1russell7/ste-lint@https://codeload.github.com/mark1russell7/ste-lint/tar.gz/f597d6c1e09bcfcb487bb575825d6d5f29e9e0c7':
     resolution: {gitHosted: true, integrity: sha512-HDxumpWNUeciZKaXbAGFPyoOTrt0trj7L3/koNvWnTN/vEuF0gYzqVJdsgfTQ9bE/DhSxfNMRxtrh4KYnbbimA==, tarball: https://codeload.github.com/mark1russell7/ste-lint/tar.gz/f597d6c1e09bcfcb487bb575825d6d5f29e9e0c7}
@@ -4678,6 +4694,12 @@ snapshots:
 
   '@mark1russell7/rational@0.1.2': {}
 
+  '@mark1russell7/rigor-generators@0.1.5': {}
+
+  '@mark1russell7/rigor-statistics@0.1.11':
+    dependencies:
+      '@mark1russell7/rigor-generators': 0.1.5
+
   '@mark1russell7/service@0.6.3(ws@8.22.0)(zod@4.6.6)':
     dependencies:
       '@mark1russell7/algebra': 0.8.0(zod@4.6.6)
@@ -4685,6 +4707,10 @@ snapshots:
     optionalDependencies:
       ws: 8.22.0
       zod: 4.6.6
+
+  '@mark1russell7/site-pages@0.2.26':
+    dependencies:
+      '@mark1russell7/rigor-statistics': 0.1.11
 
   '@mark1russell7/ste-lint@https://codeload.github.com/mark1russell7/ste-lint/tar.gz/f597d6c1e09bcfcb487bb575825d6d5f29e9e0c7':
     dependencies:

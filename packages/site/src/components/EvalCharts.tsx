@@ -414,7 +414,7 @@ export function SessionCosts(): ReactElement {
       <details className="pc-table-view">
         <summary>Show the running totals as a table</summary>
         <div
-          className="pc-table-wrap"
+          className="pc-table-wrap scroll-cue"
           tabIndex={0}
           role="region"
           aria-label={`The running totals, ${orderName}`}
@@ -486,7 +486,7 @@ export function ClaimTable(): ReactElement {
   return (
     <div className="pc-eval-table not-content">
       <div
-        className="pc-table-wrap"
+        className="pc-table-wrap scroll-cue"
         tabIndex={0}
         role="region"
         aria-label="The tokens of each claim"

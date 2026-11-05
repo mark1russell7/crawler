@@ -9,6 +9,7 @@
 #   branch        commits the data on the branch study/<YYYY-MM> and pushes it   contents: write
 #   pull-request  opens the pull request into the branch of the run            pull-requests: write
 #   ci            starts ci.yml on the branch: the main ruleset requires its checks   actions: write
+#   report        opens an issue when a job of the run fails                          issues: write
 # The workflow never pushes to main. The steps after the merge are in CLAUDE.md, section "Study".
 name: Study each month
 
@@ -278,3 +279,23 @@ jobs:
         run: |
           gh workflow run ci.yml -R "$REPO" --ref "$HEAD"
           echo "The run started ci.yml on $HEAD: https://github.com/$REPO/actions/workflows/ci.yml" >> "$GITHUB_STEP_SUMMARY"
+
+  # The site stops its deploys when the data of the study is more than 33 days old (data-stamps.ts). This
+  # issue tells a person about a failed run on the same day, so the deploys do not stop first.
+  report:
+    name: Report a failed run
+    needs: [study, branch, pull-request, ci]
+    if: failure()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      issues: write
+    steps:
+      - name: Open an issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          gh issue create -R "$REPO" --title "The monthly robots.txt study failed" \
+            --body "The run $RUN_URL failed. The deploys of the site stop when the data of the study is more than 33 days old. Start the run again, or correct the failure."

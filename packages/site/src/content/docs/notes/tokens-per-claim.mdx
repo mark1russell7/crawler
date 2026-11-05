@@ -22,6 +22,8 @@ export const day = new Date(`${evalA.date}T12:00:00Z`).toLocaleDateString("en-US
 
 <p class="pc-byline">By <a href={STUDY_AUTHOR.url}>{STUDY_AUTHOR.name}</a>. The eval read the pages on <time datetime={evalA.date}>{day}</time> with {evalA.package}, in <a href={runUrl}>workflow {evalA.run}</a> (commit <code>{evalA.commit}</code>).</p>
 
+<p class="pc-byline">This page is a fixed study of {evalA.package}. It tells nothing about a newer release.</p>
+
 An agent that cites a page must check the quote. How many tokens does it read to do that? Part A of the eval counts them for {s.claims} claims on {pageCount} pages, in CI, with no model. Each claim has a question and an exact quote from a page. The pages are RFCs, Wikipedia articles, MDN, the documentation of Node.js and Python, government pages and one W3C recommendation.
 
 The polite-crawler path is four calls of its MCP server. `crawl_fetch` stores the page, and `crawl_find` searches the store with the question. `crawl_read` reads {tokens(evalA.window)} characters at the quote, and `crawl_verify` checks the quote. The other path reads the whole page as Markdown, the way WebFetch converts a page.

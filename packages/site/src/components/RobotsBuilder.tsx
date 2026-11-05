@@ -224,7 +224,7 @@ export default function RobotsBuilder(): ReactElement {
           agents can fetch the home page <code>/</code>. Pick a rule for each group.
         </p>
         <div
-          className="pc-table-wrap"
+          className="pc-table-wrap scroll-cue"
           tabIndex={0}
           role="region"
           aria-label="The rule of each group, and the verdict for each agent and each path"

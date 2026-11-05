@@ -527,6 +527,13 @@ header.header {
 }
 .pc-table-wrap {
   overflow-x: auto;
+  --scroll-cue-bg: var(--color-surface);
+}
+/* With a scroll timeline, the mask makes the fade. The box needs no color of its own, so it matches each card. */
+@supports (animation-timeline: scroll()) {
+  .pc-table-wrap.scroll-cue {
+    background-color: transparent;
+  }
 }
 .pc-table {
   width: 100%;

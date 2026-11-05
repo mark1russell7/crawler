@@ -297,7 +297,7 @@ export function ClaimSessions(): ReactElement {
       <details className="pc-table-view">
         <summary>Show each claim as a table</summary>
         <div
-          className="pc-table-wrap"
+          className="pc-table-wrap scroll-cue"
           tabIndex={0}
           role="region"
           aria-label={`The cost of a session for each claim, with ${run.name} and polite-crawler-mcp ${run.mcp}`}

@@ -246,7 +246,7 @@ export default function RobotsTester(): ReactElement {
       </div>
 
       <div
-        className="pc-table-wrap"
+        className="pc-table-wrap scroll-cue"
         tabIndex={0}
         role="region"
         aria-label="The verdict for each path and each agent"

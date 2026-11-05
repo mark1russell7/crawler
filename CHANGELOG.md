@@ -15,6 +15,10 @@ A prerelease version (`0.2.0-beta.1`) goes to the npm tag `next`. Each other ver
 
 ## Unreleased
 
+## 0.3.1 - 2026-11-05
+
+- **A page with a long run of spaces in its head no longer takes polynomial time.** The regular expression of the meta charset took time as the square of the length of that run. A head of 2,000 spaces took 2.3 ms. With this version, the time is linear (CodeQL alert 32). The regular expression reads the same declarations.
+
 ## 0.3.0 - 2026-11-02
 
 - New versions of the dependencies (the release train).

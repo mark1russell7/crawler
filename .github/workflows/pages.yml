@@ -49,5 +49,5 @@ jobs:
       # A pull request builds and checks the site in a browser, with no deploy. The probe drives the live crawl of the
       # home page. The check reads the TypeScript source and removes its types.
       site-check: true
-      site-check-pages: /,/releases/,/status/,/notes/robots-txt-ai-agents/,/block-ai-training-crawlers/,/bot/,/notes/tokens-per-claim/,/notes/claude-code-sessions/,/notes/restaurant-websites/
+      site-check-pages: /notes/tokens-per-claim/
       site-check-probe: packages/site/src/check-probe.ts

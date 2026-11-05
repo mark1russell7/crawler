@@ -6,10 +6,13 @@
 # The artifact "eval" holds the JSON result, the Markdown summary and the WACZ file. The job
 # summary has the tables.
 #
-# It runs only when a person starts it, and at each release. It never runs on a push of a branch.
+# It runs when a person starts it, each week, and at each release. It never runs on a push of a branch.
 # release.yml makes each GitHub release with the token of GitHub Actions, and an event of that
 # token starts no workflow. Thus the end of a Release run also starts this workflow (workflow_run).
-# The job "gate" then lets the eval run only when that Release run made a GitHub release.
+# The job "gate" then lets the eval run only when that Release run made a release of polite-crawler:
+# scripts/eval-gate.ts reads the artifact "tags" of the run, its plan of tags, and compares no times.
+# The gate writes its reason to the job summary, so a green run that skipped the eval says so.
+# The weekly run keeps the data of the site page current when no release comes.
 # After a Release run, the eval checks out the tag of that GitHub release: the code that went to
 # npm. It does not check out a commit from the payload of the event (github.event.workflow_run).
 name: Eval
@@ -22,6 +25,8 @@ on:
         default: "2000"
   release:
     types: [published]
+  schedule:
+    - cron: "17 6 * * 1"
   workflow_run:
     workflows: [Release]
     types: [completed]
@@ -45,34 +50,37 @@ jobs:
     timeout-minutes: 5
     outputs:
       run: ${{ steps.gate.outputs.run }}
-      # After a Release run, the tag of the newest GitHub release that the run made. Else empty.
+      # After a Release run, the tag of the release of polite-crawler that the run made. Else empty.
       tag: ${{ steps.gate.outputs.tag }}
+    permissions:
+      contents: read
+      # gh run download reads the artifact "tags" of the Release run.
+      actions: read
     steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
       - name: The decision
         id: gate
         env:
           GH_TOKEN: ${{ github.token }}
           EVENT: ${{ github.event_name }}
           CONCLUSION: ${{ github.event.workflow_run.conclusion }}
-          STARTED: ${{ github.event.workflow_run.run_started_at }}
+          RUN_ID: ${{ github.event.workflow_run.id }}
           REPO: ${{ github.repository }}
+          PLAN_FILE: ${{ runner.temp }}/tags/tags.json
+          RELEASES_FILE: ${{ runner.temp }}/releases.txt
         run: |
-          if [ "$EVENT" != workflow_run ]; then
-            echo "run=true" >> "$GITHUB_OUTPUT"
-            exit 0
+          if [ "$EVENT" = workflow_run ]; then
+            # A Release run with no plan has no artifact "tags". The gate then skips the eval, with that reason.
+            gh run download "$RUN_ID" --repo "$REPO" --name tags --dir "$RUNNER_TEMP/tags" ||
+              echo "The Release run $RUN_ID has no artifact tags."
+            gh release list --repo "$REPO" --limit 50 --json tagName --jq '.[].tagName' > "$RELEASES_FILE"
           fi
-          made=0
-          tag=""
-          if [ "$CONCLUSION" = success ]; then
-            # The newest release comes first. Each release of one run has a tag on the same commit.
-            tags=$(gh release list --repo "$REPO" --limit 10 --json tagName,createdAt \
-              --jq ".[] | select(.createdAt >= \"$STARTED\") | .tagName")
-            made=$(printf '%s' "$tags" | grep -c . || true)
-            tag=$(printf '%s\n' "$tags" | head -n 1)
-          fi
-          echo "The Release run ended with $CONCLUSION and made $made GitHub releases${tag:+ (newest: $tag)}."
-          echo "tag=$tag" >> "$GITHUB_OUTPUT"
-          if [ "$made" -gt 0 ]; then echo "run=true" >> "$GITHUB_OUTPUT"; else echo "run=false" >> "$GITHUB_OUTPUT"; fi
+          node scripts/eval-gate.ts
 
   eval:
     name: Tokens per verified claim

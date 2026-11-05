@@ -369,7 +369,12 @@ export default function RecipeReader({ initial }: { readonly initial: RecipeView
                             ? ": you keep no hours, so each day of the reading is new."
                             : ": each day that the two weeks state is the same."}
                       </p>
-                      <div className="pc-table-wrap">
+                      <div
+                        className="pc-table-wrap scroll-cue"
+                        tabIndex={0}
+                        role="region"
+                        aria-label="The hours of each day"
+                      >
                         <table className="pc-table pc-rr-compact">
                           <thead>
                             <tr>

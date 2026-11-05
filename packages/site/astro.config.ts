@@ -290,6 +290,7 @@ export default defineConfig({
       customCss: [
         "@fontsource-variable/atkinson-hyperlegible-next",
         "@fontsource-variable/atkinson-hyperlegible-mono",
+        "@mark1russell7/site-pages/scroll-cue.css",
         "./src/styles/tokens.css",
         "./src/styles/theme.css",
         "./src/styles/study.css",

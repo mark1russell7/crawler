@@ -295,7 +295,7 @@ export default function PaceTimeline(): ReactElement {
       <details className="pc-table-view pc-pace-table">
         <summary>The pace as a table</summary>
         <div
-          className="pc-table-wrap"
+          className="pc-table-wrap scroll-cue"
           tabIndex={0}
           role="region"
           aria-label="The pace of each tool"

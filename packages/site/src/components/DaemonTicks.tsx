@@ -610,7 +610,7 @@ export default function DaemonTicks(): ReactElement {
 
       <details className="pc-table-view pc-dm-table">
         <summary>The ticks as a table</summary>
-        <div className="pc-table-wrap">
+        <div className="pc-table-wrap scroll-cue" tabIndex={0} role="region" aria-label="The ticks">
           <table className="pc-table">
             <thead>
               <tr>

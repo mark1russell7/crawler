@@ -4,7 +4,7 @@
 # and private members. The command `api-report check` compares this file with the built .d.ts files.
 # To accept a change of the API, start the build, then `api-report update`, and review the diff.
 
-## . (build/index.d.mts): 25 names
+## . (build/index.d.mts): names
 
 type CrawlMcpServer: build/index.d.mts#CrawlMcpServer
 type CrawlServerOptions: build/index.d.mts#CrawlServerOptions

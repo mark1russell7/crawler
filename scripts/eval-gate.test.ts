@@ -15,8 +15,8 @@ const PLAN: PlanEntry[] = [
 const RELEASES = ["polite-crawler-mcp@0.5.0", "polite-crawler@0.5.0", "polite-crawler@0.4.0"];
 const AFTER_RELEASE = { event: "workflow_run", conclusion: "success", runId: "41974842695" };
 
-describe("decide", () => {
-  it("runs the eval on the tag that the Release run made", () => {
+void describe("decide", () => {
+  void it("runs the eval on the tag that the Release run made", () => {
     assert.deepEqual(decide({ ...AFTER_RELEASE, plan: PLAN, releases: RELEASES }), {
       run: true,
       tag: "polite-crawler@0.5.0",
@@ -24,7 +24,7 @@ describe("decide", () => {
     });
   });
 
-  it("skips the eval, with a reason, after a Release run that made no tag", () => {
+  void it("skips the eval, with a reason, after a Release run that made no tag", () => {
     const decision = decide({ ...AFTER_RELEASE, plan: [], releases: RELEASES });
     assert.equal(decision.run, false);
     assert.equal(
@@ -33,18 +33,18 @@ describe("decide", () => {
     );
   });
 
-  it("skips the eval when the Release run has no plan", () => {
+  void it("skips the eval when the Release run has no plan", () => {
     const decision = decide({ ...AFTER_RELEASE, plan: null, releases: RELEASES });
     assert.equal(decision.run, false);
     assert.equal(decision.reason, "Eval skipped: the Release run 41974842695 has no plan of tags.");
   });
 
-  it("skips the eval when a release of the MCP server only came", () => {
+  void it("skips the eval when a release of the MCP server only came", () => {
     const decision = decide({ ...AFTER_RELEASE, plan: PLAN.slice(1), releases: RELEASES });
     assert.equal(decision.run, false);
   });
 
-  it("skips the eval when the tag of the plan has no GitHub release", () => {
+  void it("skips the eval when the tag of the plan has no GitHub release", () => {
     const decision = decide({ ...AFTER_RELEASE, plan: PLAN, releases: ["polite-crawler@0.4.0"] });
     assert.deepEqual(decision, {
       run: false,
@@ -54,7 +54,7 @@ describe("decide", () => {
     });
   });
 
-  it("skips the eval after a failed Release run", () => {
+  void it("skips the eval after a failed Release run", () => {
     const decision = decide({
       ...AFTER_RELEASE,
       conclusion: "failure",
@@ -64,7 +64,7 @@ describe("decide", () => {
     assert.equal(decision.reason, "Eval skipped: the Release run 41974842695 ended with failure.");
   });
 
-  it("runs the eval for each other event, on the default ref", () => {
+  void it("runs the eval for each other event, on the default ref", () => {
     for (const event of ["schedule", "workflow_dispatch", "release"]) {
       assert.deepEqual(decide({ event, plan: null, releases: [] }), {
         run: true,
@@ -75,8 +75,8 @@ describe("decide", () => {
   });
 });
 
-describe("the files of the gate", () => {
-  it("reads a plan and the release tags, and gives null for a missing plan", () => {
+void describe("the files of the gate", () => {
+  void it("reads a plan and the release tags, and gives null for a missing plan", () => {
     const dir = mkdtempSync(join(tmpdir(), "eval-gate-"));
     try {
       writeFileSync(

@@ -15,6 +15,10 @@ A prerelease version (`0.2.0-beta.1`) goes to the npm tag `next`. Each other ver
 
 ## Unreleased
 
+## 0.5.0 - 2026-11-05
+
+- New versions of the dependencies (the release train).
+
 ## 0.4.0 - 2026-11-05
 
 - New versions of the dependencies (the release train).

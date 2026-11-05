@@ -607,7 +607,12 @@ export default function SiteVisit(): ReactElement {
 
       <details className="pc-table-view pc-visit-table">
         <summary>The requests as a table</summary>
-        <div className="pc-table-wrap scroll-cue" tabIndex={0} role="region" aria-label="The requests">
+        <div
+          className="pc-table-wrap scroll-cue"
+          tabIndex={0}
+          role="region"
+          aria-label="The requests"
+        >
           <table className="pc-table">
             <thead>
               <tr>

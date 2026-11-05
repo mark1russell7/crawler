@@ -583,7 +583,12 @@ export default function HybridRanks(): ReactElement {
 
       <details className="pc-table-view">
         <summary>The rankings as a table</summary>
-        <div className="pc-table-wrap scroll-cue" tabIndex={0} role="region" aria-label="The rankings">
+        <div
+          className="pc-table-wrap scroll-cue"
+          tabIndex={0}
+          role="region"
+          aria-label="The rankings"
+        >
           <table className="pc-table">
             <thead>
               <tr>

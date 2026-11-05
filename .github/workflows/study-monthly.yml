@@ -25,6 +25,10 @@ concurrency:
   group: study-monthly
   cancel-in-progress: false
 
+defaults:
+  run:
+    shell: bash
+
 jobs:
   study:
     name: Run the study and check the site

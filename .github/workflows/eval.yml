@@ -34,6 +34,10 @@ concurrency:
   group: eval
   cancel-in-progress: false
 
+defaults:
+  run:
+    shell: bash
+
 jobs:
   gate:
     name: Is there a new release

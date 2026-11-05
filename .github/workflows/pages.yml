@@ -7,6 +7,11 @@ name: Pages
 on:
   push:
     branches: [main]
+  # After a release, so that the Releases page has the new version
+  workflow_run:
+    workflows: [Release]
+    types: [completed]
+    branches: [main]
   # Every 3 hours, so that the Status page shows the open pull requests and issues of now
   schedule:
     - cron: "28 */3 * * *"
@@ -23,7 +28,7 @@ concurrency:
 
 jobs:
   pages:
-    uses: mark1russell7/template/.github/workflows/reusable-pages.yml@10f19ba1ae8ac30cf47616bc2812f695ea0076c1 # main
+    uses: mark1russell7/template/.github/workflows/reusable-pages.yml@f5db24088229bde4bdbfa4f5b35a1ef531484c09 # main
     # The build job of the shared workflow gets only the read permissions. Only its deploy job,
     # which runs no code of the repository, writes to Pages.
     permissions:

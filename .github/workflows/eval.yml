@@ -26,7 +26,7 @@ on:
   release:
     types: [published]
   schedule:
-    - cron: "17 6 * * 1"
+    - cron: "53 6 * * 1"
   workflow_run:
     workflows: [Release]
     types: [completed]

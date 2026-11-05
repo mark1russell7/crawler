@@ -10,7 +10,7 @@
 //
 // The script writes "run" and "tag" to GITHUB_OUTPUT. It writes the reason to the job summary, so a skip
 // is visible in a green run.
-import { appendFileSync, existsSync, readFileSync } from "node:fs";
+import { appendFileSync, existsSync, readFileSync, realpathSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
 /** The package that the eval measures. */
@@ -90,7 +90,11 @@ export function readReleases(file: string | undefined): string[] {
     .filter((line) => line !== "");
 }
 
-if (process.argv[1] === fileURLToPath(import.meta.url)) {
+// engines.node allows Node 23, which has no import.meta.main, so the check compares the real paths.
+if (
+  process.argv[1] !== undefined &&
+  realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url))
+) {
   const env = process.env;
   const decision = decide({
     event: env["EVENT"] ?? "",

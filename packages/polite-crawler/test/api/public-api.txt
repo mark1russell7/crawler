@@ -4,7 +4,7 @@
 # and private members. The command `api-report check` compares this file with the built .d.ts files.
 # To accept a change of the API, start the build, then `api-report update`, and review the diff.
 
-## . (build/index.d.mts): 370 names
+## . (build/index.d.mts): names
 
 ALLOW_ALL: build/robots.d.mts#ALLOW_ALL
 type AiInput: build/signals.d.mts#AiInput
@@ -161,8 +161,8 @@ type OpenOptions: build/index.d.mts#OpenOptions
 type OpenedCrawler: build/index.d.mts#OpenedCrawler
 type Outcome: build/classify.d.mts#Outcome
 PRODUCT_LIMITS: build/index.d.mts#PRODUCT_LIMITS
-type PageExtract: build/html-o5bDHjNi.d.mts#PageExtract
-type PageLink: build/html-o5bDHjNi.d.mts#PageLink
+type PageExtract: build/html.chunk.d.mts#PageExtract
+type PageLink: build/html.chunk.d.mts#PageLink
 type PageOptions: build/index.d.mts#PageOptions
 type PageResult: build/index.d.mts#PageResult
 type Passage: build/index.d.mts#Passage
@@ -214,7 +214,7 @@ SITEMAP_LIMITS: build/index.d.mts#SITEMAP_LIMITS
 type ScanOptions: build/index.d.mts#ScanOptions
 type ScheduleOptions: build/index.d.mts#ScheduleOptions
 type ScheduleResult: build/index.d.mts#ScheduleResult
-type ScopeOptions: build/html-o5bDHjNi.d.mts#ScopeOptions
+type ScopeOptions: build/html.chunk.d.mts#ScopeOptions
 type SearchOptions: build/index.d.mts#SearchOptions
 type SearchRank: build/index.d.mts#SearchRank
 type Signals: build/signals.d.mts#Signals
@@ -294,7 +294,7 @@ type Week: build/hours.d.mts#Week
 type WordPart: build/index.d.mts#WordPart
 archiveExtractor: build/index.d.mts#archiveExtractor
 archivedDocId: build/index.d.mts#archivedDocId
-bodyEncoding: build/html-o5bDHjNi.d.mts#bodyEncoding
+bodyEncoding: build/html.chunk.d.mts#bodyEncoding
 browserMissing: build/index.d.mts#browserMissing
 catchUpIndex: build/index.d.mts#catchUpIndex
 changeCommand: build/index.d.mts#changeCommand
@@ -308,7 +308,7 @@ createRuntime: build/index.d.mts#createRuntime
 createWebBotAuthSigner: build/index.d.mts#createWebBotAuthSigner
 daemonStateFile: build/index.d.mts#daemonStateFile
 decide: build/robots.d.mts#decide
-decodeBody: build/html-o5bDHjNi.d.mts#decodeBody
+decodeBody: build/html.chunk.d.mts#decodeBody
 defaultUserAgent: build/index.d.mts#defaultUserAgent
 defineRecipe: build/index.d.mts#defineRecipe
 describeWeek: build/hours.d.mts#describeWeek
@@ -322,7 +322,7 @@ estimateTokens: build/index.d.mts#estimateTokens
 exportWacz: build/index.d.mts#exportWacz
 exportWarc: build/index.d.mts#exportWarc
 extractDocument: build/index.d.mts#extractDocument
-extractPage: build/html-o5bDHjNi.d.mts#extractPage
+extractPage: build/html.chunk.d.mts#extractPage
 feedDate: build/index.d.mts#feedDate
 fetchAndIndex: build/index.d.mts#fetchAndIndex
 fetchPage: build/index.d.mts#fetchPage
@@ -370,14 +370,14 @@ scheduleWatches: build/index.d.mts#scheduleWatches
 startDaemon: build/index.d.mts#startDaemon
 toHoursWeek: build/hours.d.mts#toHoursWeek
 transformersEmbedder: build/index.d.mts#transformersEmbedder
-typesOf: build/html-o5bDHjNi.d.mts#typesOf
+typesOf: build/html.chunk.d.mts#typesOf
 unitVector: build/index.d.mts#unitVector
 venueReadingsOf: build/index.d.mts#venueReadingsOf
 verifyQuote: build/index.d.mts#verifyQuote
 verifySignature: build/index.d.mts#verifySignature
 versionAtTime: build/index.d.mts#versionAtTime
 
-## ./robots (build/robots.d.mts): 20 names
+## ./robots (build/robots.d.mts): names
 
 ALLOW_ALL: build/robots.d.mts#ALLOW_ALL
 DISALLOW_ALL: build/robots.d.mts#DISALLOW_ALL
@@ -400,7 +400,7 @@ robotsFromStatus: build/robots.d.mts#robotsFromStatus
 signalsFor: build/robots.d.mts#signalsFor
 unreachableRobots: build/robots.d.mts#unreachableRobots
 
-## ./hours (build/hours.d.mts): 15 names
+## ./hours (build/hours.d.mts): names
 
 DAYS: build/hours.d.mts#DAYS
 Day: build/hours.d.mts#Day
@@ -418,20 +418,20 @@ fromText: build/hours.d.mts#fromText
 readRange: build/hours.d.mts#readRange
 toHoursWeek: build/hours.d.mts#toHoursWeek
 
-## ./html (build/html.d.mts): 10 names
+## ./html (build/html.d.mts): names
 
-DomNode: build/html-o5bDHjNi.d.mts#DomNode
-PageExtract: build/html-o5bDHjNi.d.mts#PageExtract
-PageLink: build/html-o5bDHjNi.d.mts#PageLink
-bodyEncoding: build/html-o5bDHjNi.d.mts#bodyEncoding
-canonicalUrl: build/html-o5bDHjNi.d.mts#canonicalUrl
-decodeBody: build/html-o5bDHjNi.d.mts#decodeBody
-extractPage: build/html-o5bDHjNi.d.mts#extractPage
-readJsonLd: build/html-o5bDHjNi.d.mts#readJsonLd
-typesOf: build/html-o5bDHjNi.d.mts#typesOf
-visibleText: build/html-o5bDHjNi.d.mts#visibleText
+DomNode: build/html.chunk.d.mts#DomNode
+PageExtract: build/html.chunk.d.mts#PageExtract
+PageLink: build/html.chunk.d.mts#PageLink
+bodyEncoding: build/html.chunk.d.mts#bodyEncoding
+canonicalUrl: build/html.chunk.d.mts#canonicalUrl
+decodeBody: build/html.chunk.d.mts#decodeBody
+extractPage: build/html.chunk.d.mts#extractPage
+readJsonLd: build/html.chunk.d.mts#readJsonLd
+typesOf: build/html.chunk.d.mts#typesOf
+visibleText: build/html.chunk.d.mts#visibleText
 
-## ./classify (build/classify.d.mts): 7 names
+## ./classify (build/classify.d.mts): names
 
 Classified: build/classify.d.mts#Classified
 Outcome: build/classify.d.mts#Outcome
@@ -441,7 +441,7 @@ isClientError: build/classify.d.mts#isClientError
 parseHttpDate: build/classify.d.mts#parseHttpDate
 parseRetryAfter: build/classify.d.mts#parseRetryAfter
 
-## ./politeness (build/politeness.d.mts): 30 names
+## ./politeness (build/politeness.d.mts): names
 
 Clock: build/politeness.d.mts#Clock
 DEFAULT_POLICY: build/politeness.d.mts#DEFAULT_POLICY
@@ -474,7 +474,7 @@ realClock: build/politeness.d.mts#realClock
 restAfter: build/politeness.d.mts#restAfter
 validatorsToSend: build/politeness.d.mts#validatorsToSend
 
-## ./signals (build/signals.d.mts): 5 names
+## ./signals (build/signals.d.mts): names
 
 AiInput: build/signals.d.mts#AiInput
 NO_SIGNALS: build/signals.d.mts#NO_SIGNALS
@@ -586,7 +586,7 @@ export declare const toHoursWeek: (week: Week) => {
   readonly split: readonly Day[];
 };
 
-### build/html-o5bDHjNi.d.mts#DomNode
+### build/html.chunk.d.mts#DomNode
 interface DomNode {
   readonly nodeType: number;
   readonly nodeName: string;
@@ -598,7 +598,7 @@ interface DomNode {
   readonly remove?: (() => void) | undefined;
 }
 
-### build/html-o5bDHjNi.d.mts#PageExtract
+### build/html.chunk.d.mts#PageExtract
 interface PageExtract {
   readonly title: string;
   readonly description: string | null;
@@ -618,37 +618,37 @@ interface PageExtract {
   readonly notes: readonly string[];
 }
 
-### build/html-o5bDHjNi.d.mts#PageLink
+### build/html.chunk.d.mts#PageLink
 interface PageLink {
   readonly href: string;
   readonly text: string;
 }
 
-### build/html-o5bDHjNi.d.mts#ScopeOptions
+### build/html.chunk.d.mts#ScopeOptions
 interface ScopeOptions {
   readonly sameSite?: boolean | undefined;
   readonly allowHosts?: readonly string[] | undefined;
 }
 
-### build/html-o5bDHjNi.d.mts#bodyEncoding
+### build/html.chunk.d.mts#bodyEncoding
 declare const bodyEncoding: (bytes: Uint8Array, contentType: string | null) => string;
 
-### build/html-o5bDHjNi.d.mts#canonicalUrl
+### build/html.chunk.d.mts#canonicalUrl
 declare const canonicalUrl: (value: string) => string;
 
-### build/html-o5bDHjNi.d.mts#decodeBody
+### build/html.chunk.d.mts#decodeBody
 declare const decodeBody: (bytes: Uint8Array, contentType: string | null) => string;
 
-### build/html-o5bDHjNi.d.mts#extractPage
+### build/html.chunk.d.mts#extractPage
 declare const extractPage: (html: string, pageUrl: string) => PageExtract;
 
-### build/html-o5bDHjNi.d.mts#readJsonLd
+### build/html.chunk.d.mts#readJsonLd
 declare const readJsonLd: (sources: readonly string[]) => Record<string, unknown>[];
 
-### build/html-o5bDHjNi.d.mts#typesOf
+### build/html.chunk.d.mts#typesOf
 declare const typesOf: (record: Record<string, unknown>) => string[];
 
-### build/html-o5bDHjNi.d.mts#visibleText
+### build/html.chunk.d.mts#visibleText
 declare const visibleText: (root: DomNode) => string;
 
 ### build/index.d.mts#ArchiveCounts

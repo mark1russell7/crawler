@@ -16,6 +16,8 @@ export interface StampRun {
   readonly url: string;
   readonly date: string;
   readonly engines: Readonly<Record<string, string>>;
+  /** The full commit of the code of the run. */
+  readonly commit?: string;
 }
 
 /** The largest age of the data of a page, and the scheduled workflow that meets it. */
@@ -26,11 +28,20 @@ export interface StampLimit {
   readonly ruling: string;
 }
 
-/** The stamp of one page. A fixed study has no age limit, and its page says that it covers one version. */
+/** The two statements of a study with no age limit. The page shows both. */
+export interface NoLimit {
+  /** The reason that no run of the current code can reproduce the numbers. */
+  readonly reproduce: string;
+  /** The reason that the page claims nothing about today. */
+  readonly today: string;
+}
+
+/** The stamp of one page. A study has no limit only if no run of the current code can reproduce its numbers and its page claims nothing about today. */
 export interface PageStamp {
   readonly page: string;
   readonly study?: true;
   readonly limit?: StampLimit;
+  readonly noLimit?: NoLimit;
   readonly runs: readonly StampRun[];
 }
 
@@ -86,24 +97,58 @@ export function studyLimitStamps(): PageStamp[] {
   }));
 }
 
+/** The largest age of eval part A. Its workflow starts each Monday, and the run and the next deploy take 2 days. */
+export const EVAL_A_LIMIT_DAYS = 9;
+const EVAL_A_REASON =
+  "Eval part A runs again each Monday, and each build of this site takes its newest green run.";
+
+/** This text tells a reader the limit of eval part A. Its page shows it. */
+export const EVAL_A_LIMIT_TEXT = `${EVAL_A_REASON} A check stops a new deploy of this site when the data is more than ${EVAL_A_LIMIT_DAYS} days old.`;
+
+/** This function gives the stamp of eval part A: the newest green run of eval.yml on main, which the build reads. */
+export function evalAStamp(): PageStamp {
+  return {
+    page: "notes/tokens-per-claim/index.html",
+    limit: {
+      days: EVAL_A_LIMIT_DAYS,
+      reason: EVAL_A_REASON,
+      workflow: ".github/workflows/eval.yml",
+      ruling: `${REPOSITORY}/pull/109`,
+    },
+    runs: [
+      {
+        id: String(evalA.run),
+        url: runUrl(evalA.run),
+        date: evalA.started,
+        engines: { "polite-crawler": versionOf(evalA.package) },
+        commit: evalA.commitSha,
+      },
+    ],
+  };
+}
+
+/** The statements of the study of the sessions of eval part B. */
+export const EVAL_B_NO_LIMIT: NoLimit = {
+  reproduce:
+    "Each run is a set of sessions of a model, and the model behind one name changes. So no run of the current code gives these numbers again.",
+  today:
+    "The page tells what the sessions with those versions did on their dates. It claims nothing about a session today.",
+};
+
+/** The statements of the survey of restaurant websites. */
+export const SURVEY_NO_LIMIT: NoLimit = {
+  reproduce:
+    "The survey read the live websites on its date, and the websites changed after that day. So no run of the current code reads the same pages.",
+  today: "The page tells what those websites had on that day. It claims nothing about them today.",
+};
+
 /** This function gives the stamps of the fixed studies. */
 export function studyStamps(): PageStamp[] {
   return [
     {
-      page: "notes/tokens-per-claim/index.html",
-      study: true,
-      runs: [
-        {
-          id: String(evalA.run),
-          url: runUrl(evalA.run),
-          date: evalA.date,
-          engines: { "polite-crawler": versionOf(evalA.package) },
-        },
-      ],
-    },
-    {
       page: "notes/claude-code-sessions/index.html",
       study: true,
+      noLimit: EVAL_B_NO_LIMIT,
       runs: evalB.runs.map((run) => {
         const version = evalB.versions.find((entry) => entry.mcp === run.mcp);
         if (version === undefined) throw new Error(`The run ${run.id} has no version entry.`);
@@ -118,6 +163,7 @@ export function studyStamps(): PageStamp[] {
     {
       page: "notes/restaurant-websites/index.html",
       study: true,
+      noLimit: SURVEY_NO_LIMIT,
       runs: [
         {
           id: `survey of ${survey.date}`,

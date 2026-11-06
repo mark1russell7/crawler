@@ -6,9 +6,12 @@ import survey from "../data/restaurant-survey.json";
 import study from "../data/robots-study.json";
 import history from "../data/study-history.json";
 import {
+  EVAL_A_LIMIT_DAYS,
+  EVAL_A_LIMIT_TEXT,
   STUDY_LIMIT_DAYS,
   STUDY_LIMIT_TEXT,
   STUDY_PAGES,
+  evalAStamp,
   studyLimitStamps,
   studyStamps,
   versionOf,
@@ -20,14 +23,47 @@ const noteOf = (page: string): string =>
     "utf8",
   );
 
+describe("evalAStamp", () => {
+  it("takes the run, its start, its version and its full commit from the data file", () => {
+    const stamp = evalAStamp();
+    expect(stamp.study).toBeUndefined();
+    expect(stamp.runs).toEqual([
+      {
+        id: String(evalA.run),
+        url: `https://github.com/mark1russell7/crawler/actions/runs/${String(evalA.run)}`,
+        date: evalA.started,
+        engines: { "polite-crawler": versionOf(evalA.package) },
+        commit: evalA.commitSha,
+      },
+    ]);
+    expect(evalA.commitSha).toMatch(/^[0-9a-f]{40}$/);
+    expect(evalA.commitSha.startsWith(evalA.commit)).toBe(true);
+  });
+
+  it("gives a limit that the weekly schedule of eval.yml meets, with no ruling over 14 days", () => {
+    const { limit } = evalAStamp();
+    expect(limit?.workflow).toBe(".github/workflows/eval.yml");
+    expect(limit?.days).toBe(EVAL_A_LIMIT_DAYS);
+    expect(EVAL_A_LIMIT_DAYS).toBeGreaterThanOrEqual(7);
+    expect(EVAL_A_LIMIT_DAYS).toBeLessThanOrEqual(14);
+    const workflow = readFileSync(
+      new URL("../../../../.github/workflows/eval.yml", import.meta.url),
+      "utf8",
+    );
+    expect(workflow).toMatch(/cron: "\d+ \d+ \* \* 1"/);
+  });
+
+  it("shows the limit in plain words on the page, and no claim that the page is fixed", () => {
+    const text = noteOf(evalAStamp().page);
+    expect(text).toContain("{EVAL_A_LIMIT_TEXT}");
+    expect(text).not.toContain("fixed study");
+    expect(EVAL_A_LIMIT_TEXT).toContain(`${EVAL_A_LIMIT_DAYS} days`);
+  });
+});
+
 describe("studyStamps", () => {
   it("takes the run, the date and the version from each data file", () => {
-    const [tokens, sessions, restaurants] = studyStamps();
-    expect(tokens?.runs[0]).toMatchObject({
-      id: String(evalA.run),
-      date: evalA.date,
-      engines: { "polite-crawler": versionOf(evalA.package) },
-    });
+    const [sessions, restaurants] = studyStamps();
     expect(sessions?.runs.map((run) => run.id)).toEqual(evalB.runs.map((run) => String(run.run)));
     expect(sessions?.runs.map((run) => run.engines["polite-crawler-mcp"])).toEqual(
       evalB.runs.map((run) => run.mcp),
@@ -45,10 +81,15 @@ describe("studyStamps", () => {
     }
   });
 
-  it("stamps only a page that says in plain words that it is a fixed study", () => {
+  it("gives each study both statements of no limit, and shows both on its page", () => {
     for (const stamp of studyStamps()) {
-      expect(noteOf(stamp.page)).toContain("This page is a fixed study of");
-      expect(noteOf(stamp.page)).toContain("It tells nothing about a newer release.");
+      expect(stamp.study).toBe(true);
+      expect(stamp.limit).toBeUndefined();
+      expect(stamp.noLimit?.reproduce.length).toBeGreaterThan(0);
+      expect(stamp.noLimit?.today.length).toBeGreaterThan(0);
+      const text = noteOf(stamp.page);
+      expect(text).toContain("This page is a fixed study of");
+      expect(text).toMatch(/\{[A-Z_]+_NO_LIMIT\.reproduce\} \{[A-Z_]+_NO_LIMIT\.today\}/);
     }
   });
 

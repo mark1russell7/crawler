@@ -28,12 +28,13 @@ concurrency:
 
 jobs:
   pages:
-    uses: mark1russell7/template/.github/workflows/reusable-pages.yml@f5db24088229bde4bdbfa4f5b35a1ef531484c09 # main
+    uses: mark1russell7/template/.github/workflows/reusable-pages.yml@d645ad835f83682532b724ec4caef5ddab31682a # main
     # The build job of the shared workflow gets only the read permissions. Only its deploy job,
     # which runs no code of the repository, writes to Pages.
     permissions:
       contents: read
       # green-main reads the Actions runs. site-pages reads the pull requests, the issues and their checks.
+      # The build reads the newest green run of eval.yml and its artifact (scripts/eval-latest.ts).
       actions: read
       issues: read
       pull-requests: read
@@ -43,7 +44,11 @@ jobs:
       id-token: write
     with:
       build: pnpm --filter @crawler/site run build
+      # The build gets GITHUB_TOKEN with the read permissions above, for the run of eval.yml.
+      github-token: true
       out: packages/site/dist
+      # The freshness gate: the age of the data of each measured page, its engines and the schedule of its workflow
+      data-stamps: packages/site/dist/data-stamps.json
       env: '{"SITE_BASE": "/${{ github.event.repository.name }}", "ASTRO_TELEMETRY_DISABLED": "1"}'
       deploy: ${{ github.event_name != 'pull_request' }}
       # The Releases page and the Status page (releases/, status/ and their data/*.json), at deploy time

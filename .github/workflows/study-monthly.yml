@@ -37,6 +37,8 @@ jobs:
     timeout-minutes: 45
     permissions:
       contents: read
+      # The build of the site reads the newest green run of eval.yml and its artifact.
+      actions: read
     outputs:
       version: ${{ steps.data.outputs.version }}
       month: ${{ steps.data.outputs.month }}
@@ -95,6 +97,8 @@ jobs:
         env:
           SITE_BASE: /crawler
           ASTRO_TELEMETRY_DISABLED: "1"
+          # The build reads the newest green run of eval.yml on main (scripts/eval-latest.ts) with this token.
+          GH_TOKEN: ${{ github.token }}
       # The links, the width on a phone, the console, the JavaScript budget and the feed. It also
       # saves a screenshot of each page for the review of the pull request.
       - name: Check the site

@@ -6,6 +6,7 @@ description: "Eval part A of polite-crawler: the tokens that an agent reads to p
 import { ClaimCosts, ClaimTable, SessionCosts } from "../../../components/EvalCharts.tsx";
 import evalA from "../../../data/eval-a.json";
 import { costsMore, ordered, ratioOf, sessionTotals, stayAheadFrom, tokens } from "../../../lib/eval-a.ts";
+import { EVAL_A_LIMIT_TEXT } from "../../../lib/data-stamps.ts";
 import { STUDY_AUTHOR } from "../../../lib/study.ts";
 
 export const s = evalA.summary;
@@ -16,11 +17,14 @@ export const politeCosts = evalA.claims.map((claim) => claim.polite);
 export const pages = evalA.claims.map((claim) => claim.markdown);
 export const more = evalA.claims.filter(costsMore);
 export const pageCount = new Set(evalA.claims.map((claim) => claim.url)).size;
+export const pastCutPages = [...new Set(evalA.claims.filter((claim) => claim.window === "past-cut").map((claim) => claim.page))].join(", ");
 export const times = (id) => Math.round(ratioOf(evalA.claims.find((claim) => claim.id === id)));
 export const aheadFrom = (order) => stayAheadFrom(sessionTotals(ordered(evalA.claims, order), evalA.toolDefinitions));
 export const day = new Date(`${evalA.date}T12:00:00Z`).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric", timeZone: "UTC" });
 
 <p class="pc-byline">By <a href={STUDY_AUTHOR.url}>{STUDY_AUTHOR.name}</a>. The eval read the pages on <time datetime={evalA.date}>{day}</time> with {evalA.package}, in <a href={runUrl}>workflow {evalA.run}</a> (commit <code>{evalA.commit}</code>).</p>
+
+<p class="pc-byline">The numbers come from the newest green run of eval part A on main. {EVAL_A_LIMIT_TEXT}</p>
 
 An agent that cites a page must check the quote. How many tokens does it read to do that? Part A of the eval counts them for {s.claims} claims on {pageCount} pages, in CI, with no model. Each claim has a question and an exact quote from a page. The pages are RFCs, Wikipedia articles, MDN, the documentation of Node.js and Python, government pages and one W3C recommendation.
 
@@ -43,7 +47,7 @@ The cost of polite-crawler stays between {tokens(Math.min(...politeCosts))} and 
 
 <SessionCosts client:visible />
 
-The MCP server costs {tokens(evalA.toolDefinitions)} tokens one time in each session: the definitions of its nine tools. Thus a session that proves one short claim costs more with polite-crawler. The order of the claims changes when polite-crawler goes below the proxy and stays there:
+The MCP server costs {tokens(evalA.toolDefinitions)} tokens one time in each session: the definitions of its tools. Thus a session that proves one short claim costs more with polite-crawler. The order of the claims changes when polite-crawler goes below the proxy and stays there:
 
 - **In the order of the eval**, from claim {aheadFrom("run")} on.
 - **With the short pages first**, from claim {aheadFrom("short")} on.
@@ -71,6 +75,6 @@ The <a href={readme}>README of the eval</a> gives each step, the units and the c
 - **The tokenizer is a proxy.** The count uses the encoding `{evalA.tokenizer}` of the package `gpt-tokenizer`. It is not the tokenizer of Claude, and Claude gives different counts. The two paths use the same tokenizer, so a ratio depends less on the tokenizer than a count.
 - **The real WebFetch is different.** The WebFetch tool of Claude Code converts the page to Markdown and gives it to a small model with the prompt. The main model gets the answer of that model, not the page. That answer is not an exact quote that the main model can check. To check a quote, a model reads the text of the page. The proxy counts that text, with no limit of WebFetch.
 - **The read window starts at the quote.** `crawl_verify` gives the place of the quote, so the agent knows where to read. An agent that reads from the start of each page in ranges of 4,000 characters reads {tokens(s.paged.total)} tokens in total, not {tokens(s.polite.total)}.
-- **Some quotes are past the cut.** The reader of polite-crawler cuts the text of a page at 50,000 characters. For {s.pastCut} claims on RFC 9110, the quote is past the cut. Then the path has no read, and the excerpt of `crawl_verify` shows the text around the quote.
+- **Some quotes are past the cut.** The reader of polite-crawler cuts the text of a page at 50,000 characters. For {s.pastCut} claims ({pastCutPages}), the quote is past the cut. Then the path has no read, and the excerpt of `crawl_verify` shows the text around the quote.
 - **The count leaves out the text that the agent writes** (the arguments of each call) and the system prompt.
 - **Part B measured the real cost.** In [real sessions of Claude Code](../claude-code-sessions/), WebFetch costs less than polite-crawler, because a small model reads the page. With polite-crawler-mcp 0.2.1, a session with WebFetch cost approximately half as much. With the shorter tool text of 0.2.3, it costs approximately 60%.

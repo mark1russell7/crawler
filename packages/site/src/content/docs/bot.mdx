@@ -7,6 +7,7 @@ description: PoliteCrawler visited your site. What it is, what it fetches, how f
 import { Code } from "@astrojs/starlight/components";
 import crawlerPackage from "polite-crawler/package.json";
 import study from "../../data/robots-study.json";
+import { STUDY_LIMIT_TEXT } from "../../lib/data-stamps.ts";
 import { formatDay } from "../../lib/study.ts";
 import SiteVisit from "../../components/SiteVisit.tsx";
 
@@ -99,6 +100,8 @@ An operator can give the crawler an Ed25519 key. The crawler then signs each req
 - The `User-Agent` header stays the same, with a signature or without one.
 
 ## The robots.txt study
+
+<p class="pc-byline">{STUDY_LIMIT_TEXT}</p>
 
 On {day}, PoliteCrawler read the robots.txt file of each of the top 1,000 domains of the Tranco list. It sent one request for `/robots.txt` to each domain, with its redirects, and fetched no other page. It did not try again. [Read the study](../notes/robots-txt-ai-agents/).
 

@@ -54,11 +54,27 @@ describe("a session of 30 claims", () => {
   });
 
   it("gives the claim from which polite-crawler stays below the proxy, for each order", () => {
-    const from = (order: "run" | "short" | "long"): number | undefined =>
-      stayAheadFrom(sessionTotals(ordered(claims, order), toolDefinitions));
-    expect(from("run")).toBe(4);
-    expect(from("short")).toBe(13);
-    expect(from("long")).toBe(1);
+    // The build takes the newest run each week, so the test checks the rule and not the numbers of one run.
+    for (const order of ["run", "short", "long"] as const) {
+      const points = sessionTotals(ordered(claims, order), toolDefinitions);
+      const from = stayAheadFrom(points);
+      expect(from, order).toBeDefined();
+      // Each total from that claim on is below the proxy, and the total before it is not.
+      const after = points.filter((point) => point.n >= from!);
+      expect(after.filter((point) => point.polite >= point.markdown)).toEqual([]);
+      const before = points.find((point) => point.n === from! - 1);
+      expect(before === undefined || before.polite >= before.markdown, order).toBe(true);
+    }
+    const claim = { ...claims[0]!, polite: 10 };
+    const session = [
+      { ...claim, markdown: 30 },
+      { ...claim, markdown: 1 },
+      { ...claim, markdown: 50 },
+    ];
+    // The totals are 15 against 30, 25 against 31 and 35 against 81, with 5 tokens of definitions.
+    expect(stayAheadFrom(sessionTotals(session, 5))).toBe(1);
+    // With 20 tokens of definitions: 30 against 30, 40 against 31 and 50 against 81.
+    expect(stayAheadFrom(sessionTotals(session, 20))).toBe(3);
   });
 
   it("orders the claims by the size of the page as Markdown", () => {
@@ -94,9 +110,9 @@ describe("the scale and the text", () => {
   });
 
   it("writes a ratio as fewer or more tokens", () => {
-    const long = claims.find((claim) => claim.id === "rfc9110-404")!;
-    const short = claims.find((claim) => claim.id === "rfc1149-service")!;
-    expect(ratioText(long)).toBe("57 times fewer");
-    expect(ratioText(short)).toBe("5.2 times more");
+    const claim = claims[0]!;
+    expect(ratioText({ ...claim, markdown: 5650, polite: 100 })).toBe("57 times fewer");
+    expect(ratioText({ ...claim, markdown: 250, polite: 100 })).toBe("2.5 times fewer");
+    expect(ratioText({ ...claim, markdown: 100, polite: 520 })).toBe("5.2 times more");
   });
 });

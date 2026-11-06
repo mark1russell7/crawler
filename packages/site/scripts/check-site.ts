@@ -19,6 +19,7 @@ import { fileURLToPath } from "node:url";
 import { gzipSync } from "node:zlib";
 import { chromium } from "playwright-core";
 import type { Page } from "playwright-core";
+import { ordered, sessionTotals, stayAheadFrom, type EvalData } from "../src/lib/eval-a.ts";
 
 /** A figure of a page, and the click that makes it answer. */
 interface Interaction {
@@ -334,6 +335,19 @@ for (const path of pages) {
     problems.push("the study page has no <link rel=alternate> to the feed");
 }
 
+// The texts that the eval figures show come from the data file that the build wrote (scripts/eval-latest.ts),
+// through the functions of the page. So a new eval run does not break the check.
+const EVAL = JSON.parse(
+  readFileSync(fileURLToPath(new URL("../src/data/eval-a.json", import.meta.url)), "utf8"),
+) as EvalData;
+const EVAL_SHORT = ordered(EVAL.claims, "short");
+const EVAL_SHORTEST = EVAL_SHORT[0]!;
+const EVAL_SHORT_FROM = stayAheadFrom(sessionTotals(EVAL_SHORT, EVAL.toolDefinitions));
+const EVAL_SHORT_VERDICT =
+  EVAL_SHORT_FROM === 1
+    ? "from the first claim"
+    : `from claim ${String(EVAL_SHORT_FROM ?? EVAL_SHORT.length)} on`;
+
 // the figures answer a reader: a click, then the result that the code of the package gives
 const INTERACTIONS: readonly Interaction[] = [
   {
@@ -462,7 +476,7 @@ const INTERACTIONS: readonly Interaction[] = [
       await page.keyboard.press("Home");
       await page
         .locator(".pc-eval-claims .pc-eval-detail")
-        .getByText(/RFC 1149/)
+        .getByText(`${EVAL_SHORTEST.page}: ${EVAL_SHORTEST.question}`, { exact: false })
         .waitFor({ timeout: 10_000 });
     },
   },
@@ -474,7 +488,7 @@ const INTERACTIONS: readonly Interaction[] = [
       await page.getByRole("button", { name: "Short pages first" }).click();
       await page
         .locator(".pc-eval-session .pc-crawl-verdict")
-        .getByText(/from claim 13 on/)
+        .getByText(EVAL_SHORT_VERDICT, { exact: false })
         .waitFor({ timeout: 10_000 });
     },
   },

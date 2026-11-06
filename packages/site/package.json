@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "dev": "astro dev",
-    "build": "astro build",
+    "build": "node scripts/eval-latest.ts && astro build",
     "preview": "astro preview",
     "og": "node scripts/og-image.ts",
     "check": "node scripts/check-site.ts",

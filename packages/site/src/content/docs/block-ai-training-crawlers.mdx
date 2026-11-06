@@ -6,6 +6,7 @@ description: A ready robots.txt that blocks GPTBot, ClaudeBot, CCBot and the oth
 
 import { Code } from "@astrojs/starlight/components";
 import study from "../../data/robots-study.json";
+import { STUDY_LIMIT_TEXT } from "../../lib/data-stamps.ts";
 import { summarize } from "../../lib/study.ts";
 import { TRAINING_BLOCK_ROBOTS } from "../../lib/recipes.ts";
 import RobotsBuilder from "../../components/RobotsBuilder.tsx";
@@ -13,6 +14,8 @@ import RobotsBuilder from "../../components/RobotsBuilder.tsx";
 export const s = summarize(study);
 
 Many sites refuse the crawlers that collect training data for AI models. Some of these sites also refuse the AI assistants by accident, with the group `*` or with a long list of agents. An assistant agent fetches one page when a person asks for it. It does not collect the site for a model.
+
+<p class="pc-byline">{STUDY_LIMIT_TEXT}</p>
 
 This page gives a robots.txt that refuses the training crawlers and lets the assistants in. In [the study of the top 1,000 domains](../notes/robots-txt-ai-agents/), {s.trainingNotUser.OpenAI} sites do this for OpenAI: they refuse `GPTBot` and let `ChatGPT-User` in.
 

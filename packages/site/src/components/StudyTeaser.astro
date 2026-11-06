@@ -4,6 +4,7 @@
  * GPTBot, and three agents to compare. The build reads the dataset, so the panel needs no script.
  */
 import study from "../data/robots-study.json";
+import { STUDY_LIMIT_TEXT } from "../lib/data-stamps.ts";
 import type { Study } from "../lib/study.ts";
 import { agentRows, formatDay, niceMax, summarize } from "../lib/study.ts";
 
@@ -30,7 +31,7 @@ const keys = [
 <figure class="pc-teaser not-content" aria-labelledby="pc-teaser-title">
   <figcaption>
     <a id="pc-teaser-title" href={`${base}/notes/robots-txt-ai-agents/`}>Who lets AI agents in?</a>
-    <span>The crawler read the robots.txt of the top {data.sites.length.toLocaleString("en-US")} domains on {day}. One square is one domain.</span>
+    <span>The crawler read the robots.txt of the top {data.sites.length.toLocaleString("en-US")} domains on {day}. One square is one domain. {STUDY_LIMIT_TEXT}</span>
   </figcaption>
   <div
     class="pc-teaser-grid"

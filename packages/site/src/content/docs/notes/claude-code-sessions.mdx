@@ -6,6 +6,7 @@ description: "Eval part B of polite-crawler: real sessions of Claude Code prove 
 import { ClaimSessions } from "../../../components/EvalSessions.tsx";
 import evalB from "../../../data/eval-b.json";
 import { change, claimCost, costsLess, tokens, usd } from "../../../lib/eval-b.ts";
+import { EVAL_B_NO_LIMIT } from "../../../lib/data-stamps.ts";
 import { STUDY_AUTHOR } from "../../../lib/study.ts";
 
 export const runOf = (id) => evalB.runs.find((run) => run.id === id);
@@ -43,6 +44,8 @@ export const writeGap = Q.mainKindsUsd.cacheWrite - W.mainKindsUsd.cacheWrite;
 export const day = new Date(`${first.date}T12:00:00Z`).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric", timeZone: "UTC" });
 
 <p class="pc-byline">By <a href={STUDY_AUTHOR.url}>{STUDY_AUTHOR.name}</a>. The sessions used Claude Code {first.claudeCode}, and they started on <time datetime={first.date}>{day}</time>. The runs of polite-crawler-mcp {first.mcp} are <a href={runUrl(sonnet.run)}>workflow {sonnet.run}</a> (Sonnet) and <a href={runUrl(opus.run)}>workflow {opus.run}</a> (Opus). The run of {second.mcp} is <a href={runUrl(lean.run)}>workflow {lean.run}</a> (Sonnet).</p>
+
+<p class="pc-byline">This page is a fixed study of polite-crawler-mcp {evalB.versions.map((version) => version.mcp).join(" and ")}. {EVAL_B_NO_LIMIT.reproduce} {EVAL_B_NO_LIMIT.today}</p>
 
 [Part A](../tokens-per-claim/) of the eval counted the tokens that an agent reads to prove {count} claims with exact quotes. It used a proxy tokenizer and no model. Part B asks the same questions in real sessions of Claude Code (`claude -p`), in CI. The tokens and the cost come from the usage that Claude Code reports, with each model of the session.
 

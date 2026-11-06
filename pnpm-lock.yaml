@@ -171,7 +171,7 @@ importers:
         version: 0.18.5
       '@mark1russell7/api-report':
         specifier: ^0.4.0
-        version: 0.4.0
+        version: 0.4.1
       '@mark1russell7/conventions':
         specifier: ^0.31.0
         version: 0.31.0
@@ -1051,8 +1051,8 @@ packages:
       zod:
         optional: true
 
-  '@mark1russell7/api-report@0.4.0':
-    resolution: {integrity: sha512-LROZAyoiluIzvojl8mU/abTzKhLAC3Qj/lG5HgvK/2ehkJ8z2T/Zk49+d2d6nVhyMuLr9ETT3T7g7egk4jaiRg==}
+  '@mark1russell7/api-report@0.4.1':
+    resolution: {integrity: sha512-kx3vmIdzwGJf+aZ66qoYWm65IlrEzrbSXckAQed0I+fxs6+wFygVoum6ZVBeKdz05rHHLD9kiarwQQcI5LhsDQ==}
     engines: {node: '>=22'}
     hasBin: true
 
@@ -4668,7 +4668,7 @@ snapshots:
     optionalDependencies:
       zod: 4.6.6
 
-  '@mark1russell7/api-report@0.4.0': {}
+  '@mark1russell7/api-report@0.4.1': {}
 
   '@mark1russell7/coeval@0.22.0': {}
 

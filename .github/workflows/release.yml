@@ -68,6 +68,9 @@ jobs:
     uses: ./.github/workflows/ci.yml
     permissions:
       contents: read
+      # The Checks job of ci.yml reads the newest green run of eval.yml for the site build. A called
+      # workflow gets only the permissions that this job gives, so a run with less does not start.
+      actions: read
 
   build:
     name: Build and pack

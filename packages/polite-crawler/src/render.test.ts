@@ -42,6 +42,9 @@ root.innerHTML = "<h2>Hours</h2><p>Tue-Sun 11am-9pm</p>";
 </script></body></html>`,
   "/end": `<html><body>${FILLER}<p>PUBLIC-END</p></body></html>`,
   "/restless": `<html><body>${FILLER}<script>setTimeout(function () { location.replace("/restless"); }, 30);</script></body></html>`,
+  // the read itself starts a navigation: the getter of innerHTML (only the read uses it) navigates, then holds the
+  // thread, so the request of the navigation reaches the route while the read still runs
+  "/read-trap": `<html><body>${FILLER}<script>(function () { var own = Object.getOwnPropertyDescriptor(Element.prototype, "innerHTML"); Object.defineProperty(document.documentElement, "innerHTML", { configurable: true, get: function () { location.replace("/during-read"); var end = Date.now() + 500; while (Date.now() < end) {} return own.get.call(this); } }); })();</script></body></html>`,
   "/restless-now": `<html><body>${FILLER}<script>addEventListener("DOMContentLoaded", function () { setTimeout(function () { location.replace("/restless-now"); }, 0); });</script></body></html>`,
   "/js-out": `<html><body>${FILLER}<script>setTimeout(function () { location.href = "/internal/js"; }, 300);</script></body></html>`,
 };
@@ -284,6 +287,18 @@ describe("the headless browser", () => {
     const shown = await renderer!.render(`${base}/restless-now`, { ...OPTIONS, timeoutMs: 8000 });
     expect(extractPage(shown.html, shown.finalUrl).text).toContain("The kitchen closes");
     expect(shown.finalUrl).toBe(`${base}/restless-now`);
+  }, 60_000);
+
+  it("flip: stops a navigation that starts while the page is read, so the request never leaves the browser", async (context) => {
+    if (unavailable !== undefined)
+      context.skip(`Playwright's browser could not start: ${unavailable}`);
+    // no timing decides this test: the navigation starts inside the read. Before the fix the route sent its request on
+    const before = asked.filter((entry) => entry.path === "/during-read").length;
+    const shown = await renderer!.render(`${base}/read-trap`, { ...OPTIONS, timeoutMs: 8000 });
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    expect(asked.filter((entry) => entry.path === "/during-read").length).toBe(before);
+    expect(extractPage(shown.html, shown.finalUrl).text).toContain("The kitchen closes");
+    expect(shown.finalUrl).toBe(`${base}/read-trap`);
   }, 60_000);
 
   it("reads open shadow roots and frames of the same origin, and stops waiting on an empty page", async (context) => {

@@ -384,6 +384,7 @@ import { extractPage, type PageExtract } from "polite-crawler/html";
 import { classify } from "polite-crawler/classify";
 import { DEFAULT_POLICY } from "polite-crawler/politeness";
 import { readSignals, type Signals } from "polite-crawler/signals";
+import { canonicalUrl } from "polite-crawler/urls";
 import schema from "polite-crawler/record.schema.json" with { type: "json" };
 
 export const check = async (): Promise<string> => {
@@ -398,7 +399,7 @@ export const check = async (): Promise<string> => {
   const extract: PageExtract = extractPage("<p>x</p>", "https://example.com/");
   const signals: Signals = readSignals([], () => undefined);
   const outcome: string = classify(200, () => undefined, Date.now()).outcome;
-  return [allowed, week, extract.title, signals.ai_input, verified.found, DEFAULT_POLICY.pageIntervalMs, schema.title, caught?.mode, outcome].join();
+  return [allowed, week, extract.title, signals.ai_input, verified.found, DEFAULT_POLICY.pageIntervalMs, schema.title, caught?.mode, outcome, canonicalUrl("https://Example.com:443/?utm_source=x")].join();
 };
 `,
   );
@@ -490,6 +491,8 @@ export const start: typeof startMcpServer = startMcpServer;
     classify: 1300,
     politeness: 3000,
     signals: 1100,
+    // the size of version 0.5.1, and 20 percent more
+    urls: 850,
     html: 192_000,
   };
   for (const [name, budget] of Object.entries(budgets)) {

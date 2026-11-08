@@ -12,6 +12,7 @@ export default defineConfig({
     "src/classify.ts",
     "src/politeness.ts",
     "src/signals.ts",
+    "src/urls.ts",
   ],
   outDir: "build",
   format: "esm",

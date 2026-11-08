@@ -470,6 +470,7 @@ The package is ESM only. These are its entry points:
 | `polite-crawler/classify` | `classify`, `parseRetryAfter`: the outcome of a response. |
 | `polite-crawler/politeness` | `HostScheduler`, `backoffMs`, `restAfter`: one request in progress for each host, and the rest of a host after a request. |
 | `polite-crawler/signals` | `readSignals`: content signals for AI input. |
+| `polite-crawler/urls` | `canonicalUrl`, `cacheKeyOf`, `siteOf`, `scopeTest`: the canonical form of a URL, its cache key, its site and the scope of a crawl. It imports no module. |
 
 The entry points below `polite-crawler` have no Node.js dependency, so they operate in a browser too. The MCP server is the package `polite-crawler-mcp`: `createMcpServer`, `startMcpServer` and `startMcpHttpServer`. It needs Node.js.
 

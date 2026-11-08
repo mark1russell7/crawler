@@ -126,6 +126,12 @@ export interface CacheIndex {
     setLatest(entry: CacheEntry): void;
 }
 
+// @public
+export const cacheKeyOf: (value: string) => string;
+
+// @public
+export const canonicalUrl: (value: string) => string;
+
 // @beta
 export const CAPTURE_SCHEMA = 2;
 
@@ -2629,6 +2635,9 @@ export interface SitemapRead {
     readonly notes: readonly string[];
 }
 
+// @public
+export const siteOf: (host: string) => string;
+
 // @beta
 export interface SqliteHostStateOptions {
     readonly busyTimeoutMs?: number | undefined;
@@ -3088,7 +3097,7 @@ export const verifySignature: (request: SignedRequest, directory: KeyDirectory, 
 }) => SignatureCheck;
 
 // @public
-export const VERSION = "0.5.0";
+export const VERSION = "0.5.1";
 
 // @public
 export interface VersionAt {

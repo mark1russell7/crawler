@@ -48,6 +48,7 @@ The package is ESM only, and it includes its TypeScript declarations. It has the
 | `polite-crawler/classify` | The outcome of a response | Yes |
 | `polite-crawler/politeness` | The queue that keeps one request in progress for each host | Yes |
 | `polite-crawler/signals` | The reader of usage signals (`Content-Signal`) | Yes |
+| `polite-crawler/urls` | The canonical form of a URL, its cache key and its site. It imports no module. | Yes |
 
 The entry points that work in a browser import no Node.js module. The package loads no MCP SDK and no `zod`: the MCP server is the package `polite-crawler-mcp`.
 

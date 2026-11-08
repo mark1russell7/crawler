@@ -42,6 +42,7 @@ root.innerHTML = "<h2>Hours</h2><p>Tue-Sun 11am-9pm</p>";
 </script></body></html>`,
   "/end": `<html><body>${FILLER}<p>PUBLIC-END</p></body></html>`,
   "/restless": `<html><body>${FILLER}<script>setTimeout(function () { location.replace("/restless"); }, 30);</script></body></html>`,
+  "/restless-now": `<html><body>${FILLER}<script>setTimeout(function () { location.replace("/restless-now"); }, 0);</script></body></html>`,
   "/js-out": `<html><body>${FILLER}<script>setTimeout(function () { location.href = "/internal/js"; }, 300);</script></body></html>`,
 };
 /** These paths redirect to the path that they give. The paths under /internal/ stand for a private address. */
@@ -273,6 +274,15 @@ describe("the headless browser", () => {
       context.skip(`Playwright's browser could not start: ${unavailable}`);
     const shown = await renderer!.render(`${base}/restless`, { ...OPTIONS, timeoutMs: 5000 });
     expect(extractPage(shown.html, shown.finalUrl).text).toContain("The kitchen closes");
+  }, 60_000);
+
+  it("flip: reads a page that navigates at once, again and again, because the read stops its navigations", async (context) => {
+    if (unavailable !== undefined)
+      context.skip(`Playwright's browser could not start: ${unavailable}`);
+    // before the fix, each read lost its document to the next navigation and the render timed out
+    const shown = await renderer!.render(`${base}/restless-now`, { ...OPTIONS, timeoutMs: 8000 });
+    expect(extractPage(shown.html, shown.finalUrl).text).toContain("The kitchen closes");
+    expect(shown.finalUrl).toBe(`${base}/restless-now`);
   }, 60_000);
 
   it("reads open shadow roots and frames of the same origin, and stops waiting on an empty page", async (context) => {

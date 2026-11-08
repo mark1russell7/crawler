@@ -1,5 +1,7 @@
 // The build of the site starts this script before `astro build`. It finds the newest green run of the workflow
-// eval.yml on main, downloads its artifact `eval`, and writes src/data/eval-a.json from its eval-result.json.
+// eval.yml on main that has the artifact `eval`, downloads that artifact, and writes src/data/eval-a.json from its
+// eval-result.json. A green run can have no artifact: after a Release run that made no release of polite-crawler,
+// the gate of eval.yml skips the eval and the run ends green. The script passes over such a run.
 // The page "Tokens to prove a claim" then shows the numbers of that run, with its version, run id and date.
 //
 // The script uses the GitHub CLI with the token in GH_TOKEN or GITHUB_TOKEN. The token needs the permission
@@ -22,13 +24,30 @@ export interface ListedRun {
   readonly headSha: string;
 }
 
+/** The number of the newest green runs that the script examines for the artifact `eval`. */
+export const RUN_LIMIT = 20;
+
 /** The runner of the GitHub CLI. A test gives a fake. */
 export type Gh = (args: readonly string[]) => string;
 
 const realGh: Gh = (args) =>
   execFileSync("gh", args, { encoding: "utf8", stdio: ["ignore", "pipe", "inherit"] });
 
-/** This function gives the newest green run of eval.yml on main. It fails when there is none. */
+/** This function tells if the run has the artifact `eval`, and the artifact is not expired. */
+export function hasEvalArtifact(run: ListedRun, gh: Gh = realGh): boolean {
+  const count = gh([
+    "api",
+    `repos/${EVAL_REPOSITORY}/actions/runs/${String(run.databaseId)}/artifacts?name=eval`,
+    "--jq",
+    "[.artifacts[] | select(.expired | not)] | length",
+  ]);
+  return Number(count.trim()) > 0;
+}
+
+/**
+ * This function gives the newest green run of eval.yml on main that has the artifact `eval`. It examines the
+ * newest RUN_LIMIT green runs, and fails when none of them has the artifact.
+ */
 export function newestGreenRun(gh: Gh = realGh): ListedRun {
   const listed = JSON.parse(
     gh([
@@ -43,14 +62,17 @@ export function newestGreenRun(gh: Gh = realGh): ListedRun {
       "--status",
       "success",
       "--limit",
-      "1",
+      String(RUN_LIMIT),
       "--json",
       "databaseId,createdAt,headSha",
     ]),
   ) as ListedRun[];
-  const run = listed[0];
-  if (run === undefined)
-    throw new Error(`${EVAL_REPOSITORY}: no green run of eval.yml on main. The build stops.`);
+  const run = listed.find((item) => hasEvalArtifact(item, gh));
+  if (run === undefined) {
+    throw new Error(
+      `${EVAL_REPOSITORY}: no green run of eval.yml on main has the artifact eval (${String(listed.length)} runs examined). The build stops.`,
+    );
+  }
   return run;
 }
 

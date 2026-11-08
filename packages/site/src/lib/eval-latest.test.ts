@@ -60,21 +60,34 @@ afterEach(() => {
   for (const dir of dirs.splice(0)) rmSync(dir, { recursive: true, force: true });
 });
 
-/** This function gives a fake GitHub CLI: a list of runs, and a download that writes `file` when it is a string. */
+/**
+ * This function gives a fake GitHub CLI: a list of runs, a list of the artifacts of a run, and a download that writes
+ * `file` when it is a string. A run in `skipped` has no artifact "eval", as a green run whose gate skipped the eval.
+ * Its download fails, as `gh run download -n eval` fails.
+ */
 function fakeGh(
   runs: readonly ListedRun[],
   file: string | undefined,
+  skipped: readonly number[] = [],
 ): { gh: Gh; calls: string[][] } {
   const calls: string[][] = [];
   const gh: Gh = (args) => {
     calls.push([...args]);
     if (args[1] === "list") return JSON.stringify(runs);
+    if (args[0] === "api") {
+      const id = Number(/\/runs\/(\d+)\//.exec(args[1] ?? "")?.[1]);
+      return skipped.includes(id) ? "0" : "1";
+    }
+    if (skipped.includes(Number(args[2]))) throw new Error("no artifact matches the name eval");
     const dir = args[args.indexOf("-D") + 1];
     if (dir !== undefined && file !== undefined) writeFileSync(join(dir, "eval-result.json"), file);
     return "";
   };
   return { gh, calls };
 }
+
+const downloads = (calls: readonly string[][]): string[][] =>
+  calls.filter((call) => call[0] === "run" && call[1] === "download");
 
 const out = (): string => {
   const dir = mkdtempSync(join(tmpdir(), "eval-latest-test-"));
@@ -97,7 +110,32 @@ describe("writeNewestEval", () => {
     expect(calls[0]).toEqual(
       expect.arrayContaining(["--workflow", "eval.yml", "--branch", "main", "--status", "success"]),
     );
-    expect(calls[1]?.slice(0, 3)).toEqual(["run", "download", String(RUN.databaseId)]);
+    expect(downloads(calls).map((call) => call.slice(0, 3))).toEqual([
+      ["run", "download", String(RUN.databaseId)],
+    ]);
+  });
+
+  // A Release run that made no release of polite-crawler starts eval.yml. Its gate skips the eval, and the run ends
+  // green with no artifact "eval" (run 42043755344 of 2026-11-05). The build takes the newest run with the artifact.
+  it("passes over a green run that has no artifact eval, and takes the newest run that has it", () => {
+    const skippedRun: ListedRun = {
+      databaseId: 42043755344,
+      createdAt: "2026-11-06T14:18:38Z",
+      headSha: "2".repeat(40),
+    };
+    const { gh, calls } = fakeGh([skippedRun, RUN], JSON.stringify(result()), [
+      skippedRun.databaseId,
+    ]);
+    const file = out();
+    expect(writeNewestEval(gh, file)).toEqual(RUN);
+    expect(JSON.parse(readFileSync(file, "utf8"))).toMatchObject({ run: RUN.databaseId });
+    expect(downloads(calls).map((call) => call[2])).toEqual([String(RUN.databaseId)]);
+  });
+
+  it("fails when no green run of the list has the artifact eval", () => {
+    const { gh, calls } = fakeGh([RUN], JSON.stringify(result()), [RUN.databaseId]);
+    expect(() => writeNewestEval(gh, out())).toThrow(/no green run/);
+    expect(downloads(calls)).toEqual([]);
   });
 
   it("fails when main has no green run", () => {

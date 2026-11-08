@@ -2,8 +2,8 @@
 // of one run of eval part A (eval-result.json, in the artifact `eval` of the workflow eval.yml) and the
 // question set (packages/polite-crawler/eval/claims.json), and they give only what the page shows.
 //
-// The build of the site takes the newest green run of eval.yml on main (scripts/eval-latest.ts). To write
-// the data of one run by hand:
+// The build of the site takes the newest green run of eval.yml on main that has the artifact `eval`
+// (scripts/eval-latest.ts). To write the data of one run by hand:
 //
 //   gh run download <run id> -R mark1russell7/crawler -n eval -D <dir>
 //   node packages/site/scripts/eval-data.ts --result <dir>/eval-result.json --run <run id> --started <ISO time>

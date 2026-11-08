@@ -50,7 +50,7 @@ The reports also show what API Extractor found:
 | `ArchiveCounts`, `ArchiveFilter`, `ArchiveOptions`, `ArchiveSource`, `exportWacz`, `exportWarc`, `WaczResult`, `WarcResult` | root | The export to WARC and WACZ. |
 | `WATCH_LIMITS`, `WATCH_SCHEMA`, `WatchEntry`, `WatchEvent`, `WatchKind`, `WatchList`, `WatchOptions`, `WatchPending`, `WatchRun`, `WatchRunOptions`, `WatchStop`, `WatchSummary` | root | The watch list of `crawler.watch`. |
 | `createWebBotAuthSigner`, `DirectoryKey`, `KEY_DIRECTORY_PATH`, `KEY_DIRECTORY_TYPE`, `keyDirectory`, `KeyDirectory`, `KeyInput`, `RequestSigner`, `SignatureAgentType`, `SignatureCheck`, `SignedRequest`, `verifySignature`, `WebBotAuthOptions`, `WebBotAuthSigner` | root | Signed requests (Web Bot Auth). |
-| `AiInput`, `ALLOW_ALL`, `bodyEncoding`, `Clock`, `compareHours`, `Day`, `DAYS`, `decide`, `decodeBody`, `DEFAULT_POLICY`, `describeWeek`, `disagreements`, `extractPage`, `fromCompact`, `fromSchemaOrg`, `fromText`, `HostCounts`, `HostResult`, `HostStateStore`, `HostStop`, `Hours`, `HoursComparison`, `Interval`, `MemoryHostStateStore`, `nextValidatorMemo`, `Outcome`, `PageExtract`, `PageLink`, `parseRobots`, `PolicyOptions`, `PolitenessPolicy`, `realClock`, `Robots`, `RobotsDecision`, `RobotsGroup`, `RobotsRule`, `RobotsSignal`, `Signals`, `toHoursWeek`, `typesOf`, `VALIDATOR_MEMO`, `ValidatorAnswer`, `ValidatorLimits`, `ValidatorMemo`, `ValidatorReport`, `ValidatorVerdict`, `Week` | root | A reader. Its own entry point gives it too, and the readers are stable as a whole. |
+| `AiInput`, `ALLOW_ALL`, `bodyEncoding`, `cacheKeyOf`, `canonicalUrl`, `Clock`, `compareHours`, `Day`, `DAYS`, `decide`, `decodeBody`, `DEFAULT_POLICY`, `describeWeek`, `disagreements`, `extractPage`, `fromCompact`, `fromSchemaOrg`, `fromText`, `HostCounts`, `HostResult`, `HostStateStore`, `HostStop`, `Hours`, `HoursComparison`, `Interval`, `MemoryHostStateStore`, `nextValidatorMemo`, `Outcome`, `PageExtract`, `PageLink`, `parseRobots`, `PolicyOptions`, `PolitenessPolicy`, `realClock`, `Robots`, `RobotsDecision`, `RobotsGroup`, `RobotsRule`, `RobotsSignal`, `Signals`, `siteOf`, `toHoursWeek`, `typesOf`, `VALIDATOR_MEMO`, `ValidatorAnswer`, `ValidatorLimits`, `ValidatorMemo`, `ValidatorReport`, `ValidatorVerdict`, `Week` | root | A reader. Its own entry point gives it too, and the readers are stable as a whole. |
 
 ## Beta
 
@@ -97,7 +97,7 @@ Version 0.2.0 removes these exports from the root entry point. `durationMs` stay
 
 ## The entry points of the readers
 
-`polite-crawler/robots`, `/hours`, `/html`, `/classify`, `/politeness` and `/signals` are stable as a whole. They import no Node.js module, so a browser can use them. The site and its tools use them.
+`polite-crawler/robots`, `/hours`, `/html`, `/classify`, `/politeness`, `/signals` and `/urls` are stable as a whole. They import no Node.js module, so a browser can use them. The site and its tools use them.
 
 ## What 0.2.0 changes
 
@@ -138,6 +138,6 @@ The package is the MCP server of polite-crawler since 0.2.0. Its tiers follow th
 
 | Entry point | Stable | Beta | Deprecated |
 | --- | --- | --- | --- |
-| polite-crawler root | 235 | 135 | 0 |
-| `/robots`, `/hours`, `/html`, `/classify`, `/politeness`, `/signals` | 87 | 0 | 0 |
+| polite-crawler root | 238 | 135 | 0 |
+| `/robots`, `/hours`, `/html`, `/classify`, `/politeness`, `/signals`, `/urls` | 92 | 0 | 0 |
 | polite-crawler-mcp | 17 | 5 | 0 |

@@ -214,7 +214,7 @@ SITEMAP_LIMITS: build/index.d.mts#SITEMAP_LIMITS
 type ScanOptions: build/index.d.mts#ScanOptions
 type ScheduleOptions: build/index.d.mts#ScheduleOptions
 type ScheduleResult: build/index.d.mts#ScheduleResult
-type ScopeOptions: build/html.chunk.d.mts#ScopeOptions
+type ScopeOptions: build/urls.d.mts#ScopeOptions
 type SearchOptions: build/index.d.mts#SearchOptions
 type SearchRank: build/index.d.mts#SearchRank
 type Signals: build/signals.d.mts#Signals
@@ -296,6 +296,8 @@ archiveExtractor: build/index.d.mts#archiveExtractor
 archivedDocId: build/index.d.mts#archivedDocId
 bodyEncoding: build/html.chunk.d.mts#bodyEncoding
 browserMissing: build/index.d.mts#browserMissing
+cacheKeyOf: build/urls.d.mts#cacheKeyOf
+canonicalUrl: build/urls.d.mts#canonicalUrl
 catchUpIndex: build/index.d.mts#catchUpIndex
 changeCommand: build/index.d.mts#changeCommand
 checkFields: build/index.d.mts#checkFields
@@ -367,6 +369,7 @@ reindex: build/index.d.mts#reindex
 runRecipe: build/index.d.mts#runRecipe
 runWatch: build/index.d.mts#runWatch
 scheduleWatches: build/index.d.mts#scheduleWatches
+siteOf: build/urls.d.mts#siteOf
 startDaemon: build/index.d.mts#startDaemon
 toHoursWeek: build/hours.d.mts#toHoursWeek
 transformersEmbedder: build/index.d.mts#transformersEmbedder
@@ -424,7 +427,7 @@ DomNode: build/html.chunk.d.mts#DomNode
 PageExtract: build/html.chunk.d.mts#PageExtract
 PageLink: build/html.chunk.d.mts#PageLink
 bodyEncoding: build/html.chunk.d.mts#bodyEncoding
-canonicalUrl: build/html.chunk.d.mts#canonicalUrl
+canonicalUrl: build/urls.d.mts#canonicalUrl
 decodeBody: build/html.chunk.d.mts#decodeBody
 extractPage: build/html.chunk.d.mts#extractPage
 readJsonLd: build/html.chunk.d.mts#readJsonLd
@@ -481,6 +484,14 @@ NO_SIGNALS: build/signals.d.mts#NO_SIGNALS
 Signals: build/signals.d.mts#Signals
 metaSignals: build/signals.d.mts#metaSignals
 readSignals: build/signals.d.mts#readSignals
+
+## ./urls (build/urls.d.mts): names
+
+ScopeOptions: build/urls.d.mts#ScopeOptions
+cacheKeyOf: build/urls.d.mts#cacheKeyOf
+canonicalUrl: build/urls.d.mts#canonicalUrl
+scopeTest: build/urls.d.mts#scopeTest
+siteOf: build/urls.d.mts#siteOf
 
 ## ./record.schema.json: no declaration file for ./record.schema.json
 
@@ -624,17 +635,8 @@ interface PageLink {
   readonly text: string;
 }
 
-### build/html.chunk.d.mts#ScopeOptions
-interface ScopeOptions {
-  readonly sameSite?: boolean | undefined;
-  readonly allowHosts?: readonly string[] | undefined;
-}
-
 ### build/html.chunk.d.mts#bodyEncoding
 declare const bodyEncoding: (bytes: Uint8Array, contentType: string | null) => string;
-
-### build/html.chunk.d.mts#canonicalUrl
-declare const canonicalUrl: (value: string) => string;
 
 ### build/html.chunk.d.mts#decodeBody
 declare const decodeBody: (bytes: Uint8Array, contentType: string | null) => string;
@@ -2554,7 +2556,7 @@ export declare const VENUE_LIMITS: {
 };
 
 ### build/index.d.mts#VERSION
-export declare const VERSION = "0.5.0";
+export declare const VERSION = "0.5.1";
 
 ### build/index.d.mts#Variant
 type Variant = "plain" | "rendered";
@@ -3586,3 +3588,21 @@ export declare const metaSignals: (html: string) => string[];
 
 ### build/signals.d.mts#readSignals
 export declare const readSignals: (robotsLines: readonly string[], header: (name: string) => string | undefined, pageLines?: readonly string[]) => Signals;
+
+### build/urls.d.mts#ScopeOptions
+export interface ScopeOptions {
+  readonly sameSite?: boolean | undefined;
+  readonly allowHosts?: readonly string[] | undefined;
+}
+
+### build/urls.d.mts#cacheKeyOf
+export declare const cacheKeyOf: (value: string) => string;
+
+### build/urls.d.mts#canonicalUrl
+export declare const canonicalUrl: (value: string) => string;
+
+### build/urls.d.mts#scopeTest
+export declare const scopeTest: (starts: readonly URL[], options: ScopeOptions) => ((url: URL) => boolean);
+
+### build/urls.d.mts#siteOf
+export declare const siteOf: (host: string) => string;

@@ -27,8 +27,8 @@
  *
  * The other entry points give the rest:
  *
- * - `polite-crawler/robots`, `/hours`, `/html`, `/classify`, `/politeness` and `/signals` give each
- *   reader whole. They import no Node.js module, so a browser can use them.
+ * - `polite-crawler/robots`, `/hours`, `/html`, `/classify`, `/politeness`, `/signals` and `/urls` give
+ *   each reader whole. They import no Node.js module, so a browser can use them.
  */
 export type { BlobStore, FileBlobStoreOptions } from "./blobs.ts";
 export { FileBlobStore } from "./blobs.ts";
@@ -370,6 +370,7 @@ export type {
 export { SITEMAP_LIMITS, feedDate, readSitemap } from "./sitemaps.ts";
 export { bodyEncoding, decodeBody } from "./text.ts";
 export type { ScopeOptions } from "./urls.ts";
+export { cacheKeyOf, canonicalUrl, siteOf } from "./urls.ts";
 export { VERSION } from "./version.ts";
 export type { WaczResult } from "./wacz.ts";
 export type {

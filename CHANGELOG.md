@@ -15,6 +15,10 @@ A prerelease version (`0.2.0-beta.1`) goes to the npm tag `next`. Each other ver
 
 ## Unreleased
 
+## 0.5.1 - 2026-11-08
+
+- **The new entry point `polite-crawler/urls`.** It gives `canonicalUrl`, `cacheKeyOf`, `siteOf` and `scopeTest`: the rules of the crawler for the form of a URL. It imports no module, so a program can find duplicate URLs without the dependencies of the crawler. The root entry point also exports `canonicalUrl`, `cacheKeyOf` and `siteOf`.
+
 ## 0.5.0 - 2026-11-05
 
 - New versions of the dependencies (the release train).

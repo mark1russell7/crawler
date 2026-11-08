@@ -322,8 +322,8 @@ importers:
         specifier: ^5.3.0
         version: 5.3.0
       '@mark1russell7/site-pages':
-        specifier: ^0.3.5
-        version: 0.3.5
+        specifier: ^0.4.1
+        version: 0.4.1
       '@pagefind/default-ui':
         specifier: ^1.5.2
         version: 1.5.2
@@ -1143,8 +1143,8 @@ packages:
       zod:
         optional: true
 
-  '@mark1russell7/site-pages@0.3.5':
-    resolution: {integrity: sha512-3/VryGHcANgpTwAdAeyWL08I2qpfyUoXCVBUYtzjRQDpGT4i/wCUgJpAziiJrhY5g8HDOOsKgP/9Nf+kGh0a7Q==}
+  '@mark1russell7/site-pages@0.4.1':
+    resolution: {integrity: sha512-YYPPHH3ee6No2VL+yl+mholtu7m1qdZWTf5ldYLxxZyyrsE55rPFHwIPZOnkxH6OJ7GtzqUn37/cfOg7UJqP9A==}
     engines: {node: '>=22'}
     hasBin: true
 
@@ -4769,7 +4769,7 @@ snapshots:
       ws: 8.22.0
       zod: 4.6.7
 
-  '@mark1russell7/site-pages@0.3.5':
+  '@mark1russell7/site-pages@0.4.1':
     dependencies:
       '@mark1russell7/rigor-statistics': 0.1.11
 

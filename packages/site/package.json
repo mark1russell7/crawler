@@ -28,7 +28,7 @@
     "@astrojs/starlight": "^0.42.6",
     "@fontsource-variable/atkinson-hyperlegible-mono": "^5.3.0",
     "@fontsource-variable/atkinson-hyperlegible-next": "^5.3.0",
-    "@mark1russell7/site-pages": "^0.3.5",
+    "@mark1russell7/site-pages": "^0.4.1",
     "@pagefind/default-ui": "^1.5.2",
     "astro": "^7.3.8",
     "polite-crawler": "workspace:*",

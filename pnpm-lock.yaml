@@ -326,7 +326,7 @@ importers:
         version: 5.3.0
       '@mark1russell7/site-pages':
         specifier: ^0.4.1
-        version: 0.4.4
+        version: 0.4.5
       '@mark1russell7/text':
         specifier: ^0.0.2
         version: 0.0.2
@@ -1149,8 +1149,8 @@ packages:
       zod:
         optional: true
 
-  '@mark1russell7/site-pages@0.4.4':
-    resolution: {integrity: sha512-d6R1dLYAN7CA+Bnww3gZju5sO/2B3s+EuE+UupO5Fx6iKCo4w+oAenNX13yeBy/jLdxxD++m/zrcx+MxcbZ1ig==}
+  '@mark1russell7/site-pages@0.4.5':
+    resolution: {integrity: sha512-h/sHWnpzaTb87L/PLmy8P2/9a+kftX/SLuJ+RREHoLplvF1TLQ9GUu9DMg6y/ZQRLcxn9NgGaGC51KKKmpFdoA==}
     engines: {node: '>=22'}
     hasBin: true
 
@@ -4779,7 +4779,7 @@ snapshots:
       ws: 8.22.0
       zod: 4.6.7
 
-  '@mark1russell7/site-pages@0.4.4':
+  '@mark1russell7/site-pages@0.4.5':
     dependencies:
       '@mark1russell7/rigor-statistics': 0.1.11
 

@@ -45,7 +45,7 @@ defaults:
 
 jobs:
   ci:
-    uses: mark1russell7/template/.github/workflows/reusable-ci.yml@600ff4b757d17c8681961d19aea7b5224ab4fa80 # main
+    uses: mark1russell7/template/.github/workflows/reusable-ci.yml@65c760bd1ce1885b2badf6f92706dd396f50b9f4 # main
     with:
       # check:conventions reads each commit of a pull request back to its merge base (the rules release-files
       # and unreleased-change). The whole history is about 2 MB.
@@ -90,7 +90,7 @@ jobs:
 
   # 22.19.0 is the floor of "engines": its SQLite has FTS5, and undici 8 needs it.
   test-node:
-    uses: mark1russell7/template/.github/workflows/reusable-ci.yml@600ff4b757d17c8681961d19aea7b5224ab4fa80 # main
+    uses: mark1russell7/template/.github/workflows/reusable-ci.yml@65c760bd1ce1885b2badf6f92706dd396f50b9f4 # main
     with:
       node-versions: '["22.19.0", "26"]'
       timeout-minutes: 30
@@ -101,7 +101,7 @@ jobs:
       coverage-on-main: false
 
   test-os:
-    uses: mark1russell7/template/.github/workflows/reusable-ci.yml@600ff4b757d17c8681961d19aea7b5224ab4fa80 # main
+    uses: mark1russell7/template/.github/workflows/reusable-ci.yml@65c760bd1ce1885b2badf6f92706dd396f50b9f4 # main
     with:
       os: '["windows-latest", "macos-latest"]'
       node-versions: '["24"]'

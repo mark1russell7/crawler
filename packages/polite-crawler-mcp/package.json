@@ -65,6 +65,7 @@
   "devDependencies": {
     "@mark1russell7/cue": "github:mark1russell7/cue#d4fc4d708b2cfeae91e194b18466455ccad875b7",
     "@types/node": "^22.19.0",
+    "@vitest/coverage-v8": "^5.0.3",
     "tsdown": "^0.23.1",
     "typescript": "^7.0.2",
     "undici": "^8.12.3",

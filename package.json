@@ -32,6 +32,7 @@
     "@mark1russell7/cue": "github:mark1russell7/cue#f2bb6026e14fcfb782eef3e02771ce983d4bff55",
     "@mark1russell7/ste-lint": "github:mark1russell7/ste-lint#f597d6c1e09bcfcb487bb575825d6d5f29e9e0c7",
     "@mark1russell7/template-cli": "^0.1.2",
+    "@mark1russell7/text": "^0.0.2",
     "@types/node": "^22.20.5",
     "esbuild": "0.28.2",
     "oxlint": "^1.87.0",

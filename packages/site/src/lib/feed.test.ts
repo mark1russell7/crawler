@@ -19,13 +19,13 @@ const parseXml = (
   const open: Array<{ name: string; attrs: Record<string, string>; text: string }> = [];
   let roots = 0;
   const token =
-    /<(\/?)([A-Za-z_][\w:.-]*)((?:\s+[\w:.-]+="[^"<&]*(?:&(?:amp|lt|gt|quot|apos);[^"<&]*)*")*)\s*(\/?)>|([^<]+)/gy;
+    /<(\/?)([A-Za-z_][\w:.-]*)((?:\s+[\w:.-]+="[^"<&]*(?:&(?:amp|lt|gt|quot|apos|#\d+);[^"<&]*)*")*)\s*(\/?)>|([^<]+)/gy;
   let at = 0;
   for (let match = token.exec(body); match !== null; match = token.exec(body)) {
     at = token.lastIndex;
     const [, close, name, attrText, self, text] = match;
     if (text !== undefined) {
-      if (/&(?!(?:amp|lt|gt|quot|apos);)/.test(text))
+      if (/&(?!(?:amp|lt|gt|quot|apos|#\d+);)/.test(text))
         throw new Error(`a bare & in ${text.slice(0, 40)}`);
       if (text.includes(">")) throw new Error(`a bare > in ${text.slice(0, 40)}`);
       const top = open.at(-1);
@@ -61,6 +61,7 @@ const unescape = (text: string): string =>
     .replace(/&gt;/g, ">")
     .replace(/&quot;/g, '"')
     .replace(/&apos;/g, "'")
+    .replace(/&#(\d+);/g, (_, code: string) => String.fromCharCode(Number(code)))
     .replace(/&amp;/g, "&");
 
 const run = (version: string, doi: string | null): StudyRun => ({
@@ -148,7 +149,7 @@ describe("the feed of the monthly runs", () => {
   });
 
   it("escapes the text of the feed", () => {
-    expect(xmlEscape(`a & b <c> "d" 'e'`)).toBe("a &amp; b &lt;c&gt; &quot;d&quot; &apos;e&apos;");
+    expect(xmlEscape(`a & b <c> "d" 'e'`)).toBe("a &amp; b &lt;c&gt; &quot;d&quot; &#39;e&#39;");
     expect(() => parseXml('<?xml version="1.0" encoding="UTF-8"?>\n<a>b & c</a>')).toThrow(
       /bare &/,
     );

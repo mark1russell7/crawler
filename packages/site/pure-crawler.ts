@@ -17,6 +17,7 @@
 // The tests of the site (vitest) do not use this plugin: they use the real modules.
 import { readFileSync } from "node:fs";
 import type { Plugin } from "vite";
+import { escapeRegExp as escape } from "@mark1russell7/text";
 
 /** A module of the source of polite-crawler. */
 const SOURCE = /[\\/]polite-crawler[\\/]src[\\/][^\\/]+\.ts$/;
@@ -27,8 +28,6 @@ const PACKAGE = /^(?:node:|(?:@[\w.~-]+\/)?[\w~-][\w.~-]*(?:\/|$))/;
 /** The packages that the pure parts use in the browser: the HTML reader. */
 const BROWSER_SAFE = new Set(["linkedom", "@mozilla/readability"]);
 const STAND_IN = "\0polite-crawler-stand-in:";
-
-const escape = (text: string): string => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 /** The names that a module imports from a source, so that the stand-in can export each one. */
 const namesOf = (file: string, source: string): string[] => {

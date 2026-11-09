@@ -20,6 +20,7 @@ import {
 } from "./cite.ts";
 import type { Study } from "./study.ts";
 import { DATA_LICENSE, STUDY_AUTHOR, summarize, toCsv } from "./study.ts";
+import { escapeAttribute as escapeHtml } from "@mark1russell7/text";
 
 /** A file of the dataset: its name and its bytes. */
 export interface DatasetFile {
@@ -326,9 +327,6 @@ export interface ZenodoMetadata {
   readonly notes: string;
   readonly version: string;
 }
-
-const escapeHtml = (text: string): string =>
-  text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
 /**
  * This function gives the metadata of the record on Zenodo. The version and the date of publication

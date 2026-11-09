@@ -7,6 +7,7 @@ import { DATASET_TITLE, SITE_URL, STUDY_PAGE, doiUrl } from "./cite.ts";
 import type { StudyHistory, StudyRun } from "./runs.ts";
 import { runCsvPath, runJsonPath } from "./runs.ts";
 import { DATA_LICENSE, formatDay } from "./study.ts";
+import { escapeAttribute as xmlEscape } from "@mark1russell7/text";
 
 /** This path is the feed, relative to the site. */
 export const FEED_PATH = "study/feed.xml";
@@ -15,14 +16,7 @@ export const FEED_URL = `${SITE_URL}${FEED_PATH}`;
 /** This text is the title of the feed. The link in the head of the study page names it too. */
 export const FEED_TITLE = "The robots.txt study of polite-crawler, each month";
 
-/** This function escapes a text for XML: in an element and in an attribute. */
-export const xmlEscape = (text: string): string =>
-  text
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&apos;");
+export { xmlEscape };
 
 /** This function gives the anchor of a run in the table of the runs on the study page. */
 export const runAnchor = (version: string): string => `run-${version}`;

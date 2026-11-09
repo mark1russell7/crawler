@@ -1,6 +1,13 @@
-# The gates of each change.
-#   test    the tests and the smoke test of the packed package, on each supported Node.js version and OS
-#   checks  the checks that give the same result everywhere: types, code lint, prose lint, the public API, the site build
+# The gates of each change. The jobs ci, test-node and test-os are the shared CI of mark1russell7
+# (reusable-ci.yml, CI.md of mark1russell7/template). Each runs the scripts of its input "scripts".
+#   ci           ubuntu-latest, Node.js 24: the format, the types, the code lint, the prose lint, the
+#                conventions, the tests, the build, the API report, the smoke test of the packed package,
+#                the coverage and the validation of the WARC and WACZ exports
+#   test-node    ubuntu-latest, Node.js 22.19.0 and 26: the tests, the build and the smoke test
+#   test-os      windows-latest and macos-latest, Node.js 24: the tests, the build and the smoke test
+#   api-and-site the API report of polite-crawler, the site build and the site check. The site build
+#                reads a run of eval.yml, so this job needs actions: read, which the shared CI does not give.
+#   ci-ok        the one check of the ruleset (CI OK). It needs each other job of this file.
 # release.yml calls this workflow before it builds a release.
 name: CI
 
@@ -32,82 +39,36 @@ concurrency:
   group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
+defaults:
+  run:
+    shell: bash
+
 jobs:
-  test:
-    name: Test (${{ matrix.os }}, Node.js ${{ matrix.node }})
-    strategy:
-      max-parallel: 3
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest]
-        # 22.19.0 is the floor of "engines": its SQLite has FTS5, and undici 8 needs it.
-        node: ["22.19.0", "24", "26"]
-        include:
-          - os: windows-latest
-            node: "24"
-          - os: macos-latest
-            node: "24"
-          # This adds the coverage step to the ubuntu-latest and Node.js 24 job.
-          - os: ubuntu-latest
-            node: "24"
-            coverage: true
-    runs-on: ${{ matrix.os }}
-    timeout-minutes: 30
-    env:
-      # One browser folder on each OS. .cache/ is in .gitignore.
-      PLAYWRIGHT_BROWSERS_PATH: ${{ github.workspace }}/.cache/ms-playwright
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      # The pnpm version comes from "packageManager" in package.json
-      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        with:
-          node-version: ${{ matrix.node }}
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
-
+  ci:
+    uses: mark1russell7/template/.github/workflows/reusable-ci.yml@600ff4b757d17c8681961d19aea7b5224ab4fa80 # main
+    with:
+      # check:conventions reads each commit of a pull request back to its merge base (the rules release-files
+      # and unreleased-change). The whole history is about 2 MB.
+      fetch-depth: 0
+      timeout-minutes: 40
+      # .nvmrc has 24
+      node-versions: '["24"]'
+      # smoke: the npm builds, packed and installed into an empty project the way a user gets them
+      scripts: format:check typecheck lint lint:ste check:conventions test build check:api smoke
       # The browser for the renderer test. Without one, the test skips and proves nothing.
-      - name: The version of playwright-core
-        id: playwright
-        shell: bash
-        run: echo "version=$(node -p "require('./packages/polite-crawler/node_modules/playwright-core/package.json').version")" >> "$GITHUB_OUTPUT"
-      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: .cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}
       # On Linux, --with-deps also installs the system libraries of the browser.
-      - name: Install the headless shell
-        run: pnpm --filter polite-crawler exec playwright-core install ${{ runner.os == 'Linux' && '--with-deps' || '' }} chromium-headless-shell
-
-      - run: pnpm test
-
-      # The thresholds are in packages/polite-crawler/vitest.config.ts.
-      - name: Coverage
-        if: matrix.coverage
-        run: pnpm --filter polite-crawler test:coverage
-      - name: Upload the coverage report
-        if: matrix.coverage && !cancelled()
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: coverage
-          path: packages/polite-crawler/coverage/
-          if-no-files-found: ignore
-          retention-days: 14
-
-      # The archive tools read the exports of src/archive.test.ts: warcio reads the WARC files,
-      # py-wacz the WACZ file, and zipfile each ZIP (also one with Zip64 records). Pinned versions.
-      - name: Validate the WARC and WACZ exports
-        if: matrix.os == 'ubuntu-latest' && matrix.node == '24'
-        shell: bash
-        env:
-          POLITE_CRAWLER_ARCHIVE_OUT: ${{ runner.temp }}/archives
-        run: |
-          python3 -m venv "$RUNNER_TEMP/archive-tools"
-          . "$RUNNER_TEMP/archive-tools/bin/activate"
-          pip install --disable-pip-version-check --quiet warcio==1.8.1 wacz==0.6.0 cdxj-indexer==1.4.6 frictionless==5.15.6 boilerpy3==1.0.7 shortuuid==1.0.13 jsonlines==4.0.0
-          pnpm --filter polite-crawler exec vitest run src/archive.test.ts
+      setup: pnpm --filter polite-crawler exec playwright-core install --with-deps chromium-headless-shell
+      # 1. The coverage of polite-crawler. The thresholds are in packages/polite-crawler/vitest.config.ts.
+      # 2. The archive tools read the exports of src/archive.test.ts: warcio reads the WARC files,
+      #    py-wacz the WACZ file, and zipfile each ZIP (also one with Zip64 records). Pinned versions.
+      run: |
+        pnpm --filter polite-crawler test:coverage
+        export POLITE_CRAWLER_ARCHIVE_OUT="$RUNNER_TEMP/archives"
+        python3 -m venv "$RUNNER_TEMP/archive-tools"
+        . "$RUNNER_TEMP/archive-tools/bin/activate"
+        pip install --disable-pip-version-check --quiet warcio==1.8.1 wacz==0.6.0 cdxj-indexer==1.4.6 frictionless==5.15.6 boilerpy3==1.0.7 shortuuid==1.0.13 jsonlines==4.0.0
+        pnpm --filter polite-crawler exec vitest run src/archive.test.ts
+        (
           cd "$POLITE_CRAWLER_ARCHIVE_OUT"
           for file in *.warc.gz; do
             warcio check -v "$file"
@@ -117,21 +78,42 @@ jobs:
           done
           for file in *.wacz; do wacz validate -f "$file"; done
           python3 -I - *.wacz *.zip <<'EOF'
-          import sys, zipfile
-          for name in sys.argv[1:]:
-              with zipfile.ZipFile(name) as archive:
-                  bad = archive.testzip()
-                  assert bad is None, f"{name}: the CRC of {bad} is wrong"
-                  for info in archive.infolist():
-                      print(name, info.filename, info.compress_type, info.file_size, info.CRC)
-          EOF
+        import sys, zipfile
+        for name in sys.argv[1:]:
+            with zipfile.ZipFile(name) as archive:
+                bad = archive.testzip()
+                assert bad is None, f"{name}: the CRC of {bad} is wrong"
+                for info in archive.infolist():
+                    print(name, info.filename, info.compress_type, info.file_size, info.CRC)
+        EOF
+        )
 
-      # The npm builds, packed and installed into an empty project the way a user gets them
-      - run: pnpm build
-      - run: node scripts/smoke.ts
+  # 22.19.0 is the floor of "engines": its SQLite has FTS5, and undici 8 needs it.
+  test-node:
+    uses: mark1russell7/template/.github/workflows/reusable-ci.yml@600ff4b757d17c8681961d19aea7b5224ab4fa80 # main
+    with:
+      node-versions: '["22.19.0", "26"]'
+      timeout-minutes: 30
+      scripts: test build smoke
+      setup: pnpm --filter polite-crawler exec playwright-core install --with-deps chromium-headless-shell
+      # The job ci does these once.
+      changesets: false
+      coverage-on-main: false
 
-  checks:
-    name: Checks
+  test-os:
+    uses: mark1russell7/template/.github/workflows/reusable-ci.yml@600ff4b757d17c8681961d19aea7b5224ab4fa80 # main
+    with:
+      os: '["windows-latest", "macos-latest"]'
+      node-versions: '["24"]'
+      timeout-minutes: 30
+      scripts: test build smoke
+      setup: pnpm --filter polite-crawler exec playwright-core install chromium-headless-shell
+      # The job ci does these once.
+      changesets: false
+      coverage-on-main: false
+
+  api-and-site:
+    name: API report and site
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
@@ -142,30 +124,16 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-          # The rules release-files and unreleased-change of check:conventions read each commit of a pull request,
-          # back to its merge base. A depth of 2 ends inside a change of more than one commit. The whole history is
-          # about 2 MB.
-          fetch-depth: 0
+      # The pnpm version comes from "packageManager" in package.json
       - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      # Prettier: the code, the JSON and the YAML. .prettierignore names what it does not format.
-      - run: pnpm format:check
-      - run: pnpm typecheck
-      # oxlint, with the type-aware rules (no-floating-promises, no-misused-promises)
-      - run: pnpm lint
-      # The writing rules (ASD-STE100) of the README files and the doc comments
-      - run: pnpm lint:ste
-      # The conventions of the docs (@mark1russell7/conventions): exceptions are in the field conventions of package.json
-      - run: pnpm check:conventions
       # The public API: the build of the package against the reports in packages/polite-crawler/api/
       - run: pnpm build
       - run: pnpm api --check
-      # The report of each public package in packages/<package>/test/api/public-api.txt (@mark1russell7/api-report)
-      - run: pnpm check:api
       # When the check fails, the new reports are an artifact: download them, look at the change,
       # and commit them to packages/polite-crawler/api/ (or start `pnpm api` with a build).
       - name: Upload the new API reports
@@ -215,3 +183,34 @@ jobs:
           path: ${{ runner.temp }}/shots/
           if-no-files-found: warn
           retention-days: 14
+
+  # The one check of the ruleset (CI.md of mark1russell7/template, "The check of the ruleset").
+  # It passes only when each job of needs passed, or was skipped by its own if and ALLOW_SKIP names it.
+  # A new job of this file goes in needs, so the ruleset never has to change, and gh pr merge --auto
+  # waits for the whole gate.
+  ci-ok:
+    name: CI OK
+    if: ${{ !cancelled() }}
+    needs: [ci, test-node, test-os, api-and-site]
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    permissions: {}
+    steps:
+      - name: Each job passed
+        env:
+          NEEDS: ${{ toJSON(needs) }}
+          # The jobs that their own if may skip, separated by spaces. Each other job must pass.
+          ALLOW_SKIP: ""
+        run: |
+          echo "$NEEDS" | jq -r 'to_entries[] | "\(.key) \(.value.result)"' > results
+          cat results
+          if [ ! -s results ]; then echo "::error::no job in needs"; exit 1; fi
+          bad=0
+          while read -r job result; do
+            case "$result" in
+              success) ;;
+              skipped) case " $ALLOW_SKIP " in *" $job "*) ;; *) echo "::error::$job was skipped, and ALLOW_SKIP does not name it"; bad=1 ;; esac ;;
+              *) echo "::error::$job: $result"; bad=1 ;;
+            esac
+          done < results
+          exit $bad

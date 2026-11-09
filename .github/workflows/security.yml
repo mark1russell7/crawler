@@ -1,6 +1,6 @@
-# The security scans of this repository: dependency review, osv-scanner and CodeQL (CI.md of
-# mark1russell7/template). A pull request fails only for a new finding at or above high. Pushes to
-# main and the weekly scan upload the findings to the Security tab.
+# The security scans of this repository in one job: the action security-scan of mark1russell7/template
+# (CI.md, "Security"): dependency review and osv-scanner. A pull request fails only for a new finding at
+# or above high. Pushes to main and the weekly scan upload the findings to the Security tab.
 name: Security
 
 on:
@@ -18,12 +18,19 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  security:
-    uses: mark1russell7/template/.github/workflows/reusable-security.yml@c216644a252956d695bc2a785e80abccd98fa0d0 # main
+  # The one check of this file that the ruleset names, next to CI OK (CI.md of mark1russell7/template,
+  # "The check of the ruleset"). The scans stay out of ci.yml, because release.yml calls ci.yml with
+  # contents: read and actions: read only.
+  security-ok:
+    name: Security OK
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
     permissions:
       contents: read
       security-events: write
       actions: read
-    with:
-      # The default setup of code scanning already analyzes this repository with CodeQL
-      codeql: false
+    steps:
+      - uses: mark1russell7/template/.github/actions/security-scan@600ff4b757d17c8681961d19aea7b5224ab4fa80 # main
+        with:
+          # The default setup of code scanning already analyzes this repository with CodeQL
+          codeql: false

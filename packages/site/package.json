@@ -17,6 +17,7 @@
   "devDependencies": {
     "@mark1russell7/cue": "github:mark1russell7/cue#01454a6f49e745268264795d4e77e0bb374e96cc",
     "@types/node": "^26.6.4",
+    "@vitest/coverage-v8": "^5.0.3",
     "playwright-core": "^1.64.0",
     "typescript": "^7.0.2",
     "vite": "^8.3.4",

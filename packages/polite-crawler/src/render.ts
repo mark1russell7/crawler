@@ -18,6 +18,9 @@ import type { APIResponse, Browser, BrowserContext, Page, Request, Route } from 
  * - A wait until the visible text stops growing, with a limit. Playwright discourages
  *   `networkidle`. The text includes open shadow roots and the frames of the same origin.
  * - One deadline for the whole render: the navigation, the wait and the reading of the page.
+ * - The page cannot leave its document while it is read. The route stops each later navigation of
+ *   the page as aborted, and the browser then keeps the document. A page that navigates without
+ *   end can otherwise replace the document before each read ends.
  * - After a crash or a disconnection, the next page launches a new browser.
  * - The browser closes after two idle minutes. An idle Chromium holds hundreds of megabytes, so
  *   it stays open only while pages need it. The open browser keeps the process alive, so a
@@ -328,6 +331,8 @@ export const playwrightRenderer = (
     let refused: { readonly message: string; readonly url: string } | undefined;
     /** The last navigation of the page that the route answered: the URL that the browser asked for, and the URL of the answer. */
     let navigated: { readonly asked: string; readonly final: string } | undefined;
+    /** True from the start of the read: the route stops each navigation of the page, so the document stays. */
+    let reading = false;
     const extra = Object.fromEntries(
       Object.entries(headers ?? {}).map(([name, value]) => [name.toLowerCase(), value]),
     );
@@ -438,6 +443,11 @@ export const playwrightRenderer = (
       const request = route.request();
       const main = ofPage(request);
       try {
+        // "aborted" leaves no error page: the browser keeps the document that is read
+        if (main && reading) {
+          await route.abort("aborted");
+          return;
+        }
         if (BLOCKED_TYPES.has(request.resourceType())) {
           await route.abort("blockedbyclient");
           return;
@@ -570,8 +580,9 @@ export const playwrightRenderer = (
         }
         await sleep(Math.min(POLL_MS, settleEnd - Date.now()));
       }
-      // a navigation can replace the document while it is read: the read waits for the new document
-      // and tries again, until the deadline (a page can navigate many times in a row)
+      // from here the route stops each new navigation of the page. One that started before can still
+      // replace the document: the read waits for the new document and tries again, until the deadline
+      reading = true;
       let serialized: Serialized | undefined;
       while (serialized === undefined) {
         try {

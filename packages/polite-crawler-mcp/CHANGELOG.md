@@ -6,6 +6,10 @@ This file records the changes to `polite-crawler-mcp` in each version. The chang
 
 ## Unreleased
 
+## 0.5.2 - 2026-11-08
+
+- **The server uses polite-crawler 0.5.2.** A render now reads a page that navigates again and again: see the [changelog of polite-crawler](../../CHANGELOG.md). The server does not change.
+
 ## 0.5.1 - 2026-11-08
 
 - **The server uses polite-crawler 0.5.1.** The new entry point `polite-crawler/urls` is in the [changelog of polite-crawler](../../CHANGELOG.md). The server does not change.

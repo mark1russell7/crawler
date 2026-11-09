@@ -18,6 +18,7 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { escapeRegExp } from "@mark1russell7/text";
 
 /** The packages that have the same version, by their folder in packages/. */
 export const PACKAGES = ["polite-crawler", "polite-crawler-mcp"] as const;
@@ -81,8 +82,6 @@ const replaceIn = (file: string, text: string, pattern: RegExp, replacement: str
   pattern.lastIndex = 0;
   return text.replace(pattern, replacement);
 };
-
-const escapeRegExp = (text: string): string => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 /**
  * This function adds the section of a version to the text of a changelog. The section goes

@@ -184,6 +184,9 @@ importers:
       '@mark1russell7/template-cli':
         specifier: ^0.1.2
         version: 0.1.6
+      '@mark1russell7/text':
+        specifier: ^0.0.2
+        version: 0.0.2
       '@types/node':
         specifier: ^22.20.5
         version: 22.20.5
@@ -324,6 +327,9 @@ importers:
       '@mark1russell7/site-pages':
         specifier: ^0.4.1
         version: 0.4.1
+      '@mark1russell7/text':
+        specifier: ^0.0.2
+        version: 0.0.2
       '@pagefind/default-ui':
         specifier: ^1.5.2
         version: 1.5.2
@@ -1158,6 +1164,10 @@ packages:
     resolution: {integrity: sha512-aKHaoDxg8zutGQIlJ6H10TO0lCHFReNkGxBrZNS1O77TArms62FXA43wIc9wU29zra6uMgNIlUKpfN3rZJtWqA==}
     engines: {node: '>=22.12'}
     hasBin: true
+
+  '@mark1russell7/text@0.0.2':
+    resolution: {integrity: sha512-m1aIB8X+PDekktzr1fYOp1/7gvlh9iL/2M7ktj/GnmPmVrWin0rTADgTm00dKFdWFRzXraCUYkjyCl3jQZHEVg==}
+    engines: {node: '>=22.12'}
 
   '@microsoft/api-extractor-model@7.33.16':
     resolution: {integrity: sha512-MO61eHRI3DDieE9pxNo5xc096NGUQAIKzEPW6IhNNGU9K4EIhRSYiXfroDZX4joNkrWBMzAMp3WhbPGbHG5zHQ==}
@@ -4780,6 +4790,8 @@ snapshots:
   '@mark1russell7/template-cli@0.1.6':
     dependencies:
       '@clack/prompts': 1.8.1
+
+  '@mark1russell7/text@0.0.2': {}
 
   '@microsoft/api-extractor-model@7.33.16(@types/node@22.20.5)':
     dependencies:

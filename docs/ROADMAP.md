@@ -12,7 +12,7 @@ List the MCP server in the directories that need a submission, then post polite-
 
 - Area: Site and growth
 - Waits for: `eval`, `eval-b`
-- What Mark does: Read the post text that the strategist gave you, then post it from your Hacker News account.
+- What Mark does: Read the prepared post text, then post it from your Hacker News account.
 
 ## Later
 
@@ -25,7 +25,7 @@ List the MCP server in the directories that need a submission, then post polite-
 
 ### `daemon-lock`: Daemon: a lock file for the single-daemon rule
 
-Two `polite-crawler daemon` starts at the same moment on one store both pass the single-daemon check, so both run and the second replaces the MCP token file. The fix is an exclusive lock file with recovery of a stale lock. Found by the strategist's audit (s21). It is rare: it needs two starts at the same moment.
+Two `polite-crawler daemon` starts at the same moment on one store both pass the single-daemon check, so both run and the second replaces the MCP token file. The fix is an exclusive lock file with recovery of a stale lock. Found by an audit. It is rare: it needs two starts at the same moment.
 
 - Area: Package
 
@@ -78,7 +78,7 @@ Shipped in 0.2.3 (crawler #36): runWatch takes job (a name in the captures), cra
 
 ### `hybrid-rejection`: Hybrid search: no unhandled rejection from a shared embedding
 
-The strategist's audit (s21) found that two hybrid searches that share a text, and both fail, could stop the process with an unhandled rejection. The fix and a test that shows the failure are in PR #29. It ships in the next patch version.
+An audit found that two hybrid searches that share a text, and both fail, could stop the process with an unhandled rejection. The fix and a test that shows the failure are in PR #29. It ships in the next patch version.
 
 - Area: Package
 - Started: 2026-10-25
@@ -87,7 +87,7 @@ The strategist's audit (s21) found that two hybrid searches that share a text, a
 
 ### `eval-b`: Eval, part B: real Claude Code runs
 
-Run the same claims through Claude Code (claude -p, one model for both arms) with polite-crawler's MCP tools and with WebFetch, and measure the real tokens and cost from Claude's own usage. It runs in public CI on the API key (strategist cap $40, dry run of 2 claims first), and gives the number to publish on the site.
+Run the same claims through Claude Code (claude -p, one model for both arms) with polite-crawler's MCP tools and with WebFetch, and measure the real tokens and cost from Claude's own usage. It runs in public CI on the API key (cap $40, dry run of 2 claims first), and gives the number to publish on the site.
 
 - Area: Site and growth
 - Waits for: `eval`

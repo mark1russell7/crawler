@@ -6,6 +6,15 @@ This file records the changes to `polite-crawler-mcp` in each version. The chang
 
 ## Unreleased
 
+## 0.6.0
+
+The release train changes the range of `@procedures/client`, `@procedures/mcp-server` to a version outside the old range. The public types name @procedures/client, @procedures/mcp-server, so its new version outside the old range can change them.
+
+### Breaking
+
+- The range `^0.48.0` of `@procedures/client` in `dependencies` does not hold `0.55.0`, so it changes.
+- The range `^0.48.0` of `@procedures/mcp-server` in `dependencies` does not hold `0.55.0`, so it changes.
+
 ## 0.5.2 - 2026-11-08
 
 - **The server uses polite-crawler 0.5.2.** A render now reads a page that navigates again and again: see the [changelog of polite-crawler](../../CHANGELOG.md). The server does not change.

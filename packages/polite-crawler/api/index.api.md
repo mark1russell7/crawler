@@ -3097,7 +3097,7 @@ export const verifySignature: (request: SignedRequest, directory: KeyDirectory, 
 }) => SignatureCheck;
 
 // @public
-export const VERSION = "0.5.2";
+export const VERSION = "0.6.0";
 
 // @public
 export interface VersionAt {

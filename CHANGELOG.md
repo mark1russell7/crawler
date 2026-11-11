@@ -15,6 +15,10 @@ A prerelease version (`0.2.0-beta.1`) goes to the npm tag `next`. Each other ver
 
 ## Unreleased
 
+## 0.6.0 - 2026-11-11
+
+- New versions of the dependencies (the release train).
+
 ## 0.5.2 - 2026-11-08
 
 - **A render reads a page that navigates again and again.** The render stops each new navigation of the page while it reads the page, and the browser keeps the document. Before, a page that navigated faster than one read could replace the document before each read ended, and the render timed out. A slow computer made this more probable.

@@ -82,7 +82,7 @@
     "@mozilla/readability": "^0.6.0",
     "linkedom": "^0.18.13",
     "undici": "^8.12.3",
-    "unpdf": "^1.8.1"
+    "unpdf": "^2.0.0"
   },
   "peerDependencies": {
     "@huggingface/transformers": "^3.0.0 || ^4.0.0",

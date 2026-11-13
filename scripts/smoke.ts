@@ -385,6 +385,7 @@ import { classify } from "polite-crawler/classify";
 import { DEFAULT_POLICY } from "polite-crawler/politeness";
 import { readSignals, type Signals } from "polite-crawler/signals";
 import { canonicalUrl } from "polite-crawler/urls";
+import { readGrant, type Reply } from "polite-crawler/api";
 import schema from "polite-crawler/record.schema.json" with { type: "json" };
 
 export const check = async (): Promise<string> => {
@@ -399,7 +400,9 @@ export const check = async (): Promise<string> => {
   const extract: PageExtract = extractPage("<p>x</p>", "https://example.com/");
   const signals: Signals = readSignals([], () => undefined);
   const outcome: string = classify(200, () => undefined, Date.now()).outcome;
-  return [allowed, week, extract.title, signals.ai_input, verified.found, DEFAULT_POLICY.pageIntervalMs, schema.title, caught?.mode, outcome, canonicalUrl("https://Example.com:443/?utm_source=x")].join();
+  const reply: Reply = { status: 200, statusText: "OK", headers: {}, body: '{"access_token":"token-0001","expires_in":600}' };
+  const until: number = readGrant(reply, "Example API", Date.now()).until;
+  return [allowed, week, extract.title, signals.ai_input, verified.found, DEFAULT_POLICY.pageIntervalMs, schema.title, caught?.mode, outcome, canonicalUrl("https://Example.com:443/?utm_source=x"), until].join();
 };
 `,
   );
@@ -493,6 +496,8 @@ export const start: typeof startMcpServer = startMcpServer;
     signals: 1100,
     // the size of version 0.5.1, and 20 percent more
     urls: 850,
+    // the size of version 0.6.1, and 20 percent more
+    api: 3800,
     html: 192_000,
   };
   for (const [name, budget] of Object.entries(budgets)) {

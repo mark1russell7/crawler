@@ -13,6 +13,7 @@ export default defineConfig({
     "src/politeness.ts",
     "src/signals.ts",
     "src/urls.ts",
+    "src/api.ts",
   ],
   outDir: "build",
   format: "esm",

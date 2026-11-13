@@ -15,6 +15,14 @@ A prerelease version (`0.2.0-beta.1`) goes to the npm tag `next`. Each other ver
 
 ## Unreleased
 
+## 0.6.1 - 2026-11-13
+
+- **The new entry point `polite-crawler/api`.** It sends the requests of an API client with the politeness of the crawler, and it stores no page. Each export is beta.
+  - `send` waits the rest of the host with the scheduler of the crawler, and gives each answer. The transport is a port (`Transport`), so a program gives `fetch` or a fake.
+  - `tokenStore`, `readGrant` and `sendWithToken` get and keep the token of the OAuth 2.0 client credentials grant. After a 401, `sendWithToken` gets a new token and sends one more time.
+  - The option `redact` of `send` removes the secrets from the text of each error. The default changes nothing.
+- **`polite-crawler/api` also gives the reaction of the crawler to an answer.** `outcomeResult` gives the result that the host state counts, and `reactToOutcome` gives the rest and the stop of the host. They are pure and beta. The `Crawler` uses them, and its behavior does not change. They are not in `polite-crawler/politeness`, thus the size of that entry does not change.
+
 ## 0.6.0 - 2026-11-11
 
 - New versions of the dependencies (the release train).

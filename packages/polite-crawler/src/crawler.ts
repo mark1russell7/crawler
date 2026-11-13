@@ -5,7 +5,7 @@ import type { Dispatcher } from "undici";
 import { Agent, request } from "undici";
 import type { BlobStore } from "./blobs.ts";
 import type { Classified, Outcome } from "./classify.ts";
-import { classify, isClientError, parseHttpDate } from "./classify.ts";
+import { classify, parseHttpDate } from "./classify.ts";
 import type { Variant } from "./docs.ts";
 import type { EgressOptions } from "./egress.ts";
 import { checkEgress, egressError, egressLookup, egressRefusal } from "./egress.ts";
@@ -20,10 +20,11 @@ import type {
   ValidatorAnswer,
   ValidatorMemo,
 } from "./politeness.ts";
+import type { OutcomeFacts } from "./reaction.ts";
+import { outcomeResult, reactToOutcome } from "./reaction.ts";
 import {
   DEFAULT_POLICY,
   HostScheduler,
-  MAX_STOP_MS,
   HostStopped,
   checkPolicy,
   equalJitterMs,
@@ -955,17 +956,16 @@ interface RobotsEntry {
   good: { readonly verdict: RobotsVerdict; readonly at: number } | undefined;
 }
 
-interface Settle {
-  readonly outcome: FetchOutcome;
-  readonly status: number;
-  readonly retryAfterMs: number | undefined;
+/** The facts of one answer for `reactToOutcome`, with the pace of the host and the kind of the file. */
+interface Settle extends OutcomeFacts {
   /** The pace of the host: the kind of the request, its duration, the crawl delay and the documented interval. */
   readonly rest: RestInput;
   /** A 401 or a 403 on robots.txt means "no robots.txt" (RFC 9309), so it does not stop the host. */
   readonly robotsFile: boolean;
-  /** This result replaces the result that the outcome gives. */
-  readonly result?: HostResult | undefined;
 }
+
+/** The statuses of a refusal of robots.txt that do not stop the host. */
+const ROBOTS_SPARE: readonly number[] = [401, 403];
 
 type RenderDone =
   | {
@@ -1434,62 +1434,16 @@ export class Crawler {
    * refusal stops the host for a time.
    */
   private settle(host: string, policy: PolitenessPolicy, step: Settle): number {
-    const store = this.scheduler.store;
     const now = this.clock.now();
-    const rest = restAfter(policy, step.rest);
-    const delayMs = rest.ms;
-    const waited = (ms: number, reason: string): number => {
-      if (ms > delayMs) this.emit({ type: "wait", host, ms, reason });
-      return ms;
-    };
-    if (step.result !== undefined) {
-      store.record(host, step.result);
-      return delayMs;
-    }
-    const outcome = step.outcome;
-    if (outcome === "rate-limited" || outcome === "unavailable") {
-      const { waits } = store.record(host, "wait");
-      const asked = step.retryAfterMs;
-      if (asked !== undefined && asked > policy.maxRetryAfterMs) {
-        // a wait longer than the budget stops the host, so no request sleeps for days
-        this.stopHost(
-          host,
-          now + Math.min(asked, MAX_STOP_MS),
-          `asked to wait ${String(Math.round(asked / 1000))} s`,
-        );
-        return delayMs;
-      }
-      return waited(
-        Math.max(
-          delayMs,
-          asked ?? equalJitterMs(waits, policy.backoffBaseMs, policy.backoffCapMs, this.random),
-        ),
-        asked === undefined ? "backoff" : "retry-after",
-      );
-    }
-    if (outcome === "error") {
-      if (isClientError(step.status)) {
-        store.record(host, "neutral");
-        return delayMs;
-      }
-      const { failures } = store.record(host, "failure");
-      if (failures >= policy.maxFailures)
-        this.stopHost(host, now + policy.failureStopMs, `${String(failures)} failures in a row`);
-      return waited(
-        Math.max(
-          delayMs,
-          equalJitterMs(failures, policy.backoffBaseMs, policy.backoffCapMs, this.random),
-        ),
-        "backoff",
-      );
-    }
-    if (outcome === "challenge") this.stopHost(host, now + policy.challengeStopMs, outcome);
-    else if (outcome === "payment-required")
-      this.stopHost(host, now + policy.paymentStopMs, outcome);
-    else if (outcome === "blocked" && !step.robotsFile)
-      this.stopHost(host, now + policy.blockedStopMs, outcome);
-    store.record(host, "success");
-    return delayMs;
+    const restMs = restAfter(policy, step.rest).ms;
+    // a 401 or a 403 for robots.txt means "no robots.txt" (RFC 9309), so it does not stop the host
+    const facts = step.robotsFile ? { ...step, spare: ROBOTS_SPARE } : step;
+    const counts = this.scheduler.store.record(host, outcomeResult(facts));
+    const reaction = reactToOutcome(facts, counts, { policy, now, restMs, random: this.random });
+    if (reaction.stop !== undefined) this.stopHost(host, reaction.stop.until, reaction.stop.reason);
+    if (reaction.longer !== undefined)
+      this.emit({ type: "wait", host, ms: reaction.restMs, reason: reaction.longer });
+    return reaction.restMs;
   }
 
   /**
@@ -2682,9 +2636,10 @@ export class Crawler {
                   : undefined;
             if (refused !== undefined) {
               if (refused.reason === "browser") this.renderOff = refused.message;
-              // a refused navigation, a file, a scheme or no browser is no fault of the host
+              // a refused navigation, a file, a scheme or no browser is no fault of the host:
+              // the neutral result decides, and the outcome does not count
               const delayMs = this.settle(host, policy, {
-                outcome: "skipped",
+                outcome: "error",
                 status: 0,
                 retryAfterMs: undefined,
                 rest: rest(0),

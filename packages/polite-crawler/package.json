@@ -1,7 +1,7 @@
 {
   "$schema": "https://json.schemastore.org/package",
   "name": "polite-crawler",
-  "version": "0.6.0",
+  "version": "0.6.1",
   "description": "A polite web crawler for research and AI agents. It fetches a source once, keeps it, and reads it many times: robots.txt obeyed, one request per site, full-text search. The MCP server is the package polite-crawler-mcp.",
   "keywords": [
     "crawler",
@@ -52,6 +52,7 @@
     "./politeness": "./src/politeness.ts",
     "./signals": "./src/signals.ts",
     "./urls": "./src/urls.ts",
+    "./api": "./src/api.ts",
     "./record.schema.json": "./record.schema.json",
     "./package.json": "./package.json"
   },
@@ -150,6 +151,10 @@
       "./urls": {
         "types": "./build/urls.d.mts",
         "default": "./build/urls.mjs"
+      },
+      "./api": {
+        "types": "./build/api.d.mts",
+        "default": "./build/api.mjs"
       },
       "./record.schema.json": "./record.schema.json",
       "./package.json": "./package.json"

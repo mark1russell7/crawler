@@ -71,6 +71,8 @@ The reports also show what API Extractor found:
 | `RECIPE_LIMITS`, `registerRecipe` | root | `registerRecipe` puts a recipe in the extractors of a runtime of your own. The limits can change. |
 | `locationMatches`, `namesVenue`, `pickProduct`, `pickVariant`, `PRODUCT_LIMITS`, `rankHoursLinks`, `readAmount`, `VENUE_LIMITS` | root | The steps of the two recipes. The words that rank a link or a label can improve in each version. |
 | `NO_PLAYWRIGHT`, `playwrightRenderer`, `PlaywrightRenderer`, `RefusedReason`, `Rendered`, `Renderer`, `RenderOptions`, `RenderRefused` | root | The renderer. The option `renderer` is beta too. |
+| `HostReaction`, `outcomeResult`, `OutcomeFacts`, `reactToOutcome`, `ReactionContext` | `/api` | The reaction of the crawler to an answer. The `Crawler` and the send of `polite-crawler/api` use it. A study can change its rules. |
+| `Answer`, `ApiError`, `ApiScheduler`, `Exchange`, `Grant`, `Pace`, `readGrant`, `Redact`, `Reply`, `send`, `Send`, `sendWithToken`, `Signal`, `statusLine`, `TOKEN_MARGIN_MS`, `Tokens`, `tokenStore`, `Transport` | `/api` | The polite send of a documented API. It is new in 0.6.1, so the first API clients can change it. |
 
 These members of stable types are beta:
 
@@ -98,6 +100,8 @@ Version 0.2.0 removes these exports from the root entry point. `durationMs` stay
 ## The entry points of the readers
 
 `polite-crawler/robots`, `/hours`, `/html`, `/classify`, `/politeness`, `/signals` and `/urls` are stable as a whole. They import no Node.js module, so a browser can use them. The site and its tools use them.
+
+Each export of its own in `polite-crawler/api` is beta. The entry also gives the types of its signatures from `/classify` and `/politeness`, and these stay stable. It imports no Node.js module too.
 
 ## What 0.2.0 changes
 
@@ -140,4 +144,5 @@ The package is the MCP server of polite-crawler since 0.2.0. Its tiers follow th
 | --- | --- | --- | --- |
 | polite-crawler root | 238 | 135 | 0 |
 | `/robots`, `/hours`, `/html`, `/classify`, `/politeness`, `/signals`, `/urls` | 92 | 0 | 0 |
+| `/api` | 13 | 23 | 0 |
 | polite-crawler-mcp | 17 | 5 | 0 |

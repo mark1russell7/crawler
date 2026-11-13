@@ -5,13 +5,16 @@ import {
   DEFAULT_POLICY,
   HostScheduler,
   HostStopped,
+  MAX_STOP_MS,
   MemoryHostStateStore,
   backoffMs,
   checkPolicy,
   equalJitterMs,
   policyFor,
   realClock,
+  type HostCounts,
 } from "./politeness.ts";
+import { outcomeResult, reactToOutcome, type OutcomeFacts } from "./reaction.ts";
 import { parseRobots, signalsFor } from "./robots.ts";
 import { metaSignals, readSignals } from "./signals.ts";
 
@@ -344,5 +347,78 @@ describe("the politeness policy", () => {
     expect(() => checkPolicy({ maxFailures: 2.5 })).toThrow(RangeError);
     expect(() => checkPolicy({ hosts: { "a.example": { robotsTtlMs: -1 } } })).toThrow(RangeError);
     expect(() => checkPolicy({ blockedStopMs: Number.POSITIVE_INFINITY })).not.toThrow();
+  });
+});
+
+describe("the reaction to an outcome", () => {
+  const now = Date.parse("2026-11-12T12:00:00Z");
+  const context = { policy: DEFAULT_POLICY, now, restMs: 1000, random: () => 0.5 };
+  const counts = (failures: number, waits = 0): HostCounts => ({ failures, waits });
+  const react = (facts: OutcomeFacts, after: HostCounts = counts(0)) =>
+    reactToOutcome(facts, after, context);
+
+  it("gives the result that the store counts for each outcome", () => {
+    expect(outcomeResult({ outcome: "ok", status: 200 })).toBe("success");
+    expect(outcomeResult({ outcome: "rate-limited", status: 429 })).toBe("wait");
+    expect(outcomeResult({ outcome: "unavailable", status: 503 })).toBe("wait");
+    expect(outcomeResult({ outcome: "error", status: 500 })).toBe("failure");
+    expect(outcomeResult({ outcome: "error", status: 0 })).toBe("failure");
+    expect(outcomeResult({ outcome: "error", status: 400 })).toBe("neutral");
+    expect(outcomeResult({ outcome: "blocked", status: 403 })).toBe("success");
+    expect(outcomeResult({ outcome: "error", status: 500, result: "neutral" })).toBe("neutral");
+  });
+
+  it("keeps the rest of the pace after a success, a client error and an override", () => {
+    const rest = { restMs: 1000, longer: undefined, stop: undefined };
+    expect(react({ outcome: "ok", status: 200 })).toEqual(rest);
+    expect(react({ outcome: "error", status: 400 })).toEqual(rest);
+    expect(react({ outcome: "blocked", status: 403, result: "neutral" })).toEqual(rest);
+  });
+
+  it("waits the Retry-After, or a backoff with jitter, after a request to wait", () => {
+    expect(react({ outcome: "rate-limited", status: 429, retryAfterMs: 30_000 })).toEqual({
+      restMs: 30_000,
+      longer: "retry-after",
+      stop: undefined,
+    });
+    expect(react({ outcome: "unavailable", status: 503 }, counts(0, 2))).toEqual({
+      restMs: equalJitterMs(2, 5000, 300_000, () => 0.5),
+      longer: "backoff",
+      stop: undefined,
+    });
+    // a short Retry-After does not shorten the pace
+    expect(react({ outcome: "rate-limited", status: 429, retryAfterMs: 10 }).restMs).toBe(1000);
+  });
+
+  it("stops the host for a Retry-After longer than the policy, up to the longest stop", () => {
+    expect(react({ outcome: "unavailable", status: 503, retryAfterMs: 7_200_000 }).stop).toEqual({
+      until: now + 7_200_000,
+      reason: "asked to wait 7200 s",
+    });
+    const far = react({ outcome: "unavailable", status: 503, retryAfterMs: 10 * MAX_STOP_MS });
+    expect(far.stop?.until).toBe(now + MAX_STOP_MS);
+  });
+
+  it("parks the host after a failure, and stops it at the limit of failures", () => {
+    const first = react({ outcome: "error", status: 500 }, counts(1));
+    expect(first).toEqual({ restMs: 3750, longer: "backoff", stop: undefined });
+    const last = react({ outcome: "error", status: 0 }, counts(5));
+    expect(last.longer).toBe("backoff");
+    expect(last.stop).toEqual({ until: now + 3_600_000, reason: "5 failures in a row" });
+  });
+
+  it("stops the host after a refusal, except for a status that the caller spares", () => {
+    const stopOf = (facts: OutcomeFacts) => react(facts).stop;
+    expect(stopOf({ outcome: "blocked", status: 403 })).toEqual({
+      until: now + 3_600_000,
+      reason: "blocked",
+    });
+    expect(stopOf({ outcome: "challenge", status: 403 })?.reason).toBe("challenge");
+    expect(stopOf({ outcome: "payment-required", status: 402 })).toEqual({
+      until: now + 86_400_000,
+      reason: "payment-required",
+    });
+    expect(stopOf({ outcome: "blocked", status: 401, spare: [401] })).toBeUndefined();
+    expect(stopOf({ outcome: "blocked", status: 403, spare: [401] })?.reason).toBe("blocked");
   });
 });

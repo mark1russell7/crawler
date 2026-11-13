@@ -49,6 +49,7 @@ The package is ESM only, and it includes its TypeScript declarations. It has the
 | `polite-crawler/politeness` | The queue that keeps one request in progress for each host | Yes |
 | `polite-crawler/signals` | The reader of usage signals (`Content-Signal`) | Yes |
 | `polite-crawler/urls` | The canonical form of a URL, its cache key and its site. It imports no module. | Yes |
+| `polite-crawler/api` | The polite send of a documented API, with the OAuth 2.0 client credentials grant. [Send to a documented API](#send-to-a-documented-api) tells how. | Yes |
 
 The entry points that work in a browser import no Node.js module. The package loads no MCP SDK and no `zod`: the MCP server is the package `polite-crawler-mcp`.
 
@@ -294,6 +295,8 @@ The engine of hybrid search is `createHybridSearch`, `HybridSearchOptions`, `Vec
 The engine of the recipes is `registerRecipe`, `rankHoursLinks`, `namesVenue`, `locationMatches`, `pickProduct`, `pickVariant`, `readAmount`, `VENUE_LIMITS`, `PRODUCT_LIMITS`, `RECIPE_LIMITS` and the `steps` of `VenueRead` and `ProductRead`. The words that rank a link or a label are the engine too, so a version can improve them.
 
 The engine of the archived fallback and of the signatures is `archiveExtractor`, `archivedDocId`, and the `fallback` and `archiveDespiteRobots` of `PageOptions`. It also includes `range`, `signalLines` and `originalHeaderPrefix` of `FetchRequest`, `ai_input` of `ExtractedDoc`, `sign` of `RenderOptions` and `signer` of `CrawlerOptions`.
+
+Each export of `polite-crawler/api` is the engine too. This includes the reaction of the crawler: `outcomeResult` and `reactToOutcome`, with `OutcomeFacts`, `ReactionContext` and `HostReaction`.
 
 Version 0.2.0 removed five exports from the root entry point: `checkedRenderer`, `renderedKey`, `pageDocId`, `renderAndIndex` and `pageExtractor`. No documented use needed them. `durationMs` stays in the engine, because `polite-crawler-mcp` uses it.
 
@@ -1247,6 +1250,42 @@ To block the crawler, a site owner adds this group to robots.txt:
 User-agent: PoliteCrawler
 Disallow: /
 ```
+
+## Send to a documented API
+
+The entry point `polite-crawler/api` sends the requests of an API client with the same politeness as the crawler. It stores no page. Give it the scheduler of the crawler, so a host has one pace for pages and API requests.
+
+```ts
+import { send, type Transport } from "polite-crawler/api";
+import { HostScheduler, realClock } from "polite-crawler/politeness";
+
+const scheduler = new HostScheduler(realClock, 4);
+const pace = { scheduler, now: realClock.now };
+const transport: Transport = async (exchange, signal) => {
+  const { method, headers, body } = exchange;
+  const response = await fetch(exchange.url, { method, headers, body, redirect: "manual", signal });
+  return {
+    status: response.status,
+    statusText: response.statusText,
+    headers: Object.fromEntries(response.headers),
+    body: await response.text(),
+  };
+};
+
+const answer = await send(pace, transport, {
+  source: "Example API",
+  host: "api.example.com",
+  minIntervalMs: 500,
+  what: "the product P-1",
+  exchange: { method: "GET", url: "https://api.example.com/products/P-1", headers: {}, body: null },
+});
+```
+
+- **The transport is a port.** Give `fetch`, a different HTTP client, or a fake in a test. The send changes no part of the exchange.
+- **The reaction is the reaction of the crawler.** `reactToOutcome` sets the rest and the stops of the host after each answer. A 429 waits the `Retry-After`, a 403 stops the host, and five failures in sequence stop it.
+- **Each answer comes back.** The send gives each status to the caller. It throws an `ApiError` only when the API gives no answer, or when the host is stopped.
+- **Tokens.** `tokenStore` keeps one token of the OAuth 2.0 client credentials grant, and `readGrant` reads the answer of the token endpoint. `sendWithToken` gets a new token after a 401 and sends one more time. A second 401 stops the host.
+- **No secret in a message.** Give the keys of the exchange in `secrets`, and a `redact` function. The send gives the text of each error to `redact`. `sendWithToken` adds the token to the secrets. The default `redact` changes nothing, so give one that removes each form of a secret.
 
 ## Stored copies and conditional requests
 

@@ -6,6 +6,10 @@ This file records the changes to `polite-crawler-mcp` in each version. The chang
 
 ## Unreleased
 
+## 0.6.1 - 2026-11-13
+
+- **The server uses polite-crawler 0.6.1.** The new entry point `polite-crawler/api` is in the [changelog of polite-crawler](../../CHANGELOG.md). The server does not change.
+
 ## 0.6.0
 
 The release train changes the range of `@procedures/client`, `@procedures/mcp-server` to a version outside the old range. The public types name @procedures/client, @procedures/mcp-server, so its new version outside the old range can change them.

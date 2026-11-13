@@ -493,6 +493,45 @@ canonicalUrl: build/urls.d.mts#canonicalUrl
 scopeTest: build/urls.d.mts#scopeTest
 siteOf: build/urls.d.mts#siteOf
 
+## ./api (build/api.d.mts): names
+
+Answer: build/api.d.mts#Answer
+ApiError: build/api.d.mts#ApiError
+ApiScheduler: build/api.d.mts#ApiScheduler
+type Classified: build/classify.d.mts#Classified
+Exchange: build/api.d.mts#Exchange
+Grant: build/api.d.mts#Grant
+type HostCounts: build/politeness.d.mts#HostCounts
+type HostReaction: build/api.d.mts#HostReaction
+type HostResult: build/politeness.d.mts#HostResult
+type HostStateStore: build/politeness.d.mts#HostStateStore
+type HostStop: build/politeness.d.mts#HostStop
+type Outcome: build/classify.d.mts#Outcome
+type OutcomeFacts: build/api.d.mts#OutcomeFacts
+Pace: build/api.d.mts#Pace
+type Paced: build/politeness.d.mts#Paced
+type PolicyOptions: build/politeness.d.mts#PolicyOptions
+type PolitenessPolicy: build/politeness.d.mts#PolitenessPolicy
+type ReactionContext: build/api.d.mts#ReactionContext
+Redact: build/api.d.mts#Redact
+Reply: build/api.d.mts#Reply
+Send: build/api.d.mts#Send
+Signal: build/api.d.mts#Signal
+TOKEN_MARGIN_MS: build/api.d.mts#TOKEN_MARGIN_MS
+Tokens: build/api.d.mts#Tokens
+Transport: build/api.d.mts#Transport
+type ValidatorAnswer: build/politeness.d.mts#ValidatorAnswer
+type ValidatorMemo: build/politeness.d.mts#ValidatorMemo
+type ValidatorReport: build/politeness.d.mts#ValidatorReport
+type ValidatorVerdict: build/politeness.d.mts#ValidatorVerdict
+outcomeResult: build/api.d.mts#outcomeResult
+reactToOutcome: build/api.d.mts#reactToOutcome
+readGrant: build/api.d.mts#readGrant
+send: build/api.d.mts#send
+sendWithToken: build/api.d.mts#sendWithToken
+statusLine: build/api.d.mts#statusLine
+tokenStore: build/api.d.mts#tokenStore
+
 ## ./record.schema.json: no declaration file for ./record.schema.json
 
 file ./record.schema.json: record.schema.json
@@ -502,6 +541,130 @@ file ./record.schema.json: record.schema.json
 polite-crawler: ./build/cli.mjs
 
 ## Declarations
+
+### build/api.d.mts#Answer
+export interface Answer {
+  readonly reply: Reply;
+  readonly classified: Classified;
+}
+
+### build/api.d.mts#ApiError
+export declare class ApiError extends Error {
+  override readonly name: string;
+}
+
+### build/api.d.mts#ApiScheduler
+export interface ApiScheduler<S extends Signal = AbortSignal> {
+  run<T>(host: string, task: () => Promise<Paced<T>>, signal?: S): Promise<T>;
+  readonly store: Pick<HostStateStore, "record" | "stop">;
+}
+
+### build/api.d.mts#Exchange
+export interface Exchange {
+  readonly method: string;
+  readonly url: string;
+  readonly headers: Readonly<Record<string, string>>;
+  readonly body: string | null;
+}
+
+### build/api.d.mts#Grant
+export interface Grant {
+  readonly token: string;
+  readonly until: number;
+}
+
+### build/api.d.mts#HostReaction
+interface HostReaction {
+  readonly restMs: number;
+  readonly longer: "backoff" | "retry-after" | undefined;
+  readonly stop: HostStop | undefined;
+}
+
+### build/api.d.mts#OutcomeFacts
+interface OutcomeFacts {
+  readonly outcome: Outcome;
+  readonly status: number;
+  readonly retryAfterMs?: number | undefined;
+  readonly spare?: readonly number[] | undefined;
+  readonly result?: HostResult | undefined;
+}
+
+### build/api.d.mts#Pace
+export interface Pace<S extends Signal = AbortSignal> {
+  readonly scheduler: ApiScheduler<S>;
+  readonly now: () => number;
+  readonly policy?: PolicyOptions | undefined;
+  readonly random?: (() => number) | undefined;
+}
+
+### build/api.d.mts#ReactionContext
+interface ReactionContext {
+  readonly policy: PolitenessPolicy;
+  readonly now: number;
+  readonly restMs: number;
+  readonly random: () => number;
+}
+
+### build/api.d.mts#Redact
+export type Redact = (text: string, secrets: readonly string[]) => string;
+
+### build/api.d.mts#Reply
+export interface Reply {
+  readonly status: number;
+  readonly statusText: string;
+  readonly headers: Readonly<Record<string, string>>;
+  readonly body: string;
+}
+
+### build/api.d.mts#Send
+export interface Send {
+  readonly source: string;
+  readonly host: string;
+  readonly minIntervalMs?: number | undefined;
+  readonly what: string;
+  readonly exchange: Exchange;
+  readonly secrets?: readonly string[] | undefined;
+  readonly redact?: Redact | undefined;
+  readonly tokenRetry?: boolean | undefined;
+}
+
+### build/api.d.mts#Signal
+export interface Signal {
+  readonly aborted: boolean;
+}
+
+### build/api.d.mts#TOKEN_MARGIN_MS
+export declare const TOKEN_MARGIN_MS: number;
+
+### build/api.d.mts#Tokens
+export interface Tokens<S extends Signal = AbortSignal> {
+  get(signal?: S): Promise<string>;
+  drop(token?: string): void;
+}
+
+### build/api.d.mts#Transport
+export type Transport<S extends Signal = AbortSignal> = (exchange: Exchange, signal: S | undefined) => Promise<Reply>;
+
+### build/api.d.mts#outcomeResult
+export declare const outcomeResult: (facts: OutcomeFacts) => HostResult;
+
+### build/api.d.mts#reactToOutcome
+export declare const reactToOutcome: (facts: OutcomeFacts, counts: HostCounts, context: ReactionContext) => HostReaction;
+
+### build/api.d.mts#readGrant
+export declare function readGrant(reply: Reply, source: string, issuedAt: number, secrets?: readonly string[], redact?: Redact): Grant;
+
+### build/api.d.mts#send
+export declare function send<S extends Signal = AbortSignal>(pace: Pace<S>, transport: Transport<S>, input: Send, signal?: S): Promise<Answer>;
+
+### build/api.d.mts#sendWithToken
+export declare function sendWithToken<S extends Signal = AbortSignal>(pace: Pace<S>, transport: Transport<S>, tokens: Tokens<S>, input: Send, headers: (token: string) => Readonly<Record<string, string>>, signal?: S): Promise<Answer>;
+
+### build/api.d.mts#statusLine
+export declare function statusLine(reply: Reply): string;
+
+### build/api.d.mts#tokenStore
+export declare function tokenStore<S extends Signal = AbortSignal>(grant: (signal: S | undefined) => Promise<Grant>, now: () => number): Tokens<S>;
 
 ### build/classify.d.mts#Classified
 export interface Classified {
@@ -2556,7 +2719,7 @@ export declare const VENUE_LIMITS: {
 };
 
 ### build/index.d.mts#VERSION
-export declare const VERSION = "0.6.0";
+export declare const VERSION = "0.6.1";
 
 ### build/index.d.mts#Variant
 type Variant = "plain" | "rendered";

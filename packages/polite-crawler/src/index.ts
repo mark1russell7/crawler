@@ -29,6 +29,8 @@
  *
  * - `polite-crawler/robots`, `/hours`, `/html`, `/classify`, `/politeness`, `/signals` and `/urls` give
  *   each reader whole. They import no Node.js module, so a browser can use them.
+ * - `polite-crawler/api` gives the polite send of a documented API, with the OAuth 2.0 client
+ *   credentials grant. It stores no page, and it imports no Node.js module.
  */
 export type { BlobStore, FileBlobStoreOptions } from "./blobs.ts";
 export { FileBlobStore } from "./blobs.ts";

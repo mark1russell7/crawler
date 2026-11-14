@@ -1,11 +1,20 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": ["github>mark1russell7/template//renovate/default"],
+  "extends": [
+    "github>mark1russell7/template//renovate/default"
+  ],
+  "schedule": [
+    "before 6am on thursday"
+  ],
   "packageRules": [
     {
       "description": "The Node.js types follow the oldest Node.js release in engines (22.19), not the newest one.",
-      "matchPackageNames": ["@types/node"],
-      "matchUpdateTypes": ["major"],
+      "matchPackageNames": [
+        "@types/node"
+      ],
+      "matchUpdateTypes": [
+        "major"
+      ],
       "enabled": false
     }
   ]

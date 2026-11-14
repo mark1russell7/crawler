@@ -49,7 +49,7 @@ The package is ESM only, and it includes its TypeScript declarations. It has the
 | `polite-crawler/politeness` | The queue that keeps one request in progress for each host | Yes |
 | `polite-crawler/signals` | The reader of usage signals (`Content-Signal`) | Yes |
 | `polite-crawler/urls` | The canonical form of a URL, its cache key and its site. It imports no module. | Yes |
-| `polite-crawler/api` | The polite send of a documented API, with the OAuth 2.0 client credentials grant. [Send to a documented API](#send-to-a-documented-api) tells how. | Yes |
+| `polite-crawler/api` | The polite send of a documented API, with conditional polls and the OAuth 2.0 client credentials grant. [Send to a documented API](#send-to-a-documented-api) tells how. | Yes |
 
 The entry points that work in a browser import no Node.js module. The package loads no MCP SDK and no `zod`: the MCP server is the package `polite-crawler-mcp`.
 
@@ -1256,21 +1256,12 @@ Disallow: /
 The entry point `polite-crawler/api` sends the requests of an API client with the same politeness as the crawler. It stores no page. Give it the scheduler of the crawler, so a host has one pace for pages and API requests.
 
 ```ts
-import { send, type Transport } from "polite-crawler/api";
+import { fetchTransport, send } from "polite-crawler/api";
 import { HostScheduler, realClock } from "polite-crawler/politeness";
 
 const scheduler = new HostScheduler(realClock, 4);
 const pace = { scheduler, now: realClock.now };
-const transport: Transport = async (exchange, signal) => {
-  const { method, headers, body } = exchange;
-  const response = await fetch(exchange.url, { method, headers, body, redirect: "manual", signal });
-  return {
-    status: response.status,
-    statusText: response.statusText,
-    headers: Object.fromEntries(response.headers),
-    body: await response.text(),
-  };
-};
+const transport = fetchTransport({ userAgent: "example-app/1.0 (ops@example.com)" });
 
 const answer = await send(pace, transport, {
   source: "Example API",
@@ -1281,11 +1272,42 @@ const answer = await send(pace, transport, {
 });
 ```
 
-- **The transport is a port.** Give `fetch`, a different HTTP client, or a fake in a test. The send changes no part of the exchange.
+- **The transport is a port.** `fetchTransport` sends with `fetch`. Give a different HTTP client, or a fake in a test. The send changes no part of the exchange.
+- **A User-Agent and a time limit.** `fetchTransport` needs a User-Agent that names the client and a contact. Some APIs refuse a request with no User-Agent. It stops a request and its body after `timeoutMs` (default 30 seconds), and the send counts that as a failure of the host. It does not follow a redirect.
 - **The reaction is the reaction of the crawler.** `reactToOutcome` sets the rest and the stops of the host after each answer. A 429 waits the `Retry-After`, a 403 stops the host, and five failures in sequence stop it.
 - **Each answer comes back.** The send gives each status to the caller. It throws an `ApiError` only when the API gives no answer, or when the host is stopped.
 - **Tokens.** `tokenStore` keeps one token of the OAuth 2.0 client credentials grant, and `readGrant` reads the answer of the token endpoint. `sendWithToken` gets a new token after a 401 and sends one more time. A second 401 stops the host.
 - **No secret in a message.** Give the keys of the exchange in `secrets`, and a `redact` function. The send gives the text of each error to `redact`. `sendWithToken` adds the token to the secrets. The default `redact` changes nothing, so give one that removes each form of a secret.
+
+### Poll an API
+
+`poll` sends a conditional GET at the pace of the host. It keeps the `ETag` and the `Last-Modified` date of the last answer 2xx of each URL. They go in a store that you give, for example a `Map`. The next poll sends them as `If-None-Match` and `If-Modified-Since`. A poll every 60 seconds then costs a 304 with no body while the data does not change.
+
+```ts
+import { fetchTransport, poll, type Condition } from "polite-crawler/api";
+
+const conditions = new Map<string, Condition>();
+const polled = await poll(pace, transport, conditions, {
+  source: "Example alerts",
+  host: "api.example.com",
+  minIntervalMs: 30_000,
+  what: "the active alerts",
+  exchange: {
+    method: "GET",
+    url: "https://api.example.com/alerts/active",
+    headers: { accept: "application/geo+json" },
+    body: null,
+  },
+});
+if (polled.changed) {
+  // read polled.reply.body
+}
+```
+
+- **`changed`** is true only for an answer 2xx with a body that is not the last body of the URL. A 304, the same body again and each other status give false. A 304 has no body: keep the result of the last changed body.
+- **The poll keeps no page.** The store holds the two validators and the SHA-256 of the last body.
+- **The validator memo of the crawler.** Some hosts give an `ETag` that changes at each answer. With a store of the scheduler that keeps the validator memo, the poll then sends only `If-Modified-Since`, as the crawler does.
+- **One store for one set of headers.** A store keeps one entry for each URL. Give a second store to a request with a different `accept` header.
 
 ## Stored copies and conditional requests
 

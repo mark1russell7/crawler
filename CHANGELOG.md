@@ -15,6 +15,13 @@ A prerelease version (`0.2.0-beta.1`) goes to the npm tag `next`. Each other ver
 
 ## Unreleased
 
+## 0.6.2 - 2026-11-14
+
+- **Polls of an API in `polite-crawler/api`.** Each new export is beta.
+  - `fetchTransport` sends with `fetch`. It needs a User-Agent, it stops a request and its body after `timeoutMs` (default `API_TIMEOUT_MS`, 30 seconds), and it does not follow a redirect. `send` counts a request that the time limit stopped as a failure of the host.
+  - `poll` sends a conditional GET at the pace of the host. It keeps the `ETag`, the `Last-Modified` date and the SHA-256 of the last body of each URL in a store that you give (`Conditions`, for example a `Map`). It gives `changed: false` for a 304 and for the same body again. With the validator memo of the host state store, it sends only `If-Modified-Since` to a host whose ETags do not match, as the crawler does.
+  - `ApiScheduler.store` can also have the validator memo (`validators` and `noteValidators`). The two members are optional, so each store that you gave before still works.
+
 ## 0.6.1 - 2026-11-13
 
 - **The new entry point `polite-crawler/api`.** It sends the requests of an API client with the politeness of the crawler, and it stores no page. Each export is beta.

@@ -496,8 +496,8 @@ export const start: typeof startMcpServer = startMcpServer;
     signals: 1100,
     // the size of version 0.5.1, and 20 percent more
     urls: 850,
-    // the size of version 0.6.1, and 20 percent more
-    api: 3800,
+    // the size of version 0.6.2 (4121 B, with fetchTransport and poll), and 20 percent more
+    api: 4950,
     html: 192_000,
   };
   for (const [name, budget] of Object.entries(budgets)) {

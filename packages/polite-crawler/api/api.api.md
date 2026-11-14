@@ -13,6 +13,9 @@ export interface Answer {
 }
 
 // @beta
+export const API_TIMEOUT_MS: number;
+
+// @beta
 export class ApiError extends Error {
     // (undocumented)
     override readonly name: string;
@@ -22,7 +25,7 @@ export class ApiError extends Error {
 export interface ApiScheduler<S extends Signal = AbortSignal> {
     // (undocumented)
     run<T>(host: string, task: () => Promise<Paced<T>>, signal?: S): Promise<T>;
-    readonly store: Pick<HostStateStore, "record" | "stop">;
+    readonly store: Pick<HostStateStore, "record" | "stop" | "validators" | "noteValidators">;
 }
 
 // @public (undocumented)
@@ -35,12 +38,53 @@ export interface Classified {
 }
 
 // @beta
+export interface Condition {
+    readonly digest: string;
+    readonly etag?: string | undefined;
+    readonly lastModified?: string | undefined;
+}
+
+// @beta
+export interface Conditions {
+    // (undocumented)
+    get(url: string): Condition | undefined;
+    // (undocumented)
+    set(url: string, condition: Condition): void;
+}
+
+// @beta
 export interface Exchange {
     readonly body: string | null;
     readonly headers: Readonly<Record<string, string>>;
     readonly method: string;
     // (undocumented)
     readonly url: string;
+}
+
+// @beta
+export type FetchLike = (url: string, init: {
+    readonly method: string;
+    readonly headers: Record<string, string>;
+    readonly body?: string;
+    readonly redirect: "manual";
+    readonly signal: AbortSignal;
+}) => Promise<{
+    readonly status: number;
+    readonly statusText: string;
+    readonly headers: {
+        forEach(callback: (value: string, name: string) => void): void;
+    };
+    text(): Promise<string>;
+}>;
+
+// @beta
+export function fetchTransport(options: FetchTransportOptions): Transport;
+
+// @beta
+export interface FetchTransportOptions {
+    readonly fetch?: FetchLike | undefined;
+    readonly timeoutMs?: number | undefined;
+    readonly userAgent: string;
 }
 
 // @beta
@@ -147,6 +191,14 @@ export interface PolitenessPolicy {
     readonly robotsRetryMs: number;
     readonly robotsStaleMs: number;
     readonly robotsTtlMs: number;
+}
+
+// @beta
+export function poll<S extends Signal = AbortSignal>(pace: Pace<S>, transport: Transport<S>, conditions: Conditions, input: Send, signal?: S): Promise<Polled>;
+
+// @beta
+export interface Polled extends Answer {
+    readonly changed: boolean;
 }
 
 // @beta

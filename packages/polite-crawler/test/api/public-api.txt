@@ -495,11 +495,16 @@ siteOf: build/urls.d.mts#siteOf
 
 ## ./api (build/api.d.mts): names
 
+API_TIMEOUT_MS: build/api.d.mts#API_TIMEOUT_MS
 Answer: build/api.d.mts#Answer
 ApiError: build/api.d.mts#ApiError
 ApiScheduler: build/api.d.mts#ApiScheduler
 type Classified: build/classify.d.mts#Classified
+Condition: build/api.d.mts#Condition
+Conditions: build/api.d.mts#Conditions
 Exchange: build/api.d.mts#Exchange
+FetchLike: build/api.d.mts#FetchLike
+FetchTransportOptions: build/api.d.mts#FetchTransportOptions
 Grant: build/api.d.mts#Grant
 type HostCounts: build/politeness.d.mts#HostCounts
 type HostReaction: build/api.d.mts#HostReaction
@@ -512,6 +517,7 @@ Pace: build/api.d.mts#Pace
 type Paced: build/politeness.d.mts#Paced
 type PolicyOptions: build/politeness.d.mts#PolicyOptions
 type PolitenessPolicy: build/politeness.d.mts#PolitenessPolicy
+Polled: build/api.d.mts#Polled
 type ReactionContext: build/api.d.mts#ReactionContext
 Redact: build/api.d.mts#Redact
 Reply: build/api.d.mts#Reply
@@ -524,7 +530,9 @@ type ValidatorAnswer: build/politeness.d.mts#ValidatorAnswer
 type ValidatorMemo: build/politeness.d.mts#ValidatorMemo
 type ValidatorReport: build/politeness.d.mts#ValidatorReport
 type ValidatorVerdict: build/politeness.d.mts#ValidatorVerdict
+fetchTransport: build/api.d.mts#fetchTransport
 outcomeResult: build/api.d.mts#outcomeResult
+poll: build/api.d.mts#poll
 reactToOutcome: build/api.d.mts#reactToOutcome
 readGrant: build/api.d.mts#readGrant
 send: build/api.d.mts#send
@@ -542,6 +550,9 @@ polite-crawler: ./build/cli.mjs
 
 ## Declarations
 
+### build/api.d.mts#API_TIMEOUT_MS
+export declare const API_TIMEOUT_MS: number;
+
 ### build/api.d.mts#Answer
 export interface Answer {
   readonly reply: Reply;
@@ -556,7 +567,20 @@ export declare class ApiError extends Error {
 ### build/api.d.mts#ApiScheduler
 export interface ApiScheduler<S extends Signal = AbortSignal> {
   run<T>(host: string, task: () => Promise<Paced<T>>, signal?: S): Promise<T>;
-  readonly store: Pick<HostStateStore, "record" | "stop">;
+  readonly store: Pick<HostStateStore, "record" | "stop" | "validators" | "noteValidators">;
+}
+
+### build/api.d.mts#Condition
+export interface Condition {
+  readonly etag?: string | undefined;
+  readonly lastModified?: string | undefined;
+  readonly digest: string;
+}
+
+### build/api.d.mts#Conditions
+export interface Conditions {
+  get(url: string): Condition | undefined;
+  set(url: string, condition: Condition): void;
 }
 
 ### build/api.d.mts#Exchange
@@ -565,6 +589,29 @@ export interface Exchange {
   readonly url: string;
   readonly headers: Readonly<Record<string, string>>;
   readonly body: string | null;
+}
+
+### build/api.d.mts#FetchLike
+export type FetchLike = (url: string, init: {
+  readonly method: string;
+  readonly headers: Record<string, string>;
+  readonly body?: string;
+  readonly redirect: "manual";
+  readonly signal: AbortSignal;
+}) => Promise<{
+  readonly status: number;
+  readonly statusText: string;
+  readonly headers: {
+    forEach(callback: (value: string, name: string) => void): void;
+  };
+  text(): Promise<string>;
+}>;
+
+### build/api.d.mts#FetchTransportOptions
+export interface FetchTransportOptions {
+  readonly userAgent: string;
+  readonly timeoutMs?: number | undefined;
+  readonly fetch?: FetchLike | undefined;
 }
 
 ### build/api.d.mts#Grant
@@ -595,6 +642,11 @@ export interface Pace<S extends Signal = AbortSignal> {
   readonly now: () => number;
   readonly policy?: PolicyOptions | undefined;
   readonly random?: (() => number) | undefined;
+}
+
+### build/api.d.mts#Polled
+export interface Polled extends Answer {
+  readonly changed: boolean;
 }
 
 ### build/api.d.mts#ReactionContext
@@ -645,8 +697,14 @@ export interface Tokens<S extends Signal = AbortSignal> {
 ### build/api.d.mts#Transport
 export type Transport<S extends Signal = AbortSignal> = (exchange: Exchange, signal: S | undefined) => Promise<Reply>;
 
+### build/api.d.mts#fetchTransport
+export declare function fetchTransport(options: FetchTransportOptions): Transport;
+
 ### build/api.d.mts#outcomeResult
 export declare const outcomeResult: (facts: OutcomeFacts) => HostResult;
+
+### build/api.d.mts#poll
+export declare function poll<S extends Signal = AbortSignal>(pace: Pace<S>, transport: Transport<S>, conditions: Conditions, input: Send, signal?: S): Promise<Polled>;
 
 ### build/api.d.mts#reactToOutcome
 export declare const reactToOutcome: (facts: OutcomeFacts, counts: HostCounts, context: ReactionContext) => HostReaction;
@@ -2719,7 +2777,7 @@ export declare const VENUE_LIMITS: {
 };
 
 ### build/index.d.mts#VERSION
-export declare const VERSION = "0.6.1";
+export declare const VERSION = "0.6.2";
 
 ### build/index.d.mts#Variant
 type Variant = "plain" | "rendered";

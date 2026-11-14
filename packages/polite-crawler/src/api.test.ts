@@ -1,13 +1,18 @@
 import { describe, expect, it } from "vitest";
 import {
+  API_TIMEOUT_MS,
   ApiError,
   TOKEN_MARGIN_MS,
+  fetchTransport,
+  poll,
   readGrant,
   send,
   sendWithToken,
   statusLine,
   tokenStore,
+  type Condition,
   type Exchange,
+  type FetchLike,
   type Grant,
   type Pace,
   type Redact,
@@ -16,7 +21,7 @@ import {
   type Tokens,
   type Transport,
 } from "./api.ts";
-import { HostScheduler, type Clock } from "./politeness.ts";
+import { HostScheduler, VALIDATOR_MEMO, type Clock } from "./politeness.ts";
 import { fakeClock } from "./test-helpers.ts";
 
 const SECRET = "s3cr3t-Value_9";
@@ -415,5 +420,199 @@ describe("sendWithToken", () => {
     const { store } = tokens();
     const error = await failure(sendWithToken(pace, transport, store, input(), bearer));
     expect(error.message).toBe(`Example gave no answer to the thing: failed with Bearer ${MARK}`);
+  });
+});
+
+/** A fetch function that records each call and gives a fixed answer. */
+const fakeFetch = (
+  answer: {
+    status: number;
+    statusText?: string;
+    headers?: Record<string, string>;
+    body?: string;
+  } = { status: 200 },
+): { fetch: FetchLike; calls: { url: string; init: Parameters<FetchLike>[1] }[] } => {
+  const calls: { url: string; init: Parameters<FetchLike>[1] }[] = [];
+  const fetch: FetchLike = (url, init) => {
+    calls.push({ url, init });
+    return Promise.resolve({
+      status: answer.status,
+      statusText: answer.statusText ?? "",
+      headers: new Headers(answer.headers ?? {}),
+      text: () => Promise.resolve(answer.body ?? ""),
+    });
+  };
+  return { fetch, calls };
+};
+
+/** A fetch function that answers only when the signal stops it, with the reason of the signal. */
+const stuckFetch: FetchLike = (_, init) =>
+  new Promise((_resolve, reject) => {
+    init.signal.addEventListener("abort", () => {
+      reject(init.signal.reason as Error);
+    });
+  });
+
+const get = (headers: Record<string, string> = {}): Exchange => ({
+  method: "GET",
+  url: `https://${HOST}/`,
+  headers,
+  body: null,
+});
+
+describe("fetchTransport", () => {
+  it("sends the User-Agent, the method, the headers and the body, and follows no redirect", async () => {
+    const { fetch, calls } = fakeFetch({
+      status: 201,
+      statusText: "Created",
+      headers: { ETag: '"v1"', "Content-Type": "application/json" },
+      body: "{}",
+    });
+    const transport = fetchTransport({ userAgent: "example-app/1.0 (ops@example.com)", fetch });
+    const answer = await transport(
+      {
+        method: "POST",
+        url: `https://${HOST}/thing`,
+        headers: { accept: "application/json" },
+        body: "x=1",
+      },
+      undefined,
+    );
+    expect(calls[0]!.url).toBe(`https://${HOST}/thing`);
+    expect(calls[0]!.init).toMatchObject({
+      method: "POST",
+      headers: { "user-agent": "example-app/1.0 (ops@example.com)", accept: "application/json" },
+      body: "x=1",
+      redirect: "manual",
+    });
+    expect(answer).toEqual({
+      status: 201,
+      statusText: "Created",
+      headers: { etag: '"v1"', "content-type": "application/json" },
+      body: "{}",
+    });
+  });
+
+  it("keeps the user-agent header of an exchange, and sends no body for a null body", async () => {
+    const { fetch, calls } = fakeFetch();
+    const transport = fetchTransport({ userAgent: "default/1.0", fetch });
+    await transport(get({ "user-agent": "own/2.0" }), undefined);
+    expect(calls[0]!.init.headers["user-agent"]).toBe("own/2.0");
+    expect("body" in calls[0]!.init).toBe(false);
+  });
+
+  it("refuses a User-Agent that is empty, that is not ASCII, or that has a control character", () => {
+    for (const userAgent of ["", " app/1.0", "app/1.0 ", "app\r\nx: y", "äpp/1.0", "a".repeat(513)])
+      expect(() => fetchTransport({ userAgent })).toThrow(ApiError);
+    expect(() => fetchTransport({ userAgent: "a".repeat(512) })).not.toThrow();
+  });
+
+  it("refuses a time limit that is not a positive number", () => {
+    for (const timeoutMs of [0, -1, Number.NaN, Number.POSITIVE_INFINITY])
+      expect(() => fetchTransport({ userAgent: "app/1.0", timeoutMs })).toThrow(ApiError);
+    expect(API_TIMEOUT_MS).toBe(30_000);
+  });
+
+  it("stops a request after the time limit with an error that tells the limit", async () => {
+    const transport = fetchTransport({ userAgent: "app/1.0", timeoutMs: 20, fetch: stuckFetch });
+    const error = await failure(transport(get(), undefined));
+    expect(error.message).toBe("no answer in 1 s");
+  });
+
+  it("gives the reason of the signal when the signal stops the request", async () => {
+    const transport = fetchTransport({ userAgent: "app/1.0", fetch: stuckFetch });
+    const controller = new AbortController();
+    const reason = new Error("the caller stopped");
+    const pending = transport(get(), controller.signal);
+    controller.abort(reason);
+    expect(await failure(pending)).toBe(reason);
+  });
+
+  it("counts a request that the time limit stopped as a failure of the host", async () => {
+    const { pace } = fakePace();
+    const transport = fetchTransport({ userAgent: "app/1.0", timeoutMs: 5, fetch: stuckFetch });
+    for (let round = 0; round < 5; round += 1) {
+      const error = await failure(send(pace, transport, input()));
+      expect(error).toBeInstanceOf(ApiError);
+      expect(error.message).toBe("Example gave no answer to the thing: no answer in 1 s");
+    }
+    const stopped = await failure(send(pace, transport, input()));
+    expect(stopped.message).toContain("5 failures in a row");
+  });
+});
+
+describe("poll", () => {
+  const url = `https://${HOST}/thing`;
+  const DATE = "Sat, 14 Nov 2026 12:00:00 GMT";
+
+  it("sends the validators of the last answer, and gives changed false for a 304", async () => {
+    const { pace, clock } = fakePace();
+    const { transport, sent } = fakeTransport(clock, (_, index) =>
+      index === 0 ? reply(200, "body 1", { etag: '"v1"', "last-modified": DATE }) : reply(304, ""),
+    );
+    const conditions = new Map<string, Condition>();
+    const first = await poll(pace, transport, conditions, input());
+    expect(first.changed).toBe(true);
+    expect(sent[0]!.exchange.headers).toEqual({});
+    expect(conditions.get(url)).toMatchObject({ etag: '"v1"', lastModified: DATE });
+    const second = await poll(pace, transport, conditions, input());
+    expect(sent[1]!.exchange.headers).toEqual({
+      "if-none-match": '"v1"',
+      "if-modified-since": DATE,
+    });
+    expect(second.changed).toBe(false);
+    expect(second.reply.status).toBe(304);
+    expect(second.classified.outcome).toBe("not-modified");
+    expect(sent[1]!.at - sent[0]!.at).toBe(500);
+  });
+
+  it("gives changed false for the same body, and true for a new body", async () => {
+    const { pace, clock } = fakePace();
+    const bodies = ["a", "a", "b"];
+    const { transport } = fakeTransport(clock, (_, index) => reply(200, bodies[index] ?? ""));
+    const conditions = new Map<string, Condition>();
+    const changed: boolean[] = [];
+    for (let round = 0; round < bodies.length; round += 1)
+      changed.push((await poll(pace, transport, conditions, input())).changed);
+    expect(changed).toEqual([true, false, true]);
+    // the SHA-256 of "b"
+    expect(conditions.get(url)?.digest).toBe(
+      "3e23e8160039594a33894f6564e1b1348bbd7a0088d42c4acb73eeaed59c009d",
+    );
+  });
+
+  it("sends only the date to a host whose ETag does not match, as the crawler does", async () => {
+    const { pace, clock, scheduler } = fakePace();
+    const { transport, sent } = fakeTransport(clock, () =>
+      reply(200, "same", { etag: '"unstable"', "last-modified": DATE }),
+    );
+    const conditions = new Map<string, Condition>();
+    for (let round = 0; round <= VALIDATOR_MEMO.misses + 1; round += 1)
+      await poll(pace, transport, conditions, input());
+    expect(scheduler.store.validators?.(HOST)?.skipEtag).toBe(true);
+    expect(sent.at(-1)!.exchange.headers).toEqual({ "if-modified-since": DATE });
+  });
+
+  it("keeps the conditions after an answer that is not 2xx", async () => {
+    const { pace, clock } = fakePace();
+    const { transport } = fakeTransport(clock, (_, index) =>
+      index === 0 ? reply(200, "body", { etag: '"v1"' }) : reply(404, "missing"),
+    );
+    const conditions = new Map<string, Condition>();
+    await poll(pace, transport, conditions, input());
+    const kept = conditions.get(url);
+    const missing = await poll(pace, transport, conditions, input());
+    expect(missing.changed).toBe(false);
+    expect(missing.reply.status).toBe(404);
+    expect(conditions.get(url)).toBe(kept);
+  });
+
+  it("refuses a method that is not GET, and sends nothing", async () => {
+    const { pace, clock } = fakePace();
+    const { transport, sent } = fakeTransport(clock, () => reply(200, ""));
+    const exchange: Exchange = { method: "POST", url, headers: {}, body: "x" };
+    const error = await failure(poll(pace, transport, new Map(), input({ exchange })));
+    expect(error).toBeInstanceOf(ApiError);
+    expect(sent).toHaveLength(0);
   });
 });

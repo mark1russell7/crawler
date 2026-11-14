@@ -7,12 +7,14 @@
  * The module imports no Node.js module, and it uses no type of a platform except the signal.
  *
  * The module also has the OAuth 2.0 client credentials grant (RFC 6749, section 4.4): `readGrant`,
- * `tokenStore` and `sendWithToken`. Each export is beta: a minor version can change it.
+ * `tokenStore` and `sendWithToken`. `fetchTransport` is a transport over `fetch` with a User-Agent
+ * and a time limit. `poll` sends conditional requests. Each export is beta: a minor version can
+ * change it.
  */
 import type { Classified } from "./classify.ts";
 import { classify } from "./classify.ts";
-import type { HostStateStore, Paced, PolicyOptions } from "./politeness.ts";
-import { policyFor, restAfter } from "./politeness.ts";
+import type { HostStateStore, Paced, PolicyOptions, ValidatorAnswer } from "./politeness.ts";
+import { policyFor, restAfter, validatorsToSend } from "./politeness.ts";
 import type { OutcomeFacts } from "./reaction.ts";
 import { outcomeResult, reactToOutcome } from "./reaction.ts";
 
@@ -89,8 +91,11 @@ export type Transport<S extends Signal = AbortSignal> = (
  */
 export interface ApiScheduler<S extends Signal = AbortSignal> {
   run<T>(host: string, task: () => Promise<Paced<T>>, signal?: S): Promise<T>;
-  /** This store keeps the counts and the stops of each host. */
-  readonly store: Pick<HostStateStore, "record" | "stop">;
+  /**
+   * This store keeps the counts and the stops of each host. When it has the validator memo
+   * (`validators` and `noteValidators`), `poll` uses it as the crawler does.
+   */
+  readonly store: Pick<HostStateStore, "record" | "stop" | "validators" | "noteValidators">;
 }
 
 /**
@@ -410,4 +415,224 @@ export async function sendWithToken<S extends Signal = AbortSignal>(
   if (first.answer.reply.status !== 401) return first.answer;
   tokens.drop(first.token);
   return (await once(false)).answer;
+}
+
+/**
+ * The part of a `fetch` function that `fetchTransport` uses. The `fetch` of Node.js and of a
+ * browser has it.
+ *
+ * @beta
+ */
+export type FetchLike = (
+  url: string,
+  init: {
+    readonly method: string;
+    readonly headers: Record<string, string>;
+    readonly body?: string;
+    readonly redirect: "manual";
+    readonly signal: AbortSignal;
+  },
+) => Promise<{
+  readonly status: number;
+  readonly statusText: string;
+  readonly headers: { forEach(callback: (value: string, name: string) => void): void };
+  text(): Promise<string>;
+}>;
+
+/**
+ * The default time limit of `fetchTransport`: 30 seconds for the request and its body.
+ *
+ * @beta
+ */
+export const API_TIMEOUT_MS: number = 30_000;
+
+/**
+ * The options of `fetchTransport`.
+ *
+ * @beta
+ */
+export interface FetchTransportOptions {
+  /**
+   * This value names the client and a contact, for example `example-app/1.0 (ops@example.com)`.
+   * Each request sends it, except a request with its own `user-agent` header. Some APIs, for
+   * example `api.weather.gov`, refuse a request with no User-Agent.
+   */
+  readonly userAgent: string;
+  /** This value is the time limit of one request and its body, in milliseconds. The default is `API_TIMEOUT_MS`. */
+  readonly timeoutMs?: number | undefined;
+  /** This function sends the request. The default is the global `fetch`. */
+  readonly fetch?: FetchLike | undefined;
+}
+
+/** A User-Agent is printable ASCII, from 1 to 512 characters, with no space at an end. */
+const USER_AGENT = /^[!-~](?:[ -~]{0,510}[!-~])?$/;
+
+/**
+ * This function makes a transport over `fetch`. The transport sends the User-Agent, does not
+ * follow a redirect, and stops a request after the time limit. A request that the time limit
+ * stopped throws an error, and `send` counts it as a failure of the host. A request that the
+ * signal stopped throws the reason of the signal.
+ *
+ * @throws ApiError when the User-Agent is not printable ASCII, or when the time limit is not a positive number.
+ * @beta
+ */
+export function fetchTransport(options: FetchTransportOptions): Transport {
+  const { userAgent } = options;
+  if (!USER_AGENT.test(userAgent)) {
+    throw new ApiError(
+      "The transport needs a User-Agent of 1 to 512 printable ASCII characters, with no space at an end.",
+    );
+  }
+  const timeoutMs = options.timeoutMs ?? API_TIMEOUT_MS;
+  if (!Number.isFinite(timeoutMs) || timeoutMs <= 0) {
+    throw new ApiError(
+      `The time limit of the transport is not a positive number: ${String(timeoutMs)}.`,
+    );
+  }
+  const fetchOf: FetchLike = options.fetch ?? ((url, init) => globalThis.fetch(url, init));
+  return async (exchange, signal) => {
+    const timeout = AbortSignal.timeout(timeoutMs);
+    const both = signal === undefined ? timeout : AbortSignal.any([signal, timeout]);
+    const headers: Record<string, string> = { "user-agent": userAgent, ...exchange.headers };
+    try {
+      const response = await fetchOf(exchange.url, {
+        method: exchange.method,
+        headers,
+        ...(exchange.body === null ? {} : { body: exchange.body }),
+        redirect: "manual",
+        signal: both,
+      });
+      // the time limit also stops a body that does not end
+      const body = await response.text();
+      const replyHeaders: Record<string, string> = {};
+      response.headers.forEach((value, name) => {
+        replyHeaders[name.toLowerCase()] = value;
+      });
+      return {
+        status: response.status,
+        statusText: response.statusText,
+        headers: replyHeaders,
+        body,
+      };
+    } catch (error) {
+      if (timeout.aborted && signal?.aborted !== true) {
+        throw new Error(`no answer in ${String(Math.ceil(timeoutMs / 1000))} s`, { cause: error });
+      }
+      throw error;
+    }
+  };
+}
+
+/**
+ * What a poll keeps of the last answer 2xx of one URL.
+ *
+ * @beta
+ */
+export interface Condition {
+  /** This value is the `ETag` header of the answer, when it had one. */
+  readonly etag?: string | undefined;
+  /** This value is the `Last-Modified` header of the answer, when it had one. */
+  readonly lastModified?: string | undefined;
+  /** This value is the SHA-256 of the body, in hexadecimal. */
+  readonly digest: string;
+}
+
+/**
+ * A store of the conditions of a poll, one for each URL. A `Map` is a store in memory. One store
+ * goes with one set of request headers: give a second store to a second `accept` header.
+ *
+ * @beta
+ */
+export interface Conditions {
+  get(url: string): Condition | undefined;
+  set(url: string, condition: Condition): void;
+}
+
+/**
+ * An answer of a poll.
+ *
+ * @beta
+ */
+export interface Polled extends Answer {
+  /**
+   * This value is true for an answer 2xx with a body that is not the body of the last answer 2xx
+   * of the URL. It is false for a 304, for the same body, and for each other status.
+   */
+  readonly changed: boolean;
+}
+
+const HEX = "0123456789abcdef";
+
+/** This function gives the SHA-256 of a text, in hexadecimal. */
+const digestOf = async (text: string): Promise<string> => {
+  const bytes = new Uint8Array(
+    await globalThis.crypto.subtle.digest("SHA-256", new TextEncoder().encode(text)),
+  );
+  let hex = "";
+  for (const byte of bytes) hex += (HEX[byte >> 4] ?? "") + (HEX[byte & 15] ?? "");
+  return hex;
+};
+
+/**
+ * This function sends one conditional GET at the pace of its host, as `send` does. It sends the
+ * validators of the last answer 2xx of the URL: `If-None-Match` with its ETag and
+ * `If-Modified-Since` with its date. The store of the scheduler can have a validator memo. Then
+ * the function sends only the date to a host whose ETags do not match, as the crawler does.
+ *
+ * A 304 gives no body: the caller keeps the result of the last changed body. A server that does
+ * not answer 304 can send the same body again. The function then gives `changed: false` too.
+ *
+ * @throws ApiError as `send` does, and when the method is not GET.
+ * @throws the reason of the signal, when the signal stops the exchange.
+ * @beta
+ */
+export async function poll<S extends Signal = AbortSignal>(
+  pace: Pace<S>,
+  transport: Transport<S>,
+  conditions: Conditions,
+  input: Send,
+  signal?: S,
+): Promise<Polled> {
+  const { exchange, host } = input;
+  if (exchange.method.toUpperCase() !== "GET") {
+    throw new ApiError(`A poll sends only GET, not ${exchange.method}.`);
+  }
+  const { store } = pace.scheduler;
+  const last = conditions.get(exchange.url);
+  const which = validatorsToSend(
+    store.validators?.(host),
+    { etag: last?.etag !== undefined, lastModified: last?.lastModified !== undefined },
+    pace.now(),
+  );
+  const headers: Record<string, string> = { ...exchange.headers };
+  if (which.etag && last?.etag !== undefined) headers["if-none-match"] = last.etag;
+  if (which.lastModified && last?.lastModified !== undefined)
+    headers["if-modified-since"] = last.lastModified;
+  const answer = await send(
+    pace,
+    transport,
+    { ...input, exchange: { ...exchange, headers } },
+    signal,
+  );
+  const { reply } = answer;
+  let verdict: ValidatorAnswer | undefined;
+  let changed = false;
+  if (reply.status === 304) verdict = "not-modified";
+  else if (reply.status >= 200 && reply.status <= 299) {
+    const digest = await digestOf(reply.body);
+    changed = last?.digest !== digest;
+    verdict = changed ? "changed" : "same";
+    conditions.set(exchange.url, {
+      etag: reply.headers["etag"],
+      lastModified: reply.headers["last-modified"],
+      digest,
+    });
+  }
+  const report = {
+    etag: headers["if-none-match"] !== undefined,
+    lastModified: headers["if-modified-since"] !== undefined,
+  };
+  if (verdict !== undefined && (report.etag || report.lastModified))
+    store.noteValidators?.(host, { ...report, answer: verdict }, pace.now());
+  return { ...answer, changed };
 }

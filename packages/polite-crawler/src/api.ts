@@ -93,7 +93,8 @@ export interface ApiScheduler<S extends Signal = AbortSignal> {
   run<T>(host: string, task: () => Promise<Paced<T>>, signal?: S): Promise<T>;
   /**
    * This store keeps the counts and the stops of each host. When it has the validator memo
-   * (`validators` and `noteValidators`), `poll` uses it as the crawler does.
+   * (`validators` and `noteValidators`), `poll` uses it as the crawler does. The two members are optional, as in
+   * `HostStateStore`, so a store of `record` and `stop` is sufficient.
    */
   readonly store: Pick<HostStateStore, "record" | "stop" | "validators" | "noteValidators">;
 }

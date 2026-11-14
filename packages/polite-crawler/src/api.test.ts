@@ -10,6 +10,7 @@ import {
   sendWithToken,
   statusLine,
   tokenStore,
+  type ApiScheduler,
   type Condition,
   type Exchange,
   type FetchLike,
@@ -591,6 +592,31 @@ describe("poll", () => {
       await poll(pace, transport, conditions, input());
     expect(scheduler.store.validators?.(HOST)?.skipEtag).toBe(true);
     expect(sent.at(-1)!.exchange.headers).toEqual({ "if-modified-since": DATE });
+  });
+
+  it("polls with a store that has no validator memo, and sends both validators", async () => {
+    const { clock, scheduler: full } = fakePace();
+    // The type check of this file proves that a store of only `record` and `stop` is a store of the scheduler.
+    const scheduler: ApiScheduler = {
+      run: full.run.bind(full),
+      store: { record: full.store.record.bind(full.store), stop: full.store.stop.bind(full.store) },
+    };
+    const pace: Pace = { scheduler, now: clock.now, random: () => 0.5 };
+    const { transport, sent } = fakeTransport(clock, (_, index) =>
+      index === 0 ? reply(200, "body 1", { etag: '"v1"', "last-modified": DATE }) : reply(304, ""),
+    );
+    const conditions = new Map<string, Condition>();
+    const first = await poll(pace, transport, conditions, input());
+    expect(first.changed).toBe(true);
+    expect(sent[0]!.exchange.headers).toEqual({});
+    const second = await poll(pace, transport, conditions, input());
+    expect(sent[1]!.exchange.headers).toEqual({
+      "if-none-match": '"v1"',
+      "if-modified-since": DATE,
+    });
+    expect(second.changed).toBe(false);
+    // The poll wrote no memo: the store that it saw has no noteValidators.
+    expect(full.store.validators?.(HOST)).toBeUndefined();
   });
 
   it("keeps the conditions after an answer that is not 2xx", async () => {

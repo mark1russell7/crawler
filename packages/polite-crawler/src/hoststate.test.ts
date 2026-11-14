@@ -139,6 +139,23 @@ describe("the SQLite host state store", () => {
     expect(again.validators("old.example")).toMatchObject({ etagMisses: 1 });
   });
 
+  it("works on a file of a later version, and the file keeps its number", async () => {
+    const path = join(await storeIn(), "hosts.sqlite");
+    open(path).close();
+    // a later version adds a table and raises the number
+    const later = new DatabaseSync(path);
+    later.exec(`CREATE TABLE later (x TEXT); PRAGMA user_version = ${String(HOST_STATE_SCHEMA + 1)}`);
+    later.close();
+    const store = open(path);
+    expect(store.record("a", "failure")).toEqual({ failures: 1, waits: 0 });
+    store.close();
+    const check = new DatabaseSync(path);
+    expect(check.prepare("PRAGMA user_version").get()).toEqual({
+      user_version: HOST_STATE_SCHEMA + 1,
+    });
+    check.close();
+  });
+
   it("forgets idle hosts", async () => {
     const store = open(join(await storeIn(), "hosts.sqlite"));
     for (let index = 0; index < 1200; index += 1) {

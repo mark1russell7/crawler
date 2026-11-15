@@ -1,5 +1,6 @@
 import { existsSync } from "node:fs";
 import { join } from "node:path";
+import { DatabaseSync } from "node:sqlite";
 import { afterEach, describe, expect, it } from "vitest";
 import { openCrawler } from "./open.ts";
 import type { HybridCrawler } from "./open.ts";
@@ -7,7 +8,7 @@ import { fakeClock, removeDir, tempDir } from "./test-helpers.ts";
 import type { Reply, TestSite } from "./test-site.ts";
 import { htmlPage, pagesOf, testSite } from "./test-site.ts";
 import type { WatchEvent, WatchRunOptions, WatchRunnerOptions, WatchSummary } from "./watch.ts";
-import { WATCH_LIMITS, WatchStore, runWatch } from "./watch.ts";
+import { WATCH_LIMITS, WATCH_SCHEMA, WatchStore, runWatch } from "./watch.ts";
 
 const HOUR = 3_600_000;
 const cleanups: Array<() => Promise<void> | void> = [];
@@ -604,6 +605,29 @@ describe("the watch list in the store", () => {
     expect(a.settle(taken!.url, "runner-b", update)).toBe(false);
     expect(() => a.release(taken!.url, "runner-b")).not.toThrow();
     expect(() => a.list(now)).toThrow(/closed/);
+  });
+
+  it("works on a file of a later version, and the file keeps its number", async () => {
+    const path = join(await store(), "watch.sqlite");
+    const now = fakeClock().now();
+    const first = new WatchStore(path);
+    first.add("https://one.example/", {}, now);
+    first.close();
+    const raw = new DatabaseSync(path);
+    expect(raw.prepare("PRAGMA user_version").get()).toEqual({ user_version: WATCH_SCHEMA });
+    // a later version adds a table and raises the number
+    raw.exec(`CREATE TABLE later (x TEXT); PRAGMA user_version = ${String(WATCH_SCHEMA + 1)}`);
+    raw.close();
+    const later = new WatchStore(path);
+    expect(later.get("https://one.example/", now)).toMatchObject({ checks: 0 });
+    later.add("https://two.example/", {}, now);
+    expect(later.list(now)).toHaveLength(2);
+    later.close();
+    const check = new DatabaseSync(path);
+    expect(check.prepare("PRAGMA user_version").get()).toEqual({
+      user_version: WATCH_SCHEMA + 1,
+    });
+    check.close();
   });
 
   it("lets two runs on one store fetch each entry one time", async () => {

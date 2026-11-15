@@ -1,8 +1,7 @@
 import { randomUUID } from "node:crypto";
-import { mkdirSync } from "node:fs";
-import { dirname } from "node:path";
-import type { StatementSync } from "node:sqlite";
-import { DatabaseSync } from "node:sqlite";
+import type { DatabaseSync, StatementSync } from "node:sqlite";
+import type { Migration } from "@mark1russell7/sqlite";
+import { migrate, openDatabase, transaction } from "@mark1russell7/sqlite";
 import type { DiffSummary } from "./diff.ts";
 import { diffTexts } from "./diff.ts";
 import { pastDeadline } from "./discover.ts";
@@ -33,7 +32,10 @@ import { cacheKeyOf } from "./urls.ts";
  * A scheduler of the operator starts `watch.run`, or the daemon (`startDaemon`) starts it on a schedule.
  */
 
-/** This value is the version of the schema of `watch.sqlite`. */
+/**
+ * This value is the version of the schema of `watch.sqlite` (`PRAGMA user_version`): the count of the
+ * steps of the schema. A file of a later version keeps its number, and the store works on it.
+ */
 export const WATCH_SCHEMA = 1;
 
 /** These are the defaults and the limits of the watch list. */
@@ -385,6 +387,45 @@ const targetOf = (
 };
 
 /**
+ * These are the steps of the schema of `watch.sqlite`, for `migrate` of `@mark1russell7/sqlite`. The
+ * version of a file (`PRAGMA user_version`) is the count of its steps. Do not change a step: add a step.
+ */
+const MIGRATIONS: readonly Migration[] = [
+  // Step 1 makes the table of version 1.
+  `CREATE TABLE IF NOT EXISTS watches (
+    url TEXT PRIMARY KEY,
+    target TEXT NOT NULL,
+    host TEXT NOT NULL,
+    every_ms REAL NOT NULL,
+    render TEXT NOT NULL,
+    confirm INTEGER NOT NULL,
+    scope TEXT,
+    labels TEXT,
+    on_behalf_of TEXT,
+    added_at REAL NOT NULL,
+    next_at REAL NOT NULL,
+    lease_until REAL NOT NULL DEFAULT 0,
+    lease_owner TEXT,
+    checks INTEGER NOT NULL DEFAULT 0,
+    changes INTEGER NOT NULL DEFAULT 0,
+    last_at REAL,
+    last_kind TEXT,
+    last_note TEXT,
+    doc TEXT,
+    base_state TEXT,
+    base_sha TEXT,
+    base_capture TEXT,
+    base_fetched_at TEXT,
+    pend_state TEXT,
+    pend_sha TEXT,
+    pend_capture TEXT,
+    pend_fetched_at TEXT,
+    pend_since REAL
+  );
+  CREATE INDEX IF NOT EXISTS watches_due ON watches (next_at)`,
+];
+
+/**
  * This store keeps the watch list in a SQLite file (`watch.sqlite`). Two or more processes on one
  * store share it. Each step is one transaction (`BEGIN IMMEDIATE`), and it waits for the lock of a
  * different process (`busy_timeout`).
@@ -405,55 +446,28 @@ export class WatchStore {
     readonly path: string,
     options: WatchStoreOptions = {},
   ) {
-    if (path !== ":memory:") mkdirSync(dirname(path), { recursive: true, mode: 0o700 });
     const floor = options.floorMs ?? WATCH_LIMITS.floorMs;
     if (!Number.isFinite(floor) || floor < 0)
       throw new RangeError(
         `the floor of every must be 0 or more milliseconds, not ${String(floor)}`,
       );
     this.floorMs = floor;
-    this.db = new DatabaseSync(path);
-    const wait = Math.max(0, Math.floor(options.busyTimeoutMs ?? 10_000));
-    this.db.exec(`PRAGMA busy_timeout = ${String(wait)};`);
-    if (path !== ":memory:") this.db.exec("PRAGMA journal_mode = WAL;");
-    this.db.exec("PRAGMA synchronous = NORMAL;");
-    this.step(() => {
-      this.db.exec(`CREATE TABLE IF NOT EXISTS watches (
-        url TEXT PRIMARY KEY,
-        target TEXT NOT NULL,
-        host TEXT NOT NULL,
-        every_ms REAL NOT NULL,
-        render TEXT NOT NULL,
-        confirm INTEGER NOT NULL,
-        scope TEXT,
-        labels TEXT,
-        on_behalf_of TEXT,
-        added_at REAL NOT NULL,
-        next_at REAL NOT NULL,
-        lease_until REAL NOT NULL DEFAULT 0,
-        lease_owner TEXT,
-        checks INTEGER NOT NULL DEFAULT 0,
-        changes INTEGER NOT NULL DEFAULT 0,
-        last_at REAL,
-        last_kind TEXT,
-        last_note TEXT,
-        doc TEXT,
-        base_state TEXT,
-        base_sha TEXT,
-        base_capture TEXT,
-        base_fetched_at TEXT,
-        pend_state TEXT,
-        pend_sha TEXT,
-        pend_capture TEXT,
-        pend_fetched_at TEXT,
-        pend_since REAL
-      )`);
-      this.db.exec("CREATE INDEX IF NOT EXISTS watches_due ON watches (next_at)");
-      const { user_version: version } = this.db.prepare("PRAGMA user_version").get() as {
-        user_version: number;
-      };
-      if (version < WATCH_SCHEMA) this.db.exec(`PRAGMA user_version = ${String(WATCH_SCHEMA)}`);
+    this.db = openDatabase(path, {
+      wal: path !== ":memory:",
+      synchronous: "NORMAL",
+      busyTimeoutMs: Math.max(0, Math.floor(options.busyTimeoutMs ?? 10_000)),
+      makeFolder: true,
+      folderMode: 0o700,
     });
+    try {
+      // Each step of the schema adds only tables or columns, so this code works on the file of a
+      // later version, and the file keeps its number (`newer: "keep"`). Two versions of the crawler
+      // can thus share one file.
+      migrate(this.db, MIGRATIONS, { name: "watch store", newer: "keep" });
+    } catch (error) {
+      this.db.close();
+      throw error;
+    }
   }
 
   private stmt(sql: string): StatementSync {
@@ -468,15 +482,7 @@ export class WatchStore {
   /** This method does one step in one transaction. */
   private step<T>(work: () => T): T {
     if (this.closed) throw new Error("the watch store is closed");
-    this.db.exec("BEGIN IMMEDIATE");
-    try {
-      const result = work();
-      this.db.exec("COMMIT");
-      return result;
-    } catch (error) {
-      if (this.db.isTransaction) this.db.exec("ROLLBACK");
-      throw error;
-    }
+    return transaction(this.db, work);
   }
 
   private row(key: string): WatchRow | undefined {

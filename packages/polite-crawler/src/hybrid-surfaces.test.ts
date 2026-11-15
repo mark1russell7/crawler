@@ -1,7 +1,15 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { fakeVector } from "./test-embedder.ts";
 import type { LocalSite } from "./test-surfaces.ts";
-import { childEnv, localSite, removeDir, runCli, seedStore, tempDir } from "./test-surfaces.ts";
+import {
+  childEnv,
+  leaksHeldBack,
+  localSite,
+  removeDir,
+  runCli,
+  seedStore,
+  tempDir,
+} from "./test-surfaces.ts";
 
 // The command line of hybrid search, with a mock Ollama server. polite-crawler-mcp tests the MCP tool.
 
@@ -59,9 +67,7 @@ describe("the command line of hybrid search", () => {
     });
     expect(result["embedded"]).toBeGreaterThanOrEqual(1);
     // the page that asks not to be AI input never goes to the model
-    expect(inputs.some((text) => text.includes("7319") || text.includes("members only"))).toBe(
-      false,
-    );
+    expect(inputs.some((text) => leaksHeldBack(text) || text.includes("members only"))).toBe(false);
     const found = await runCli(["find", "loaf", "--rank", "hybrid", ...OLLAMA(), "--dir", store]);
     expect(found.code).toBe(0);
     expect(found.stdout).toContain("url:https://bakery.example/");

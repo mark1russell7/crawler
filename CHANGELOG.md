@@ -15,6 +15,13 @@ A prerelease version (`0.2.0-beta.1`) goes to the npm tag `next`. Each other ver
 
 ## Unreleased
 
+## 0.6.4 - 2026-11-15
+
+- **The new entry point `polite-crawler/text`.** It gives the body decoder (`decodeBody`, `bodyEncoding`) and imports no module, so a browser gets it without linkedom. `polite-crawler/html` and the root still give both.
+- **The API report names only entry points.** Before, it named a chunk of the bundler (`build/html.chunk.d.mts`) for the declarations of `/html`. A new version of the bundler can rename a chunk, and the report then shows a change of the API that is not real. A new test fails when the report names a file that is not the declaration file of an entry point.
+- **The guards `isApiError` and `isQuotaError`** in `polite-crawler/api`. They tell an error of the API, or a refusal of a quota, from another failure. The error can come from another copy of the package, where `instanceof` is false. `send` and `poll` use the guard too, so a refusal from the `withQuota` of another copy does not count as a failure of the host.
+- The counts in `docs/API-REVIEW.md` are correct again (they were out of date since 0.6.2), and a test compares them with the reports.
+
 ## 0.6.3 - 2026-11-15
 
 - **Quotas of API keys in `polite-crawler/api`.** Each new export is beta.

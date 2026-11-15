@@ -69,7 +69,7 @@ The reports also show what API Extractor found:
 | `isPdf`, `PdfOptions`, `PdfText`, `readPdf` | root | The PDF reader of the page extractor. |
 | `makeRecord`, `RecordInput` | root | The function that makes a record. A private consumer checks that its hash stays the same. |
 | `RECIPE_LIMITS`, `registerRecipe` | root | `registerRecipe` puts a recipe in the extractors of a runtime of your own. The limits can change. |
-| `locationMatches`, `namesVenue`, `pickProduct`, `pickVariant`, `PRODUCT_LIMITS`, `rankHoursLinks`, `readAmount`, `VENUE_LIMITS` | root | The steps of the two recipes. The words that rank a link or a label can improve in each version. |
+| `chooseVenueReadings`, `locationMatches`, `namesVenue`, `pickProduct`, `pickVariant`, `PRODUCT_LIMITS`, `rankHoursLinks`, `readAmount`, `VenueChoice`, `VENUE_LIMITS` | root | The steps of the two recipes. The words that rank a link or a label can improve in each version. |
 | `NO_PLAYWRIGHT`, `playwrightRenderer`, `PlaywrightRenderer`, `RefusedReason`, `Rendered`, `Renderer`, `RenderOptions`, `RenderRefused` | root | The renderer. The option `renderer` is beta too. |
 | `HostReaction`, `outcomeResult`, `OutcomeFacts`, `reactToOutcome`, `ReactionContext` | `/api` | The reaction of the crawler to an answer. The `Crawler` and the send of `polite-crawler/api` use it. A study can change its rules. |
 | `Answer`, `ApiError`, `ApiScheduler`, `Exchange`, `Grant`, `isApiError`, `Pace`, `readGrant`, `Redact`, `Reply`, `send`, `Send`, `sendWithToken`, `Signal`, `statusLine`, `TOKEN_MARGIN_MS`, `Tokens`, `tokenStore`, `Transport`, `API_TIMEOUT_MS`, `Condition`, `Conditions`, `FetchLike`, `fetchTransport`, `FetchTransportOptions`, `poll`, `Polled` | `/api` | The polite send of a documented API. It is new in 0.6.1, and the poll is new in 0.6.2, so the first API clients can change it. |
@@ -144,7 +144,7 @@ The package is the MCP server of polite-crawler since 0.2.0. Its tiers follow th
 
 | Entry point | Stable | Beta | Deprecated |
 | --- | --- | --- | --- |
-| polite-crawler root | 238 | 137 | 0 |
+| polite-crawler root | 238 | 139 | 0 |
 | `/robots`, `/hours`, `/html`, `/classify`, `/politeness`, `/signals`, `/urls`, `/text` | 94 | 2 | 0 |
 | `/api` | 13 | 49 | 0 |
 | polite-crawler-mcp | 17 | 5 | 0 |

@@ -552,6 +552,66 @@ export const venueReadingsOf = (
   return { readings: settleBar(readings), phone, menus, notes, steps };
 };
 
+// ── the choice ──────────────────────────────────────────────────────────────
+
+/**
+ * The readings of a venue in their order, and the readings that `readVenue` chooses from them.
+ *
+ * @beta
+ */
+export interface VenueChoice {
+  /** These are the readings, one for each source, label, week and season: the best first. */
+  readonly readings: readonly VenueReading[];
+  /** This reading is the best reading of the opening hours, from any source. */
+  readonly best: VenueReading | null;
+  /** This reading is the best reading of the site itself (not OpenStreetMap) with no guess. */
+  readonly from_site: VenueReading | null;
+  /** These days are the days where two readings of the whole schedule (a rank of 2 or less) disagree. */
+  readonly disagree: readonly Day[];
+}
+
+/**
+ * This function orders the readings of a venue and chooses the best reading, as `readVenue` does.
+ * Give the readings in the order of the pages, the home page first.
+ *
+ * - It applies the rule of the word "bar" to all the readings together.
+ * - It keeps the first reading for each source, label, week and season.
+ * - It sorts the readings by rank. Of two readings with the same rank, the reading as written
+ *   comes before a guess.
+ * - The best reading is the first reading of the opening hours.
+ *
+ * The function is pure. An eval of the choice uses it.
+ *
+ * @beta
+ */
+export const chooseVenueReadings = (readings: readonly VenueReading[]): VenueChoice => {
+  // one reading for each source, label and week: a site that repeats its JSON-LD on each page said it once
+  const firstOf = new Map<string, VenueReading>();
+  for (const one of settleBar(readings)) {
+    const key = `${one.from}|${one.label ?? ""}|${one.hours}|${one.season ?? ""}`;
+    if (!firstOf.has(key)) firstOf.set(key, one);
+  }
+  // the best first; of two equal readings, the reading as written before a guess
+  const unique = [...firstOf.values()].sort(
+    (a, b) => a.rank - b.rank || Number(a.inferred) - Number(b.inferred),
+  );
+  const disagree = new Set<Day>();
+  const whole = unique.filter((one) => one.rank <= 2);
+  for (let i = 0; i < whole.length; i += 1) {
+    for (let j = i + 1; j < whole.length; j += 1) {
+      for (const day of disagreements(whole[i]!.week, whole[j]!.week)) disagree.add(day);
+    }
+  }
+  return {
+    readings: unique,
+    best: unique.find((one) => one.schedule === "opening") ?? null,
+    from_site:
+      unique.find((one) => one.from !== "osm" && one.schedule === "opening" && !one.inferred) ??
+      null,
+    disagree: DAYS.filter((day) => disagree.has(day)),
+  };
+};
+
 // ── the recipe ──────────────────────────────────────────────────────────────
 
 /** An OpenStreetMap `opening_hours` value, with where the caller got it. */
@@ -786,36 +846,17 @@ export const readVenue = async (
   if (moved !== null) notes.push(`${site.href} now goes to ${moved}`);
   if (heldBack) notes.push(HELD_BACK);
 
-  // one reading for each source, label and week: a site that repeats its JSON-LD on each page said it once
-  const firstOf = new Map<string, VenueReading>();
-  for (const one of settleBar(readings)) {
-    const key = `${one.from}|${one.label ?? ""}|${one.hours}|${one.season ?? ""}`;
-    if (!firstOf.has(key)) firstOf.set(key, one);
-  }
-  // the best first; of two equal readings, the reading as written before a guess
-  const unique = [...firstOf.values()].sort(
-    (a, b) => a.rank - b.rank || Number(a.inferred) - Number(b.inferred),
-  );
-  const disagree = new Set<Day>();
-  const whole = unique.filter((one) => one.rank <= 2);
-  for (let i = 0; i < whole.length; i += 1) {
-    for (let j = i + 1; j < whole.length; j += 1) {
-      for (const day of disagreements(whole[i]!.week, whole[j]!.week)) disagree.add(day);
-    }
-  }
-  const best = unique.find((one) => one.schedule === "opening") ?? null;
-  const fromSite =
-    unique.find((one) => one.from !== "osm" && one.schedule === "opening" && !one.inferred) ?? null;
+  const choice = chooseVenueReadings(readings);
   return {
     url: site.href,
     home: homeUrl,
     moved,
     names_venue: namesVenueResult,
     pages,
-    readings: unique,
-    best,
-    from_site: fromSite,
-    disagree: DAYS.filter((day) => disagree.has(day)),
+    readings: choice.readings,
+    best: choice.best,
+    from_site: choice.from_site,
+    disagree: choice.disagree,
     menus,
     phone,
     captures: [...captures],

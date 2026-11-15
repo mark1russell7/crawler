@@ -14,21 +14,6 @@ List the MCP server in the directories that need a submission, then post polite-
 - Waits for: `eval`, `eval-b`
 - What Mark does: Read the prepared post text, then post it from your Hacker News account.
 
-## In progress
-
-### `quota-service`: Quotas: move the window counting to @mark1russell7/service
-
-The window counting of quotaGate (rolling buckets and calendar days and months in a zone) is a limiter, and the map of homes puts limiters in @mark1russell7/service. Systems built it in #527 (SYS-115, merged 2616fe7) as @mark1russell7/service/limiter: quota specs as quantities, a pure quotaStep, keyedQuota on a wall clock, and takeQuotas, all or none, with the give-back and readAt rules of polite-crawler 0.6.4. Its QuotaRecord and QuotaStore have the same shape as those of polite-crawler, so the files of SqliteHostStateStore do not change. The plan: quotaGate becomes an adapter over keyedQuota, a list in withQuota goes to takeQuotas, and the two record types become those of service. polite-crawler keeps the header reading (readQuotaHeaders), QuotaError and withQuota, and its QuotaStore with changeQuota (an adapter gives it the change method of service, so a store of your own does not break). A check of service 0.8.17 on 2026-11-15 found two gaps: no bound on a provider block (polite-crawler 0.7.0 caps it at maxBlockMs, by default one window), and a part of takeQuotas had to be a full KeyedQuota, so a gate of your own could not be one. Systems #535 added both: maxBlock in QuotaSpec and a narrow part type. The crawler side is written on a branch: quotaGate maps a quota to a spec of the limiter and keeps its store through an adapter, a list of gates takes through takeQuotas, and the crawler no longer needs @mark1russell7/algebra. Its 102 quota, host-state and API tests pass on a build of service with #535. The release train published service 0.8.18 seven seconds before #535 merged with the same number, so #535 ships as 0.8.19 (systems #538). Service 0.8.19 is on npm. The move then failed the browser size budget of polite-crawler/api: 16.6 KB gzip against 8.15 KB. Systems #543 made the limiter leaner (service 0.8.20, quantity 0.4.1: a time-only unit table, one file per module, rational imported by name): its three imports go from 11.2 KB to 7.7 KB gzip. The rest is the quota logic and the exact unit conversion, which stay (the quantity law). Only quotaGate and withQuota bundle the limiter. On service 0.8.20 the whole api entry is 13.4 KB gzip (7.9 KB in 0.7.4), the entry without those two functions is 4.9 KB, and fetchTransport alone is 0.8 KB. The decision: the budget of the whole entry is 16102 B (the size and 20 percent more), and a second budget in the smoke check holds the entry without the two functions at 5898 B. A new export of api counts in that part by default. The end: 2026-11-22.
-
-- Area: Package
-- Waits for: `api-quota`
-- Started: 2026-11-15
-- [crawler #161 (the review that asks for the move)](https://github.com/mark1russell7/crawler/pull/161)
-- [systems #527 (SYS-115: service 0.8.15, algebra 0.8.9)](https://github.com/mark1russell7/systems/pull/527)
-- [systems #535 (maxBlock and the narrow part, merged 75f8efb)](https://github.com/mark1russell7/systems/pull/535)
-- [systems #538 (service 0.8.19)](https://github.com/mark1russell7/systems/pull/538)
-- [systems #543 (the leaner limiter: service 0.8.20, quantity 0.4.1)](https://github.com/mark1russell7/systems/pull/543)
-
 ## Later
 
 ### `v1`: Version 1.0
@@ -88,6 +73,22 @@ Five follow-ups from the reviews of the quotas, in 0.7.0 (#162). 1. Two quotas o
 - [crawler #162 (0.7.0, merged dff2fe8)](https://github.com/mark1russell7/crawler/pull/162)
 - [crawler #161 (the review)](https://github.com/mark1russell7/crawler/pull/161)
 - [polite-crawler 0.7.0 on npm](https://www.npmjs.com/package/polite-crawler/v/0.7.0)
+
+### `quota-service`: Quotas: move the window counting to @mark1russell7/service
+
+The window counting of quotaGate (rolling buckets and calendar days and months in a zone) is a limiter, and the map of homes puts limiters in @mark1russell7/service. Systems built it in #527 (SYS-115, merged 2616fe7) as @mark1russell7/service/limiter: quota specs as quantities, a pure quotaStep, keyedQuota on a wall clock, and takeQuotas, all or none, with the give-back and readAt rules of polite-crawler 0.6.4. Its QuotaRecord and QuotaStore have the same shape as those of polite-crawler, so the files of SqliteHostStateStore do not change. The plan: quotaGate becomes an adapter over keyedQuota, a list in withQuota goes to takeQuotas, and the two record types become those of service. polite-crawler keeps the header reading (readQuotaHeaders), QuotaError and withQuota, and its QuotaStore with changeQuota (an adapter gives it the change method of service, so a store of your own does not break). A check of service 0.8.17 on 2026-11-15 found two gaps: no bound on a provider block (polite-crawler 0.7.0 caps it at maxBlockMs, by default one window), and a part of takeQuotas had to be a full KeyedQuota, so a gate of your own could not be one. Systems #535 added both: maxBlock in QuotaSpec and a narrow part type. The crawler side is written on a branch: quotaGate maps a quota to a spec of the limiter and keeps its store through an adapter, a list of gates takes through takeQuotas, and the crawler no longer needs @mark1russell7/algebra. Its 102 quota, host-state and API tests pass on a build of service with #535. The release train published service 0.8.18 seven seconds before #535 merged with the same number, so #535 ships as 0.8.19 (systems #538). Service 0.8.19 is on npm. The move then failed the browser size budget of polite-crawler/api: 16.6 KB gzip against 8.15 KB. Systems #543 made the limiter leaner (service 0.8.20, quantity 0.4.1: a time-only unit table, one file per module, rational imported by name): its three imports go from 11.2 KB to 7.7 KB gzip. The rest is the quota logic and the exact unit conversion, which stay (the quantity law). Only quotaGate and withQuota bundle the limiter. On service 0.8.20 the whole api entry is 13.4 KB gzip (7.9 KB in 0.7.4), the entry without those two functions is 4.9 KB, and fetchTransport alone is 0.8 KB. The decision: the budget of the whole entry is 16102 B (the size and 20 percent more), and a second budget in the smoke check holds the entry without the two functions at 5898 B. A new export of api counts in that part by default. CI agreed with the local sizes (13418 B and 4915 B). A new release check of the shared CI (pinned on 2026-11-15) fails a pull request that changes shipped files at a version on npm, so #171 carries its version: 0.7.5, a PATCH (no change to the public API). It merged on 2026-11-15 (468e5cc), and polite-crawler and polite-crawler-mcp 0.7.5 are on npm with provenance.
+
+- Area: Package
+- Waits for: `api-quota`
+- Started: 2026-11-15
+- Shipped: 2026-11-15
+- [crawler #161 (the review that asks for the move)](https://github.com/mark1russell7/crawler/pull/161)
+- [systems #527 (SYS-115: service 0.8.15, algebra 0.8.9)](https://github.com/mark1russell7/systems/pull/527)
+- [systems #535 (maxBlock and the narrow part, merged 75f8efb)](https://github.com/mark1russell7/systems/pull/535)
+- [systems #538 (service 0.8.19)](https://github.com/mark1russell7/systems/pull/538)
+- [systems #543 (the leaner limiter: service 0.8.20, quantity 0.4.1)](https://github.com/mark1russell7/systems/pull/543)
+- [crawler #171 (merged 468e5cc)](https://github.com/mark1russell7/crawler/pull/171)
+- [polite-crawler 0.7.5 on npm](https://www.npmjs.com/package/polite-crawler/v/0.7.5)
 
 ### `api-guards`: isQuotaError and isApiError: tell a quota refusal across two copies of the package
 

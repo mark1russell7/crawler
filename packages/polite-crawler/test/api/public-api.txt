@@ -252,6 +252,7 @@ type VectorHit: build/index.d.mts#VectorHit
 VectorStore: build/index.d.mts#VectorStore
 type VectorStoreOptions: build/index.d.mts#VectorStoreOptions
 type VectorWrite: build/index.d.mts#VectorWrite
+type VenueChoice: build/index.d.mts#VenueChoice
 type VenueLink: build/index.d.mts#VenueLink
 type VenueLocation: build/index.d.mts#VenueLocation
 type VenueOptions: build/index.d.mts#VenueOptions
@@ -303,6 +304,7 @@ canonicalUrl: build/urls.d.mts#canonicalUrl
 catchUpIndex: build/index.d.mts#catchUpIndex
 changeCommand: build/index.d.mts#changeCommand
 checkFields: build/index.d.mts#checkFields
+chooseVenueReadings: build/index.d.mts#chooseVenueReadings
 chunkText: build/index.d.mts#chunkText
 chunkTokensOf: build/index.d.mts#chunkTokensOf
 compareHours: build/hours.d.mts#compareHours
@@ -2895,7 +2897,7 @@ export declare const VENUE_LIMITS: {
 };
 
 ### build/index.d.mts#VERSION
-export declare const VERSION = "0.7.5";
+export declare const VERSION = "0.7.6";
 
 ### build/index.d.mts#Variant
 type Variant = "plain" | "rendered";
@@ -2952,6 +2954,14 @@ interface VectorWrite {
   readonly chunks: ReadonlyArray<Omit<StoredChunk, "chunk">>;
   readonly docs: readonly string[];
   readonly at: string;
+}
+
+### build/index.d.mts#VenueChoice
+interface VenueChoice {
+  readonly readings: readonly VenueReading[];
+  readonly best: VenueReading | null;
+  readonly from_site: VenueReading | null;
+  readonly disagree: readonly Day[];
 }
 
 ### build/index.d.mts#VenueLink
@@ -3400,6 +3410,9 @@ export declare const changeCommand: (command: string, options?: ChangeCommandOpt
 
 ### build/index.d.mts#checkFields
 export declare const checkFields: (source: ExtractSource, fields: Readonly<Record<string, FieldClaim>>) => FieldsChecked;
+
+### build/index.d.mts#chooseVenueReadings
+export declare const chooseVenueReadings: (readings: readonly VenueReading[]) => VenueChoice;
 
 ### build/index.d.mts#chunkText
 export declare const chunkText: (text: string, options: ChunkOptions) => TextChunk[];

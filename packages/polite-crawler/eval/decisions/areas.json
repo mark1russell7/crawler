@@ -1,0 +1,20 @@
+{
+  "note": "Three public areas for the decision eval. Each box is south, west, north and east, in degrees (WGS84).",
+  "areas": [
+    {
+      "name": "edinburgh",
+      "label": "Central Edinburgh, United Kingdom",
+      "box": { "south": 55.935, "west": -3.215, "north": 55.962, "east": -3.165 }
+    },
+    {
+      "name": "portland",
+      "label": "Central Portland, Oregon, United States",
+      "box": { "south": 45.505, "west": -122.7, "north": 45.535, "east": -122.645 }
+    },
+    {
+      "name": "melbourne",
+      "label": "Central Melbourne, Australia",
+      "box": { "south": -37.83, "west": 144.945, "north": -37.795, "east": 144.99 }
+    }
+  ]
+}

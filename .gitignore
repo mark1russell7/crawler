@@ -114,3 +114,12 @@ temp/
 # The output of the dataset scripts of the study (packages/site/scripts/study-*.ts)
 /study-dataset/
 /deposition.json
+
+# The data of the evals: WACZ files of other sites, and the OpenStreetMap extract, the labels and
+# the result of the decision eval. They are artifacts of CI only (eval.yml, decisions.yml). They
+# never go into the repository.
+*.wacz
+venues.json
+decisions-crawl.json
+labels.jsonl
+/result.json

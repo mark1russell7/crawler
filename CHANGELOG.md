@@ -15,6 +15,8 @@ A prerelease version (`0.2.0-beta.1`) goes to the npm tag `next`. Each other ver
 
 ## Unreleased
 
+- **The new function `freshUntil` in `polite-crawler/api`.** It gives the end of the freshness of an answer, as RFC 9111 §4.2 calculates it, in milliseconds since the epoch. A client that keeps the answers of `poll` and `send` asks again at that time. The sources in sequence are `max-age`, `Expires` minus `Date`, and 10 percent of the age of `Last-Modified`, with a maximum. The crawler uses the same function for the field `fresh_until` of a capture, so the freshness of a capture does not change. The function is beta.
+
 ## 0.7.3 - 2026-11-15
 
 - **The smaller points of the review of the quotas.** A take after a reading in the same millisecond keeps its units, so the count can be too high, but not too low. A store of your own keeps each field of the record. A store that drops `readAt` lets a give-back go below the count of the provider. `isApiError` checks the name, so use it on the errors of `polite-crawler/api`. A list with two gates of one name and key is an error, also on two stores.

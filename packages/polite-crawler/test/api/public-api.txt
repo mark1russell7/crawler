@@ -551,6 +551,7 @@ type ValidatorReport: build/politeness.d.mts#ValidatorReport
 type ValidatorVerdict: build/politeness.d.mts#ValidatorVerdict
 type WithQuotaOptions: build/api.d.mts#WithQuotaOptions
 fetchTransport: build/api.d.mts#fetchTransport
+freshUntil: build/api.d.mts#freshUntil
 isApiError: build/api.d.mts#isApiError
 isQuotaError: build/api.d.mts#isQuotaError
 memoryQuotaStore: build/api.d.mts#memoryQuotaStore
@@ -800,6 +801,9 @@ interface WithQuotaOptions<A extends readonly unknown[], R> {
 
 ### build/api.d.mts#fetchTransport
 export declare function fetchTransport(options: FetchTransportOptions): Transport;
+
+### build/api.d.mts#freshUntil
+export declare function freshUntil(header: (name: string) => string | undefined, status: number, fetchedAt: number, lastModified: string | undefined, capMs: number): number | undefined;
 
 ### build/api.d.mts#isApiError
 export declare const isApiError: (value: unknown) => value is ApiError;

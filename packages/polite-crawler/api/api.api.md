@@ -88,6 +88,9 @@ export interface FetchTransportOptions {
 }
 
 // @beta
+export function freshUntil(header: (name: string) => string | undefined, status: number, fetchedAt: number, lastModified: string | undefined, capMs: number): number | undefined;
+
+// @beta
 export interface Grant {
     // (undocumented)
     readonly token: string;

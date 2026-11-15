@@ -15,6 +15,8 @@ A prerelease version (`0.2.0-beta.1`) goes to the npm tag `next`. Each other ver
 
 ## Unreleased
 
+## 0.6.3 - 2026-11-15
+
 - **Quotas of API keys in `polite-crawler/api`.** Each new export is beta.
   - `quotaGate` counts the calls of one key in a window: a calendar day or month in a time zone, or a rolling window. It refuses a call over the quota with a `QuotaError` that gives `resetAt`, before the call starts. The option `reserve` keeps units unused.
   - `withQuota` puts a gate on an async function and keeps its type: a `fetch`, a transport of `send` and `poll`, or a different client. Its option `cost` gives the units of a call (0 counts nothing), and its option `read` adds what the answer of the provider tells. `readQuotaHeaders` reads the count and the reset time from the headers of an answer.

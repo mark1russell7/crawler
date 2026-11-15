@@ -6,6 +6,10 @@ This file records the changes to `polite-crawler-mcp` in each version. The chang
 
 ## Unreleased
 
+## 0.6.3 - 2026-11-15
+
+- New versions of the dependencies (the release train).
+
 ## 0.6.2 - 2026-11-14
 
 - **The server uses polite-crawler 0.6.2.** The new polls of `polite-crawler/api` (`fetchTransport` and `poll`) are in the [changelog of polite-crawler](../../CHANGELOG.md). The server does not change.

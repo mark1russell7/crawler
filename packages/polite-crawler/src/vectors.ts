@@ -1,7 +1,5 @@
-import { mkdirSync } from "node:fs";
-import { dirname } from "node:path";
-import type { StatementSync } from "node:sqlite";
-import { DatabaseSync } from "node:sqlite";
+import type { DatabaseSync, StatementSync } from "node:sqlite";
+import { ensureProjection, openDatabase, transaction } from "@mark1russell7/sqlite";
 
 /**
  * The vector store keeps the vectors of hybrid search in `vectors.sqlite`, beside the index. It is
@@ -187,28 +185,27 @@ export class VectorStore {
     readonly path: string,
     options: VectorStoreOptions = {},
   ) {
-    if (path !== ":memory:") mkdirSync(dirname(path), { recursive: true, mode: 0o700 });
-    this.db = new DatabaseSync(path);
-    const wait = Math.max(0, Math.floor(options.busyTimeoutMs ?? 10_000));
-    this.db.exec(`PRAGMA busy_timeout = ${String(wait)};`);
-    if (path !== ":memory:") this.db.exec("PRAGMA journal_mode = WAL;");
     // the store is a projection, so a power cut can cost its last transactions and nothing else
-    this.db.exec("PRAGMA synchronous = NORMAL;");
-    this.write(() => {
-      const version = (this.db.prepare("PRAGMA user_version").get() as { user_version: number })
-        .user_version;
-      if (version !== VECTORS_SCHEMA) {
-        // a store of a different schema is a projection: it opens empty
-        const tables = this.db
-          .prepare(
-            "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%'",
-          )
-          .all() as Array<{ name: string }>;
-        for (const { name } of tables) this.db.exec(`DROP TABLE IF EXISTS "${name}"`);
-      }
-      this.db.exec(DDL);
-      this.db.exec(`PRAGMA user_version = ${String(VECTORS_SCHEMA)}`);
+    this.db = openDatabase(path, {
+      wal: path !== ":memory:",
+      synchronous: "NORMAL",
+      busyTimeoutMs: Math.max(0, Math.floor(options.busyTimeoutMs ?? 10_000)),
+      makeFolder: true,
+      folderMode: 0o700,
     });
+    try {
+      this.write(() => {
+        // A store of a different schema is a projection: it opens empty. A file of a later version
+        // opens empty too, and gets this version.
+        const { rebuilt } = ensureProjection(this.db, DDL, { version: VECTORS_SCHEMA });
+        // Each statement of the DDL makes only what is not there. Thus a file of this version that
+        // lacks a table gets the table again, and the other tables keep their vectors.
+        if (!rebuilt) this.db.exec(DDL);
+      });
+    } catch (error) {
+      this.db.close();
+      throw error;
+    }
   }
 
   private stmt(sql: string): StatementSync {
@@ -222,15 +219,7 @@ export class VectorStore {
 
   private write<T>(work: () => T): T {
     if (this.closed) throw new Error("the vector store is closed");
-    this.db.exec("BEGIN IMMEDIATE");
-    try {
-      const result = work();
-      this.db.exec("COMMIT");
-      return result;
-    } catch (error) {
-      if (this.db.isTransaction) this.db.exec("ROLLBACK");
-      throw error;
-    }
+    return transaction(this.db, work);
   }
 
   private live(): void {
@@ -426,7 +415,10 @@ export class VectorStore {
     if (cached !== undefined && cached.version === version) return cached;
     const dims = this.dimensions(embedder);
     if (dims === undefined) return undefined;
-    // one read transaction: the count, the rows and the pointers come from one snapshot of the file
+    // one read transaction: the count, the rows and the pointers come from one snapshot of the file.
+    // The `transaction` of @mark1russell7/sqlite starts only `BEGIN IMMEDIATE`, which takes the write
+    // lock and waits for the writers. TODO(sqlite): use a read transaction (`BEGIN DEFERRED`) of
+    // @mark1russell7/sqlite when it has one, and remove this code.
     this.db.exec("BEGIN");
     try {
       const matrix = this.load(embedder, dims, version);

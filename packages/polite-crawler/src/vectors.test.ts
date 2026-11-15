@@ -146,11 +146,37 @@ describe("VectorStore", () => {
     const again = new VectorStore(path);
     cleanups.push(() => again.close());
     expect(again.counts()).toEqual({ texts: 0, chunks: 0, docs: 0, bytes: 0 });
+    // the file gets this version, and the store works on it
+    const raw = new DatabaseSync(path);
+    expect(raw.prepare("PRAGMA user_version").get()).toEqual({ user_version: VECTORS_SCHEMA });
+    raw.close();
+    write(again, "s1", [v(1, 0, 0)], ["a"]);
+    expect(again.counts().texts).toBe(1);
     store.close();
     expect(() => store.plan("e", "s1")).toThrow(/closed/);
     expect(() => write(store, "s1", [v(1, 0, 0)], ["a"])).toThrow(/closed/);
     const memory = new VectorStore(":memory:");
     expect(memory.counts().texts).toBe(0);
     memory.close();
+  });
+
+  it("keeps a file of its version, and makes a table that such a file lacks", async () => {
+    const { path, store } = await open();
+    write(store, "s1", [v(1, 0, 0)], ["a"]);
+    store.close();
+    const kept = new VectorStore(path);
+    expect(kept.counts().texts).toBe(1);
+    kept.close();
+    const db = new DatabaseSync(path);
+    db.exec("DROP TABLE vectors_meta");
+    db.close();
+    const again = new VectorStore(path);
+    cleanups.push(() => again.close());
+    expect(again.counts()).toEqual({ texts: 1, chunks: 1, docs: 1, bytes: 12 });
+    const raw = new DatabaseSync(path);
+    expect(raw.prepare("SELECT name FROM sqlite_master WHERE name = 'vectors_meta'").get()).toEqual(
+      { name: "vectors_meta" },
+    );
+    raw.close();
   });
 });

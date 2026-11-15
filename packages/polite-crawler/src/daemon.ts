@@ -723,7 +723,7 @@ export const startDaemon = async (options: DaemonOptions): Promise<Daemon> => {
   const stateFile = givenState ?? daemonStateFile(open.dir);
   const lock = await lockStore(open.dir);
   const { writeEvent, renderOff, crawler } = await releaseOnError(lock, async () => {
-    // a daemon of a version before 0.6.6 takes no lock, and two stores can have one state file
+    // a daemon of a version before 0.7.2 takes no lock, and two stores can have one state file
     const before = readDaemonState(open.dir, stateFile);
     if (before?.alive === true) {
       throw new Error(

@@ -408,7 +408,7 @@ describe("the daemon", () => {
       `a daemon runs on the store ${dir} already (process ${String(process.ppid)})`,
     );
     rmSync(lock);
-    // a daemon of a version before 0.6.6 takes no lock: its state file still refuses a start
+    // a daemon of a version before 0.7.2 takes no lock: its state file still refuses a start
     const file = join(dir, "daemon", "state.json");
     const state = JSON.parse(readFileSync(file, "utf8")) as Record<string, unknown>;
     writeFileSync(file, JSON.stringify({ ...state, running: true, pid: process.ppid }));

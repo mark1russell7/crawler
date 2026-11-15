@@ -11,6 +11,7 @@
  * The module imports no Node.js module, so a browser can use it. Each export is beta.
  */
 import { ApiError } from "./api-error.ts";
+import type { QuotaRecord, QuotaStore } from "./politeness.ts";
 
 /**
  * The window of a quota.
@@ -51,33 +52,6 @@ export interface Quota {
   /** The gate keeps this count of units unused. The default is 0. */
   readonly reserve?: number | undefined;
   readonly window: QuotaWindow;
-}
-
-/**
- * The record of one key in a store: the units of each time bucket, and the end of a refusal of the
- * provider. A record has only numbers, so a store can keep it as JSON.
- *
- * @beta
- */
-export interface QuotaRecord {
-  /** Each item is the start of a bucket in milliseconds since the epoch, and its units. The items are in the order of their start. */
-  readonly spent: readonly (readonly [start: number, units: number])[];
-  /** The provider refused the key until this time, in milliseconds since the epoch. */
-  readonly blockedUntil?: number | undefined;
-}
-
-/**
- * A store of the records of the keys. `memoryQuotaStore` keeps them in memory, and
- * `SqliteHostStateStore` keeps them in its file.
- *
- * @beta
- */
-export interface QuotaStore {
-  /**
-   * This method gives the record of `key` to `step`, keeps the record that `step` gives, and gives
-   * it. It is one step: a different call cannot change the record between the read and the write.
-   */
-  changeQuota(key: string, step: (record: QuotaRecord | undefined) => QuotaRecord): QuotaRecord;
 }
 
 /**

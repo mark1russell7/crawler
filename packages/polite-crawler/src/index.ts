@@ -209,8 +209,6 @@ export type { PageExtract, PageLink } from "./html.ts";
 export { extractPage, typesOf } from "./html.ts";
 export type { SqliteHostStateOptions } from "./hoststate.ts";
 export { SqliteHostStateStore } from "./hoststate.ts";
-// through the entry ./api, so the declarations stay in its module of the build, not in a chunk
-export type { QuotaRecord, QuotaStore } from "./api.ts";
 export type {
   CaptureFilter,
   CaptureLogOptions,
@@ -255,6 +253,8 @@ export type {
   HostStop,
   PolicyOptions,
   PolitenessPolicy,
+  QuotaRecord,
+  QuotaStore,
   ValidatorAnswer,
   ValidatorLimits,
   ValidatorMemo,

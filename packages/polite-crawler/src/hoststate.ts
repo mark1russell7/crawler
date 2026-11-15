@@ -7,13 +7,13 @@ import type {
   HostResult,
   HostStateStore,
   HostStop,
+  QuotaRecord,
+  QuotaStore,
   ValidatorMemo,
   ValidatorReport,
   ValidatorVerdict,
 } from "./politeness.ts";
 import { nextValidatorMemo } from "./politeness.ts";
-// through the entry ./api, so the declarations stay in its module of the build, not in a chunk
-import type { QuotaRecord, QuotaStore } from "./api.ts";
 
 /** A stop with no end goes into the table as this value, which is past each date that JavaScript can hold. */
 const NO_END = 9e15;

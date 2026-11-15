@@ -145,6 +145,33 @@ export interface HostStateStore {
   noteValidators?(host: string, report: ValidatorReport, now: number): ValidatorMemo;
 }
 
+/**
+ * The record of one key in a store: the units of each time bucket, and the end of a refusal of the
+ * provider. A record has only numbers, so a store can keep it as JSON.
+ *
+ * @beta
+ */
+export interface QuotaRecord {
+  /** Each item is the start of a bucket in milliseconds since the epoch, and its units. The items are in the order of their start. */
+  readonly spent: readonly (readonly [start: number, units: number])[];
+  /** The provider refused the key until this time, in milliseconds since the epoch. */
+  readonly blockedUntil?: number | undefined;
+}
+
+/**
+ * A store of the records of the keys. `memoryQuotaStore` keeps them in memory, and
+ * `SqliteHostStateStore` keeps them in its file.
+ *
+ * @beta
+ */
+export interface QuotaStore {
+  /**
+   * This method gives the record of `key` to `step`, keeps the record that `step` gives, and gives
+   * it. It is one step: a different call cannot change the record between the read and the write.
+   */
+  changeQuota(key: string, step: (record: QuotaRecord | undefined) => QuotaRecord): QuotaRecord;
+}
+
 /** This value tells the result that the crawler learned for one validator of a host. */
 export type ValidatorVerdict = "unknown" | "works" | "fails";
 

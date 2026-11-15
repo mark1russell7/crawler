@@ -30,6 +30,8 @@ export type {
   Paced,
   PolicyOptions,
   PolitenessPolicy,
+  QuotaRecord,
+  QuotaStore,
   ValidatorAnswer,
   ValidatorMemo,
   ValidatorReport,
@@ -43,9 +45,7 @@ export type {
   QuotaGateOptions,
   QuotaHeaders,
   QuotaReading,
-  QuotaRecord,
   QuotaState,
-  QuotaStore,
   QuotaWindow,
   WithQuotaOptions,
 } from "./quota.ts";

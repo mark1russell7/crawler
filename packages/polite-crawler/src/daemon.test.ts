@@ -1,5 +1,6 @@
-import { readFileSync, statSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { existsSync, mkdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { lockText, parseLockOwner } from "@mark1russell7/service/host";
 import { afterEach, describe, expect, it } from "vitest";
 import type {
   Daemon,
@@ -347,6 +348,80 @@ describe("the daemon", () => {
     await expect(startDaemon(options(dir, { tick: "10ms" }))).rejects.toThrow(/tick must be/);
   });
 
+  it("starts one daemon of two starts at the same moment, and the other rejects", async () => {
+    const dir = await store();
+    const held = gate();
+    let starts = 0;
+    // the host holds each start, thus the two starts are in progress at the same moment
+    const host: DaemonMcpHost = {
+      start: async () => {
+        starts += 1;
+        await held.wait;
+        return {
+          url: "http://127.0.0.1:1234/mcp",
+          tasks: () => [],
+          close: () => Promise.resolve(),
+        };
+      },
+    };
+    const both = Promise.allSettled([
+      startDaemon(options(dir, { tick: "1h", mcp: {}, mcpHost: host })),
+      startDaemon(options(dir, { tick: "1h", mcp: {}, mcpHost: host })),
+    ]);
+    await until(() => starts > 0);
+    held.open();
+    const results = await both;
+    const daemons = results.flatMap((one) => (one.status === "fulfilled" ? [one.value] : []));
+    for (const daemon of daemons) {
+      cleanups.push(async () => {
+        await daemon.stop(0);
+      });
+    }
+    // a check of the state file let both through: at the two checks, no start had written its state
+    expect(daemons).toHaveLength(1);
+    expect(starts).toBe(1);
+    const refusals = results.flatMap((one) =>
+      one.status === "rejected" ? [String(one.reason)] : [],
+    );
+    expect(refusals).toEqual([
+      expect.stringMatching(
+        /a daemon runs on the store .+ already \(process \d+\): stop it first$/,
+      ),
+    ]);
+    await daemons[0]!.stop();
+    expect(existsSync(join(dir, "daemon", "lock"))).toBe(false);
+  });
+
+  it("removes the lock of a process that stopped, and refuses the lock or the state of a live process", async () => {
+    const dir = await store();
+    const lock = join(dir, "daemon", "lock");
+    mkdirSync(dirname(lock), { recursive: true });
+    // no system gives this id to a process: Linux stops at 2^22, Windows uses multiples of 4
+    writeFileSync(lock, lockText({ pid: 2 ** 22 + 12_345, startedAt: 1_000 }));
+    const first = await started(options(dir, { tick: "1h" }));
+    expect(parseLockOwner(readFileSync(lock, "utf8"))?.pid).toBe(process.pid);
+    await first.stop();
+    expect(existsSync(lock)).toBe(false);
+    // the parent of this process is alive, and it started before now
+    writeFileSync(lock, lockText({ pid: process.ppid, startedAt: Date.now() }));
+    await expect(startDaemon(options(dir))).rejects.toThrow(
+      `a daemon runs on the store ${dir} already (process ${String(process.ppid)})`,
+    );
+    rmSync(lock);
+    // a daemon of a version before 0.6.6 takes no lock: its state file still refuses a start
+    const file = join(dir, "daemon", "state.json");
+    const state = JSON.parse(readFileSync(file, "utf8")) as Record<string, unknown>;
+    writeFileSync(file, JSON.stringify({ ...state, running: true, pid: process.ppid }));
+    await expect(startDaemon(options(dir))).rejects.toThrow(
+      /remove .+state\.json when no daemon runs/,
+    );
+    // the start that the state refused gave the lock back
+    expect(existsSync(lock)).toBe(false);
+    writeFileSync(file, JSON.stringify({ ...state, running: false }));
+    const second = await started(options(dir, { tick: "1h" }));
+    await second.stop();
+  });
+
   it("lets the check in progress end at a stop, within the grace", async () => {
     const dir = await store();
     const held = gate();
@@ -443,6 +518,8 @@ describe("the daemon", () => {
       ),
     ).rejects.toThrow(/in use/);
     expect(readDaemonState(dir)?.alive).toBe(false);
+    // the start that failed gave the lock back
+    expect(existsSync(join(dir, "daemon", "lock"))).toBe(false);
   });
 });
 

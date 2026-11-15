@@ -14,6 +14,36 @@ List the MCP server in the directories that need a submission, then post polite-
 - Waits for: `eval`, `eval-b`
 - What Mark does: Read the prepared post text, then post it from your Hacker News account.
 
+## In progress
+
+### `sqlite-projections`: SQLite: move the index, the vectors and the watch list onto @mark1russell7/sqlite
+
+The map of homes puts the SQLite code in @mark1russell7/sqlite. The host state store moved onto it with api-quota (0.6.3), with newer: "keep" of 0.2.5. The search index (docs.ts), the vectors (vectors.ts) and the watch list (watch.ts) still have their own pragmas, versions and rebuilds. The index and the vectors are projections, so they move to ensureProjection of @mark1russell7/sqlite 0.2.4: a file of a different version opens empty and the crawler fills it again from the capture log. watch.ts is a store, so it moves to migrate. It waits for the end of the alerts work.
+
+- Area: Package
+- Waits for: `api-quota`
+- Started: 2026-11-15
+- [sqlite #12 (migrate newer: keep, 0.2.5, done)](https://github.com/mark1russell7/sqlite/pull/12)
+
+### `report-chunks`: API report: no chunk paths (html.chunk.d.mts)
+
+The API report named build/html.chunk.d.mts 24 times. A chunk name is not a stable API: a change of the bundler renames the chunk, and the report then shows a break that is not real. The cause: html.ts and text.ts were needed by the same entries, so the bundler put them in one chunk. The fix makes text.ts (the body decoder, with no imports) an entry point of its own, polite-crawler/text, as urls became one in 0.5.1. The first try, a merge of text.ts into html.ts, broke the JavaScript budget of the site (146,597 bytes over 40,000). Two new tests: the report names only entry points, and the counts table of the API review matches the reports. A draft PR stacked on #161, 0.6.4 (PATCH: a new subpath). The local checks pass, and CI runs on 1ede2ac. The strategist asked for it on 2026-11-14.
+
+- Area: Package
+- Waits for: `api-quota`
+- Started: 2026-11-14
+- [crawler #162 (report-chunks, 0.6.4)](https://github.com/mark1russell7/crawler/pull/162)
+
+### `api-guards`: isQuotaError and isApiError: tell a quota refusal across two copies of the package
+
+For the alerts project: a package that gets a transport of withQuota, with no dependency on polite-crawler, must tell a refusal of the quota from another failure. instanceof is false when a program has two copies of the package. isQuotaError and isApiError in polite-crawler/api read the name and the fields, so they also accept the errors of another copy or of 0.6.3. send and poll use the guard too, so a refusal from another copy no longer counts as a failure of the host. In #162 with report-chunks, released as 0.6.4. The alerts channel keeps its own check until then.
+
+- Area: Package
+- Waits for: `api-quota`
+- Started: 2026-11-15
+- [crawler #162 (api-guards, 0.6.4)](https://github.com/mark1russell7/crawler/pull/162)
+- [alerts PR 19 (the ask)](https://github.com/mark1russell7/alerts/pull/19)
+
 ## Later
 
 ### `v1`: Version 1.0
@@ -29,14 +59,46 @@ Two `polite-crawler daemon` starts at the same moment on one store both pass the
 
 - Area: Package
 
-### `html-size`: The html entry grew 25 % with linkedom 0.18.15
+### `quota-service`: Quotas: move the window counting to @mark1russell7/service
 
-linkedom 0.18.15 (2026-11-01) bundles the CSS parser cssomnom in place of @acemir/cssom. The gzip size of polite-crawler/html went from 128362 to 160188 bytes (+25 %), over the 138000 budget. #80 raised the budget to 192000 to unblock CI, so the regression is real and open. To do: measure what the html entry uses of the CSS parser; then pin linkedom below 0.18.15, drop the CSS parser from the bundle, or accept the size with a reason. Put the budget back to the measured size plus a margin from its noise.
+The window counting of quotaGate (rolling buckets and calendar days and months in a zone) is a limiter, and the map of homes puts limiters in @mark1russell7/service. It moves there as a calendar-window machine on algebra/clock, keyed by quota name and key as the TakeRequest of the service limiter. polite-crawler keeps the header reading (readQuotaHeaders) and the adapter (withQuota on a fetch or a transport). The service part is a request to systems, with a second request for algebra/clock: the first instant at or after a wall time, which quota.ts now finds with instantsOf and offsetChanges. The end: 2026-11-22.
 
 - Area: Package
-- [crawler #80 (budget raised to 192000)](https://github.com/mark1russell7/crawler/pull/80)
+- Waits for: `api-quota`
+- [crawler #161 (the review that asks for the move)](https://github.com/mark1russell7/crawler/pull/161)
 
 ## Shipped
+
+### `api-quota`: API quotas: count each key over its day, month or window, and stop before the provider
+
+For the alerts project: free API keys have a documented quota (as read on 2026-11-14: Pushover 10,000 messages a month for each user account, reset at 00:00 Central Time on the 1st; NASA FIRMS 5,000 transactions in 10 minutes; OpenSky 400 to 8,000 credits a day for each endpoint group; TomTom 200,000 tiles and 20,000 other map requests a month). polite-crawler/api paced each host and reacted to a 429, but it counted no quota, so a program found the limit only when the provider refused it. quotaGate counts each key over a calendar day or month in a time zone, or a rolling window, with a cost for each call and a reserve. withQuota puts the gate on any async function (a fetch, a transport, a client), so a call over the quota is refused with its reset time and no request goes out. The headers of the provider make the count larger, never smaller. The counts stay after a restart in the SQLite host state store (schema 2 through @mark1russell7/sqlite). After the review of the strategist: each quota name and key has its own record, so a gate of a minute and a gate of a day on one key count apart. The civil time comes from @mark1russell7/algebra/clock: a window that starts in a clock gap starts at the end of the gap, and in an overlap at the first time. An error of the store after a call goes to onError, so a retry does not send the call twice.
+
+- Area: Package
+- Waits for: `api-poll`
+- Started: 2026-11-14
+- Shipped: 2026-11-15
+- [crawler #161 (quotas, 0.6.3)](https://github.com/mark1russell7/crawler/pull/161)
+
+### `html-size`: The html entry grew 25 % with linkedom 0.18.15
+
+linkedom 0.18.15 (2026-11-01) bundles the CSS parser cssomnom in place of @acemir/cssom. The gzip size of polite-crawler/html went from 128362 to 160188 bytes (+25 %), over the 138000 budget. #80 raised the budget to 192000 to unblock CI. Measured on 2026-11-15 (esbuild, browser, minified, as the smoke test): 160,172 bytes gzip, 499,612 raw, and cssomnom is 199,261 raw bytes (40 %). linkedom uses it in one place, the lazy getter HTMLStyleElement.sheet. extractPage and Readability never read it, but a bundler cannot drop a static import of a class that it keeps. A browser build that uses the DOMParser of the browser does not work: the page reader of the site runs extractPage in a Web Worker, and a worker has no DOMParser, so linkedom must ship. A pin to linkedom 0.18.14 is debt with no end. The decision: accept the size. The budget of 192,000 is already the size with 0.18.15 and 20 percent more, as for each other entry, and smoke.ts states the reason. The end of the debt is a new check in the smoke test: a budget more than 40 percent over its size fails. So when a linkedom version drops cssomnom (html near 128 KB), the PR that brings it must lower the budget, and each entry that shrinks 15 percent keeps its gain. A request to linkedom for a lazy CSS parser is outside the fleet, so it is not made.
+
+- Area: Package
+- Started: 2026-11-15
+- Shipped: 2026-11-15
+- [crawler #80 (budget raised to 192000)](https://github.com/mark1russell7/crawler/pull/80)
+- [crawler #164 (the check of a loose budget, merged 48e459a)](https://github.com/mark1russell7/crawler/pull/164)
+
+### `api-poll`: API polls: conditional requests, a required User-Agent, a time limit
+
+For the alerts project (DEFCON 1). polite-crawler/api (0.6.1) already sends documented API calls at the host pace with the outcome actions. This adds what a poll every 30 to 60 s needs: a fetch transport with a required User-Agent and a time limit, and conditional requests (ETag and If-Modified-Since kept per URL, with the crawler's validator memo), so a 304 or the same body costs little. Ships as 0.6.2 (PATCH: new exports).
+
+- Area: Package
+- Started: 2026-11-14
+- Shipped: 2026-11-14
+- [crawler #159 (feature and 0.6.2)](https://github.com/mark1russell7/crawler/pull/159)
+- [npm polite-crawler 0.6.2](https://www.npmjs.com/package/polite-crawler/v/0.6.2)
+- [merge 17c24d1](https://github.com/mark1russell7/crawler/commit/17c24d1c7154bceed3a4bb72f61eedafbb77add0)
 
 ### `mcp-lean`: MCP server: a smaller fixed cost in each session
 

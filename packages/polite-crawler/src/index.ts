@@ -253,6 +253,8 @@ export type {
   HostStop,
   PolicyOptions,
   PolitenessPolicy,
+  QuotaRecord,
+  QuotaStore,
   ValidatorAnswer,
   ValidatorLimits,
   ValidatorMemo,

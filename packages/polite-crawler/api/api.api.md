@@ -130,6 +130,9 @@ export interface HostStop {
     readonly until: number;
 }
 
+// @beta
+export function memoryQuotaStore(): QuotaStore;
+
 // @public
 export type Outcome = "ok" | "not-modified" | "redirect" | "challenge" | "payment-required" | "blocked" | "not-found" | "rate-limited" | "unavailable" | "error";
 
@@ -202,6 +205,89 @@ export interface Polled extends Answer {
 }
 
 // @beta
+export interface Quota {
+    readonly limit: number;
+    readonly name: string;
+    readonly reserve?: number | undefined;
+    // (undocumented)
+    readonly window: QuotaWindow;
+}
+
+// @beta
+export class QuotaError extends ApiError {
+    constructor(message: string, key: string, resetAt: number);
+    readonly key: string;
+    // (undocumented)
+    override readonly name: string;
+    readonly resetAt: number;
+}
+
+// @beta
+export interface QuotaGate {
+    // (undocumented)
+    readonly key: string;
+    note(reading: QuotaReading): QuotaState;
+    // (undocumented)
+    readonly quota: Quota;
+    state(): QuotaState;
+    take(cost?: number): QuotaState;
+}
+
+// @beta
+export function quotaGate(quota: Quota, options: QuotaGateOptions): QuotaGate;
+
+// @beta
+export interface QuotaGateOptions {
+    readonly key: string;
+    readonly now?: (() => number) | undefined;
+    readonly store?: QuotaStore | undefined;
+}
+
+// @beta
+export interface QuotaHeaders {
+    readonly remaining?: string | undefined;
+    readonly resetAfter?: string | undefined;
+    readonly resetAt?: string | undefined;
+}
+
+// @beta
+export interface QuotaReading {
+    readonly remaining?: number | undefined;
+    readonly resetAt?: number | undefined;
+}
+
+// @beta
+export interface QuotaRecord {
+    readonly blockedUntil?: number | undefined;
+    readonly spent: readonly (readonly [start: number, units: number])[];
+}
+
+// @beta
+export interface QuotaState {
+    readonly blockedUntil?: number | undefined;
+    readonly left: number;
+    readonly resetAt?: number | undefined;
+    readonly used: number;
+}
+
+// @beta
+export interface QuotaStore {
+    changeQuota(quota: string, key: string, step: (record: QuotaRecord | undefined) => QuotaRecord): QuotaRecord;
+}
+
+// @beta
+export type QuotaWindow = {
+    readonly kind: "rolling";
+    readonly ms: number;
+    readonly buckets?: number | undefined;
+} | {
+    readonly kind: "calendar";
+    readonly unit: "day" | "month";
+    readonly timeZone: string;
+    readonly hour?: number | undefined;
+};
+
+// @beta
 export interface ReactionContext {
     readonly now: number;
     readonly policy: PolitenessPolicy;
@@ -214,6 +300,9 @@ export const reactToOutcome: (facts: OutcomeFacts, counts: HostCounts, context: 
 
 // @beta
 export function readGrant(reply: Reply, source: string, issuedAt: number, secrets?: readonly string[], redact?: Redact): Grant;
+
+// @beta
+export function readQuotaHeaders(get: (name: string) => string | null | undefined, names: QuotaHeaders, now: number): QuotaReading | undefined;
 
 // @beta
 export type Redact = (text: string, secrets: readonly string[]) => string;
@@ -295,6 +384,16 @@ export interface ValidatorReport {
 
 // @public
 export type ValidatorVerdict = "unknown" | "works" | "fails";
+
+// @beta
+export function withQuota<A extends readonly unknown[], R>(gate: QuotaGate, call: (...args: A) => Promise<R>, options?: WithQuotaOptions<A, R>): (...args: A) => Promise<R>;
+
+// @beta
+export interface WithQuotaOptions<A extends readonly unknown[], R> {
+    readonly cost?: number | ((...args: A) => number) | undefined;
+    readonly onError?: ((error: unknown) => void) | undefined;
+    readonly read?: ((result: R) => QuotaReading | undefined) | undefined;
+}
 
 // (No @packageDocumentation comment for this package)
 

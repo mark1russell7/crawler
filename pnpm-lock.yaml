@@ -217,6 +217,12 @@ importers:
 
   packages/polite-crawler:
     dependencies:
+      '@mark1russell7/algebra':
+        specifier: ^0.8.8
+        version: 0.8.8(zod@4.6.7)
+      '@mark1russell7/sqlite':
+        specifier: ^0.2.5
+        version: 0.2.5
       '@mozilla/readability':
         specifier: ^0.6.0
         version: 0.6.0
@@ -1159,6 +1165,15 @@ packages:
       zod:
         optional: true
 
+  '@mark1russell7/algebra@0.8.8':
+    resolution: {integrity: sha512-lonD7fxwt+Y9iqVflkKqcwZ3GiegOaCknIrQ9Tz1vuqx8Wrr1fZX7S/3OtvdrSAFpC1ZLIA2a42rmVuKIEzTJg==}
+    engines: {node: '>=22.19'}
+    peerDependencies:
+      zod: ^4.1.0
+    peerDependenciesMeta:
+      zod:
+        optional: true
+
   '@mark1russell7/api-report@0.5.6':
     resolution: {integrity: sha512-WgMnxnLhm7UoZL8aaosuAk8eik69SyhgoJ6y5rSwwX4A4v9kr98/DV+uGZE6B0XsO0oCg6cg57DhPMQKapKyrw==}
     engines: {node: '>=22'}
@@ -1200,6 +1215,15 @@ packages:
 
   '@mark1russell7/quantity@0.3.5':
     resolution: {integrity: sha512-RCwaYZjMH3mVbnhLIW/xz2Enz4ekUBOY80g20pb4nhk9I1U9eDXd/eMxmkvN+/szFYjpzTRQp7Skq7zk2DVxzA==}
+    engines: {node: '>=22.19'}
+    peerDependencies:
+      zod: ^4.1.0
+    peerDependenciesMeta:
+      zod:
+        optional: true
+
+  '@mark1russell7/quantity@0.4.0':
+    resolution: {integrity: sha512-TucM9+HtueZd+duKWeB3ClS3uIaS545eOF9dB+8kM7vlD0NVBIjQd4IaIzTsQabaPG3WnlPOLJuX8H8LyqrcAQ==}
     engines: {node: '>=22.19'}
     peerDependencies:
       zod: ^4.1.0
@@ -1253,6 +1277,10 @@ packages:
     resolution: {integrity: sha512-uN7SV7VxrsMyH7/cPOUClFOnJhw24S2+qVaMIoNK+7AtJe3FB4l5qN2NowKAYvYgLcDpY4gUBlw9meJ6/Gq2pQ==}
     engines: {node: '>=22'}
     hasBin: true
+
+  '@mark1russell7/sqlite@0.2.5':
+    resolution: {integrity: sha512-T1FFG3dhupWaBFJn6oU7g5JaG5T8O0Cu4QZFu32qK7LoECzYPcWLg4/o/Hb8rsg3GmWYIK757YDnRnv8cbzrVA==}
+    engines: {node: '>=22.16'}
 
   '@mark1russell7/ste-lint@https://codeload.github.com/mark1russell7/ste-lint/tar.gz/f597d6c1e09bcfcb487bb575825d6d5f29e9e0c7':
     resolution: {gitHosted: true, integrity: sha512-HDxumpWNUeciZKaXbAGFPyoOTrt0trj7L3/koNvWnTN/vEuF0gYzqVJdsgfTQ9bE/DhSxfNMRxtrh4KYnbbimA==, tarball: https://codeload.github.com/mark1russell7/ste-lint/tar.gz/f597d6c1e09bcfcb487bb575825d6d5f29e9e0c7}
@@ -4974,6 +5002,12 @@ snapshots:
     optionalDependencies:
       zod: 4.6.7
 
+  '@mark1russell7/algebra@0.8.8(zod@4.6.7)':
+    dependencies:
+      '@mark1russell7/quantity': 0.4.0(zod@4.6.7)
+    optionalDependencies:
+      zod: 4.6.7
+
   '@mark1russell7/api-report@0.5.6':
     dependencies:
       '@mark1russell7/conventions': 0.41.5
@@ -5011,6 +5045,12 @@ snapshots:
     optionalDependencies:
       zod: 4.6.7
 
+  '@mark1russell7/quantity@0.4.0(zod@4.6.7)':
+    dependencies:
+      '@mark1russell7/rational': 0.1.2
+    optionalDependencies:
+      zod: 4.6.7
+
   '@mark1russell7/rational@0.1.2': {}
 
   '@mark1russell7/rigor-generators@0.1.14': {}
@@ -5034,6 +5074,8 @@ snapshots:
   '@mark1russell7/site-pages@0.4.8':
     dependencies:
       '@mark1russell7/rigor-statistics': 0.1.27
+
+  '@mark1russell7/sqlite@0.2.5': {}
 
   '@mark1russell7/ste-lint@https://codeload.github.com/mark1russell7/ste-lint/tar.gz/f597d6c1e09bcfcb487bb575825d6d5f29e9e0c7':
     dependencies:

@@ -152,6 +152,17 @@ export interface PolitenessPolicy {
     readonly robotsTtlMs: number;
 }
 
+// @beta
+export interface QuotaRecord {
+    readonly blockedUntil?: number | undefined;
+    readonly spent: readonly (readonly [start: number, units: number])[];
+}
+
+// @beta
+export interface QuotaStore {
+    changeQuota(quota: string, key: string, step: (record: QuotaRecord | undefined) => QuotaRecord): QuotaRecord;
+}
+
 // @public (undocumented)
 export const realClock: Clock;
 

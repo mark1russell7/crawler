@@ -497,8 +497,9 @@ export const start: typeof startMcpServer = startMcpServer;
     signals: 1100,
     // the size of version 0.5.1, and 20 percent more
     urls: 850,
-    // the size of version 0.6.2 (4121 B, with fetchTransport and poll), and 20 percent more
-    api: 4950,
+    // the size of version 0.6.3 (6793 B, with fetchTransport, poll, the quotas and the civil time of
+    // @mark1russell7/algebra/clock), and 20 percent more
+    api: 8150,
     html: 192_000,
   };
   // A budget is the size of an entry and 20 percent more. When the entry shrinks, a budget that

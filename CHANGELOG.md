@@ -15,6 +15,15 @@ A prerelease version (`0.2.0-beta.1`) goes to the npm tag `next`. Each other ver
 
 ## Unreleased
 
+## 0.6.3 - 2026-11-15
+
+- **Quotas of API keys in `polite-crawler/api`.** Each new export is beta.
+  - `quotaGate` counts the calls of one key in a window: a calendar day or month in a time zone, or a rolling window. It refuses a call over the quota with a `QuotaError` that gives `resetAt`, before the call starts. The option `reserve` keeps units unused.
+  - `withQuota` puts a gate on an async function and keeps its type: a `fetch`, a transport of `send` and `poll`, or a different client. Its option `cost` gives the units of a call (0 counts nothing), and its option `read` adds what the answer of the provider tells. `readQuotaHeaders` reads the count and the reset time from the headers of an answer.
+  - `send` and `poll` give a `QuotaError` of the transport as it is, and the host keeps its state.
+  - `memoryQuotaStore` keeps the counts in memory. `SqliteHostStateStore` keeps them in its file (the new table `quotas`, schema version 2), so a count stays after a restart and two processes share it. The root and `polite-crawler/politeness` export the types `QuotaRecord` and `QuotaStore`, next to `HostStateStore`.
+- **`SqliteHostStateStore` opens, migrates and locks its file through `@mark1russell7/sqlite`.** Its behavior does not change: a file of each earlier version opens, and a file of a later version keeps its number.
+
 ## 0.6.2 - 2026-11-14
 
 - **Polls of an API in `polite-crawler/api`.** Each new export is beta.

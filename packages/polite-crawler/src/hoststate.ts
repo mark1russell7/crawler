@@ -1,13 +1,14 @@
 import { randomUUID } from "node:crypto";
-import { mkdirSync } from "node:fs";
-import { dirname } from "node:path";
-import type { StatementSync } from "node:sqlite";
-import { DatabaseSync } from "node:sqlite";
+import type { DatabaseSync, StatementSync } from "node:sqlite";
+import type { Migration } from "@mark1russell7/sqlite";
+import { migrate, openDatabase, transaction } from "@mark1russell7/sqlite";
 import type {
   HostCounts,
   HostResult,
   HostStateStore,
   HostStop,
+  QuotaRecord,
+  QuotaStore,
   ValidatorMemo,
   ValidatorReport,
   ValidatorVerdict,
@@ -21,10 +22,47 @@ const SHARED_WAIT_MS = 1000;
 /** The store removes the rows of idle hosts after this many reservations. */
 const SWEEP_EVERY = 1000;
 /**
+ * These are the steps of the schema of the file, for `migrate` of `@mark1russell7/sqlite`. The
+ * version of a file (`PRAGMA user_version`) is the count of its steps. Do not change a step: add a step.
+ */
+const MIGRATIONS: readonly Migration[] = [
+  // Step 1 makes the tables of version 1. A file of version 0.1.0 (version 0) has the table
+  // `hosts` already, so the step keeps it and adds the table `validators`.
+  `CREATE TABLE IF NOT EXISTS hosts (
+    host TEXT PRIMARY KEY,
+    next_at REAL NOT NULL DEFAULT 0,
+    leased_until REAL NOT NULL DEFAULT 0,
+    owner TEXT,
+    failures INTEGER NOT NULL DEFAULT 0,
+    waits INTEGER NOT NULL DEFAULT 0,
+    stop_until REAL,
+    stop_reason TEXT
+  );
+  CREATE TABLE IF NOT EXISTS validators (
+    host TEXT PRIMARY KEY,
+    skip_etag INTEGER NOT NULL DEFAULT 0,
+    etag TEXT NOT NULL DEFAULT 'unknown',
+    last_modified TEXT NOT NULL DEFAULT 'unknown',
+    etag_misses INTEGER NOT NULL DEFAULT 0,
+    date_misses INTEGER NOT NULL DEFAULT 0,
+    since_probe INTEGER NOT NULL DEFAULT 0,
+    changed_at REAL NOT NULL DEFAULT 0
+  )`,
+  // Step 2 (0.6.3) adds the record of each quota and key, as JSON (`QuotaRecord`).
+  `CREATE TABLE IF NOT EXISTS quotas (
+    quota TEXT NOT NULL,
+    key TEXT NOT NULL,
+    record TEXT NOT NULL,
+    PRIMARY KEY (quota, key)
+  )`,
+];
+
+/**
  * This value is the version of the schema of the file (`PRAGMA user_version`). Version 0 (0.1.0)
  * has the table `hosts`. Version 1 adds the table `validators`, and it reads a file of version 0.
+ * Version 2 (0.6.3) adds the table `quotas`.
  */
-export const HOST_STATE_SCHEMA = 1;
+export const HOST_STATE_SCHEMA: number = MIGRATIONS.length;
 
 interface MemoRow {
   skip_etag: number;
@@ -84,12 +122,15 @@ export interface SqliteHostStateOptions {
  * The table `validators` keeps the validator memo of each host (`ValidatorMemo`), so the processes
  * share it and it stays after a restart. A file of version 0.1.0 gets the table when it opens.
  *
+ * The table `quotas` keeps the record of each quota and key of `polite-crawler/api` (`QuotaStore`). Give
+ * the store to `quotaGate`, so the count of a key stays after a restart and the processes share it.
+ *
  * The state is not a projection of the capture log. A deletion of the file loses only the pace,
  * the counts, the stops and the memos, and the crawler starts them again.
  *
  * @beta
  */
-export class SqliteHostStateStore implements HostStateStore {
+export class SqliteHostStateStore implements HostStateStore, QuotaStore {
   private readonly db: DatabaseSync;
   private readonly statements = new Map<string, StatementSync>();
   /** This id names the leases of this store. */
@@ -102,49 +143,23 @@ export class SqliteHostStateStore implements HostStateStore {
     readonly path: string,
     options: SqliteHostStateOptions = {},
   ) {
-    if (path !== ":memory:") mkdirSync(dirname(path), { recursive: true, mode: 0o700 });
     this.pollMs = Math.max(1, Math.min(SHARED_WAIT_MS, options.pollMs ?? SHARED_WAIT_MS));
-    this.db = new DatabaseSync(path);
-    const wait = Math.max(0, Math.floor(options.busyTimeoutMs ?? 10_000));
-    this.db.exec(`PRAGMA busy_timeout = ${String(wait)};`);
-    if (path !== ":memory:") this.db.exec("PRAGMA journal_mode = WAL;");
-    this.db.exec("PRAGMA synchronous = NORMAL;");
-    this.migrate();
-  }
-
-  /**
-   * This method makes the tables, or adds the tables of a later version to an older file. It is one
-   * transaction, so two processes that open one old file at the same time do not collide.
-   */
-  private migrate(): void {
-    this.step(() => {
-      this.db.exec(`CREATE TABLE IF NOT EXISTS hosts (
-        host TEXT PRIMARY KEY,
-        next_at REAL NOT NULL DEFAULT 0,
-        leased_until REAL NOT NULL DEFAULT 0,
-        owner TEXT,
-        failures INTEGER NOT NULL DEFAULT 0,
-        waits INTEGER NOT NULL DEFAULT 0,
-        stop_until REAL,
-        stop_reason TEXT
-      )`);
-      this.db.exec(`CREATE TABLE IF NOT EXISTS validators (
-        host TEXT PRIMARY KEY,
-        skip_etag INTEGER NOT NULL DEFAULT 0,
-        etag TEXT NOT NULL DEFAULT 'unknown',
-        last_modified TEXT NOT NULL DEFAULT 'unknown',
-        etag_misses INTEGER NOT NULL DEFAULT 0,
-        date_misses INTEGER NOT NULL DEFAULT 0,
-        since_probe INTEGER NOT NULL DEFAULT 0,
-        changed_at REAL NOT NULL DEFAULT 0
-      )`);
-      const { user_version: version } = this.db.prepare("PRAGMA user_version").get() as {
-        user_version: number;
-      };
-      // a file of a later version keeps its number
-      if (version < HOST_STATE_SCHEMA)
-        this.db.exec(`PRAGMA user_version = ${String(HOST_STATE_SCHEMA)}`);
+    this.db = openDatabase(path, {
+      wal: path !== ":memory:",
+      synchronous: "NORMAL",
+      busyTimeoutMs: Math.max(0, Math.floor(options.busyTimeoutMs ?? 10_000)),
+      makeFolder: true,
+      folderMode: 0o700,
     });
+    try {
+      // Each step of the schema adds only tables or columns, so this code works on the file of a
+      // later version, and the file keeps its number (`newer: "keep"`). Two versions of the crawler
+      // can thus share one file.
+      migrate(this.db, MIGRATIONS, { name: "host state store", newer: "keep" });
+    } catch (error) {
+      this.db.close();
+      throw error;
+    }
   }
 
   private stmt(sql: string): StatementSync {
@@ -159,15 +174,7 @@ export class SqliteHostStateStore implements HostStateStore {
   /** This method does one step in one transaction. */
   private step<T>(work: () => T): T {
     if (this.closed) throw new Error("the host state store is closed");
-    this.db.exec("BEGIN IMMEDIATE");
-    try {
-      const result = work();
-      this.db.exec("COMMIT");
-      return result;
-    } catch (error) {
-      if (this.db.isTransaction) this.db.exec("ROLLBACK");
-      throw error;
-    }
+    return transaction(this.db, work);
   }
 
   private row(host: string): Row {
@@ -311,6 +318,35 @@ export class SqliteHostStateStore implements HostStateStore {
         memo.changedAt,
       );
       return memo;
+    });
+  }
+
+  /**
+   * This method changes the record of a quota and a key in one transaction. So two processes cannot
+   * count one call twice or lose a call. A row that is not JSON goes to `step` as no record. The gate
+   * of `quotaGate` examines each record that it gets.
+   */
+  changeQuota(
+    quota: string,
+    key: string,
+    step: (record: QuotaRecord | undefined) => QuotaRecord,
+  ): QuotaRecord {
+    return this.step(() => {
+      const row = this.stmt("SELECT record FROM quotas WHERE quota = ? AND key = ?").get(
+        quota,
+        key,
+      ) as { record: string } | undefined;
+      let stored: QuotaRecord | undefined;
+      try {
+        stored = row === undefined ? undefined : (JSON.parse(row.record) as QuotaRecord);
+      } catch {
+        stored = undefined;
+      }
+      const next = step(stored);
+      this.stmt(
+        "INSERT INTO quotas (quota, key, record) VALUES (?, ?, ?) ON CONFLICT(quota, key) DO UPDATE SET record = excluded.record",
+      ).run(quota, key, JSON.stringify(next));
+      return next;
     });
   }
 

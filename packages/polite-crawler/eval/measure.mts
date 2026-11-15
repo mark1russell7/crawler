@@ -11,8 +11,8 @@
  *
  * The same WACZ file gives the same numbers at each run:
  *
- * - The replay fetches the URLs one at a time, in the order of the claims, on a clock that starts
- *   at the first capture of the archive and moves only when the crawler waits.
+ * - The replay fetches the URLs one at a time, in the order of the claims. Its clock starts at the
+ *   first capture of the archive, and it moves only when the crawler waits.
  * - During the tool calls, `Date.now` gives the time of that clock, so the age of each copy is
  *   the same at each run.
  * - Each tool result has a random envelope id. The count replaces it with an id of the same
@@ -253,7 +253,7 @@ export const readClaims = (json: string): Claim[] => {
 };
 
 /** This function gives a clock that starts at a time and moves only when the crawler waits. */
-const replayClock = (start: number): Clock => {
+export const replayClock = (start: number): Clock => {
   let now = start;
   return {
     now: () => now,
@@ -271,7 +271,7 @@ const DROPPED_HEADERS: ReadonlySet<string> = new Set([
 ]);
 
 /** This function gives a mock agent that answers each request from the archive, and refuses the network. */
-const replayAgent = (archive: Archive, urls: readonly string[]): MockAgent => {
+export const replayAgent = (archive: Archive, urls: readonly string[]): MockAgent => {
   const agent = new MockAgent();
   agent.disableNetConnect();
   const origins = new Set<string>();

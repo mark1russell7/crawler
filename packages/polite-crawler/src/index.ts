@@ -292,6 +292,7 @@ export {
   runRecipe,
 } from "./recipe.ts";
 export type {
+  VenueChoice,
   VenueLink,
   VenueLocation,
   VenueOptions,
@@ -304,6 +305,7 @@ export type {
 } from "./recipe-venue.ts";
 export {
   VENUE_LIMITS,
+  chooseVenueReadings,
   locationMatches,
   namesVenue,
   rankHoursLinks,

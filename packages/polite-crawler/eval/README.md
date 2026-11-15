@@ -1,6 +1,8 @@
 # The eval: tokens per verified claim
 
-This folder holds the two parts of the eval of polite-crawler. Part A is a count in CI, with no model. It counts the text that an agent reads to verify a claim with polite-crawler, and the text of the WebFetch way. Part B starts real sessions of Claude Code in CI. It measures the tokens and the cost with the count of the API.
+This folder holds the evals of polite-crawler. Part A is a count in CI, with no model. It counts the text that an agent reads to verify a claim with polite-crawler, and the text of the WebFetch way. Part B starts real sessions of Claude Code in CI. It measures the tokens and the cost with the count of the API.
+
+Part C, the decision eval, asks a different question. It measures two choices of the venue recipe against the hours of OpenStreetMap.
 
 The eval asks one question. To prove an answer with an exact quote from a page, how many tokens does an agent read?
 
@@ -213,3 +215,116 @@ The run did not start the WebFetch arm again, because it changed nothing for Web
 - WebFetch still costs less. A token that Sonnet writes to its cache costs 25 times a token that it reads from the cache (2.50 USD against 0.10 USD for one million). The writes to the cache are 69% of the cost of the arm `mcp-quote`.
 - A median session of `mcp-quote` writes 4,502 tokens to the cache. The main model of WebFetch writes 2,206. The small model of WebFetch reads the page (a median of 13,133 tokens) as input, at 0.10 USD for one million.
 - For 90 sessions, `mcp-quote` cost 0.5717 USD more than WebFetch, and its writes to the cache cost 0.6215 USD more. The shorter tool text cut mostly the reads from the cache, the cheapest kind of token.
+
+## Part C: the decision eval
+
+Part C asks a different question. The venue recipe (`readVenue`) makes two choices with a fixed rule. How frequently does the rule choose correctly? The hours of OpenStreetMap are the reference.
+
+Part C uses no model. It makes the labelled data that a later step uses to compare a model with the rule. The code is in `decisions/`.
+
+### The two choices
+
+| Choice | The rule | The question |
+| --- | --- | --- |
+| Links | `rankHoursLinks` ranks the links of the home page. `readVenue` fetches the first 3 (`VENUE_LIMITS.pages`). | The home page alone does not agree, and a candidate page agrees. Does a page of the first 3 links of the rule agree? |
+| Best | `chooseVenueReadings` orders the readings and chooses the best reading, as `readVenue` does. | A reading of the pages of the rule agrees. Does the best reading agree? |
+
+### The labels
+
+A week agrees with OpenStreetMap when these two conditions are true:
+
+- `compareHours` finds no day that changed between the week of OpenStreetMap (`fromCompact(opening_hours, "osm")`) and the week of the reading.
+- The two weeks share one day or more. A week that shares no day with OpenStreetMap tells nothing (`no-overlap`).
+
+Thus a reading that gives only some days agrees when those days are the same. The eval uses the reader and the comparison of the crawler. It has no reader of hours of its own.
+
+The candidate links of a home page are the first 8 links of `rankHoursLinks`. Then they are the first 8 other links of the site, in the order of the page. The eval leaves out the links to other sites, to files (a PDF, an image) and to the home page, as `rankHoursLinks` does. Thus the crawler fetches a maximum of 17 pages for each site.
+
+Each page gets one label:
+
+| Label | What it tells |
+| --- | --- |
+| `agrees` | A reading of the page agrees. |
+| `disagrees` | No reading agrees, and a reading disagrees. |
+| `no-hours` | The page has no reading that shares a day with OpenStreetMap. |
+| `no-page` | The archive has no page that the crawler can read: a refusal, an error, or a page that asked not to be AI input. |
+
+Each venue gets one outcome for each choice:
+
+| Choice | Outcome | What it tells |
+| --- | --- | --- |
+| Links | `no-home` | The archive has no home page that the crawler can read. |
+| Links | `home-agrees` | The home page alone agrees. |
+| Links | `rule-hit` | The home page does not agree, and a page of the first 3 links of the rule agrees. |
+| Links | `rule-miss` | The home page does not agree, another candidate page agrees, and no page of the first 3 links of the rule agrees. |
+| Links | `no-page-agrees` | No page agrees. |
+| Best | `no-home` | The archive has no home page that the crawler can read. |
+| Best | `no-reading` | The home page and the pages of the rule give no reading. |
+| Best | `none-agrees` | No reading of these pages agrees. |
+| Best | `hit` | A reading agrees, and the best reading agrees. |
+| Best | `miss` | A reading agrees, and the best reading does not agree. |
+
+The score of the links is the `rule-hit` venues, of the `rule-hit` and `rule-miss` venues. The score of the best reading is the `hit` venues, of the `hit` and `miss` venues. The result also gives the venues where no page agrees, because this count is a finding. The hours of OpenStreetMap can be old. A site can give its hours in a form that the crawler cannot read.
+
+### The areas
+
+`decisions/areas.json` has three areas: central Edinburgh (United Kingdom), central Portland (Oregon, United States) and central Melbourne (Australia). Each area has a name and a box.
+
+The eval keeps a venue when these conditions are true:
+
+- It is a node or a way with `amenity` of `restaurant`, `cafe`, `bar`, `pub` or `fast_food`, or with a `shop` tag.
+- It has a `website` tag and an `opening_hours` tag.
+- `fromCompact` reads its `opening_hours` as a week with one day or more.
+
+A seeded draw keeps a maximum of 400 venues of each area.
+
+### The steps
+
+1. `collect.mts` (online, CI only) sends one Overpass query for each area through `send` of `polite-crawler/api`, at the pace of the host. Its User-Agent names the crawler and its repository. A query that times out (a 504, or a remark of a runtime error) splits its tile into four tiles, to a depth of 3. The step writes `venues.json`.
+2. `crawl.mts` (online, CI only) visits each venue with `visitVenue`. It fetches the home page, then each candidate link. robots.txt, the pace of each site, the stops and the rule for a held-back page apply. The rules for `Claude-User` in robots.txt apply too, because a model reads the labels later. No visit starts after the budget (80 minutes in the workflow). The step exports one WACZ file with the refusals and the redirects, `decisions.wacz`. It writes the status of each venue to `decisions-crawl.json`.
+3. `replay.mts` (offline) replays the WACZ file into a new store with `replayVenues` (`replay-venues.mts`), as part A does. It visits each venue of the log again with `visitVenue`, in the order of the ids. A URL that is not in the archive gets a 404, and no request goes to the network. Then the step labels each venue, splits the venues and scores the two choices. It writes `labels.jsonl` and `result.json`.
+
+The split puts each venue in the train half or the test half. In each area, it orders the venues by a seeded hash of the OpenStreetMap id (`deriveSeed` of `@mark1russell7/rigor-generators`). The first half of the order is the train half. The split uses each venue of `venues.json`, so the half of a venue does not change with the crawl.
+
+### The result
+
+`labels.jsonl` has one line for each venue. The line has the OpenStreetMap id, the area, the half, the site and the week of OpenStreetMap as words. It also has the label of the home page, the candidate links, the readings, the place of the best reading and the two outcomes. Each candidate link has its features and its label:
+
+| Field | What it holds |
+| --- | --- |
+| `url`, `text`, `path` | The link and its text |
+| `position` | The place of the link among the links of the home page (1 is the first) |
+| `rule_rank` | The place of the link in the result of `rankHoursLinks` (1 is the first), or null |
+| `label`, `readings` | The label of the page and the count of its readings |
+
+`result.json` has these fields:
+
+| Field | What it holds |
+| --- | --- |
+| `attribution` | © OpenStreetMap contributors (ODbL) |
+| `package`, `commit` | The version of the crawler and the commit |
+| `archive` | The WACZ file: its SHA-256, the counts of responses and redirects, and the first capture |
+| `venues` | The venues of the file, the venues of the replay, and the venues that the budget stopped or did not start |
+| `split` | The seed, and the count of each half |
+| `rule_pages`, `candidates` | The pages of the rule (3), and the counts of candidate links (8 and 8) |
+| `pages` | The fetches of the replay, and the pages that asked not to be AI input |
+| `links`, `best` | The scores of the two choices, for all the venues, each half and each area |
+
+Each rate has `k`, `n`, `value`, and the 95% Wilson interval `low` and `high` (`wilson` of `@mark1russell7/rigor-statistics`). The value is null when `n` is 0. The score of the links has `no_home`, `home_agrees`, `no_page_agrees` and `rule`. The score of the best reading has `no_home`, `no_reading`, `none_agrees` and `rule`.
+
+### The data rules
+
+- The data of OpenStreetMap is © OpenStreetMap contributors (ODbL). Each summary of these data carries this attribution: the job summary, and each page of the docs that gives the numbers.
+- `venues.json`, `decisions.wacz`, `decisions-crawl.json`, `labels.jsonl` and `result.json` are artifacts of CI only. They do not go into the repository, and `.gitignore` has their names.
+- robots.txt, the pace rules and the privacy rules are the rules of the crawler. The eval does not decide them, and a model does not decide them.
+- The online steps operate only in CI, not on a shared computer.
+
+### Start part C
+
+```sh
+gh workflow run decisions.yml -R mark1russell7/crawler -f per_area=400 -f budget=80
+```
+
+The job `archive` uploads the artifact `decisions-archive`: `venues.json`, `decisions.wacz` and `decisions-crawl.json`. The job `score` uploads the artifact `decisions-result`: `labels.jsonl`, `result.json` and `decisions-summary.md`. The job summary shows the tables.
+
+The tests `label.test.ts`, `score.test.ts`, `venues.test.ts`, `visit.test.ts` and `replay-venues.test.ts` use made-up venues and pages on mock hosts, with no network. `visit.test.ts` makes sure that the eval chooses the same best reading as `readVenue` on the same pages. `replay-venues.test.ts` records a crawl as a WACZ file, replays it, and makes sure that the labels do not change. The test command of the package starts them.

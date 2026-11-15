@@ -15,6 +15,8 @@ A prerelease version (`0.2.0-beta.1`) goes to the npm tag `next`. Each other ver
 
 ## Unreleased
 
+- **The new function `chooseVenueReadings`.** It orders the readings of a venue, as `readVenue` does. It gives the best reading, the best reading of the site and the days of disagreement. `readVenue` uses it, and the result of `readVenue` does not change. The decision eval (part C of `eval/README.md`) uses it to score the choice of `readVenue` with no copy of the rule. The function and its type `VenueChoice` are beta.
+
 ## 0.7.4 - 2026-11-15
 
 - **The new function `freshUntil` in `polite-crawler/api`.** It gives the end of the freshness of an answer, as RFC 9111 §4.2 calculates it, in milliseconds since the epoch. A client that keeps the answers of `poll` and `send` asks again at that time. The sources in sequence are `max-age`, `Expires` minus `Date`, and 10 percent of the age of `Last-Modified`, with a maximum. The crawler uses the same function for the field `fresh_until` of a capture, so the freshness of a capture does not change. The function is beta.

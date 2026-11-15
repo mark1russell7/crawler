@@ -103,6 +103,8 @@
   "devDependencies": {
     "@huggingface/transformers": "^4.3.1",
     "@mark1russell7/cue": "github:mark1russell7/cue#f2bb6026e14fcfb782eef3e02771ce983d4bff55",
+    "@mark1russell7/rigor-generators": "^0.1.16",
+    "@mark1russell7/rigor-statistics": "^0.2.2",
     "@microsoft/api-extractor": "^7.59.3",
     "@modelcontextprotocol/sdk": "^1.32.1",
     "@types/node": "^22.19.0",

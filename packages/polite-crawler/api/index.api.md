@@ -258,6 +258,9 @@ export type Changefreq = "always" | "hourly" | "daily" | "weekly" | "monthly" | 
 export const checkFields: (source: ExtractSource, fields: Readonly<Record<string, FieldClaim>>) => FieldsChecked;
 
 // @beta
+export const chooseVenueReadings: (readings: readonly VenueReading[]) => VenueChoice;
+
+// @beta
 export const CHUNK_LIMITS: {
     readonly maxTokens: number;
     readonly defaultTokens: number;
@@ -2893,6 +2896,14 @@ export const VENUE_LIMITS: {
     readonly links: number;
     readonly nearMetres: number;
 };
+
+// @beta
+export interface VenueChoice {
+    readonly best: VenueReading | null;
+    readonly disagree: readonly Day[];
+    readonly from_site: VenueReading | null;
+    readonly readings: readonly VenueReading[];
+}
 
 // @public
 export interface VenueLink {

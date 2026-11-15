@@ -1,0 +1,118 @@
+# The decision eval, part C (packages/polite-crawler/eval/README.md tells the method). It measures
+# two choices of the venue recipe against the hours of OpenStreetMap: the links that readVenue
+# fetches, and the reading that it chooses. It calls no model.
+#   gh workflow run decisions.yml -R mark1russell7/crawler --ref <branch>
+#
+# - The job "archive" asks the Overpass API for the venues of the areas (eval/decisions/areas.json),
+#   visits each venue with polite-crawler (robots.txt and the pace of each site apply), and exports
+#   the store as one WACZ file.
+# - The job "score" replays the WACZ file with no network, labels each venue and scores the two
+#   choices. The job summary has the tables.
+#
+# The data of OpenStreetMap is © OpenStreetMap contributors (ODbL). The venues, the WACZ file of
+# other sites, the labels and the result are artifacts only. They never go into the repository.
+# The workflow runs only when a person starts it.
+name: Decisions
+
+on:
+  workflow_dispatch:
+    inputs:
+      per_area:
+        description: The most venues of each area
+        default: "400"
+      budget:
+        description: The minutes of the crawl after which no visit starts
+        default: "80"
+
+permissions:
+  contents: read
+
+# One run at a time, so two runs never fetch from the same sites at the same time.
+concurrency:
+  group: decisions
+  cancel-in-progress: false
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  archive:
+    name: Collect the venues and archive their sites
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      PER_AREA: ${{ inputs.per_area || '400' }}
+      BUDGET: ${{ inputs.budget || '80' }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # The pnpm version comes from "packageManager" in package.json
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+
+      # One Overpass query for each tile of each area, at the pace of the host.
+      - name: Collect the venues
+        run: >-
+          pnpm exec tsx packages/polite-crawler/eval/decisions/collect.mts
+          --out venues.json --per-area "$PER_AREA"
+
+      # The home page and the candidate links of each venue, then one WACZ file.
+      - name: Archive the sites of the venues
+        run: >-
+          pnpm exec tsx packages/polite-crawler/eval/decisions/crawl.mts
+          --venues venues.json --wacz decisions.wacz --log decisions-crawl.json --budget "$BUDGET"
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: ${{ !cancelled() }}
+        with:
+          name: decisions-archive
+          path: |
+            venues.json
+            decisions.wacz
+            decisions-crawl.json
+          if-no-files-found: warn
+          retention-days: 90
+
+  score:
+    name: Label and score from the WACZ file, with no network
+    needs: archive
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: decisions-archive
+          path: .
+
+      - name: Label and score
+        run: >-
+          pnpm exec tsx packages/polite-crawler/eval/decisions/replay.mts
+          --from decisions.wacz --venues venues.json --crawl decisions-crawl.json
+          --labels labels.jsonl --out result.json --markdown decisions-summary.md
+          --summary "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: ${{ !cancelled() }}
+        with:
+          name: decisions-result
+          path: |
+            labels.jsonl
+            result.json
+            decisions-summary.md
+          if-no-files-found: warn
+          retention-days: 90

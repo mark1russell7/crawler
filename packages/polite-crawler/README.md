@@ -293,7 +293,7 @@ The engine of the time travel, the diff and the watch list is `versionAtTime`, `
 
 The engine of hybrid search is `createHybridSearch`, `HybridSearchOptions`, `VectorStore`, `VECTORS_SCHEMA` and the types of the vector store. It also includes `chunkText`, `chunkTokensOf`, `estimateTokens`, `CHUNK_LIMITS`, `fuseRanks`, `unitVector`, `isLoopback`, `FeatureExtractor`, `TransformersModule`, the optional method `ReadingIndex.digests` and `DocIndex.digests`. The file `vectors.sqlite` is a projection, as the index is: it is not part of the stable store.
 
-The engine of the recipes is `registerRecipe`, `rankHoursLinks`, `namesVenue`, `locationMatches`, `pickProduct`, `pickVariant`, `readAmount`, `VENUE_LIMITS`, `PRODUCT_LIMITS`, `RECIPE_LIMITS` and the `steps` of `VenueRead` and `ProductRead`. The words that rank a link or a label are the engine too, so a version can improve them.
+The engine of the recipes is `registerRecipe`, `rankHoursLinks`, `chooseVenueReadings`, `namesVenue`, `locationMatches`, `pickProduct`, `pickVariant`, `readAmount`, `VENUE_LIMITS`, `PRODUCT_LIMITS`, `RECIPE_LIMITS` and the `steps` of `VenueRead` and `ProductRead`. The words that rank a link or a label are the engine too, so a version can improve them.
 
 The engine of the archived fallback and of the signatures is `archiveExtractor`, `archivedDocId`, and the `fallback` and `archiveDespiteRobots` of `PageOptions`. It also includes `range`, `signalLines` and `originalHeaderPrefix` of `FetchRequest`, `ai_input` of `ExtractedDoc`, `sign` of `RenderOptions` and `signer` of `CrawlerOptions`.
 

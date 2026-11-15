@@ -15,6 +15,8 @@ A prerelease version (`0.2.0-beta.1`) goes to the npm tag `next`. Each other ver
 
 ## Unreleased
 
+- **The watch list makes its table and its index at each open again**, as before 0.7.1. In 0.7.1, `migrate` started no step on a file of version 1. Thus a file that lost the table `watches` or the index `watches_due`, for example by a hand edit, failed. Such a file works again. The watches of a lost table do not come back.
+
 ## 0.7.1 - 2026-11-15
 
 - **The search index, the vectors and the watch list open their files through `@mark1russell7/sqlite`**, as the host state store does since 0.6.3. The files (`index.sqlite`, `vectors.sqlite` and `watch.sqlite`) do not change. A file of each earlier version opens as before, and a file of a later version works as before.

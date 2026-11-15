@@ -21,6 +21,18 @@ const open = async (): Promise<{ dir: string; path: string; store: VectorStore }
   return { dir, path, store };
 };
 
+/**
+ * This function opens a file with node:sqlite. The cleanups close it after the test, also when an
+ * assertion fails first: on Windows an open file keeps its folder from being removed.
+ */
+const rawDatabase = (path: string): DatabaseSync => {
+  const db = new DatabaseSync(path);
+  cleanups.push(() => {
+    if (db.isOpen) db.close();
+  });
+  return db;
+};
+
 const v = (...values: number[]): Float32Array => unitVector(values);
 
 const write = (
@@ -116,8 +128,7 @@ describe("VectorStore", () => {
   it("reads the vectors while a different process holds the write lock", async () => {
     const { path, store } = await open();
     write(store, "s1", [v(1, 0, 0)], ["a"]);
-    const writer = new DatabaseSync(path);
-    cleanups.push(() => writer.close());
+    const writer = rawDatabase(path);
     writer.exec("PRAGMA busy_timeout = 0");
     writer.exec("BEGIN IMMEDIATE");
     // the read of the vectors takes no write lock: a write lock would wait, then throw "database is locked"
@@ -155,14 +166,14 @@ describe("VectorStore", () => {
     const { path, store } = await open();
     write(store, "s1", [v(1, 0, 0)], ["a"]);
     store.close();
-    const db = new DatabaseSync(path);
+    const db = rawDatabase(path);
     db.exec(`PRAGMA user_version = ${String(VECTORS_SCHEMA + 1)}`);
     db.close();
     const again = new VectorStore(path);
     cleanups.push(() => again.close());
     expect(again.counts()).toEqual({ texts: 0, chunks: 0, docs: 0, bytes: 0 });
     // the file gets this version, and the store works on it
-    const raw = new DatabaseSync(path);
+    const raw = rawDatabase(path);
     expect(raw.prepare("PRAGMA user_version").get()).toEqual({ user_version: VECTORS_SCHEMA });
     raw.close();
     write(again, "s1", [v(1, 0, 0)], ["a"]);
@@ -171,6 +182,7 @@ describe("VectorStore", () => {
     expect(() => store.plan("e", "s1")).toThrow(/closed/);
     expect(() => write(store, "s1", [v(1, 0, 0)], ["a"])).toThrow(/closed/);
     const memory = new VectorStore(":memory:");
+    cleanups.push(() => memory.close());
     expect(memory.counts().texts).toBe(0);
     memory.close();
   });
@@ -180,15 +192,16 @@ describe("VectorStore", () => {
     write(store, "s1", [v(1, 0, 0)], ["a"]);
     store.close();
     const kept = new VectorStore(path);
+    cleanups.push(() => kept.close());
     expect(kept.counts().texts).toBe(1);
     kept.close();
-    const db = new DatabaseSync(path);
+    const db = rawDatabase(path);
     db.exec("DROP TABLE vectors_meta");
     db.close();
     const again = new VectorStore(path);
     cleanups.push(() => again.close());
     expect(again.counts()).toEqual({ texts: 1, chunks: 1, docs: 1, bytes: 12 });
-    const raw = new DatabaseSync(path);
+    const raw = rawDatabase(path);
     expect(raw.prepare("SELECT name FROM sqlite_master WHERE name = 'vectors_meta'").get()).toEqual(
       { name: "vectors_meta" },
     );

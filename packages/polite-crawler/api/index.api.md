@@ -2066,6 +2066,7 @@ export interface ProductVariant {
 // @beta
 export interface QuotaRecord {
     readonly blockedUntil?: number | undefined;
+    readonly readAt?: number | undefined;
     readonly spent: readonly (readonly [start: number, units: number])[];
 }
 

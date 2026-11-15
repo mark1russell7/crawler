@@ -93,6 +93,11 @@ export interface QuotaState {
   readonly resetAt?: number | undefined;
   /** The provider refused the key until this time, in milliseconds since the epoch. */
   readonly blockedUntil?: number | undefined;
+  /**
+   * This value is the time of the state, in milliseconds since the epoch. For the state that `take`
+   * gives, it is the time of the units of the call, which `giveBack` needs.
+   */
+  readonly at?: number | undefined;
 }
 
 /**
@@ -254,7 +259,11 @@ const isTime = (value: unknown): value is number =>
  */
 const recordOf = (value: unknown): QuotaRecord | undefined => {
   if (typeof value !== "object" || value === null) return undefined;
-  const { spent, blockedUntil } = value as { spent?: unknown; blockedUntil?: unknown };
+  const { spent, blockedUntil, readAt } = value as {
+    spent?: unknown;
+    blockedUntil?: unknown;
+    readAt?: unknown;
+  };
   if (!Array.isArray(spent)) return undefined;
   const items: (readonly [number, number])[] = [];
   for (const item of spent as unknown[]) {
@@ -263,7 +272,11 @@ const recordOf = (value: unknown): QuotaRecord | undefined => {
     if (isTime(start) && isTime(units) && units >= 0) items.push([start, units]);
   }
   items.sort((a, b) => a[0] - b[0]);
-  return isTime(blockedUntil) ? { spent: items, blockedUntil } : { spent: items };
+  return {
+    spent: items,
+    ...(isTime(blockedUntil) ? { blockedUntil } : {}),
+    ...(isTime(readAt) ? { readAt } : {}),
+  };
 };
 
 /** This function removes the buckets that do not count at the time `t`, and an ended refusal. */
@@ -271,7 +284,12 @@ const prune = (span: Span, record: QuotaRecord | undefined, t: number): QuotaRec
   const counts = span.counting(t);
   const spent = (record?.spent ?? []).filter(([start]) => counts(start));
   const blockedUntil = record?.blockedUntil;
-  return blockedUntil !== undefined && blockedUntil > t ? { spent, blockedUntil } : { spent };
+  const readAt = record?.readAt;
+  return {
+    spent,
+    ...(blockedUntil !== undefined && blockedUntil > t ? { blockedUntil } : {}),
+    ...(readAt === undefined ? {} : { readAt }),
+  };
 };
 
 const usedOf = (record: QuotaRecord): number =>
@@ -321,6 +339,16 @@ export interface QuotaGate {
   note(reading: QuotaReading): QuotaState;
   /** This method gives the state at this time, and changes nothing. */
   state(): QuotaState;
+  /**
+   * This method gives back `cost` units that `take` counted at the time `at` (the `at` of its
+   * state), for a call that did not start. `withQuota` uses it for a list of gates. When the gate
+   * read the count of the provider at the time `at` or later, the method changes nothing. That
+   * reading can include the units. So the count does not become lower than the count of the provider
+   * at any time. A gate made by `quotaGate` has this method.
+   *
+   * @throws ApiError when the cost is negative or not finite, or when `at` is not a time.
+   */
+  giveBack?(cost: number, at: number): QuotaState;
 }
 
 /**
@@ -364,7 +392,7 @@ export function quotaGate(quota: Quota, options: QuotaGateOptions): QuotaGate {
   const store = options.store ?? memoryQuotaStore();
   const now = options.now ?? Date.now;
   const allowed = limit - reserve;
-  const stateOf = (record: QuotaRecord): QuotaState => {
+  const stateOf = (record: QuotaRecord, t: number): QuotaState => {
     const used = usedOf(record);
     const resetAt = record.spent.length === 0 ? undefined : span.freeAt(record.spent[0]![0]);
     return {
@@ -372,6 +400,7 @@ export function quotaGate(quota: Quota, options: QuotaGateOptions): QuotaGate {
       left: record.blockedUntil === undefined ? Math.max(0, allowed - used) : 0,
       ...(resetAt === undefined ? {} : { resetAt }),
       ...(record.blockedUntil === undefined ? {} : { blockedUntil: record.blockedUntil }),
+      at: t,
     };
   };
   // the record of the quota and the key, so two quotas of one key in one store count apart
@@ -380,7 +409,7 @@ export function quotaGate(quota: Quota, options: QuotaGateOptions): QuotaGate {
     const record = store.changeQuota(name, key, (stored) =>
       step(prune(span, recordOf(stored), t), t),
     );
-    return stateOf(prune(span, recordOf(record), t));
+    return stateOf(prune(span, recordOf(record), t), t);
   };
   // a read that writes the record back as it is, so a store needs only one method
   const state = (): QuotaState => change((record) => record);
@@ -441,6 +470,8 @@ export function quotaGate(quota: Quota, options: QuotaGateOptions): QuotaGate {
         if (remaining !== undefined && Number.isFinite(remaining) && remaining >= 0) {
           const more = limit - remaining - usedOf(next);
           if (more > 0) next = add(span, next, t, more);
+          // a later give-back cannot know if this count includes its units, so it changes nothing
+          next = { ...next, readAt: Math.max(next.readAt ?? t, t) };
         }
         const exhausted = remaining === undefined || remaining <= 0;
         if (exhausted && resetAt !== undefined && Number.isFinite(resetAt) && resetAt > t) {
@@ -450,6 +481,24 @@ export function quotaGate(quota: Quota, options: QuotaGateOptions): QuotaGate {
       });
     },
     state,
+    giveBack(cost, at) {
+      if (!Number.isFinite(cost) || cost < 0) {
+        throw new ApiError(
+          `The cost of a give-back is not a number of 0 or more: ${String(cost)}.`,
+        );
+      }
+      if (!isTime(at)) throw new ApiError(`The time of a give-back is not a time: ${String(at)}.`);
+      if (cost === 0) return state();
+      return change((record) => {
+        if (record.readAt !== undefined && record.readAt >= at) return record;
+        // the units are in the bucket of their time, and a bucket out of the window is gone
+        const [start] = span.bucket(at);
+        const spent = record.spent.flatMap(([from, units]): (readonly [number, number])[] =>
+          from !== start ? [[from, units]] : units > cost ? [[from, units - cost]] : [],
+        );
+        return { ...record, spent };
+      });
+    },
   };
 }
 
@@ -485,8 +534,13 @@ export interface WithQuotaOptions<A extends readonly unknown[], R> {
    * default is 1. Give 0 for a call that the provider does not count: the gate then does not refuse it.
    */
   readonly cost?: number | ((...args: A) => number) | undefined;
-  /** This function reads what the result of a call tells of the count of the provider, for example with `readQuotaHeaders`. */
-  readonly read?: ((result: R) => QuotaReading | undefined) | undefined;
+  /**
+   * This function reads what the result of a call tells of the count of the provider, for example
+   * with `readQuotaHeaders`. With a list of gates, it reads once for each gate. A provider often
+   * tells the count of one quota only: then give its reading for that gate, and undefined for the
+   * other gates.
+   */
+  readonly read?: ((result: R, gate: QuotaGate) => QuotaReading | undefined) | undefined;
   /**
    * This function gets an error of `read` or of the store after the call. The call went out, so
    * `withQuota` gives its result. It does not throw, because a retry after a throw sends the call
@@ -495,30 +549,109 @@ export interface WithQuotaOptions<A extends readonly unknown[], R> {
   readonly onError?: ((error: unknown) => void) | undefined;
 }
 
+const isGateList = (gate: QuotaGate | readonly QuotaGate[]): gate is readonly QuotaGate[] =>
+  Array.isArray(gate);
+
+/** This function checks the gates of `withQuota`: a list has gates that can give back units. */
+const gateList = (gate: QuotaGate | readonly QuotaGate[]): readonly QuotaGate[] => {
+  if (!isGateList(gate)) return [gate];
+  if (gate.length === 0) throw new ApiError("The list of gates of withQuota is empty.");
+  const seen = new Set<string>();
+  for (const each of gate) {
+    const named = `the quota ${each.quota.name} of ${each.key}`;
+    if (gate.length > 1 && each.giveBack === undefined) {
+      throw new ApiError(`The gate of ${named} cannot give back units, so it cannot be in a list.`);
+    }
+    // a store keeps one record for each name and key, so two such gates count each call twice
+    const id = JSON.stringify([each.quota.name, each.key]);
+    if (seen.has(id)) throw new ApiError(`Two gates of the list have ${named}.`);
+    seen.add(id);
+  }
+  return [...gate];
+};
+
+/** This function gives back the units of each gate that counted them, and gives each error to `onError`. */
+const giveBackAll = (
+  taken: readonly (readonly [QuotaGate, number | undefined])[],
+  cost: number,
+  onError: ((error: unknown) => void) | undefined,
+): void => {
+  for (const [gate, at] of taken) {
+    try {
+      if (at === undefined) {
+        throw new ApiError(
+          `The gate of the quota ${gate.quota.name} of ${gate.key} gave no time for its units, so it cannot give them back.`,
+        );
+      }
+      gate.giveBack?.(cost, at);
+    } catch (error) {
+      onError?.(error);
+    }
+  }
+};
+
 /**
- * This function puts a gate on an async function, and keeps the type of the function. Each call
- * counts its units first. A call over the quota throws `QuotaError`, and the function does not start.
+ * This function counts `cost` units in each gate, or in none. When a gate refuses, the gates that
+ * counted give back the units: the call did not start. The next gates still answer, so the
+ * `QuotaError` has the latest time of a reset.
+ */
+const takeAll = (
+  gates: readonly QuotaGate[],
+  cost: number,
+  onError: ((error: unknown) => void) | undefined,
+): void => {
+  const taken: (readonly [QuotaGate, number | undefined])[] = [];
+  let refusal: QuotaError | undefined;
+  try {
+    for (const gate of gates) {
+      try {
+        taken.push([gate, gate.take(cost).at]);
+      } catch (error) {
+        if (!isQuotaError(error) || gates.length === 1) throw error;
+        if (refusal === undefined || error.resetAt > refusal.resetAt) refusal = error;
+      }
+    }
+    if (refusal !== undefined) throw refusal;
+  } catch (error) {
+    giveBackAll(taken, cost, onError);
+    throw error;
+  }
+};
+
+/**
+ * This function puts a gate, or a list of gates, on an async function, and keeps the type of the
+ * function. Each call counts its units first. A call over the quota throws `QuotaError`, and the
+ * function does not start.
  *
  * Give the result to a client that takes a function of this type. For example, `withQuota(gate,
- * fetch)` is a `fetch`, and `withQuota(gate, transport)` is a transport of `send` and `poll`. Put two gates on
- * one function for two quotas of one key.
+ * fetch)` is a `fetch`, and `withQuota(gate, transport)` is a transport of `send` and `poll`.
  *
+ * For two quotas of one key, give a list: `withQuota([perMinute, perDay], fetch)`. The list counts
+ * the call in each gate or in none. Do not put one gate in the function of another. The outer gate
+ * cannot know if a request went out before the inner gate refused (`send` retries). So it keeps
+ * the units of the call.
+ *
+ * @throws ApiError when the list is empty, or when a gate of a list of two or more has no
+ * `giveBack`. Also when two gates of the list have one quota name and key.
  * @beta
  */
 export function withQuota<A extends readonly unknown[], R>(
-  gate: QuotaGate,
+  gate: QuotaGate | readonly QuotaGate[],
   call: (...args: A) => Promise<R>,
   options: WithQuotaOptions<A, R> = {},
 ): (...args: A) => Promise<R> {
+  const gates = gateList(gate);
   const { cost, read, onError } = options;
   return async (...args: A): Promise<R> => {
-    gate.take(typeof cost === "function" ? cost(...args) : (cost ?? 1));
+    takeAll(gates, typeof cost === "function" ? cost(...args) : (cost ?? 1), onError);
     const result = await call(...args);
-    try {
-      const reading = read?.(result);
-      if (reading !== undefined) gate.note(reading);
-    } catch (error) {
-      onError?.(error);
+    for (const each of gates) {
+      try {
+        const reading = read?.(result, each);
+        if (reading !== undefined) each.note(reading);
+      } catch (error) {
+        onError?.(error);
+      }
     }
     return result;
   };
@@ -532,23 +665,60 @@ export function withQuota<A extends readonly unknown[], R>(
 export interface QuotaHeaders {
   /** This header has the count of units that the provider gives before its reset, for example `x-ratelimit-remaining`. */
   readonly remaining?: string | undefined;
-  /** This header has the time of the reset in seconds since the epoch, for example `x-ratelimit-reset`. */
+  /**
+   * This header has the time of the reset, for example `x-ratelimit-reset`. The function reads its
+   * form from its size. A value under 10^9 is the seconds until the reset, as `RateLimit-Reset` of
+   * the IETF draft gives them. A value from 10^9 to under 10^11 is seconds since the epoch. A value
+   * from 10^11 is milliseconds since the epoch.
+   */
   readonly resetAt?: string | undefined;
   /**
    * This header has the seconds until the reset, or the HTTP date of the reset, as `retry-after`
-   * gives them. When it has a value, the gate does not read `resetAt`.
+   * gives them. When it has a value that the function can read, the function does not read `resetAt`.
    */
   readonly resetAfter?: string | undefined;
 }
 
 const COUNT = /^\d{1,15}$/;
 const SECONDS = /^\d{1,12}(?:\.\d{1,3})?$/;
+const RESET = /^\d{1,15}(?:\.\d{1,3})?$/;
+
+/**
+ * A reset value under this bound is a count of seconds until the reset. As seconds since the epoch,
+ * it is a time before 2001-09-09T01:46:40Z, and no reset of a provider is that early.
+ */
+export const SECONDS_SINCE_EPOCH_FROM = 1e9;
+/**
+ * A reset value from this bound is in milliseconds since the epoch. As seconds since the epoch, it
+ * is a time in the year 5138, and as milliseconds it is a time in 1973.
+ */
+export const MILLISECONDS_SINCE_EPOCH_FROM = 1e11;
+
+/**
+ * This function gives the time of a reset, in milliseconds since the epoch, from the number of a
+ * reset header. The three forms of the header do not overlap:
+ *
+ * - under `SECONDS_SINCE_EPOCH_FROM` (10^9): seconds until the reset, from `now`
+ * - from 10^9 to under `MILLISECONDS_SINCE_EPOCH_FROM` (10^11): seconds since the epoch
+ * - from 10^11: milliseconds since the epoch
+ */
+export const resetTimeOf = (value: number, now: number): number =>
+  value < SECONDS_SINCE_EPOCH_FROM
+    ? now + value * 1000
+    : value < MILLISECONDS_SINCE_EPOCH_FROM
+      ? value * 1000
+      : value;
 
 /**
  * This function reads the count of a provider from the headers of an answer. `get` gives the value
  * of one header, for example `(name) => response.headers.get(name)` for a `fetch` answer, or
  * `(name) => reply.headers[name]` for a `Reply`. A value that is not a number is not read. A value of
- * `resetAfter` can also be an HTTP date, as in `Retry-After`.
+ * `resetAfter` can also be an HTTP date, as in `Retry-After`. The value of `resetAt` can be in each
+ * of three forms, which the function tells apart by their size.
+ *
+ * A reset with no count tells that the provider refuses the key until that time. The answer can
+ * have a reset header, and no `remaining` header with a number. Then the gate stops the key until
+ * the reset, also after a successful answer.
  *
  * @returns the reading, or undefined when no header has a value.
  * @beta
@@ -565,7 +735,7 @@ export function readQuotaHeaders(
     return found !== undefined && form.test(found) ? Number(found) : undefined;
   };
   const remaining = value(names.remaining, COUNT);
-  const at = value(names.resetAt, SECONDS);
+  const at = value(names.resetAt, RESET);
   // seconds with a fraction, as some providers give, and then the two forms of Retry-After
   const afterText = text(names.resetAfter);
   const after =
@@ -574,7 +744,8 @@ export function readQuotaHeaders(
       : SECONDS.test(afterText)
         ? Number(afterText) * 1000
         : parseRetryAfter(afterText, now);
-  const resetAt = after !== undefined ? now + after : at === undefined ? undefined : at * 1000;
+  const resetAt =
+    after !== undefined ? now + after : at === undefined ? undefined : resetTimeOf(at, now);
   if (remaining === undefined && resetAt === undefined) return undefined;
   return {
     ...(remaining === undefined ? {} : { remaining }),

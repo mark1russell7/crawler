@@ -156,6 +156,12 @@ export interface QuotaRecord {
   readonly spent: readonly (readonly [start: number, units: number])[];
   /** The provider refused the key until this time, in milliseconds since the epoch. */
   readonly blockedUntil?: number | undefined;
+  /**
+   * The gate last read the count of the provider at this time, in milliseconds since the epoch. A
+   * give-back of units that the gate counted at this time or earlier changes nothing, because the
+   * reading can include those units.
+   */
+  readonly readAt?: number | undefined;
 }
 
 /**

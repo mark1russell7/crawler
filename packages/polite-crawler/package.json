@@ -80,7 +80,7 @@
     "version": "node ../../scripts/version.ts"
   },
   "dependencies": {
-    "@mark1russell7/service": "^0.8.19",
+    "@mark1russell7/service": "^0.8.20",
     "@mark1russell7/sqlite": "^0.3.2",
     "@mozilla/readability": "^0.6.0",
     "linkedom": "^0.18.13",

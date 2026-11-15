@@ -503,9 +503,11 @@ export const start: typeof startMcpServer = startMcpServer;
     urls: 850,
     // the size of version 0.7.0 (1126 B, the body decoder), and 20 percent more
     text: 1360,
-    // the size of version 0.6.3 (6793 B, with fetchTransport, poll, the quotas and the civil time of
-    // @mark1russell7/algebra/clock), and 20 percent more
-    api: 8150,
+    // the size with the limiter of @mark1russell7/service 0.8.20 (13418 B: its quota logic, and the
+    // exact time units of @mark1russell7/quantity 0.4.1), and 20 percent more. The quotas have one
+    // home, the limiter. The part "api without the quota gates" below holds the size for a caller
+    // that does not use them.
+    api: 16_102,
     html: 192_000,
   };
   // A budget is the size of an entry and 20 percent more. When the entry shrinks, a budget that
@@ -523,11 +525,12 @@ export const start: typeof startMcpServer = startMcpServer;
       { readonly entry: string; readonly without: readonly string[]; readonly budget: number }
     >
   > = {
-    // the size of version 0.7.4 with the quotas of @mark1russell7/service (4552 B), and 20 percent more
+    // the size with freshUntil and the quotas of @mark1russell7/service 0.8.20 (4915 B), and 20
+    // percent more
     "api without the quota gates": {
       entry: "api",
       without: ["quotaGate", "withQuota"],
-      budget: 5463,
+      budget: 5898,
     },
   };
   const resolveInConsumer = createRequire(join(consumer, "package.json")).resolve;

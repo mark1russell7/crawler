@@ -2063,6 +2063,17 @@ export interface ProductVariant {
     readonly sku: string | null;
 }
 
+// @beta
+export interface QuotaRecord {
+    readonly blockedUntil?: number | undefined;
+    readonly spent: readonly (readonly [start: number, units: number])[];
+}
+
+// @beta
+export interface QuotaStore {
+    changeQuota(key: string, step: (record: QuotaRecord | undefined) => QuotaRecord): QuotaRecord;
+}
+
 // @public
 export interface Ranked {
     // (undocumented)
@@ -2645,8 +2656,9 @@ export interface SqliteHostStateOptions {
 }
 
 // @beta
-export class SqliteHostStateStore implements HostStateStore {
+export class SqliteHostStateStore implements HostStateStore, QuotaStore {
     constructor(path: string, options?: SqliteHostStateOptions);
+    changeQuota(key: string, step: (record: QuotaRecord | undefined) => QuotaRecord): QuotaRecord;
     close(): void;
     // (undocumented)
     defer(host: string, until: number): void;

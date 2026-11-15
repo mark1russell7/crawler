@@ -177,6 +177,8 @@ type ProductOptions: build/index.d.mts#ProductOptions
 type ProductRead: build/index.d.mts#ProductRead
 type ProductResult: build/index.d.mts#ProductResult
 type ProductVariant: build/index.d.mts#ProductVariant
+type QuotaRecord: build/politeness.d.mts#QuotaRecord
+type QuotaStore: build/politeness.d.mts#QuotaStore
 RECIPE_LIMITS: build/index.d.mts#RECIPE_LIMITS
 RESERVED_RECIPES: build/index.d.mts#RESERVED_RECIPES
 type RankMode: build/index.d.mts#RankMode
@@ -459,6 +461,8 @@ MemoryHostStateStore: build/politeness.d.mts#MemoryHostStateStore
 Paced: build/politeness.d.mts#Paced
 PolicyOptions: build/politeness.d.mts#PolicyOptions
 PolitenessPolicy: build/politeness.d.mts#PolitenessPolicy
+QuotaRecord: build/politeness.d.mts#QuotaRecord
+QuotaStore: build/politeness.d.mts#QuotaStore
 Rest: build/politeness.d.mts#Rest
 RestInput: build/politeness.d.mts#RestInput
 SchedulerOptions: build/politeness.d.mts#SchedulerOptions
@@ -518,6 +522,16 @@ type Paced: build/politeness.d.mts#Paced
 type PolicyOptions: build/politeness.d.mts#PolicyOptions
 type PolitenessPolicy: build/politeness.d.mts#PolitenessPolicy
 Polled: build/api.d.mts#Polled
+type Quota: build/api.d.mts#Quota
+QuotaError: build/api.d.mts#QuotaError
+type QuotaGate: build/api.d.mts#QuotaGate
+type QuotaGateOptions: build/api.d.mts#QuotaGateOptions
+type QuotaHeaders: build/api.d.mts#QuotaHeaders
+type QuotaReading: build/api.d.mts#QuotaReading
+type QuotaRecord: build/politeness.d.mts#QuotaRecord
+type QuotaState: build/api.d.mts#QuotaState
+type QuotaStore: build/politeness.d.mts#QuotaStore
+type QuotaWindow: build/api.d.mts#QuotaWindow
 type ReactionContext: build/api.d.mts#ReactionContext
 Redact: build/api.d.mts#Redact
 Reply: build/api.d.mts#Reply
@@ -530,15 +544,20 @@ type ValidatorAnswer: build/politeness.d.mts#ValidatorAnswer
 type ValidatorMemo: build/politeness.d.mts#ValidatorMemo
 type ValidatorReport: build/politeness.d.mts#ValidatorReport
 type ValidatorVerdict: build/politeness.d.mts#ValidatorVerdict
+type WithQuotaOptions: build/api.d.mts#WithQuotaOptions
 fetchTransport: build/api.d.mts#fetchTransport
+memoryQuotaStore: build/api.d.mts#memoryQuotaStore
 outcomeResult: build/api.d.mts#outcomeResult
 poll: build/api.d.mts#poll
+quotaGate: build/api.d.mts#quotaGate
 reactToOutcome: build/api.d.mts#reactToOutcome
 readGrant: build/api.d.mts#readGrant
+readQuotaHeaders: build/api.d.mts#readQuotaHeaders
 send: build/api.d.mts#send
 sendWithToken: build/api.d.mts#sendWithToken
 statusLine: build/api.d.mts#statusLine
 tokenStore: build/api.d.mts#tokenStore
+withQuota: build/api.d.mts#withQuota
 
 ## ./record.schema.json: no declaration file for ./record.schema.json
 
@@ -649,6 +668,71 @@ export interface Polled extends Answer {
   readonly changed: boolean;
 }
 
+### build/api.d.mts#Quota
+interface Quota {
+  readonly name: string;
+  readonly limit: number;
+  readonly reserve?: number | undefined;
+  readonly window: QuotaWindow;
+}
+
+### build/api.d.mts#QuotaError
+export declare class QuotaError extends ApiError {
+  override readonly name: string;
+  readonly key: string;
+  readonly resetAt: number;
+  constructor(message: string, key: string, resetAt: number);
+}
+
+### build/api.d.mts#QuotaGate
+interface QuotaGate {
+  readonly quota: Quota;
+  readonly key: string;
+  take(cost?: number): QuotaState;
+  note(reading: QuotaReading): QuotaState;
+  state(): QuotaState;
+}
+
+### build/api.d.mts#QuotaGateOptions
+interface QuotaGateOptions {
+  readonly key: string;
+  readonly store?: QuotaStore | undefined;
+  readonly now?: (() => number) | undefined;
+}
+
+### build/api.d.mts#QuotaHeaders
+interface QuotaHeaders {
+  readonly remaining?: string | undefined;
+  readonly resetAt?: string | undefined;
+  readonly resetAfter?: string | undefined;
+}
+
+### build/api.d.mts#QuotaReading
+interface QuotaReading {
+  readonly remaining?: number | undefined;
+  readonly resetAt?: number | undefined;
+}
+
+### build/api.d.mts#QuotaState
+interface QuotaState {
+  readonly used: number;
+  readonly left: number;
+  readonly resetAt?: number | undefined;
+  readonly blockedUntil?: number | undefined;
+}
+
+### build/api.d.mts#QuotaWindow
+type QuotaWindow = {
+  readonly kind: "rolling";
+  readonly ms: number;
+  readonly buckets?: number | undefined;
+} | {
+  readonly kind: "calendar";
+  readonly unit: "day" | "month";
+  readonly timeZone: string;
+  readonly hour?: number | undefined;
+};
+
 ### build/api.d.mts#ReactionContext
 interface ReactionContext {
   readonly policy: PolitenessPolicy;
@@ -697,8 +781,17 @@ export interface Tokens<S extends Signal = AbortSignal> {
 ### build/api.d.mts#Transport
 export type Transport<S extends Signal = AbortSignal> = (exchange: Exchange, signal: S | undefined) => Promise<Reply>;
 
+### build/api.d.mts#WithQuotaOptions
+interface WithQuotaOptions<A extends readonly unknown[], R> {
+  readonly cost?: number | ((...args: A) => number) | undefined;
+  readonly read?: ((result: R) => QuotaReading | undefined) | undefined;
+}
+
 ### build/api.d.mts#fetchTransport
 export declare function fetchTransport(options: FetchTransportOptions): Transport;
+
+### build/api.d.mts#memoryQuotaStore
+export declare function memoryQuotaStore(): QuotaStore;
 
 ### build/api.d.mts#outcomeResult
 export declare const outcomeResult: (facts: OutcomeFacts) => HostResult;
@@ -706,11 +799,17 @@ export declare const outcomeResult: (facts: OutcomeFacts) => HostResult;
 ### build/api.d.mts#poll
 export declare function poll<S extends Signal = AbortSignal>(pace: Pace<S>, transport: Transport<S>, conditions: Conditions, input: Send, signal?: S): Promise<Polled>;
 
+### build/api.d.mts#quotaGate
+export declare function quotaGate(quota: Quota, options: QuotaGateOptions): QuotaGate;
+
 ### build/api.d.mts#reactToOutcome
 export declare const reactToOutcome: (facts: OutcomeFacts, counts: HostCounts, context: ReactionContext) => HostReaction;
 
 ### build/api.d.mts#readGrant
 export declare function readGrant(reply: Reply, source: string, issuedAt: number, secrets?: readonly string[], redact?: Redact): Grant;
+
+### build/api.d.mts#readQuotaHeaders
+export declare function readQuotaHeaders(get: (name: string) => string | null | undefined, names: QuotaHeaders, now: number): QuotaReading | undefined;
 
 ### build/api.d.mts#send
 export declare function send<S extends Signal = AbortSignal>(pace: Pace<S>, transport: Transport<S>, input: Send, signal?: S): Promise<Answer>;
@@ -723,6 +822,9 @@ export declare function statusLine(reply: Reply): string;
 
 ### build/api.d.mts#tokenStore
 export declare function tokenStore<S extends Signal = AbortSignal>(grant: (signal: S | undefined) => Promise<Grant>, now: () => number): Tokens<S>;
+
+### build/api.d.mts#withQuota
+export declare function withQuota<A extends readonly unknown[], R>(gate: QuotaGate, call: (...args: A) => Promise<R>, options?: WithQuotaOptions<A, R>): (...args: A) => Promise<R>;
 
 ### build/classify.d.mts#Classified
 export interface Classified {
@@ -2682,7 +2784,7 @@ interface SqliteHostStateOptions {
 }
 
 ### build/index.d.mts#SqliteHostStateStore
-export declare class SqliteHostStateStore implements HostStateStore {
+export declare class SqliteHostStateStore implements HostStateStore, QuotaStore {
   readonly path: string;
   constructor(path: string, options?: SqliteHostStateOptions);
   reserve(host: string, now: number, leaseMs: number): number;
@@ -2694,6 +2796,7 @@ export declare class SqliteHostStateStore implements HostStateStore {
   reset(host?: string): void;
   validators(host: string): ValidatorMemo | undefined;
   noteValidators(host: string, report: ValidatorReport, now: number): ValidatorMemo;
+  changeQuota(key: string, step: (record: QuotaRecord | undefined) => QuotaRecord): QuotaRecord;
   get size(): number;
   close(): void;
 }
@@ -3615,6 +3718,17 @@ export interface PolitenessPolicy {
   readonly robotsRetryCapMs: number;
   readonly robotsStaleMs: number;
   readonly heuristicFreshnessCapMs: number;
+}
+
+### build/politeness.d.mts#QuotaRecord
+export interface QuotaRecord {
+  readonly spent: readonly (readonly [start: number, units: number])[];
+  readonly blockedUntil?: number | undefined;
+}
+
+### build/politeness.d.mts#QuotaStore
+export interface QuotaStore {
+  changeQuota(key: string, step: (record: QuotaRecord | undefined) => QuotaRecord): QuotaRecord;
 }
 
 ### build/politeness.d.mts#Rest

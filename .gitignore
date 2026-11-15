@@ -123,3 +123,11 @@ venues.json
 decisions-crawl.json
 labels.jsonl
 /result.json
+# Step 2 of the decision eval: the training rows, the checkpoints and the results of Laya
+/laya-*.json
+/laya-*.jsonl
+/laya-*.md
+/laya-*.log
+/laya-pip-freeze.txt
+/laya-base/
+/laya-trained/

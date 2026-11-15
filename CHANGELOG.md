@@ -15,6 +15,8 @@ A prerelease version (`0.2.0-beta.1`) goes to the npm tag `next`. Each other ver
 
 ## Unreleased
 
+## 0.7.5 - 2026-11-15
+
 - **The quotas count their windows with the limiter of `@mark1russell7/service`.** `quotaGate` maps a quota to a quota spec of `@mark1russell7/service/limiter` and gives your `QuotaStore` to it through an adapter. A list of gates in `withQuota` takes through `takeQuotas`, all or none. The API does not change, and the files of `SqliteHostStateStore` do not change. The option `maxBlockMs`, the bound on a provider block, goes to `maxBlock` of the spec. The crawler needs `@mark1russell7/service` 0.8.20 or later, and it no longer needs `@mark1russell7/algebra` directly.
 - **The size of the quotas in a browser.** A browser bundle of all of `polite-crawler/api` goes from 7.9 KB to 13.4 KB (gzip), for the limiter and its exact time units. A bundle that does not import `quotaGate` or `withQuota` does not get the limiter: it is 4.9 KB, less than before.
 

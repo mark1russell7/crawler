@@ -420,6 +420,29 @@ describe("the index file", () => {
     expect(second.stale).toBe(false);
   });
 
+  it("opens a file of a later version empty and stale, and the file gets this version", async () => {
+    const dir = await tempDir("index");
+    cleanups.push(() => removeDir(dir));
+    const path = join(dir, "index.sqlite");
+    const first = new DocIndex(path);
+    first.upsert(version("fetch.a", "2026-10-01T00:00:00.000Z", "old text"), "x");
+    first.close();
+    // a later version adds a table and raises the number
+    const later = new DatabaseSync(path);
+    later.exec(`CREATE TABLE later (x TEXT); PRAGMA user_version = ${String(INDEX_SCHEMA + 1)}`);
+    later.close();
+    const again = new DocIndex(path);
+    cleanups.push(() => again.close());
+    expect(again.stale).toBe(true);
+    expect(again.counts()).toEqual({ docs: 0, urls: 0 });
+    const raw = new DatabaseSync(path);
+    cleanups.push(() => raw.close());
+    expect(raw.prepare("PRAGMA user_version").get()).toEqual({ user_version: INDEX_SCHEMA });
+    expect(
+      raw.prepare("SELECT name FROM sqlite_master WHERE name = 'later'").get(),
+    ).toBeUndefined();
+  });
+
   it("joins a transaction that the caller opened on its connection", () => {
     const index = memory();
     const db = (index as unknown as { db: DatabaseSync }).db;

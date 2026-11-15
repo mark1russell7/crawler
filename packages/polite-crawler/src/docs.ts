@@ -1,8 +1,6 @@
 import { createHash } from "node:crypto";
-import { mkdirSync } from "node:fs";
-import { dirname } from "node:path";
-import type { StatementSync } from "node:sqlite";
-import { DatabaseSync } from "node:sqlite";
+import type { DatabaseSync, StatementSync } from "node:sqlite";
+import { ensureProjection, openDatabase, tableColumns, transaction } from "@mark1russell7/sqlite";
 import { fold, parseQuery, snippetOf } from "./fold.ts";
 import type { Archived } from "./fallback.ts";
 import type { AiInput } from "./signals.ts";
@@ -645,11 +643,16 @@ export class DocIndex implements ReadingIndex {
     readonly path: string,
     options: DocIndexOptions = {},
   ) {
-    if (path !== ":memory:") mkdirSync(dirname(path), { recursive: true, mode: 0o700 });
-    this.db = new DatabaseSync(path);
-    // the wait for the lock of a different process comes first, before any statement that writes
-    const wait = Math.max(0, Math.floor(options.busyTimeoutMs ?? 10_000));
-    this.db.exec(`PRAGMA busy_timeout = ${String(wait)};`);
+    // openDatabase sets the wait for the lock of a different process first, before any statement
+    // that writes. The index is a projection, so a power cut can cost its last transactions and
+    // nothing else (`synchronous: "NORMAL"`).
+    this.db = openDatabase(path, {
+      wal: path !== ":memory:",
+      synchronous: "NORMAL",
+      busyTimeoutMs: Math.max(0, Math.floor(options.busyTimeoutMs ?? 10_000)),
+      makeFolder: true,
+      folderMode: 0o700,
+    });
     try {
       this.db.exec(
         "CREATE VIRTUAL TABLE temp.polite_fts5_probe USING fts5(x, content = '', contentless_delete = 1); DROP TABLE temp.polite_fts5_probe;",
@@ -661,41 +664,31 @@ export class DocIndex implements ReadingIndex {
         { cause },
       );
     }
-    if (path !== ":memory:") this.db.exec("PRAGMA journal_mode = WAL;");
-    // the index is a projection, so a power cut can cost its last transactions and nothing else
-    this.db.exec("PRAGMA synchronous = NORMAL;");
-    this.empty = this.write(() => this.prepareSchema());
+    try {
+      this.empty = this.write(() => this.prepareSchema());
+    } catch (error) {
+      this.db.close();
+      throw error;
+    }
   }
 
   /** This method makes the tables of the schema. It gives true when the index opened empty. */
   private prepareSchema(): boolean {
-    const version = (this.db.prepare("PRAGMA user_version").get() as { user_version: number })
-      .user_version;
-    const tables = this.db
-      .prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%'")
-      .all() as Array<{ name: string }>;
-    if (version === INDEX_SCHEMA && tables.some((table) => table.name === "index_meta")) {
-      this.dropAbandoned();
-      return false;
-    }
-    // an index of a different schema is a projection: it opens empty, and reindex fills it
-    const virtual = this.db
-      .prepare(
-        "SELECT name FROM sqlite_master WHERE type = 'table' AND sql LIKE 'CREATE VIRTUAL TABLE%'",
-      )
-      .all() as Array<{ name: string }>;
-    for (const { name } of virtual) this.db.exec(`DROP TABLE IF EXISTS "${name}"`);
-    const rest = this.db
-      .prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%'")
-      .all() as Array<{ name: string }>;
-    for (const { name } of rest) this.db.exec(`DROP TABLE IF EXISTS "${name}"`);
-    this.db.exec("CREATE TABLE index_meta (key TEXT PRIMARY KEY, value TEXT NOT NULL)");
-    this.db.exec(ddlOf(namesOf(1)));
-    this.statements.clear();
-    this.setMeta("generation", "1");
-    this.setMeta("next_generation", "2");
-    this.db.exec(`PRAGMA user_version = ${String(INDEX_SCHEMA)}`);
-    return true;
+    // An index of a different schema, or with no table `index_meta`, is a projection: it opens
+    // empty, and reindex fills it. A file of a later version opens empty too, and gets this version.
+    const { rebuilt } = ensureProjection(
+      this.db,
+      (db) => {
+        db.exec("CREATE TABLE index_meta (key TEXT PRIMARY KEY, value TEXT NOT NULL)");
+        db.exec(ddlOf(namesOf(1)));
+        this.statements.clear();
+        this.setMeta("generation", "1");
+        this.setMeta("next_generation", "2");
+      },
+      { version: INDEX_SCHEMA, check: (db) => tableColumns(db, "index_meta").length > 0 },
+    );
+    if (!rebuilt) this.dropAbandoned();
+    return rebuilt;
   }
 
   private setMeta(key: string, value: string): void {
@@ -722,29 +715,16 @@ export class DocIndex implements ReadingIndex {
 
   /**
    * This method does a write in one transaction. A transaction in progress takes the write in,
-   * also a transaction that the caller opened on the connection.
+   * also a transaction that the caller opened on the connection. The write is then a savepoint of
+   * that transaction.
    */
   private write<T>(work: () => T): T {
     if (this.closed) throw new Error("the index is closed");
-    if (this.depth > 0 || this.db.isTransaction) {
-      this.depth += 1;
-      try {
-        return work();
-      } finally {
-        this.depth -= 1;
-      }
-    }
-    this.db.exec("BEGIN IMMEDIATE");
-    this.depth = 1;
+    this.depth += 1;
     try {
-      const result = work();
-      this.db.exec("COMMIT");
-      return result;
-    } catch (error) {
-      if (this.db.isTransaction) this.db.exec("ROLLBACK");
-      throw error;
+      return transaction(this.db, work, { nested: "savepoint" });
     } finally {
-      this.depth = 0;
+      this.depth -= 1;
     }
   }
 

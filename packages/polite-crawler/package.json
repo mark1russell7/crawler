@@ -81,7 +81,7 @@
   },
   "dependencies": {
     "@mark1russell7/algebra": "^0.8.8",
-    "@mark1russell7/sqlite": "^0.2.5",
+    "@mark1russell7/sqlite": "^0.3.2",
     "@mozilla/readability": "^0.6.0",
     "linkedom": "^0.18.13",
     "undici": "^8.12.3",

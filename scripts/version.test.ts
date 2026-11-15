@@ -11,8 +11,10 @@ import {
   CHANGELOGS,
   NO_NOTES,
   PACKAGES,
+  SERVER_CHANGELOG,
   addSection,
   compareVersions,
+  serverNotes,
   syncVersion,
 } from "./version.ts";
 
@@ -100,6 +102,13 @@ void describe("addSection", () => {
     );
   });
 
+  void it("writes the given line when Unreleased has no notes", () => {
+    assert.equal(
+      addSection("## Unreleased\n\n## 0.2.4\n", "0.3.0", "2026-11-02", "- Other."),
+      "## Unreleased\n\n## 0.3.0 - 2026-11-02\n\n- Other.\n\n## 0.2.4\n",
+    );
+  });
+
   void it("does not change a changelog that has the section of the version", () => {
     const text = "## Unreleased\n\n- New.\n\n## 0.3.0 - 2026-11-01\n\n- Old.\n";
     assert.equal(addSection(text, "0.3.0", "2026-11-02"), text);
@@ -152,6 +161,21 @@ void describe("syncVersion", () => {
     const second = syncVersion(dir, "2026-11-03");
     assert.deepEqual(second, { version: "9.8.7", changed: [] });
     assert.deepEqual(FILES.map(read), snapshot);
+  });
+
+  void it("names the version of the library in the changelog of the server", () => {
+    assert.ok(CHANGELOGS.includes(SERVER_CHANGELOG));
+    for (const file of CHANGELOGS) writeFileSync(join(dir, file), "# Changelog\n\n## Unreleased\n");
+    bump("polite-crawler-mcp", "9.8.7");
+    syncVersion(dir, "2026-11-02");
+    for (const file of CHANGELOGS) {
+      const line = file === SERVER_CHANGELOG ? serverNotes("9.8.7") : NO_NOTES;
+      assert.equal(
+        read(file),
+        `# Changelog\n\n## Unreleased\n\n## 9.8.7 - 2026-11-02\n\n${line}\n`,
+      );
+    }
+    assert.match(serverNotes("9.8.7"), /^- \*\*The server uses polite-crawler 9\.8\.7\.\*\*/);
   });
 
   void it("takes the higher version also when the other package has it", () => {

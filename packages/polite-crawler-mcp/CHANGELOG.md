@@ -6,17 +6,21 @@ This file records the changes to `polite-crawler-mcp` in each version. The chang
 
 ## Unreleased
 
+## 0.7.4 - 2026-11-15
+
+- **The server uses polite-crawler 0.7.4.** The changes of the library are in the [changelog of polite-crawler](../../CHANGELOG.md). The server does not change.
+
 ## 0.7.3 - 2026-11-15
 
-- New versions of the dependencies (the release train).
+- **The server uses polite-crawler 0.7.3.** The changes of the library are in the [changelog of polite-crawler](../../CHANGELOG.md). The server does not change.
 
 ## 0.7.2 - 2026-11-15
 
-- New versions of the dependencies (the release train).
+- **The server uses polite-crawler 0.7.2.** The changes of the library are in the [changelog of polite-crawler](../../CHANGELOG.md). The server does not change.
 
 ## 0.7.1 - 2026-11-15
 
-- New versions of the dependencies (the release train).
+- **The server uses polite-crawler 0.7.1.** The changes of the library are in the [changelog of polite-crawler](../../CHANGELOG.md). The server does not change.
 
 ## 0.7.0 - 2026-11-15
 
@@ -24,7 +28,7 @@ This file records the changes to `polite-crawler-mcp` in each version. The chang
 
 ## 0.6.3 - 2026-11-15
 
-- New versions of the dependencies (the release train).
+- **The server uses polite-crawler 0.6.3.** The changes of the library are in the [changelog of polite-crawler](../../CHANGELOG.md). The server does not change.
 
 ## 0.6.2 - 2026-11-14
 
@@ -45,7 +49,7 @@ The release train changes the range of `@procedures/client`, `@procedures/mcp-se
 
 ## 0.5.2 - 2026-11-08
 
-- **The server uses polite-crawler 0.5.2.** A render now reads a page that navigates again and again: see the [changelog of polite-crawler](../../CHANGELOG.md). The server does not change.
+- **The server uses polite-crawler 0.5.2.** A render reads a page that navigates again and again: refer to the [changelog of polite-crawler](../../CHANGELOG.md). The server does not change.
 
 ## 0.5.1 - 2026-11-08
 
@@ -53,19 +57,19 @@ The release train changes the range of `@procedures/client`, `@procedures/mcp-se
 
 ## 0.5.0 - 2026-11-05
 
-- New versions of the dependencies (the release train).
+- **The server uses polite-crawler 0.5.0.** The changes of the library are in the [changelog of polite-crawler](../../CHANGELOG.md). The server does not change.
 
 ## 0.4.0 - 2026-11-05
 
-- New versions of the dependencies (the release train).
+- **The server uses polite-crawler 0.4.0.** The changes of the library are in the [changelog of polite-crawler](../../CHANGELOG.md). The server does not change.
 
 ## 0.3.1 - 2026-11-05
 
-- New versions of the dependencies (the release train).
+- **The server uses polite-crawler 0.3.1.** The changes of the library are in the [changelog of polite-crawler](../../CHANGELOG.md). The server does not change.
 
 ## 0.3.0 - 2026-11-02
 
-- New versions of the dependencies (the release train).
+- **The server uses polite-crawler 0.3.0.** The changes of the library are in the [changelog of polite-crawler](../../CHANGELOG.md). The server does not change.
 
 ## 0.2.4 - 2026-10-25
 
@@ -74,8 +78,8 @@ The release train changes the range of `@procedures/client`, `@procedures/mcp-se
 
 ## 0.2.3 - 2026-10-25
 
-- **A shorter tool list.** A session reads the tool definitions and the instructions of the server in each turn. The text is now approximately 28% shorter, by the count of part A of the eval (the cl100k proxy tokenizer).
-  - With all nine tools, the count goes from 8,268 to 5,972 tokens: the instructions from 220 to 131, and the tool list from 8,048 to 5,841. The name, the description and the input schema of each tool, with the instructions, go from 3,351 to 2,372 tokens. The Claude API takes only these fields of a tool.
+- **A shorter tool list.** A session reads the tool definitions and the instructions of the server in each turn. The text is approximately 28% shorter, by the count of part A of the eval (the cl100k proxy tokenizer).
+  - With all nine tools, the count goes from 8,268 to 5,972 tokens. The instructions go from 220 to 131, and the tool list from 8,048 to 5,841. The name, the description and the input schema of each tool, with the instructions, go from 3,351 to 2,372 tokens. The Claude API takes only these fields of a tool.
   - The descriptions keep the purpose of each tool, when to use it, its key parameters and the safety rules. The schemas give the types, the defaults and the limits, so the text does not tell them again. The README and the site keep the long explanations.
   - The names of the tools and of the parameters, the schemas and the results do not change. `INSTRUCTIONS` has a new text, and its type is `string`.
   - A test (`src/tool-cost.test.ts`) prints the counts and stops them from growing again.

@@ -22,6 +22,18 @@ const store = async (): Promise<string> => {
   return dir;
 };
 
+/**
+ * This function opens a file with node:sqlite. The cleanups close it after the test, also when an
+ * assertion fails first: on Windows an open file keeps its folder from being removed.
+ */
+const rawDatabase = (path: string): DatabaseSync => {
+  const db = new DatabaseSync(path);
+  cleanups.push(() => {
+    if (db.isOpen) db.close();
+  });
+  return db;
+};
+
 type Clock = ReturnType<typeof fakeClock>;
 
 const crawlerOn = (
@@ -611,22 +623,52 @@ describe("the watch list in the store", () => {
     const path = join(await store(), "watch.sqlite");
     const now = fakeClock().now();
     const first = new WatchStore(path);
+    cleanups.push(() => first.close());
     first.add("https://one.example/", {}, now);
     first.close();
-    const raw = new DatabaseSync(path);
+    const raw = rawDatabase(path);
     expect(raw.prepare("PRAGMA user_version").get()).toEqual({ user_version: WATCH_SCHEMA });
     // a later version adds a table and raises the number
     raw.exec(`CREATE TABLE later (x TEXT); PRAGMA user_version = ${String(WATCH_SCHEMA + 1)}`);
     raw.close();
     const later = new WatchStore(path);
+    cleanups.push(() => later.close());
     expect(later.get("https://one.example/", now)).toMatchObject({ checks: 0 });
     later.add("https://two.example/", {}, now);
     expect(later.list(now)).toHaveLength(2);
     later.close();
-    const check = new DatabaseSync(path);
+    const check = rawDatabase(path);
     expect(check.prepare("PRAGMA user_version").get()).toEqual({
       user_version: WATCH_SCHEMA + 1,
     });
+    check.close();
+  });
+
+  it("makes the table and the index again when a file of its version lost them", async () => {
+    const path = join(await store(), "watch.sqlite");
+    const now = fakeClock().now();
+    const first = new WatchStore(path);
+    cleanups.push(() => first.close());
+    first.add("https://one.example/", {}, now);
+    first.close();
+    const raw = rawDatabase(path);
+    raw.exec("DROP INDEX watches_due; DROP TABLE watches");
+    raw.close();
+    const again = new WatchStore(path);
+    cleanups.push(() => again.close());
+    // the list of the lost table is gone, and the store works
+    expect(again.list(now)).toEqual([]);
+    again.add("https://two.example/", {}, now);
+    expect(again.list(now)).toHaveLength(1);
+    const check = rawDatabase(path);
+    expect(
+      check
+        .prepare(
+          "SELECT name FROM sqlite_master WHERE name IN ('watches', 'watches_due') ORDER BY name",
+        )
+        .all(),
+    ).toEqual([{ name: "watches" }, { name: "watches_due" }]);
+    expect(check.prepare("PRAGMA user_version").get()).toEqual({ user_version: WATCH_SCHEMA });
     check.close();
   });
 

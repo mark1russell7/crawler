@@ -52,6 +52,21 @@ interface Item {
   readonly links?: ReadonlyArray<{ readonly label: string; readonly url: string }>;
 }
 
+/**
+ * This function gives the position of the first control character of a text, or -1. A tab, a line
+ * feed and a carriage return are not control characters here. A control character in the text of an
+ * item is usually an escape that a tool decoded, for example a backspace where a regular expression
+ * had `\b`.
+ */
+const controlAt = (text: string): number => {
+  // a control character is one UTF-16 unit, so the position of a unit is enough
+  for (let at = 0; at < text.length; at++) {
+    const code = text.charCodeAt(at);
+    if ((code < 32 && code !== 9 && code !== 10 && code !== 13) || code === 127) return at;
+  }
+  return -1;
+};
+
 const all = readdirSync(ITEMS)
   .filter((name) => name.endsWith(".json"))
   .map((name) => {
@@ -60,6 +75,16 @@ const all = readdirSync(ITEMS)
     if (!STATUS.some(([status]) => status === item.status))
       throw new Error(`${name}: unknown status ${item.status}`);
     if (!(item.area in AREA)) throw new Error(`${name}: unknown area ${item.area}`);
+    const texts = [item.title, item.summary, ...(item.links ?? []).map((link) => link.label)];
+    for (const text of texts) {
+      const at = controlAt(text);
+      if (at >= 0) {
+        const code = text.charCodeAt(at);
+        throw new Error(
+          `${name}: the text has the control character ${code} at ${at}: "${text.slice(Math.max(0, at - 30), at)}"`,
+        );
+      }
+    }
     return item;
   });
 const ids = new Set(all.map((item) => item.id));

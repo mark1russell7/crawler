@@ -29,6 +29,17 @@ export const CHANGELOGS = ["CHANGELOG.md", "packages/polite-crawler-mcp/CHANGELO
 /** The line of a changelog section when Unreleased has no notes. */
 export const NO_NOTES = "- New versions of the dependencies (the release train).";
 
+/** The changelog of the server, one of {@link CHANGELOGS}. */
+export const SERVER_CHANGELOG = "packages/polite-crawler-mcp/CHANGELOG.md";
+
+/**
+ * This function gives the line of a section of the changelog of the server when Unreleased has no
+ * notes. The two packages have one version, so the server of a version uses the library of that
+ * version.
+ */
+export const serverNotes = (version: string): string =>
+  `- **The server uses polite-crawler ${version}.** The changes of the library are in the [changelog of polite-crawler](../../CHANGELOG.md). The server does not change.`;
+
 const SEMVER =
   /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-([0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$/;
 
@@ -85,10 +96,15 @@ const replaceIn = (file: string, text: string, pattern: RegExp, replacement: str
 
 /**
  * This function adds the section of a version to the text of a changelog. The section goes
- * directly below "## Unreleased" and gets the notes of Unreleased. A changelog that has a section
- * of the version already does not change.
+ * directly below "## Unreleased" and gets the notes of Unreleased, or `empty` when Unreleased has
+ * no notes. A changelog that has a section of the version already does not change.
  */
-export const addSection = (text: string, version: string, date: string): string => {
+export const addSection = (
+  text: string,
+  version: string,
+  date: string,
+  empty: string = NO_NOTES,
+): string => {
   const lines = text.split("\n");
   const has = new RegExp(`^## \\[?${escapeRegExp(version)}\\]?(\\s|$)`);
   if (lines.some((line) => has.test(line))) return text;
@@ -105,7 +121,7 @@ export const addSection = (text: string, version: string, date: string): string 
     "",
     `## ${version} - ${date}`,
     "",
-    notes === "" ? NO_NOTES : notes,
+    notes === "" ? empty : notes,
   ];
   const rest = lines.slice(end);
   return [...lines.slice(0, start), ...section, ...(rest.length > 0 ? ["", ...rest] : [""])].join(
@@ -168,7 +184,10 @@ export const syncVersion = (root: string, date: string): SyncResult => {
     if (count !== 2) throw new Error(`server.json has ${String(count)} version fields, not 2`);
     return next;
   });
-  for (const file of CHANGELOGS) edit(file, (text) => addSection(text, version, date));
+  for (const file of CHANGELOGS) {
+    const empty = file === SERVER_CHANGELOG ? serverNotes(version) : NO_NOTES;
+    edit(file, (text) => addSection(text, version, date, empty));
+  }
   return { version, changed };
 };
 

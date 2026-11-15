@@ -387,12 +387,10 @@ const targetOf = (
 };
 
 /**
- * These are the steps of the schema of `watch.sqlite`, for `migrate` of `@mark1russell7/sqlite`. The
- * version of a file (`PRAGMA user_version`) is the count of its steps. Do not change a step: add a step.
+ * This SQL makes the table and the index of version 1. Each statement has `IF NOT EXISTS`, so each
+ * open of the store also applies it: a file that lost the table or the index gets it again.
  */
-const MIGRATIONS: readonly Migration[] = [
-  // Step 1 makes the table of version 1.
-  `CREATE TABLE IF NOT EXISTS watches (
+const TABLES_V1 = `CREATE TABLE IF NOT EXISTS watches (
     url TEXT PRIMARY KEY,
     target TEXT NOT NULL,
     host TEXT NOT NULL,
@@ -422,7 +420,15 @@ const MIGRATIONS: readonly Migration[] = [
     pend_fetched_at TEXT,
     pend_since REAL
   );
-  CREATE INDEX IF NOT EXISTS watches_due ON watches (next_at)`,
+  CREATE INDEX IF NOT EXISTS watches_due ON watches (next_at)`;
+
+/**
+ * These are the steps of the schema of `watch.sqlite`, for `migrate` of `@mark1russell7/sqlite`. The
+ * version of a file (`PRAGMA user_version`) is the count of its steps. Do not change a step: add a step.
+ */
+const MIGRATIONS: readonly Migration[] = [
+  // Step 1 makes the table of version 1.
+  TABLES_V1,
 ];
 
 /**
@@ -464,6 +470,9 @@ export class WatchStore {
       // later version, and the file keeps its number (`newer: "keep"`). Two versions of the crawler
       // can thus share one file.
       migrate(this.db, MIGRATIONS, { name: "watch store", newer: "keep" });
+      // `migrate` starts no step on a file of version 1 or later. Before 0.7.1, each open made the
+      // table and the index, so a file that lost one of them (for example by a hand edit) works.
+      this.db.exec(TABLES_V1);
     } catch (error) {
       this.db.close();
       throw error;

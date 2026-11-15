@@ -15,6 +15,10 @@ A prerelease version (`0.2.0-beta.1`) goes to the npm tag `next`. Each other ver
 
 ## Unreleased
 
+## 0.7.2 - 2026-11-15
+
+- **One daemon on a store, also for two starts at the same moment.** Before, the state file of a start came after the browser check and the MCP start, so two starts at one moment both started. The daemon holds the lock file `<store>/daemon/lock` until it stops, made by `acquireInstanceLock` of `@mark1russell7/service/host` only when the file is not there. The next start removes a stale lock of a stopped process, and a failed start or the stop gives the lock back. The check of the state file stays, for a daemon of an earlier version. The new dependency `@mark1russell7/service` is `^0.8.15`, and `@mark1russell7/algebra` goes to `^0.8.9` for one copy in the tree.
+
 ## 0.7.1 - 2026-11-15
 
 - **The search index, the vectors and the watch list open their files through `@mark1russell7/sqlite`**, as the host state store does since 0.6.3. The files (`index.sqlite`, `vectors.sqlite` and `watch.sqlite`) do not change. A file of each earlier version opens as before, and a file of a later version works as before.

@@ -9,6 +9,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { dirname, join } from "node:path";
+import type { InstanceLock } from "@mark1russell7/service/host";
 import { browserMissing } from "./browser.ts";
 import type { Duration } from "./duration.ts";
 import { durationMs } from "./duration.ts";
@@ -376,6 +377,38 @@ const processAlive = (pid: number): boolean => {
 /** This function gives the path of the state file of a store. */
 export const daemonStateFile = (dir: string): string => join(dir, "daemon", "state.json");
 
+/** This function gives the path of the lock file of a store. One daemon operates on a store. */
+const daemonLockFile = (dir: string): string => join(dir, "daemon", "lock");
+
+/**
+ * This function takes the lock of the daemon of a store, with `acquireInstanceLock` of
+ * `@mark1russell7/service/host`. The take makes the file only when the file is not there. Thus of two
+ * starts at the same moment, also in two processes, one starts and the other rejects. A lock whose process
+ * stopped is stale, and the take removes it. The daemon loads the package only at a start.
+ */
+const lockStore = async (dir: string): Promise<InstanceLock> => {
+  const { acquireInstanceLock, nodeHostPorts } = await import("@mark1russell7/service/host");
+  const path = daemonLockFile(dir);
+  const result = await acquireInstanceLock(path, nodeHostPorts());
+  if (result.kind === "acquired") return result.lock;
+  if (result.kind === "held") {
+    throw new Error(
+      `a daemon runs on the store ${dir} already (process ${String(result.owner.pid)}): stop it first`,
+    );
+  }
+  throw new Error(`the lock ${path} of the daemon does not take: ${result.problem}`);
+};
+
+/** This function does a step of a start. When the step throws, the lock goes back, and the error goes on. */
+const releaseOnError = async <T>(lock: InstanceLock, step: () => Promise<T>): Promise<T> => {
+  try {
+    return await step();
+  } catch (error) {
+    await lock.release();
+    throw error;
+  }
+};
+
 /**
  * This function reads the state file of a daemon. It gives undefined when the file is not there,
  * or when it is not a state file. `alive` tells if the daemon runs.
@@ -661,8 +694,10 @@ const eventWriter = (events: DaemonOptions["events"]): ((line: string) => void) 
  * and checks the watch list on a schedule (`scheduleWatches`). It writes each change event as one
  * JSON line, and it gives each change to `onChange`. The state file tells `daemon status` what runs.
  *
- * Only one daemon operates on a store: a second start rejects. At `SIGINT` or `SIGTERM`, the daemon
- * stops cleanly (`stop`). A second signal aborts the checks at once.
+ * Only one daemon operates on a store. The daemon holds the lock file `<store>/daemon/lock` until it
+ * stops. A second start rejects, also a start at the same moment in a different process. A lock
+ * of a process that stopped is stale, and the next start removes it. At `SIGINT` or `SIGTERM`, the
+ * daemon stops cleanly (`stop`). A second signal aborts the checks at once.
  */
 export const startDaemon = async (options: DaemonOptions): Promise<Daemon> => {
   const {
@@ -686,18 +721,23 @@ export const startDaemon = async (options: DaemonOptions): Promise<Daemon> => {
   const pages = pagesOf(maxPages);
   const graceMs = msOf("grace", grace ?? DAEMON_DEFAULTS.graceMs, 0);
   const stateFile = givenState ?? daemonStateFile(open.dir);
-  const before = readDaemonState(open.dir, stateFile);
-  if (before?.alive === true) {
-    throw new Error(
-      `a daemon runs on the store ${open.dir} already (process ${String(before.pid)}): stop it first, or remove ${stateFile} when no daemon runs`,
-    );
-  }
-  const writeEvent = eventWriter(events);
-  // a missing browser turns rendering off one time, at start
-  const renderOff = open.renderer === undefined ? await browserMissing() : undefined;
-  const crawler = openCrawler({
-    ...open,
-    ...(renderOff === undefined ? {} : { renderer: false as const }),
+  const lock = await lockStore(open.dir);
+  const { writeEvent, renderOff, crawler } = await releaseOnError(lock, async () => {
+    // a daemon of a version before 0.7.2 takes no lock, and two stores can have one state file
+    const before = readDaemonState(open.dir, stateFile);
+    if (before?.alive === true) {
+      throw new Error(
+        `a daemon runs on the store ${open.dir} already (process ${String(before.pid)}): stop it first, or remove ${stateFile} when no daemon runs`,
+      );
+    }
+    const writer = eventWriter(events);
+    // a missing browser turns rendering off one time, at start
+    const off = open.renderer === undefined ? await browserMissing() : undefined;
+    const opened = openCrawler({
+      ...open,
+      ...(off === undefined ? {} : { renderer: false as const }),
+    });
+    return { writeEvent: writer, renderOff: off, crawler: opened };
   });
   const clock = open.clock ?? realClock;
   const startedAt = iso(clock.now());
@@ -761,7 +801,11 @@ export const startDaemon = async (options: DaemonOptions): Promise<Daemon> => {
         log,
       });
     } catch (error) {
-      await crawler.close();
+      try {
+        await crawler.close();
+      } finally {
+        await lock.release();
+      }
       throw error;
     }
   }
@@ -848,7 +892,12 @@ export const startDaemon = async (options: DaemonOptions): Promise<Daemon> => {
       stoppedAt = iso(clock.now());
       save();
       RUNNING.delete(stateFile);
-      await crawler.close();
+      // the lock goes back after the close, thus a new daemon does not open the store while this one closes it
+      try {
+        await crawler.close();
+      } finally {
+        await lock.release();
+      }
       if (signals) {
         process.removeListener("SIGINT", onSignal);
         process.removeListener("SIGTERM", onSignal);

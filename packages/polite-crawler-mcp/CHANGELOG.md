@@ -6,6 +6,10 @@ This file records the changes to `polite-crawler-mcp` in each version. The chang
 
 ## Unreleased
 
+## 0.7.2 - 2026-11-15
+
+- New versions of the dependencies (the release train).
+
 ## 0.7.1 - 2026-11-15
 
 - New versions of the dependencies (the release train).

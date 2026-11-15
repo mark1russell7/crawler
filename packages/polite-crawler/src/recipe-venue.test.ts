@@ -106,6 +106,41 @@ describe("the readings of one document", () => {
     expect(readingsOf("Forno Esempio\n\nBarbecue hours\nSaturday 12pm - 4pm")).toEqual([
       [1, "Barbecue hours", "opening"],
     ]);
+    expect(readingsOf("Forno Esempio\n\nCrowbar hours\nSaturday 12pm - 4pm")).toEqual([
+      [1, "Crowbar hours", "opening"],
+    ]);
+  });
+
+  it("reads the hours of a bar as its opening hours when the venue gives no other opening hours", () => {
+    const readingsOf = (text: string, meta: Record<string, unknown> = {}) =>
+      venueReadingsOf({ url: `${FORNO}/`, text, meta }).readings.map((one) => [
+        one.rank,
+        one.label,
+        one.schedule,
+      ]);
+    // the only schedule of a bar
+    expect(readingsOf("Murphy's Bar\n\nBar Hours\nMonday - Sunday 4pm - 2am")).toEqual([
+      [1, "Bar Hours", "opening"],
+    ]);
+    // the name of the bar is the label
+    expect(readingsOf("Murphy's Bar\nMonday - Sunday 4pm - 2am")).toEqual([
+      [3, "Murphy's Bar", "opening"],
+    ]);
+    // a service label stays a different schedule
+    expect(
+      readingsOf(
+        "Murphy's Bar\n\nBar Hours\nMonday - Sunday 4pm - 2am\n\nKitchen hours\nFriday 5pm - 10pm",
+      ),
+    ).toEqual([
+      [1, "Bar Hours", "opening"],
+      [4, "Kitchen hours", "other"],
+    ]);
+    // JSON-LD hours are an opening reading, so the bar hours are a different schedule
+    const jsonld = readingsOf("Forno Esempio\n\nBar hours\nFriday 4pm - 11pm", {
+      jsonld: [bakery()],
+    });
+    expect(jsonld[0]).toEqual([0, null, "opening"]);
+    expect(jsonld.slice(1)).toEqual([[4, "Bar hours", "other"]]);
   });
 
   it("reads only the location of the venue on a page that lists more than one", () => {
@@ -224,6 +259,26 @@ const fornoSite =
   };
 
 describe("readVenue", () => {
+  it("decides the hours of a bar over all the pages: a different schedule only next to other opening hours", async () => {
+    const barHome = htmlPage(
+      "Forno Esempio",
+      `<h2>Bar hours</h2><p>Monday - Sunday 4pm - 11pm</p>${FILLER}<a href="/visit">Hours &amp; location</a>`,
+    );
+    const hosts = world({ [FORNO]: fornoSite({ "/": barHome }) });
+    const { crawler } = await openWith(hosts, cleanups);
+    const alone = await readVenue(crawler, `${FORNO}/`, { pages: 0 });
+    expect(alone.readings.map((one) => [one.rank, one.label, one.schedule])).toEqual([
+      [1, "Bar hours", "opening"],
+    ]);
+    expect(alone.best?.label).toBe("Bar hours");
+    const both = await readVenue(crawler, `${FORNO}/`, { pages: 1 });
+    expect(both.readings.map((one) => [one.rank, one.label, one.schedule])).toEqual([
+      [1, "Hours", "opening"],
+      [4, "Bar hours", "other"],
+    ]);
+    expect(both.best?.label).toBe("Hours");
+  });
+
   it("reads the home page and the pages most likely to hold hours, and names the days the readings disagree on", async () => {
     const hosts = world({ [FORNO]: fornoSite() });
     const { crawler } = await openWith(hosts, cleanups);

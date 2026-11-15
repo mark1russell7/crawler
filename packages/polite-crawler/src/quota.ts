@@ -588,9 +588,12 @@ const gateList = (gate: QuotaGate | readonly QuotaGate[]): readonly QuotaGate[] 
     if (gate.length > 1 && each.giveBack === undefined) {
       throw new ApiError(`The gate of ${named} cannot give back units, so it cannot be in a list.`);
     }
-    // a store keeps one record for each name and key, so two such gates count each call twice
+    // a store keeps one record for each name and key, so two such gates count each call twice;
+    // a gate does not show its store, so two gates of one name and key on two stores are refused too
     const id = JSON.stringify([each.quota.name, each.key]);
-    if (seen.has(id)) throw new ApiError(`Two gates of the list have ${named}.`);
+    if (seen.has(id)) {
+      throw new ApiError(`Two gates of the list have ${named}. Give each quota a different name.`);
+    }
     seen.add(id);
   }
   return [...gate];

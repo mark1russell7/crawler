@@ -3,32 +3,17 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
-// The API reports of this package are data, and these tests keep them true:
+// The API reports of this package are data, and this test keeps them true: the counts of
+// docs/API-REVIEW.md come from the release tags of the reports in api/. The counts were out of date
+// for two versions before this test.
 //
-// - test/api/public-api.txt names the declaration file of each public name. A chunk of the bundler
-//   has no stable name. A new version of the bundler can rename it, and the report then shows a
-//   change of the API that is not real. So each file in the report is the declaration file of an
-//   entry point in the exports of the package.
-// - The counts of docs/API-REVIEW.md come from the release tags of the reports in api/. The counts
-//   were out of date for two versions before this test.
+// The check that test/api/public-api.txt names no chunk of the bundler is the option entriesOnly of
+// api-report, in the field apiReport of the root package.json. The command check:api fails on a
+// chunk.
 
 const PACKAGE = join(dirname(fileURLToPath(import.meta.url)), "..");
 const ROOT = join(PACKAGE, "..", "..");
 const read = (...parts: string[]): string => readFileSync(join(...parts), "utf8");
-
-interface Manifest {
-  readonly publishConfig: { readonly exports: Readonly<Record<string, unknown>> };
-}
-
-/** This function gives the declaration file of each entry point in the published exports. */
-const entryFiles = (manifest: Manifest): Set<string> =>
-  new Set(
-    Object.values(manifest.publishConfig.exports).flatMap((target) =>
-      typeof target === "object" && target !== null && "types" in target
-        ? [String(target.types).replace(/^\.\//, "")]
-        : [],
-    ),
-  );
 
 /** The counts of the release tags in one report of api-extractor. */
 interface Counts {
@@ -56,16 +41,6 @@ const reportsOf = (row: string): string[] => {
 };
 
 describe("the API report", () => {
-  it("names only the declaration files of the entry points, no chunk of the bundler", () => {
-    const manifest = JSON.parse(read(PACKAGE, "package.json")) as Manifest;
-    const entries = entryFiles(manifest);
-    const named = new Set(
-      read(PACKAGE, "test", "api", "public-api.txt").match(/build\/[\w./-]+\.d\.mts/g) ?? [],
-    );
-    expect(named.size).toBeGreaterThan(1);
-    expect([...named].filter((file) => !entries.has(file)).sort()).toEqual([]);
-  });
-
   it("gives the counts of the table in docs/API-REVIEW.md", () => {
     const review = read(ROOT, "docs", "API-REVIEW.md");
     const table = review.slice(review.indexOf("## Counts"));

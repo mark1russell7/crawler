@@ -72,8 +72,8 @@ The reports also show what API Extractor found:
 | `locationMatches`, `namesVenue`, `pickProduct`, `pickVariant`, `PRODUCT_LIMITS`, `rankHoursLinks`, `readAmount`, `VENUE_LIMITS` | root | The steps of the two recipes. The words that rank a link or a label can improve in each version. |
 | `NO_PLAYWRIGHT`, `playwrightRenderer`, `PlaywrightRenderer`, `RefusedReason`, `Rendered`, `Renderer`, `RenderOptions`, `RenderRefused` | root | The renderer. The option `renderer` is beta too. |
 | `HostReaction`, `outcomeResult`, `OutcomeFacts`, `reactToOutcome`, `ReactionContext` | `/api` | The reaction of the crawler to an answer. The `Crawler` and the send of `polite-crawler/api` use it. A study can change its rules. |
-| `Answer`, `ApiError`, `ApiScheduler`, `Exchange`, `Grant`, `Pace`, `readGrant`, `Redact`, `Reply`, `send`, `Send`, `sendWithToken`, `Signal`, `statusLine`, `TOKEN_MARGIN_MS`, `Tokens`, `tokenStore`, `Transport`, `API_TIMEOUT_MS`, `Condition`, `Conditions`, `FetchLike`, `fetchTransport`, `FetchTransportOptions`, `poll`, `Polled` | `/api` | The polite send of a documented API. It is new in 0.6.1, and the poll is new in 0.6.2, so the first API clients can change it. |
-| `memoryQuotaStore`, `Quota`, `QuotaError`, `quotaGate`, `QuotaGate`, `QuotaGateOptions`, `QuotaHeaders`, `QuotaReading`, `QuotaRecord`, `QuotaState`, `QuotaStore`, `QuotaWindow`, `readQuotaHeaders`, `withQuota`, `WithQuotaOptions` | `/api` (and `QuotaRecord`, `QuotaStore` at the root and at `/politeness`) | The quotas of API keys. They are new in 0.6.3, so the first API clients can change them. |
+| `Answer`, `ApiError`, `ApiScheduler`, `Exchange`, `Grant`, `isApiError`, `Pace`, `readGrant`, `Redact`, `Reply`, `send`, `Send`, `sendWithToken`, `Signal`, `statusLine`, `TOKEN_MARGIN_MS`, `Tokens`, `tokenStore`, `Transport`, `API_TIMEOUT_MS`, `Condition`, `Conditions`, `FetchLike`, `fetchTransport`, `FetchTransportOptions`, `poll`, `Polled` | `/api` | The polite send of a documented API. It is new in 0.6.1, and the poll is new in 0.6.2, so the first API clients can change it. |
+| `isQuotaError`, `memoryQuotaStore`, `Quota`, `QuotaError`, `quotaGate`, `QuotaGate`, `QuotaGateOptions`, `QuotaHeaders`, `QuotaReading`, `QuotaRecord`, `QuotaState`, `QuotaStore`, `QuotaWindow`, `readQuotaHeaders`, `withQuota`, `WithQuotaOptions` | `/api` (and `QuotaRecord`, `QuotaStore` at the root and at `/politeness`) | The quotas of API keys. They are new in 0.6.3, so the first API clients can change them. |
 
 These members of stable types are beta:
 
@@ -145,5 +145,5 @@ The package is the MCP server of polite-crawler since 0.2.0. Its tiers follow th
 | --- | --- | --- | --- |
 | polite-crawler root | 238 | 137 | 0 |
 | `/robots`, `/hours`, `/html`, `/classify`, `/politeness`, `/signals`, `/urls`, `/text` | 94 | 2 | 0 |
-| `/api` | 13 | 46 | 0 |
+| `/api` | 13 | 48 | 0 |
 | polite-crawler-mcp | 17 | 5 | 0 |

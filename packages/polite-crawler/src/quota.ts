@@ -114,6 +114,22 @@ export class QuotaError extends ApiError {
   }
 }
 
+/**
+ * This function tells if a value is a `QuotaError`. The error can come from this copy of the package
+ * or from another copy, of this version or of an earlier one. `instanceof` is false across two copies.
+ * So the function also accepts an `Error` named `QuotaError`, with a string `key` and a finite number
+ * `resetAt`. A package that gets a transport of `withQuota` uses it to tell a refusal of the quota from
+ * another failure. That package needs no dependency on this package.
+ *
+ * @beta
+ */
+export const isQuotaError = (value: unknown): value is QuotaError =>
+  value instanceof QuotaError ||
+  (value instanceof Error &&
+    value.name === "QuotaError" &&
+    typeof (value as { readonly key?: unknown }).key === "string" &&
+    Number.isFinite((value as { readonly resetAt?: unknown }).resetAt));
+
 const MAX_BUCKETS = 1000;
 const DEFAULT_BUCKETS = 60;
 const HOUR_MS = 3_600_000;

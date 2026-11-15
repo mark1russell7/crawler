@@ -1,9 +1,12 @@
 import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { afterEach, describe, expect, it } from "vitest";
+import * as api from "./api.ts";
 import {
   ApiError,
   fetchTransport,
+  isApiError,
+  isQuotaError,
   memoryQuotaStore,
   QuotaError,
   quotaGate,
@@ -616,6 +619,98 @@ describe("send with a quota", () => {
       expect(error.message).toContain("refused a call of 1 units");
     }
     expect(sent).toBe(1);
+    expect(scheduler.store.stopped(HOST, clock.now())).toBeUndefined();
+    expect(scheduler.store.record(HOST, "neutral")).toEqual({ failures: 0, waits: 0 });
+  });
+});
+
+/**
+ * The classes of a second copy of the package: the same names and the same fields, and no relation to
+ * the classes of this copy. A program has two copies when two of its packages depend on two versions.
+ */
+class OtherApiError extends Error {
+  override readonly name: string = "ApiError";
+}
+class OtherQuotaError extends OtherApiError {
+  override readonly name: string = "QuotaError";
+  constructor(
+    message: string,
+    readonly key: string,
+    readonly resetAt: number,
+  ) {
+    super(message);
+  }
+}
+
+describe("the guards isApiError and isQuotaError", () => {
+  it("accept the errors of this copy", () => {
+    const quota = new QuotaError("refused", "k", 1);
+    expect([isApiError(quota), isQuotaError(quota)]).toEqual([true, true]);
+    const other = new ApiError("no answer");
+    expect([isApiError(other), isQuotaError(other)]).toEqual([true, false]);
+  });
+
+  it("accept the errors of another copy, where instanceof is false", () => {
+    const quota = new OtherQuotaError("refused", "k", 1);
+    expect(quota).not.toBeInstanceOf(QuotaError);
+    expect([isApiError(quota), isQuotaError(quota)]).toEqual([true, true]);
+    const other = new OtherApiError("no answer");
+    expect(other).not.toBeInstanceOf(ApiError);
+    expect([isApiError(other), isQuotaError(other)]).toEqual([true, false]);
+  });
+
+  it("refuse each other value", () => {
+    const named = (name: string, fields: object = {}): Error =>
+      Object.assign(new Error("x"), { name, ...fields });
+    const values: unknown[] = [
+      new Error("x"),
+      new TypeError("x"),
+      named("QuotaError"),
+      named("QuotaError", { key: "k", resetAt: Number.NaN }),
+      named("QuotaError", { key: "k", resetAt: "1" }),
+      named("QuotaError", { key: 1, resetAt: 1 }),
+      { name: "QuotaError", message: "x", key: "k", resetAt: 1 },
+      "QuotaError",
+      undefined,
+      null,
+    ];
+    expect(values.map((value) => isQuotaError(value))).toEqual(values.map(() => false));
+    expect(isApiError(named("QuotaError", { key: "k", resetAt: Number.NaN }))).toBe(true);
+    expect(
+      [new Error("x"), named("Other"), { name: "ApiError" }].map((value) => isApiError(value)),
+    ).toEqual([false, false, false]);
+  });
+
+  it("know the name of each class of error that polite-crawler/api exports", () => {
+    type ErrorClass = new (...args: unknown[]) => Error;
+    const classes = (Object.values(api) as unknown[]).filter(
+      (value): value is ErrorClass =>
+        typeof value === "function" &&
+        (value === ApiError ||
+          (value as { readonly prototype?: unknown }).prototype instanceof ApiError),
+    );
+    expect(classes.length).toBeGreaterThanOrEqual(2);
+    for (const Class of classes) {
+      const instance = new Class("x", "k", 1);
+      // the error of another copy has the same name and fields, and another class
+      const copy = Object.assign(new Error("x"), { name: instance.name, key: "k", resetAt: 1 });
+      expect({ name: instance.name, known: isApiError(copy) }).toEqual({
+        name: instance.name,
+        known: true,
+      });
+    }
+  });
+
+  it("let send give a refusal of another copy as it is, and the host keeps its state", async () => {
+    const clock = fakeClock("2026-11-14T12:00:00Z");
+    const scheduler = new HostScheduler(clock, 4);
+    const pace: Pace = { scheduler, now: clock.now, random: () => 0.5 };
+    const refusal = new OtherQuotaError("refused", "k", clock.now() + 60_000);
+    const transport: Transport = () => Promise.reject(refusal);
+    const input = { source: "Example", host: HOST, what: "the thing", exchange: get };
+    for (let round = 0; round < 8; round += 1) {
+      expect(await failure(send(pace, transport, input))).toBe(refusal);
+    }
     expect(scheduler.store.stopped(HOST, clock.now())).toBeUndefined();
     expect(scheduler.store.record(HOST, "neutral")).toEqual({ failures: 0, waits: 0 });
   });

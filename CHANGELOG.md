@@ -15,6 +15,8 @@ A prerelease version (`0.2.0-beta.1`) goes to the npm tag `next`. Each other ver
 
 ## Unreleased
 
+- **The new function `freshUntil` in `polite-crawler/api`.** It gives the end of the freshness of an answer, as RFC 9111 §4.2 calculates it, in milliseconds since the epoch. A client that keeps the answers of `poll` and `send` asks again at that time. The sources in sequence are `max-age`, `Expires` minus `Date`, and 10 percent of the age of `Last-Modified`, with a maximum. The crawler uses the same function for the field `fresh_until` of a capture, so the freshness of a capture does not change. The function is beta.
+
 ## 0.7.1 - 2026-11-15
 
 - **The search index, the vectors and the watch list open their files through `@mark1russell7/sqlite`**, as the host state store does since 0.6.3. The files (`index.sqlite`, `vectors.sqlite` and `watch.sqlite`) do not change. A file of each earlier version opens as before, and a file of a later version works as before.

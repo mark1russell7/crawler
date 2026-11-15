@@ -5,10 +5,11 @@ import type { Dispatcher } from "undici";
 import { Agent, request } from "undici";
 import type { BlobStore } from "./blobs.ts";
 import type { Classified, Outcome } from "./classify.ts";
-import { classify, parseHttpDate } from "./classify.ts";
+import { classify } from "./classify.ts";
 import type { Variant } from "./docs.ts";
 import type { EgressOptions } from "./egress.ts";
 import { checkEgress, egressError, egressLookup, egressRefusal } from "./egress.ts";
+import { freshUntil, PERMANENT_REDIRECTS } from "./freshness.ts";
 import type {
   Clock,
   HostResult,
@@ -395,10 +396,6 @@ const ROBOTS_BYTES = 512 * 1024;
 const LAST_DATE_MS = 8.64e15;
 const WEB_PROTOCOLS: ReadonlySet<string> = new Set(["http:", "https:"]);
 const HEADER_TEXT = /^[\t -~]*$/;
-const PERMANENT_REDIRECTS: ReadonlySet<number> = new Set([301, 308]);
-const HEURISTIC_STATUSES: ReadonlySet<number> = new Set([
-  200, 203, 204, 206, 300, 301, 308, 404, 405, 410, 414, 501,
-]);
 /** A caller cannot set these headers. The crawler sets them, or HTTP does. */
 const RESERVED_HEADERS: ReadonlySet<string> = new Set([
   "user-agent",
@@ -806,57 +803,19 @@ const readBody = async (
   return { bytes, truncated, cut };
 };
 
-const directives = (value: string | undefined): Map<string, string> => {
-  const out = new Map<string, string>();
-  for (const part of (value ?? "").split(",")) {
-    const equals = part.indexOf("=");
-    const name = (equals === -1 ? part : part.slice(0, equals)).trim().toLowerCase();
-    if (name.length === 0) continue;
-    const raw = equals === -1 ? "" : part.slice(equals + 1).trim();
-    out.set(
-      name,
-      raw.length >= 2 && raw.startsWith('"') && raw.endsWith('"') ? raw.slice(1, -1) : raw,
-    );
-  }
-  return out;
-};
-
-const TEN_YEARS_MS = 10 * 365 * 24 * 60 * 60 * 1000;
-
 /**
- * This function gives the end of the freshness of a response, as RFC 9111 §4.2 calculates it.
- * The sources in sequence are `max-age`, `Expires`, and 10 percent of the age of
- * `Last-Modified`, with a maximum. A response with `no-store` or `no-cache` is stale at once. A
- * response with no freshness gives null.
+ * This function gives the end of the freshness of a response as an ISO time, for the field
+ * `fresh_until` of a capture. `freshUntil` calculates it. A response with no freshness gives null.
  */
-const freshUntil = (
+const freshUntilIso = (
   header: (name: string) => string | undefined,
   status: number,
   fetchedAt: number,
   lastModified: string | null | undefined,
   capMs: number,
 ): string | null => {
-  const control = directives(header("cache-control"));
-  if (control.has("no-store") || control.has("no-cache")) return isoOf(fetchedAt) ?? null;
-  const ageText = header("age")?.trim() ?? "";
-  const age = /^\d+$/.test(ageText) ? Number(ageText) * 1000 : 0;
-  const date = parseHttpDate(header("date")) ?? fetchedAt;
-  let lifetime: number | undefined;
-  const maxAge = control.get("max-age");
-  const expires = header("expires");
-  if (maxAge !== undefined && /^\d+$/.test(maxAge)) lifetime = Number(maxAge) * 1000;
-  else if (expires !== undefined) {
-    // an Expires that is not a date means that the response is already stale
-    const at = parseHttpDate(expires);
-    lifetime = at === undefined ? 0 : at - date;
-  } else if (HEURISTIC_STATUSES.has(status)) {
-    const modified = parseHttpDate(lastModified ?? undefined);
-    if (modified !== undefined && modified < date)
-      lifetime = Math.min(capMs, (date - modified) / 10);
-    else if (PERMANENT_REDIRECTS.has(status)) lifetime = capMs;
-  }
-  if (lifetime === undefined) return null;
-  return isoOf(fetchedAt + Math.max(0, Math.min(lifetime, TEN_YEARS_MS) - age)) ?? null;
+  const until = freshUntil(header, status, fetchedAt, lastModified ?? undefined, capMs);
+  return until === undefined ? null : (isoOf(until) ?? null);
 };
 
 /** This function gives the request headers that a response varies on, with their values. A `Vary: *` gives `*`. */
@@ -2202,7 +2161,7 @@ export class Crawler {
           const lastModified =
             header("last-modified") ?? (revisit ? usable.last_modified : null) ?? null;
           const fetchedAt = this.clock.now();
-          const freshness = freshUntil(
+          const freshness = freshUntilIso(
             header,
             response.statusCode,
             fetchedAt,
@@ -2817,7 +2776,7 @@ export class Crawler {
     );
     const status = rendered.status ?? 200;
     const fetchedAt = this.clock.now();
-    const freshness = freshUntil(
+    const freshness = freshUntilIso(
       header,
       status,
       fetchedAt,

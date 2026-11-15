@@ -8,8 +8,9 @@
  *
  * The module also has the OAuth 2.0 client credentials grant (RFC 6749, section 4.4): `readGrant`,
  * `tokenStore` and `sendWithToken`. `fetchTransport` is a transport over `fetch` with a User-Agent
- * and a time limit. `poll` sends conditional requests. Each export is beta: a minor version can
- * change it.
+ * and a time limit. `poll` sends conditional requests. `freshUntil` gives the end of the freshness
+ * of an answer (RFC 9111), so a client that keeps answers knows when to ask again. Each export is
+ * beta: a minor version can change it.
  */
 import { ApiError } from "./api-error.ts";
 import type { Classified } from "./classify.ts";
@@ -22,6 +23,7 @@ import { isQuotaError } from "./quota.ts";
 
 export { ApiError, isApiError } from "./api-error.ts";
 export type { Classified, Outcome } from "./classify.ts";
+export { freshUntil } from "./freshness.ts";
 export type {
   HostCounts,
   HostResult,

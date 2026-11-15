@@ -593,7 +593,8 @@ await daemon.stop(); // or SIGINT and SIGTERM
 - The next tick comes when the first entry is due, and one tick (`--tick`, `1m` by default) after the last tick at the latest.
 - A random jitter from 0 to `--jitter` (`10s` by default) comes after it. Thus a check does not come before its time.
 - When a tick stops at its budget (`--tick-budget`, `10m` by default) or at its maximum (`--tick-pages`, 100 by default), the entries that stay due wait for the next tick.
-- An entry that a different process holds waits for the end of its lease. Only one daemon operates on a store: a second daemon does not start.
+- An entry that a different process holds waits for the end of its lease.
+- Only one daemon operates on a store. The daemon holds the lock file `<store>/daemon/lock` until it stops, and a second daemon does not start. This is also true for two starts at the same moment in two processes. A lock whose process stopped is stale, and the next start removes it, so you do not remove the file yourself.
 - `scheduleWatches(crawler.watch, options)` gives the same schedule over the watch list of a crawler of your own.
 
 ### The changes

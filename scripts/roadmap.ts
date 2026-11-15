@@ -58,11 +58,14 @@ interface Item {
  * item is usually an escape that a tool decoded, for example a backspace where a regular expression
  * had `\b`.
  */
-const controlAt = (text: string): number =>
-  [...text].findIndex((char) => {
-    const code = char.charCodeAt(0);
-    return (code < 32 && code !== 9 && code !== 10 && code !== 13) || code === 127;
-  });
+const controlAt = (text: string): number => {
+  // a control character is one UTF-16 unit, so the position of a unit is enough
+  for (let at = 0; at < text.length; at++) {
+    const code = text.charCodeAt(at);
+    if ((code < 32 && code !== 9 && code !== 10 && code !== 13) || code === 127) return at;
+  }
+  return -1;
+};
 
 const all = readdirSync(ITEMS)
   .filter((name) => name.endsWith(".json"))

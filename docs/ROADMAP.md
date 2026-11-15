@@ -34,6 +34,24 @@ The smaller points of the review of #162. None of them makes a count too low. Do
 - [crawler #162 (the review)](https://github.com/mark1russell7/crawler/pull/162)
 - [crawler #168 (0.7.3)](https://github.com/mark1russell7/crawler/pull/168)
 
+### `api-fresh-until`: freshUntil in polite-crawler/api: when a kept answer is stale
+
+An API client that keeps the answers of poll and send must know when to ask again. The crawler already calculates the end of the freshness of each capture (RFC 9111: max-age, Expires minus Date, then 10 percent of the age of Last-Modified, with a maximum). #169 moves that calculation to its own module and exports it from polite-crawler/api as the beta function freshUntil, in milliseconds since the epoch. The field fresh_until of a capture does not change. The alerts sources asked for it and wrote the PR. The review passed, main (0.7.3) is merged into the branch, and CI runs. It ships in 0.7.4 with the watch-list fix of #170.
+
+- Area: Package
+- Waits for: `api-poll`
+- Started: 2026-11-15
+- [crawler #169 (freshUntil)](https://github.com/mark1russell7/crawler/pull/169)
+
+### `api-report-entries`: api-report: an option that keeps chunks of the bundler out of the report
+
+A test of the crawler holds that the API report names only the declaration files of the entry points, so a change of the bundler does not show as a change of the API. That check is general, so its home is @mark1russell7/api-report: an option of the apiReport config, off by default, that makes check and update fail when a declaration of the report is in another file. When a release of api-report has it, the crawler sets the option and removes its own test. The second test of the crawler (the counts of docs/API-REVIEW.md) stays, because that file is the crawler's own.
+
+- Area: Package
+- Waits for: `report-chunks`
+- Started: 2026-11-15
+- [crawler test: the report names only entry points](https://github.com/mark1russell7/crawler/blob/main/packages/polite-crawler/src/api-report.test.ts)
+
 ## Blocked
 
 ### `quota-service`: Quotas: move the window counting to @mark1russell7/service

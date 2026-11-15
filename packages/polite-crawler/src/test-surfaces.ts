@@ -116,9 +116,20 @@ export const BAKERY: string = `<!doctype html><html lang="en"><head><title>Forno
 <body><h1>Forno Esempio</h1><p>${"Wood-fired bread, baked every morning before dawn. ".repeat(6)}</p>
 <h2>Hours</h2><p>Tuesday to Sunday 7am–3pm</p>${Array.from({ length: 30 }, (_, at) => `<a href="/bread/${String(at)}">Bread ${String(at)}</a>`).join(" ")}</body></html>`;
 
+/**
+ * The held-back sentence of the members pages of the tests. A check that the text does not leak looks for this
+ * sentence, not only for its digits: an id such as a capture id is a hash, and a hash can contain the digits 7319
+ * (the capture fetch.2a27319cb9c7 failed main on 2026-11-15).
+ */
+export const HELD_BACK: string = "The access code is 7319";
+
+/** True when the held-back sentence is in a value: a string, or any field of a JSON value. */
+export const leaksHeldBack = (value: unknown): boolean =>
+  (typeof value === "string" ? value : (JSON.stringify(value) ?? "")).includes(HELD_BACK);
+
 /** The page of the mock bakery that asks not to be AI input. */
 export const MEMBERS: string = `<!doctype html><html lang="en"><head><title>Members</title></head>
-<body><p>The access code is 7319. ${"Words for members only. ".repeat(10)}</p></body></html>`;
+<body><p>${HELD_BACK}. ${"Words for members only. ".repeat(10)}</p></body></html>`;
 
 type Reply = {
   readonly status: number;

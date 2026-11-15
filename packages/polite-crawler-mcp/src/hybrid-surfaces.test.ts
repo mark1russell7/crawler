@@ -5,7 +5,12 @@ import { createMcpServer } from "./server.ts";
 import type { PoliteCrawler } from "../../polite-crawler/src/open.ts";
 import { openCrawler } from "../../polite-crawler/src/open.ts";
 import { fakeEmbedder } from "../../polite-crawler/src/test-embedder.ts";
-import { removeDir, seedStore, tempDir } from "../../polite-crawler/src/test-surfaces.ts";
+import {
+  leaksHeldBack,
+  removeDir,
+  seedStore,
+  tempDir,
+} from "../../polite-crawler/src/test-surfaces.ts";
 
 // The MCP tool crawl_find with an embedder. polite-crawler tests the command line.
 
@@ -47,7 +52,7 @@ describe("the MCP tool crawl_find with an embedder", () => {
       });
       const content = result.content as Array<{ text: string }>;
       expect(content[1]!.text).toContain("<untrusted-web-content");
-      expect(embedder.documents().join(" ")).not.toContain("7319");
+      expect(leaksHeldBack(embedder.documents().join(" "))).toBe(false);
       const refused = await two.client.callTool({
         name: "crawl_find",
         arguments: { q: "bread", rank: "hybrid" },

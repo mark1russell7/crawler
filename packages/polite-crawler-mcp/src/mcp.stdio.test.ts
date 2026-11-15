@@ -3,9 +3,11 @@ import { fileURLToPath } from "node:url";
 import type { LocalSite, McpChild } from "../../polite-crawler/src/test-surfaces.ts";
 import {
   CLI as POLITE_CRAWLER_CLI,
+  HELD_BACK,
   PLAIN_PAGE,
   besidePoliteCrawler,
   childEnv,
+  leaksHeldBack,
   localSite,
   removeDir,
   seedStore,
@@ -210,7 +212,7 @@ describe("the MCP server over standard input and output", () => {
         user_provided: true,
       });
       expect(JSON.parse(refused.content[0]!.text)).toMatchObject({ held_back: true });
-      expect(JSON.stringify(refused)).not.toContain("7319");
+      expect(leaksHeldBack(refused)).toBe(false);
       await plain.server.end();
 
       const asked: unknown[] = [];
@@ -229,7 +231,7 @@ describe("the MCP server over standard input and output", () => {
         user_provided: true,
       });
       expect(asked).toHaveLength(1);
-      expect(released.content[1]?.text).toContain("The access code is 7319.");
+      expect(released.content[1]?.text).toContain(`${HELD_BACK}.`);
       await confirming.server.end();
       expectOnlyJsonRpc(confirming.server);
     },
@@ -247,7 +249,7 @@ describe("the MCP server over standard input and output", () => {
         doc: "url:https://members.example/",
         user_provided: true,
       });
-      expect(read.content[1]?.text).toContain("The access code is 7319.");
+      expect(read.content[1]?.text).toContain(`${HELD_BACK}.`);
       await server.end();
     },
     SLOW,

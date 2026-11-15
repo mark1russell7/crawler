@@ -4,8 +4,10 @@ import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { LocalSite } from "./test-surfaces.ts";
 import {
+  HELD_BACK,
   PLAIN_PAGE,
   childEnv,
+  leaksHeldBack,
   localSite,
   removeDir,
   runCli,
@@ -193,7 +195,7 @@ describe("the command line: the store", () => {
       const held = await runCli(["read", "url:https://members.example/", "--dir", store]);
       expect(held.code).toBe(1);
       expect(held.stdout).toContain("Add --user-provided if you gave this URL yourself.");
-      expect(held.stdout).not.toContain("7319");
+      expect(leaksHeldBack(held.stdout)).toBe(false);
       const given = await runCli([
         "read",
         "url:https://members.example/",
@@ -202,7 +204,7 @@ describe("the command line: the store", () => {
         store,
       ]);
       expect(given.code).toBe(0);
-      expect(given.stdout).toContain("The access code is 7319.");
+      expect(given.stdout).toContain(`${HELD_BACK}.`);
       const logs = await readdir(join(store, "captures"), { recursive: true });
       const text = await Promise.all(
         logs

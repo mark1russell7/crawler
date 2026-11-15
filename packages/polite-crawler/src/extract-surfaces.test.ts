@@ -284,6 +284,7 @@ describe("the command extract", () => {
     expect(usage.stderr).toContain("--field");
     expect(held.code).toBe(1);
     expect(held.stdout).toContain("--user-provided");
-    expect(held.stdout).not.toContain("7319");
+    // the field value as a whole word: the digits inside a hash such as a capture id are not a leak
+    expect(held.stdout).not.toMatch(/\b7319\b/);
   }, 60_000);
 });

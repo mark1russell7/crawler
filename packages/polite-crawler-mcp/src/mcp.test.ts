@@ -4,7 +4,13 @@ import { ElicitRequestSchema } from "@modelcontextprotocol/sdk/types.js";
 import { afterEach, describe, expect, it } from "vitest";
 import type { FetchOptions, PageResult, PoliteCrawler } from "polite-crawler";
 import { openCrawler } from "polite-crawler";
-import { mockSites, removeDir, tempDir } from "../../polite-crawler/src/test-surfaces.ts";
+import {
+  HELD_BACK,
+  leaksHeldBack,
+  mockSites,
+  removeDir,
+  tempDir,
+} from "../../polite-crawler/src/test-surfaces.ts";
 import type { CrawlServerOptions } from "./server.ts";
 import { createMcpServer } from "./server.ts";
 import { INSTRUCTIONS, crawlTools } from "./tools.ts";
@@ -413,20 +419,16 @@ describe("crawl_read", () => {
 });
 
 describe("user_provided", () => {
-  /**
-   * True when the held-back text is in any field of a result. The check looks for the sentence, not only its digits:
-   * an id such as the capture id is a hash, and a hash can contain the digits 7319.
-   */
-  const SECRET = "The access code is 7319";
-  const leaks = (value: unknown): boolean => JSON.stringify(value).includes(SECRET);
-
   it("finds the held-back text in any field, and not the digits of a hash", () => {
+    // the capture of the stdio test that failed main on 2026-11-15
+    expect(leaksHeldBack('{"captures":["fetch.2a27319cb9c7"],"held_back":true}')).toBe(false);
+    expect(leaksHeldBack(`Page. ${HELD_BACK}.`)).toBe(true);
     const hash = { data: { capture: "fetch.f73191aac0ac", held_back: true }, web: "" };
     // The old check failed on this value: the hash has the digits
     expect(JSON.stringify(hash)).toContain("7319");
-    expect(leaks(hash)).toBe(false);
-    expect(leaks({ data: { note: `${SECRET}.` }, web: "" })).toBe(true);
-    expect(leaks({ data: {}, web: `Page. ${SECRET}.` })).toBe(true);
+    expect(leaksHeldBack(hash)).toBe(false);
+    expect(leaksHeldBack({ data: { note: `${HELD_BACK}.` }, web: "" })).toBe(true);
+    expect(leaksHeldBack({ data: {}, web: `Page. ${HELD_BACK}.` })).toBe(true);
   });
 
   const heldBack = async (options: CrawlServerOptions, elicit?: Parameters<typeof connect>[2]) => {
@@ -447,7 +449,7 @@ describe("user_provided", () => {
       "POLITE_CRAWLER_ALLOW_USER_PROVIDED=1",
     );
     expect(read.web).toBe("");
-    expect(leaks(read)).toBe(false);
+    expect(leaksHeldBack(read)).toBe(false);
   });
 
   it("asks the user when the client can ask, and releases the text when the user confirms", async () => {
@@ -458,7 +460,7 @@ describe("user_provided", () => {
     expect(asked).toHaveLength(1);
     expect(asked[0]).toContain("https://members.example/");
     expect(read.data).toMatchObject({ held_back: false });
-    expect(read.web).toContain("The access code is 7319.");
+    expect(read.web).toContain(`${HELD_BACK}.`);
   });
 
   it("keeps the text held back when the user declines, also with the opt-in of the operator", async () => {
@@ -476,7 +478,7 @@ describe("user_provided", () => {
     expect(read.data).toMatchObject({ held_back: true });
     expect(String((read.data as { note: string }).note)).toContain("could not get an answer");
     expect(read.web).toBe("");
-    expect(leaks(read)).toBe(false);
+    expect(leaksHeldBack(read)).toBe(false);
   });
 
   it("keeps the text held back when the user accepts but does not confirm", async () => {
@@ -487,7 +489,7 @@ describe("user_provided", () => {
   it("releases the text with the opt-in of the operator when the client cannot ask", async () => {
     const { read } = await heldBack({ allowUserProvided: true });
     expect(read.data).toMatchObject({ held_back: false });
-    expect(read.web).toContain("The access code is 7319.");
+    expect(read.web).toContain(`${HELD_BACK}.`);
   });
 
   it("asks nothing for a page that is not held back", async () => {

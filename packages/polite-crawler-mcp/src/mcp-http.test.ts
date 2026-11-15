@@ -7,6 +7,7 @@ import { CallToolResultSchema, CreateTaskResultSchema } from "@modelcontextproto
 import { afterEach, describe, expect, it } from "vitest";
 import { McpTaskStore } from "@procedures/mcp-server";
 import { fakeClock } from "../../polite-crawler/src/test-helpers.ts";
+import { HELD_BACK, leaksHeldBack } from "../../polite-crawler/src/test-surfaces.ts";
 import type { Reply, TestSite } from "../../polite-crawler/src/test-site.ts";
 import { htmlPage, testCrawler, testSite } from "../../polite-crawler/src/test-site.ts";
 import type { McpHttpServer, StartMcpHttpOptions } from "./http.ts";
@@ -414,7 +415,7 @@ describe("the MCP server over HTTP: the tools and the tasks", () => {
         ? {
             type: "text/html",
             headers: { "content-signal": "ai-input=no" },
-            body: htmlPage("The access code is 7319"),
+            body: htmlPage(HELD_BACK),
           }
         : undefined;
     const read = async (allowUserProvided: boolean): Promise<string> => {
@@ -430,7 +431,7 @@ describe("the MCP server over HTTP: the tools and the tasks", () => {
       });
       return JSON.stringify(result.content);
     };
-    expect(await read(false)).not.toContain("7319");
-    expect(await read(true)).toContain("7319");
+    expect(leaksHeldBack(await read(false))).toBe(false);
+    expect(await read(true)).toContain(HELD_BACK);
   });
 });

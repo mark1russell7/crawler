@@ -498,7 +498,7 @@ export const start: typeof startMcpServer = startMcpServer;
     signals: 1100,
     // the size of version 0.5.1, and 20 percent more
     urls: 850,
-    // the size of version 0.6.4 (1126 B, the body decoder), and 20 percent more
+    // the size of version 0.7.0 (1126 B, the body decoder), and 20 percent more
     text: 1360,
     // the size of version 0.6.3 (6793 B, with fetchTransport, poll, the quotas and the civil time of
     // @mark1russell7/algebra/clock), and 20 percent more

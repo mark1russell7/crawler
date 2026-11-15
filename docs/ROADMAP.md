@@ -16,33 +16,52 @@ List the MCP server in the directories that need a submission, then post polite-
 
 ## In progress
 
+### `daemon-lock`: Daemon: a lock file for the single-daemon rule
+
+Two `polite-crawler daemon` starts at the same moment on one store both pass the single-daemon check, so both run and the second replaces the MCP token file. The fix is an exclusive lock file with recovery of a stale lock. Found by an audit. It is rare: it needs two starts at the same moment.
+
+- Area: Package
+- Started: 2026-11-15
+
 ### `sqlite-projections`: SQLite: move the index, the vectors and the watch list onto @mark1russell7/sqlite
 
-The map of homes puts the SQLite code in @mark1russell7/sqlite. The host state store moved onto it with api-quota (0.6.3), with newer: "keep" of 0.2.5. The search index (docs.ts), the vectors (vectors.ts) and the watch list (watch.ts) still have their own pragmas, versions and rebuilds. The index and the vectors are projections, so they move to ensureProjection of @mark1russell7/sqlite 0.2.4: a file of a different version opens empty and the crawler fills it again from the capture log. watch.ts is a store, so it moves to migrate. It waits for the end of the alerts work.
+The map of homes puts the SQLite code in @mark1russell7/sqlite. The host state store moved onto it with api-quota (0.6.3). In #165 (0.7.1, after #162 is 0.7.0) the search index (docs.ts) and the vectors (vectors.ts) move to ensureProjection: a file of a different version opens empty, and the crawler fills it again from the capture log. The watch list (watch.ts) is a store, so it moves to migrate. The vectors load in readTransaction of @mark1russell7/sqlite 0.3.2, which the sqlite role added for this item, so no hand-made transaction is left. The same release fixes a bug that the newer oxlint of Renovate #152 found: a backspace byte where \b was meant, so "Bar hours" was read as the opening hours of a venue. #165 is stacked on #162 (0.6.4) and is in CI.
 
 - Area: Package
 - Waits for: `api-quota`
 - Started: 2026-11-15
 - [sqlite #12 (migrate newer: keep, 0.2.5, done)](https://github.com/mark1russell7/sqlite/pull/12)
+- [crawler #165 (0.7.1, CI green at 4d4a9e9; rebase after #162)](https://github.com/mark1russell7/crawler/pull/165)
+- [sqlite 0.3.2 (readTransaction, for this item)](https://github.com/mark1russell7/sqlite/releases/tag/v0.3.2)
 
 ### `report-chunks`: API report: no chunk paths (html.chunk.d.mts)
 
-The API report named build/html.chunk.d.mts 24 times. A chunk name is not a stable API: a change of the bundler renames the chunk, and the report then shows a break that is not real. The cause: html.ts and text.ts were needed by the same entries, so the bundler put them in one chunk. The fix makes text.ts (the body decoder, with no imports) an entry point of its own, polite-crawler/text, as urls became one in 0.5.1. The first try, a merge of text.ts into html.ts, broke the JavaScript budget of the site (146,597 bytes over 40,000). Two new tests: the report names only entry points, and the counts table of the API review matches the reports. A draft PR stacked on #161, 0.6.4 (PATCH: a new subpath). The local checks pass, and CI runs on 1ede2ac. The strategist asked for it on 2026-11-14.
+The API report named build/html.chunk.d.mts 24 times. A chunk name is not a stable API: a change of the bundler renames the chunk, and the report then shows a break that is not real. The cause: html.ts and text.ts were needed by the same entries, so the bundler put them in one chunk. The fix makes text.ts (the body decoder, with no imports) an entry point of its own, polite-crawler/text, as urls became one in 0.5.1. The first try, a merge of text.ts into html.ts, broke the JavaScript budget of the site (146,597 bytes over 40,000). Two new tests: the report names only entry points, and the counts table of the API review matches the reports. In #162 with api-guards and quota-followups. The version is 0.7.0 (MINOR before 1.0: read of withQuota gets the gate, and that breaks a program that calls read itself). The strategist reviewed #162 on 2026-11-15 and asked for 5 fixes. They are pushed, and the strategist merges and releases 0.7.0.
 
 - Area: Package
 - Waits for: `api-quota`
 - Started: 2026-11-14
-- [crawler #162 (report-chunks, 0.6.4)](https://github.com/mark1russell7/crawler/pull/162)
+- [crawler #162 (report-chunks, 0.7.0)](https://github.com/mark1russell7/crawler/pull/162)
 
 ### `api-guards`: isQuotaError and isApiError: tell a quota refusal across two copies of the package
 
-For the alerts project: a package that gets a transport of withQuota, with no dependency on polite-crawler, must tell a refusal of the quota from another failure. instanceof is false when a program has two copies of the package. isQuotaError and isApiError in polite-crawler/api read the name and the fields, so they also accept the errors of another copy or of 0.6.3. send and poll use the guard too, so a refusal from another copy no longer counts as a failure of the host. In #162 with report-chunks, released as 0.6.4. The alerts channel keeps its own check until then.
+For the alerts project: a package that gets a transport of withQuota, with no dependency on polite-crawler, must tell a refusal of the quota from another failure. instanceof is false when a program has two copies of the package. isQuotaError and isApiError in polite-crawler/api read the name and the fields, so they also accept the errors of another copy or of 0.6.3. send and poll use the guard too, so a refusal from another copy no longer counts as a failure of the host. In #162 with report-chunks, released as 0.7.0. The alerts channel keeps its own check until then.
 
 - Area: Package
 - Waits for: `api-quota`
 - Started: 2026-11-15
-- [crawler #162 (api-guards, 0.6.4)](https://github.com/mark1russell7/crawler/pull/162)
+- [crawler #162 (api-guards, 0.7.0)](https://github.com/mark1russell7/crawler/pull/162)
 - [alerts PR 19 (the ask)](https://github.com/mark1russell7/alerts/pull/19)
+
+### `quota-followups`: Quotas: the follow-ups of the reviews (a list of gates, the reset forms, the longest block, onError)
+
+Five follow-ups from the reviews of the quotas, in 0.7.0 (#162). 1. Two quotas on one call: withQuota takes a list of gates and counts the call in each gate or in none. When one gate refuses, the other gates give back their units, because the call did not start. A give-back changes nothing when a reading of the provider came after the take, so the count never goes below the count of the provider. 2. The doc of resetAfter says: a value that the gate can read. 3. A reset header in seconds until the reset (RateLimit-Reset of the IETF draft) is read as such, and a reset in milliseconds since the epoch too, not as a time in 1970 or in the year 59000. 4. The README warns that a reset header with no count stops the key, even on a 200. 5. From the review of #162: a block of the provider ends at the latest one window after the reading (option maxBlockMs), also a block that a store keeps from an earlier version; an error that onError throws is lost, so the caller keeps the refusal and each gate still gives back. Seven mutants of these fixes fail the tests. The end: 2026-11-16.
+
+- Area: Package
+- Waits for: `api-quota`
+- Started: 2026-11-15
+- [crawler #162 (0.7.0)](https://github.com/mark1russell7/crawler/pull/162)
+- [crawler #161 (the review)](https://github.com/mark1russell7/crawler/pull/161)
 
 ## Later
 
@@ -53,31 +72,35 @@ For the alerts project: a package that gets a transport of withQuota, with no de
 - Area: Release and CI
 - Waits for: `mcp-host`, `api-review`, `eval-b`, `showhn`, `rel020`
 
-### `daemon-lock`: Daemon: a lock file for the single-daemon rule
-
-Two `polite-crawler daemon` starts at the same moment on one store both pass the single-daemon check, so both run and the second replaces the MCP token file. The fix is an exclusive lock file with recovery of a stale lock. Found by an audit. It is rare: it needs two starts at the same moment.
-
-- Area: Package
-
 ### `quota-service`: Quotas: move the window counting to @mark1russell7/service
 
-The window counting of quotaGate (rolling buckets and calendar days and months in a zone) is a limiter, and the map of homes puts limiters in @mark1russell7/service. It moves there as a calendar-window machine on algebra/clock, keyed by quota name and key as the TakeRequest of the service limiter. polite-crawler keeps the header reading (readQuotaHeaders) and the adapter (withQuota on a fetch or a transport). The service part is a request to systems, with a second request for algebra/clock: the first instant at or after a wall time, which quota.ts now finds with instantsOf and offsetChanges. The end: 2026-11-22.
+The window counting of quotaGate (rolling buckets and calendar days and months in a zone) is a limiter, and the map of homes puts limiters in @mark1russell7/service. Systems built it in #527 (SYS-115, merged 2616fe7) as @mark1russell7/service/limiter: quota specs as quantities, a pure quotaStep, keyedQuota on a wall clock, and takeQuotas, all or none, with the give-back and readAt rules of polite-crawler 0.6.4. Its QuotaRecord and QuotaStore have the same shape as those of polite-crawler, so the files of SqliteHostStateStore do not change. The plan: quotaGate becomes an adapter over keyedQuota, a list in withQuota goes to takeQuotas, and the two record types become those of service. polite-crawler keeps the header reading (readQuotaHeaders), QuotaError and withQuota. algebra 0.8.9 is on npm. Waiting on service 0.8.15 (main is at 0.8.16). The end: 2026-11-22.
 
 - Area: Package
 - Waits for: `api-quota`
 - [crawler #161 (the review that asks for the move)](https://github.com/mark1russell7/crawler/pull/161)
+- [systems #527 (SYS-115: service 0.8.15, algebra 0.8.9)](https://github.com/mark1russell7/systems/pull/527)
+
+### `quota-hardening`: Quotas: the smaller points of the review of #162
+
+The smaller points of the review of #162. None of them makes a count too low. 1. A reading in the same millisecond as a take: readAt cannot tell their order, so a give-back keeps the unit (the count is too high, not too low). A sequence number in the record fixes it. 2. isApiError accepts each error with the name ApiError, also of a different library: document it, or check a field of polite-crawler. 3. The duplicate check of a list of gates compares the quota name and the key, not the store: two stores with one name and key pass. 4. readAt is never pruned, and a custom QuotaStore must keep the record as it is: document both. 5. An entry-point test for polite-crawler/text, as urls.test.ts. 6. The api-report test (the report names only the declaration files of entries) goes as a PR to @mark1russell7/api-report. The end: 2026-11-29.
+
+- Area: Package
+- Waits for: `quota-followups`
+- [crawler #162 (the review)](https://github.com/mark1russell7/crawler/pull/162)
 
 ## Shipped
 
 ### `api-quota`: API quotas: count each key over its day, month or window, and stop before the provider
 
-For the alerts project: free API keys have a documented quota (as read on 2026-11-14: Pushover 10,000 messages a month for each user account, reset at 00:00 Central Time on the 1st; NASA FIRMS 5,000 transactions in 10 minutes; OpenSky 400 to 8,000 credits a day for each endpoint group; TomTom 200,000 tiles and 20,000 other map requests a month). polite-crawler/api paced each host and reacted to a 429, but it counted no quota, so a program found the limit only when the provider refused it. quotaGate counts each key over a calendar day or month in a time zone, or a rolling window, with a cost for each call and a reserve. withQuota puts the gate on any async function (a fetch, a transport, a client), so a call over the quota is refused with its reset time and no request goes out. The headers of the provider make the count larger, never smaller. The counts stay after a restart in the SQLite host state store (schema 2 through @mark1russell7/sqlite). After the review of the strategist: each quota name and key has its own record, so a gate of a minute and a gate of a day on one key count apart. The civil time comes from @mark1russell7/algebra/clock: a window that starts in a clock gap starts at the end of the gap, and in an overlap at the first time. An error of the store after a call goes to onError, so a retry does not send the call twice.
+For the alerts project: free API keys have a documented quota (as read on 2026-11-14: Pushover 10,000 messages a month for each user account, reset at 00:00 Central Time on the 1st; NASA FIRMS 5,000 transactions in 10 minutes; OpenSky 400 to 8,000 credits a day for each endpoint group; TomTom 200,000 tiles and 20,000 other map requests a month). polite-crawler/api paced each host and reacted to a 429, but it counted no quota, so a program found the limit only when the provider refused it. quotaGate counts each key over a calendar day or month in a time zone, or a rolling window, with a cost for each call and a reserve. withQuota puts the gate on any async function (a fetch, a transport, a client), so a call over the quota is refused with its reset time and no request goes out. The headers of the provider make the count larger, never smaller. The counts stay after a restart in the SQLite host state store (schema 2 through @mark1russell7/sqlite). After the review of the strategist: each quota name and key has its own record, so a gate of a minute and a gate of a day on one key count apart. The civil time comes from @mark1russell7/algebra/clock: a window that starts in a clock gap starts at the end of the gap, and in an overlap at the first time. An error of the store after a call goes to onError, so a retry does not send the call twice. Released as polite-crawler 0.6.3 on 2026-11-15, with npm provenance. The four follow-ups of the review are the item quota-followups (0.6.4), and the move of the window counting to @mark1russell7/service is the item quota-service.
 
 - Area: Package
 - Waits for: `api-poll`
 - Started: 2026-11-14
 - Shipped: 2026-11-15
-- [crawler #161 (quotas, 0.6.3)](https://github.com/mark1russell7/crawler/pull/161)
+- [crawler #161 (quotas, merged 71aa6f3)](https://github.com/mark1russell7/crawler/pull/161)
+- [polite-crawler 0.6.3 on npm](https://www.npmjs.com/package/polite-crawler/v/0.6.3)
 
 ### `html-size`: The html entry grew 25 % with linkedom 0.18.15
 

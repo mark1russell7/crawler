@@ -366,6 +366,14 @@ export interface QuotaGateOptions {
   readonly store?: QuotaStore | undefined;
   /** This function gives the time in milliseconds since the epoch. The default is `Date.now`. */
   readonly now?: (() => number) | undefined;
+  /**
+   * This value is the longest block that a reset of the provider can set, in milliseconds. A reading
+   * with a later reset blocks the key until the time of the reading plus this value. The default is
+   * one window. Then the block ends at the latest when the units of a call at the time of the
+   * reading go free. Thus a reset header in a wrong form cannot stop a key for much longer than the
+   * window of the quota.
+   */
+  readonly maxBlockMs?: number | undefined;
 }
 
 /**
@@ -388,7 +396,15 @@ export function quotaGate(quota: Quota, options: QuotaGateOptions): QuotaGate {
       `The reserve of the quota ${name} is not from 0 to less than the limit: ${String(reserve)}.`,
     );
   }
-  const { key } = options;
+  const { key, maxBlockMs } = options;
+  if (maxBlockMs !== undefined && (!Number.isFinite(maxBlockMs) || maxBlockMs <= 0)) {
+    throw new ApiError(
+      `The longest block of the quota ${name} is not a positive number: ${String(maxBlockMs)}.`,
+    );
+  }
+  // the latest end of a block that a reading at the time `t` can set
+  const blockBound = (t: number): number =>
+    maxBlockMs === undefined ? span.freeAt(span.bucket(t)[0]) : t + maxBlockMs;
   const store = options.store ?? memoryQuotaStore();
   const now = options.now ?? Date.now;
   const allowed = limit - reserve;
@@ -403,11 +419,20 @@ export function quotaGate(quota: Quota, options: QuotaGateOptions): QuotaGate {
       at: t,
     };
   };
+  // a block ends at the latest at the bound: also a block that a record of an earlier version keeps
+  const bounded = (record: QuotaRecord, t: number): QuotaRecord => {
+    const { blockedUntil } = record;
+    const bound = blockBound(t);
+    return blockedUntil !== undefined && blockedUntil > bound
+      ? { ...record, blockedUntil: bound }
+      : record;
+  };
   // the record of the quota and the key, so two quotas of one key in one store count apart
   const change = (step: (record: QuotaRecord, t: number) => QuotaRecord): QuotaState => {
     const t = now();
+    // the step sees a bounded record, and its new block is bounded too
     const record = store.changeQuota(name, key, (stored) =>
-      step(prune(span, recordOf(stored), t), t),
+      bounded(step(bounded(prune(span, recordOf(stored), t), t), t), t),
     );
     return stateOf(prune(span, recordOf(record), t), t);
   };
@@ -544,7 +569,8 @@ export interface WithQuotaOptions<A extends readonly unknown[], R> {
   /**
    * This function gets an error of `read` or of the store after the call. The call went out, so
    * `withQuota` gives its result. It does not throw, because a retry after a throw sends the call
-   * again. With no function, the error is lost.
+   * again. It also gets an error of a give-back of a list, and the caller still gets the refusal.
+   * With no function, the error is lost. An error that this function throws is lost too.
    */
   readonly onError?: ((error: unknown) => void) | undefined;
 }
@@ -570,6 +596,18 @@ const gateList = (gate: QuotaGate | readonly QuotaGate[]): readonly QuotaGate[] 
   return [...gate];
 };
 
+/**
+ * This function gives an error to `onError`. An error that `onError` throws is lost. Thus the other
+ * give-backs still occur, and the caller gets the refusal or the result of the call.
+ */
+const report = (onError: ((error: unknown) => void) | undefined, error: unknown): void => {
+  try {
+    onError?.(error);
+  } catch {
+    // the refusal or the result of the call is more important than an error of the report
+  }
+};
+
 /** This function gives back the units of each gate that counted them, and gives each error to `onError`. */
 const giveBackAll = (
   taken: readonly (readonly [QuotaGate, number | undefined])[],
@@ -585,7 +623,7 @@ const giveBackAll = (
       }
       gate.giveBack?.(cost, at);
     } catch (error) {
-      onError?.(error);
+      report(onError, error);
     }
   }
 };
@@ -650,7 +688,7 @@ export function withQuota<A extends readonly unknown[], R>(
         const reading = read?.(result, each);
         if (reading !== undefined) each.note(reading);
       } catch (error) {
-        onError?.(error);
+        report(onError, error);
       }
     }
     return result;

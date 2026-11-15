@@ -246,6 +246,7 @@ export function quotaGate(quota: Quota, options: QuotaGateOptions): QuotaGate;
 // @beta
 export interface QuotaGateOptions {
     readonly key: string;
+    readonly maxBlockMs?: number | undefined;
     readonly now?: (() => number) | undefined;
     readonly store?: QuotaStore | undefined;
 }

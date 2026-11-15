@@ -8,10 +8,20 @@
  * bucket, and a bucket counts until all of it is out of the window. The answer of the provider can
  * make the count larger, but not smaller.
  *
- * The civil time of a calendar window comes from `@mark1russell7/algebra/clock`. The module imports
- * no Node.js module, so a browser can use it. Each export is beta.
+ * The count of a window comes from the keyed quota of `@mark1russell7/service/limiter`, and a list
+ * of gates takes its units with `takeQuotas` of that module. The module imports no Node.js module,
+ * so a browser can use it. Each export is beta.
  */
-import { instantsOf, localTime, offsetChanges } from "@mark1russell7/algebra/clock";
+import type {
+  QuotaChange,
+  QuotaPart,
+  QuotaRefused,
+  QuotaSpec,
+  QuotaState as LimiterState,
+  QuotaStore as LimiterStore,
+  QuotaVerdict,
+} from "@mark1russell7/service/limiter";
+import { keyedQuota, quotaProblems, takeQuotas } from "@mark1russell7/service/limiter";
 import { ApiError } from "./api-error.ts";
 import { parseRetryAfter } from "./classify.ts";
 import type { QuotaRecord, QuotaStore } from "./politeness.ts";
@@ -135,186 +145,67 @@ export const isQuotaError = (value: unknown): value is QuotaError =>
     typeof (value as { readonly key?: unknown }).key === "string" &&
     Number.isFinite((value as { readonly resetAt?: unknown }).resetAt));
 
-const MAX_BUCKETS = 1000;
 const DEFAULT_BUCKETS = 60;
-const HOUR_MS = 3_600_000;
 /** The largest time of a `Date`, in milliseconds from the epoch. */
 const MAX_TIME = 8.64e15;
 
 const iso = (t: number): string => new Date(t).toISOString();
 
-/** The checked form of a window: the time bucket of a time, and the test of a bucket. */
-interface Span {
-  /** This function gives the start and the end of the bucket of the time `t`. */
-  bucket(t: number): readonly [start: number, end: number];
-  /**
-   * This function gives the test of the buckets that count at the time `t`. A bucket of a later
-   * window counts too: after a step back of the clock, the calls of that window still count.
-   */
-  counting(t: number): (start: number) => boolean;
-  /** This function gives the time when the bucket that starts at `start` stops counting. */
-  freeAt(start: number): number;
-}
-
-/** This function gives the clock time of `t` in a zone, as the milliseconds of that clock time in UTC. */
-const wallOf = (t: number, timeZone: string): number => {
-  const local = localTime(t, timeZone);
-  if (local === undefined) throw new ApiError(`The time ${String(t)} is not a date.`);
-  const { year, month, day, hour, minute, second } = local;
-  return Date.UTC(year, month - 1, day, hour, minute, second);
-};
-
-/**
- * This function gives the first time at which the clock of the zone shows the clock time `wall`.
- * In the gap of a change forward, the clock does not show `wall`. The function then gives the time
- * of the change: the end of the gap.
- */
-const firstAt = (wall: number, timeZone: string): number => {
-  const [first] = instantsOf(wall, timeZone) ?? [];
-  if (first !== undefined) return first;
-  // a time with the clock time `wall` is from 14 hours before `wall` to 12 hours after it
-  const changes = offsetChanges(wall - 15 * HOUR_MS, wall + 13 * HOUR_MS, timeZone) ?? [];
-  const change = changes.find(
-    (at) => wallOf(at - 1, timeZone) < wall && wallOf(at, timeZone) >= wall,
-  );
-  if (change === undefined) {
-    throw new ApiError(`The clock of ${timeZone} does not show or jump over ${iso(wall)}.`);
-  }
-  return change;
-};
-
-/** This function gives the calendar window of the time `t`: its start, and the start of the next window. */
-const calendarOf = (
-  unit: "day" | "month",
-  timeZone: string,
-  hour: number,
-  t: number,
-): readonly [number, number] => {
-  const wall = new Date(wallOf(t, timeZone));
-  const year = wall.getUTCFullYear();
-  const month = wall.getUTCMonth();
-  const day = wall.getUTCDate();
-  // the start of the window that is `back` windows before the window of the date of `t`
-  const startOf = (back: number): number =>
-    firstAt(
-      unit === "day"
-        ? Date.UTC(year, month, day - back, hour)
-        : Date.UTC(year, month - back, 1, hour),
-      timeZone,
-    );
-  const start = startOf(0);
-  return start <= t ? [start, startOf(-1)] : [startOf(1), start];
-};
-
-const spanOf = (window: QuotaWindow): Span => {
-  if (window.kind === "rolling") {
-    const buckets = window.buckets ?? DEFAULT_BUCKETS;
-    if (!Number.isFinite(window.ms) || window.ms <= 0) {
-      throw new ApiError(`The rolling window is not a positive number: ${String(window.ms)}.`);
-    }
-    if (!Number.isInteger(buckets) || buckets < 1 || buckets > MAX_BUCKETS) {
-      throw new ApiError(
-        `The count of buckets is not a whole number from 1 to ${String(MAX_BUCKETS)}: ${String(buckets)}.`,
-      );
-    }
-    const { ms } = window;
-    const size = Math.ceil(ms / buckets);
-    return {
-      bucket: (t) => {
-        const start = Math.floor(t / size) * size;
-        return [start, start + size];
-      },
-      counting: (t) => (start) => start + size + ms > t,
-      freeAt: (start) => start + size + ms,
-    };
-  }
-  const hour = window.hour ?? 0;
-  if (!Number.isInteger(hour) || hour < 0 || hour > 23) {
-    throw new ApiError(
-      `The hour of the window is not a whole number from 0 to 23: ${String(hour)}.`,
-    );
-  }
-  if (localTime(0, window.timeZone) === undefined) {
-    throw new ApiError(`The time zone of the window is not an IANA time zone: ${window.timeZone}.`);
-  }
-  const { unit, timeZone } = window;
-  return {
-    bucket: (t) => calendarOf(unit, timeZone, hour, t),
-    // only the windows before the window of `t` stop counting
-    counting: (t) => {
-      const [first] = calendarOf(unit, timeZone, hour, t);
-      return (start) => start >= first;
-    },
-    freeAt: (start) => calendarOf(unit, timeZone, hour, start)[1],
-  };
-};
-
 const isTime = (value: unknown): value is number =>
   typeof value === "number" && Number.isFinite(value) && Math.abs(value) <= MAX_TIME;
 
+/** This function refuses a cost that is not a finite number of 0 or more. */
+const checkCost = (cost: number, of: string): void => {
+  if (!Number.isFinite(cost) || cost < 0) {
+    throw new ApiError(`The cost of ${of} is not a number of 0 or more: ${String(cost)}.`);
+  }
+};
+
 /**
- * This function gives the record of a store, or undefined for a value that is not a record. It
- * removes each item that is not valid and keeps the other items, so the count stays as high as the
- * record lets it.
+ * This function gives the spec of the limiter for a quota. Without `maxBlockMs`, a block ends at the
+ * latest when the bucket of its reading stops counting: one window.
  */
-const recordOf = (value: unknown): QuotaRecord | undefined => {
-  if (typeof value !== "object" || value === null) return undefined;
-  const { spent, blockedUntil, readAt } = value as {
-    spent?: unknown;
-    blockedUntil?: unknown;
-    readAt?: unknown;
-  };
-  if (!Array.isArray(spent)) return undefined;
-  const items: (readonly [number, number])[] = [];
-  for (const item of spent as unknown[]) {
-    if (!Array.isArray(item) || item.length !== 2) continue;
-    const [start, units] = item as unknown[];
-    if (isTime(start) && isTime(units) && units >= 0) items.push([start, units]);
-  }
-  items.sort((a, b) => a[0] - b[0]);
+const specOf = (quota: Quota, maxBlockMs: number | undefined): QuotaSpec => {
+  const { window } = quota;
   return {
-    spent: items,
-    ...(isTime(blockedUntil) ? { blockedUntil } : {}),
-    ...(isTime(readAt) ? { readAt } : {}),
+    limit: { value: quota.limit, unit: "count" },
+    reserve: { value: quota.reserve ?? 0, unit: "count" },
+    window:
+      window.kind === "rolling"
+        ? {
+            kind: "rolling",
+            span: { value: window.ms, unit: "ms" },
+            buckets: { value: window.buckets ?? DEFAULT_BUCKETS, unit: "count" },
+          }
+        : {
+            kind: "calendar",
+            unit: window.unit,
+            zone: window.timeZone,
+            start: { value: window.hour ?? 0, unit: "h" },
+          },
+    maxBlock: maxBlockMs === undefined ? "window" : { value: maxBlockMs, unit: "ms" },
   };
 };
 
-/** This function removes the buckets that do not count at the time `t`, and an ended refusal. */
-const prune = (span: Span, record: QuotaRecord | undefined, t: number): QuotaRecord => {
-  const counts = span.counting(t);
-  const spent = (record?.spent ?? []).filter(([start]) => counts(start));
-  const blockedUntil = record?.blockedUntil;
-  const readAt = record?.readAt;
-  return {
-    spent,
-    ...(blockedUntil !== undefined && blockedUntil > t ? { blockedUntil } : {}),
-    ...(readAt === undefined ? {} : { readAt }),
-  };
-};
-
-const usedOf = (record: QuotaRecord): number =>
-  record.spent.reduce((sum, [, units]) => sum + units, 0);
-
-/** This function adds units to the bucket of the time `t`. */
-const add = (span: Span, record: QuotaRecord, t: number, units: number): QuotaRecord => {
-  const [start] = span.bucket(t);
-  const spent = record.spent.map(([at, count]): readonly [number, number] =>
-    at === start ? [at, count + units] : [at, count],
-  );
-  if (!spent.some(([at]) => at === start)) spent.push([start, units]);
-  spent.sort((a, b) => a[0] - b[0]);
-  return { ...record, spent };
-};
-
-/** This function gives the time when `need` units of the oldest buckets stop counting. */
-const freeTime = (span: Span, record: QuotaRecord, need: number): number | undefined => {
-  let freed = 0;
-  for (const [start, units] of record.spent) {
-    freed += units;
-    if (freed >= need) return span.freeAt(start);
-  }
-  return undefined;
-};
+/**
+ * This function gives a store of the limiter over a store of this package. The two stores keep one
+ * form of record, so a record of an earlier version stays valid.
+ */
+const limiterStore = (store: QuotaStore): LimiterStore<true> => ({
+  sync: true,
+  change<T>(quota: string, key: string, step: (stored: unknown) => QuotaChange<T>): T {
+    let result: { readonly value: T } | undefined;
+    store.changeQuota(quota, key, (stored) => {
+      const next = step(stored);
+      result = { value: next.result };
+      return next.record;
+    });
+    if (result === undefined) {
+      throw new ApiError(`The store did not change the record of the quota ${quota} of ${key}.`);
+    }
+    return result.value;
+  },
+});
 
 /**
  * The gate of one key. It counts the units of the calls, and it refuses a call over the quota.
@@ -379,150 +270,67 @@ export interface QuotaGateOptions {
 /**
  * This function makes the gate of one key.
  *
- * @throws ApiError when the quota or its window is not valid.
+ * @throws ApiError when the quota, its window or `maxBlockMs` is not valid. The message gives each
+ * problem.
  * @beta
  */
 export function quotaGate(quota: Quota, options: QuotaGateOptions): QuotaGate {
-  const span = spanOf(quota.window);
   const { limit, name } = quota;
   const reserve = quota.reserve ?? 0;
-  if (!Number.isFinite(limit) || limit <= 0) {
-    throw new ApiError(
-      `The limit of the quota ${name} is not a positive number: ${String(limit)}.`,
-    );
-  }
-  if (!Number.isFinite(reserve) || reserve < 0 || reserve >= limit) {
-    throw new ApiError(
-      `The reserve of the quota ${name} is not from 0 to less than the limit: ${String(reserve)}.`,
-    );
-  }
   const { key, maxBlockMs } = options;
-  if (maxBlockMs !== undefined && (!Number.isFinite(maxBlockMs) || maxBlockMs <= 0)) {
-    throw new ApiError(
-      `The longest block of the quota ${name} is not a positive number: ${String(maxBlockMs)}.`,
-    );
+  const spec = specOf(quota, maxBlockMs);
+  const problems = quotaProblems(name, spec);
+  if (problems.length > 0) {
+    throw new ApiError(`The quota ${name} is not valid: ${problems.join("; ")}.`);
   }
-  // the latest end of a block that a reading at the time `t` can set
-  const blockBound = (t: number): number =>
-    maxBlockMs === undefined ? span.freeAt(span.bucket(t)[0]) : t + maxBlockMs;
-  const store = options.store ?? memoryQuotaStore();
-  const now = options.now ?? Date.now;
-  const allowed = limit - reserve;
-  const stateOf = (record: QuotaRecord, t: number): QuotaState => {
-    const used = usedOf(record);
-    const resetAt = record.spent.length === 0 ? undefined : span.freeAt(record.spent[0]![0]);
-    return {
-      used,
-      left: record.blockedUntil === undefined ? Math.max(0, allowed - used) : 0,
-      ...(resetAt === undefined ? {} : { resetAt }),
-      ...(record.blockedUntil === undefined ? {} : { blockedUntil: record.blockedUntil }),
-      at: t,
-    };
-  };
-  // a block ends at the latest at the bound: also a block that a record of an earlier version keeps
-  const bounded = (record: QuotaRecord, t: number): QuotaRecord => {
-    const { blockedUntil } = record;
-    const bound = blockBound(t);
-    return blockedUntil !== undefined && blockedUntil > bound
-      ? { ...record, blockedUntil: bound }
-      : record;
-  };
   // the record of the quota and the key, so two quotas of one key in one store count apart
-  const change = (step: (record: QuotaRecord, t: number) => QuotaRecord): QuotaState => {
-    const t = now();
-    // the step sees a bounded record, and its new block is bounded too
-    const record = store.changeQuota(name, key, (stored) =>
-      bounded(step(bounded(prune(span, recordOf(stored), t), t), t), t),
+  const limiter = keyedQuota(name, spec, limiterStore(options.store ?? memoryQuotaStore()), {
+    time: "wall",
+    now: options.now ?? Date.now,
+  });
+  /** This function gives the error of a refused call. */
+  const refusal = (verdict: QuotaRefused, cost: number): ApiError => {
+    if (verdict.cause === "capacity") {
+      return new ApiError(
+        `A call of ${String(cost)} units is more than the quota ${name} gives in one window: ${String(verdict.capacity)}.`,
+      );
+    }
+    const { resetAt, state } = verdict;
+    const { blockedUntil } = state;
+    if (verdict.cause === "provider" && blockedUntil !== undefined) {
+      return new QuotaError(
+        `The provider refused the quota ${name} of ${key} until ${iso(blockedUntil)}.` +
+          (resetAt > blockedUntil
+            ? ` The window has the units of the call at ${iso(resetAt)}.`
+            : ""),
+        key,
+        resetAt,
+      );
+    }
+    return new QuotaError(
+      `The quota ${name} of ${key} refused a call of ${String(cost)} units: ` +
+        `${String(state.used)} of ${String(limit)} are used, and ${String(reserve)} stay in reserve. ` +
+        `It gives units again at ${iso(resetAt)}.`,
+      key,
+      resetAt,
     );
-    return stateOf(prune(span, recordOf(record), t), t);
   };
-  // a read that writes the record back as it is, so a store needs only one method
-  const state = (): QuotaState => change((record) => record);
   return {
     quota,
     key,
     take(cost = 1) {
-      if (!Number.isFinite(cost) || cost < 0) {
-        throw new ApiError(`The cost of a call is not a number of 0 or more: ${String(cost)}.`);
-      }
-      // a call that the provider does not count, for example a read of a receipt
-      if (cost === 0) return state();
-      if (cost > allowed) {
-        throw new ApiError(
-          `A call of ${String(cost)} units is more than the quota ${name} gives in one window: ${String(allowed)}.`,
-        );
-      }
-      let refused: QuotaError | undefined;
-      const taken = change((record, t) => {
-        const used = usedOf(record);
-        // the need is never more than the units of the window, because cost <= allowed
-        const free =
-          used + cost > allowed
-            ? (freeTime(span, record, used + cost - allowed) ?? span.bucket(t)[1])
-            : undefined;
-        const { blockedUntil } = record;
-        if (blockedUntil !== undefined) {
-          const resetAt = Math.max(blockedUntil, free ?? blockedUntil);
-          refused = new QuotaError(
-            `The provider refused the quota ${name} of ${key} until ${iso(blockedUntil)}.` +
-              (resetAt > blockedUntil
-                ? ` The window has the units of the call at ${iso(resetAt)}.`
-                : ""),
-            key,
-            resetAt,
-          );
-          return record;
-        }
-        if (free !== undefined) {
-          refused = new QuotaError(
-            `The quota ${name} of ${key} refused a call of ${String(cost)} units: ` +
-              `${String(used)} of ${String(limit)} are used, and ${String(reserve)} stay in reserve. ` +
-              `It gives units again at ${iso(free)}.`,
-            key,
-            free,
-          );
-          return record;
-        }
-        return add(span, record, t, cost);
-      });
-      if (refused !== undefined) throw refused;
-      return taken;
+      checkCost(cost, "a call");
+      // a call of cost 0 is a call that the provider does not count, for example a read of a receipt
+      const verdict = limiter.take(key, cost);
+      if (!verdict.allowed) throw refusal(verdict, cost);
+      return verdict.state;
     },
-    note(reading) {
-      return change((record, t) => {
-        let next = record;
-        const { remaining, resetAt } = reading;
-        if (remaining !== undefined && Number.isFinite(remaining) && remaining >= 0) {
-          const more = limit - remaining - usedOf(next);
-          if (more > 0) next = add(span, next, t, more);
-          // a later give-back cannot know if this count includes its units, so it changes nothing
-          next = { ...next, readAt: Math.max(next.readAt ?? t, t) };
-        }
-        const exhausted = remaining === undefined || remaining <= 0;
-        if (exhausted && resetAt !== undefined && Number.isFinite(resetAt) && resetAt > t) {
-          next = { ...next, blockedUntil: Math.max(next.blockedUntil ?? 0, resetAt) };
-        }
-        return next;
-      });
-    },
-    state,
+    note: (reading) => limiter.note(key, reading),
+    state: () => limiter.state(key),
     giveBack(cost, at) {
-      if (!Number.isFinite(cost) || cost < 0) {
-        throw new ApiError(
-          `The cost of a give-back is not a number of 0 or more: ${String(cost)}.`,
-        );
-      }
+      checkCost(cost, "a give-back");
       if (!isTime(at)) throw new ApiError(`The time of a give-back is not a time: ${String(at)}.`);
-      if (cost === 0) return state();
-      return change((record) => {
-        if (record.readAt !== undefined && record.readAt >= at) return record;
-        // the units are in the bucket of their time, and a bucket out of the window is gone
-        const [start] = span.bucket(at);
-        const spent = record.spent.flatMap(([from, units]): (readonly [number, number])[] =>
-          from !== start ? [[from, units]] : units > cost ? [[from, units - cost]] : [],
-        );
-        return { ...record, spent };
-      });
+      return limiter.giveBack(key, cost, at);
     },
   };
 }
@@ -611,51 +419,82 @@ const report = (onError: ((error: unknown) => void) | undefined, error: unknown)
   }
 };
 
-/** This function gives back the units of each gate that counted them, and gives each error to `onError`. */
-const giveBackAll = (
-  taken: readonly (readonly [QuotaGate, number | undefined])[],
-  cost: number,
-  onError: ((error: unknown) => void) | undefined,
-): void => {
-  for (const [gate, at] of taken) {
-    try {
-      if (at === undefined) {
+/** This function gives a state of a gate in the form of the limiter. A state with no time gets the time NaN. */
+const limiterState = (state: QuotaState): LimiterState => ({
+  ...state,
+  at: state.at ?? Number.NaN,
+});
+
+/**
+ * This function gives a gate of a list as a part of `takeQuotas`. The part keeps the `QuotaError` of
+ * its refusal in `refusals`, because the caller gets that error. A `QuotaError` has no state, so a
+ * refused part reads the state of its gate. A give-back of units with no time fails, and `onError`
+ * gets its error.
+ */
+const partOf = (
+  gate: QuotaGate,
+  units: number,
+  index: number,
+  refusals: Map<number, QuotaError>,
+): QuotaPart<true> => ({
+  key: gate.key,
+  units,
+  quota: {
+    sync: true,
+    take: (_key, cost = 1): QuotaVerdict => {
+      try {
+        return { allowed: true, state: limiterState(gate.take(cost)) };
+      } catch (error) {
+        if (!isQuotaError(error)) throw error;
+        refusals.set(index, error);
+        const state = limiterState(gate.state());
+        const wait = Number.isNaN(state.at) ? 0 : Math.max(0, error.resetAt - state.at);
+        return {
+          allowed: false,
+          cause: state.blockedUntil === undefined ? "limit" : "provider",
+          resetAt: error.resetAt,
+          retryAfter: { value: wait, unit: "ms" },
+          state,
+        };
+      }
+    },
+    giveBack: (_key, cost, at) => {
+      if (Number.isNaN(at)) {
         throw new ApiError(
           `The gate of the quota ${gate.quota.name} of ${gate.key} gave no time for its units, so it cannot give them back.`,
         );
       }
-      gate.giveBack?.(cost, at);
-    } catch (error) {
-      report(onError, error);
-    }
-  }
-};
+      return limiterState(gate.giveBack?.(cost, at) ?? gate.state());
+    },
+  },
+});
 
 /**
- * This function counts `cost` units in each gate, or in none. When a gate refuses, the gates that
- * counted give back the units: the call did not start. The next gates still answer, so the
- * `QuotaError` has the latest time of a reset.
+ * This function counts `cost` units in each gate, or in none. One gate gives its refusal as it is. A
+ * list takes with `takeQuotas`: when a gate refuses, the gates that counted give back the units,
+ * because the call did not start. The next gates still answer, so the `QuotaError` has the latest
+ * time of a reset.
  */
 const takeAll = (
   gates: readonly QuotaGate[],
   cost: number,
   onError: ((error: unknown) => void) | undefined,
 ): void => {
-  const taken: (readonly [QuotaGate, number | undefined])[] = [];
-  let refusal: QuotaError | undefined;
-  try {
-    for (const gate of gates) {
-      try {
-        taken.push([gate, gate.take(cost).at]);
-      } catch (error) {
-        if (!isQuotaError(error) || gates.length === 1) throw error;
-        if (refusal === undefined || error.resetAt > refusal.resetAt) refusal = error;
-      }
-    }
-    if (refusal !== undefined) throw refusal;
-  } catch (error) {
-    giveBackAll(taken, cost, onError);
-    throw error;
+  const [only] = gates;
+  if (gates.length === 1 && only !== undefined) {
+    only.take(cost);
+    return;
+  }
+  const refusals = new Map<number, QuotaError>();
+  const verdict = takeQuotas(
+    gates.map((gate, index) => partOf(gate, cost, index, refusals)),
+    { onGiveBackError: (error) => report(onError, error) },
+  );
+  if (!verdict.allowed) {
+    throw (
+      refusals.get(verdict.index) ??
+      new ApiError("A gate of the list refused the call, but it gave no QuotaError.")
+    );
   }
 };
 

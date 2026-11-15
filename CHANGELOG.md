@@ -17,6 +17,11 @@ A prerelease version (`0.2.0-beta.1`) goes to the npm tag `next`. Each other ver
 
 - **The new function `chooseVenueReadings`.** It orders the readings of a venue, as `readVenue` does. It gives the best reading, the best reading of the site and the days of disagreement. `readVenue` uses it, and the result of `readVenue` does not change. The decision eval (part C of `eval/README.md`) uses it to score the choice of `readVenue` with no copy of the rule. The function and its type `VenueChoice` are beta.
 
+## 0.7.5 - 2026-11-15
+
+- **The quotas count their windows with the limiter of `@mark1russell7/service`.** `quotaGate` maps a quota to a quota spec of `@mark1russell7/service/limiter` and gives your `QuotaStore` to it through an adapter. A list of gates in `withQuota` takes through `takeQuotas`, all or none. The API does not change, and the files of `SqliteHostStateStore` do not change. The option `maxBlockMs`, the bound on a provider block, goes to `maxBlock` of the spec. The crawler needs `@mark1russell7/service` 0.8.20 or later, and it no longer needs `@mark1russell7/algebra` directly.
+- **The size of the quotas in a browser.** A browser bundle of all of `polite-crawler/api` goes from 7.9 KB to 13.4 KB (gzip), for the limiter and its exact time units. A bundle that does not import `quotaGate` or `withQuota` does not get the limiter: it is 4.9 KB, less than before.
+
 ## 0.7.4 - 2026-11-15
 
 - **The new function `freshUntil` in `polite-crawler/api`.** It gives the end of the freshness of an answer, as RFC 9111 §4.2 calculates it, in milliseconds since the epoch. A client that keeps the answers of `poll` and `send` asks again at that time. The sources in sequence are `max-age`, `Expires` minus `Date`, and 10 percent of the age of `Last-Modified`, with a maximum. The crawler uses the same function for the field `fresh_until` of a capture, so the freshness of a capture does not change. The function is beta.

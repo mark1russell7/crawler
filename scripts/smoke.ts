@@ -13,7 +13,8 @@
 //   3. Every subpath imports, and a store opens (SQLite with FTS5).
 //   4. A TypeScript project type-checks its use of each entry point (nodenext, and bundler).
 //   5. The entry points for a browser stay inside their size budgets (gzip, bundled with esbuild),
-//      and no budget is more than 1.4 times its size.
+//      and no budget is more than 1.4 times its size. A part of an entry (the entry without some
+//      names) has a budget too.
 //   6. The commands run: --version, --help, find, and an MCP handshake over standard input and
 //      output, with polite-crawler-mcp and with the deprecated polite-crawler mcp.
 //   7. attw (the esm-only profile) and publint examine each tarball.
@@ -31,7 +32,8 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { delimiter, dirname, join, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { createRequire } from "node:module";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { parseArgs } from "node:util";
 import { gunzipSync, gzipSync } from "node:zlib";
 
@@ -501,9 +503,11 @@ export const start: typeof startMcpServer = startMcpServer;
     urls: 850,
     // the size of version 0.7.0 (1126 B, the body decoder), and 20 percent more
     text: 1360,
-    // the size of version 0.6.3 (6793 B, with fetchTransport, poll, the quotas and the civil time of
-    // @mark1russell7/algebra/clock), and 20 percent more
-    api: 8150,
+    // the size with the limiter of @mark1russell7/service 0.8.20 (13418 B: its quota logic, and the
+    // exact time units of @mark1russell7/quantity 0.4.1), and 20 percent more. The quotas have one
+    // home, the limiter. The part "api without the quota gates" below holds the size for a caller
+    // that does not use them.
+    api: 16_102,
     html: 192_000,
   };
   // A budget is the size of an entry and 20 percent more. When the entry shrinks, a budget that
@@ -511,10 +515,49 @@ export const start: typeof startMcpServer = startMcpServer;
   // 1.4 times its size fails: after a gain of about 15 percent, the budget comes down to the new size
   // and 20 percent more. For example, a version of linkedom without cssomnom lowers the budget of html.
   const loose = 1.4;
-  for (const [name, budget] of Object.entries(budgets)) {
+  // A part of an entry is all the exports of the entry, minus the names in `without`. Its budget
+  // holds the size for a caller that does not import those names. Only quotaGate and withQuota of
+  // api use @mark1russell7/service/limiter. Thus a caller that does not import them does not bundle
+  // the limiter. A new export of api counts in this part, unless the list `without` names it.
+  const parts: Readonly<
+    Record<
+      string,
+      { readonly entry: string; readonly without: readonly string[]; readonly budget: number }
+    >
+  > = {
+    // the size with freshUntil and the quotas of @mark1russell7/service 0.8.20 (4915 B), and 20
+    // percent more
+    "api without the quota gates": {
+      entry: "api",
+      without: ["quotaGate", "withQuota"],
+      budget: 5898,
+    },
+  };
+  const resolveInConsumer = createRequire(join(consumer, "package.json")).resolve;
+  const sources: [string, string, number][] = Object.entries(budgets).map(([name, budget]) => [
+    name,
+    `export * from "${manifest.name}/${name}";`,
+    budget,
+  ]);
+  for (const [name, part] of Object.entries(parts)) {
+    const specifier = `${manifest.name}/${part.entry}`;
+    const exported = Object.keys(
+      (await import(pathToFileURL(resolveInConsumer(specifier)).href)) as object,
+    );
+    const absent = part.without.filter((each) => !exported.includes(each));
+    check(
+      absent.length === 0,
+      absent.length === 0
+        ? `${specifier} exports each name that the part "${name}" leaves out`
+        : `${specifier} does not export ${absent.join(", ")}: change the part "${name}"`,
+    );
+    const names = exported.filter((each) => !part.without.includes(each));
+    sources.push([name, `export { ${names.join(", ")} } from "${specifier}";`, part.budget]);
+  }
+  for (const [name, contents, budget] of sources) {
     const bundled = await build({
       stdin: {
-        contents: `export * from "${manifest.name}/${name}";`,
+        contents,
         resolveDir: consumer,
         loader: "js",
       },

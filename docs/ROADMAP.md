@@ -16,56 +16,18 @@ List the MCP server in the directories that need a submission, then post polite-
 
 ## In progress
 
-### `daemon-lock`: Daemon: a lock file for the single-daemon rule
-
-Two `polite-crawler daemon` starts at the same moment on one store both passed the single-daemon check, so both ran and the second replaced the MCP token file. The fix: the daemon holds the lock file <store>/daemon/lock until it stops, from acquireInstanceLock of @mark1russell7/service (an exclusive create, and the next start removes a stale lock of a stopped process). A failed start and the stop give the lock back. Two new tests: two starts at one moment give one daemon, and a stale lock goes. Found by an audit; rare. In PR #167 as 0.7.2 (PATCH). #167 merged (9559aae) on 2026-11-15. Its release run was still in the queue when #168 (0.7.3) merged, so the fix reaches npm in 0.7.2 or, if the newer run replaces it, in 0.7.3.
-
-- Area: Package
-- Started: 2026-11-15
-- [crawler #167 (0.7.2)](https://github.com/mark1russell7/crawler/pull/167)
-
-### `quota-hardening`: Quotas: the smaller points of the review of #162
-
-The smaller points of the review of #162. None of them makes a count too low. Done in this item: the docs of a take after a reading in the same millisecond (the count can be too high, not too low), of a store of your own (it keeps each field, else a give-back can go below the provider), of isApiError (a check by name), and of the check of a list of gates (name and key, also on two stores, with a clearer error); an entry-point test of polite-crawler/text. In #168 as 0.7.3 (PATCH). #168 merged (2db10e5) on 2026-11-15, and the release of 0.7.3 runs. Not here: a sequence number in the record for the same millisecond moves to quota-service, because the record of the service limiter replaces this one; the api-report test (the report names only entry points) goes as a PR to @mark1russell7/api-report. The end: 2026-11-29.
-
-- Area: Package
-- Waits for: `quota-followups`
-- Started: 2026-11-15
-- [crawler #162 (the review)](https://github.com/mark1russell7/crawler/pull/162)
-- [crawler #168 (0.7.3)](https://github.com/mark1russell7/crawler/pull/168)
-
-### `api-fresh-until`: freshUntil in polite-crawler/api: when a kept answer is stale
-
-An API client that keeps the answers of poll and send must know when to ask again. The crawler already calculates the end of the freshness of each capture (RFC 9111: max-age, Expires minus Date, then 10 percent of the age of Last-Modified, with a maximum). #169 moves that calculation to its own module and exports it from polite-crawler/api as the beta function freshUntil, in milliseconds since the epoch. The field fresh_until of a capture does not change. The alerts sources asked for it and wrote the PR. The review passed, main (0.7.3) is merged into the branch, and CI runs. It ships in 0.7.4 with the watch-list fix of #170.
-
-- Area: Package
-- Waits for: `api-poll`
-- Started: 2026-11-15
-- [crawler #169 (freshUntil)](https://github.com/mark1russell7/crawler/pull/169)
-
-### `api-report-entries`: api-report: an option that keeps chunks of the bundler out of the report
-
-A test of the crawler holds that the API report names only the declaration files of the entry points, so a change of the bundler does not show as a change of the API. That check is general, so its home is @mark1russell7/api-report: an option of the apiReport config, off by default, that makes check and update fail when a declaration of the report is in another file. When a release of api-report has it, the crawler sets the option and removes its own test. The second test of the crawler (the counts of docs/API-REVIEW.md) stays, because that file is the crawler's own.
-
-- Area: Package
-- Waits for: `report-chunks`
-- Started: 2026-11-15
-- [crawler test: the report names only entry points](https://github.com/mark1russell7/crawler/blob/main/packages/polite-crawler/src/api-report.test.ts)
-
-## Blocked
-
 ### `quota-service`: Quotas: move the window counting to @mark1russell7/service
 
-The window counting of quotaGate (rolling buckets and calendar days and months in a zone) is a limiter, and the map of homes puts limiters in @mark1russell7/service. Systems built it in #527 (SYS-115, merged 2616fe7) as @mark1russell7/service/limiter: quota specs as quantities, a pure quotaStep, keyedQuota on a wall clock, and takeQuotas, all or none, with the give-back and readAt rules of polite-crawler 0.6.4. Its QuotaRecord and QuotaStore have the same shape as those of polite-crawler, so the files of SqliteHostStateStore do not change. The plan: quotaGate becomes an adapter over keyedQuota, a list in withQuota goes to takeQuotas, and the two record types become those of service. polite-crawler keeps the header reading (readQuotaHeaders), QuotaError and withQuota, and its QuotaStore with changeQuota (an adapter gives it the change method of service, so a store of your own does not break). A check of service 0.8.17 on 2026-11-15 found two gaps: no bound on a provider block (polite-crawler 0.7.0 caps it at maxBlockMs, by default one window), and a part of takeQuotas had to be a full KeyedQuota, so a gate of your own could not be one. Systems #535 added both: maxBlock in QuotaSpec and a narrow part type. The crawler side is written on a branch: quotaGate maps a quota to a spec of the limiter and keeps its store through an adapter, a list of gates takes through takeQuotas, and the crawler no longer needs @mark1russell7/algebra. Its 102 quota, host-state and API tests pass on a build of service with #535. The release train published service 0.8.18 seven seconds before #535 merged with the same number, so #535 ships as 0.8.19 (systems #538). The move waits for 0.8.19 on npm. The end: 2026-11-22.
+The window counting of quotaGate (rolling buckets and calendar days and months in a zone) is a limiter, and the map of homes puts limiters in @mark1russell7/service. Systems built it in #527 (SYS-115, merged 2616fe7) as @mark1russell7/service/limiter: quota specs as quantities, a pure quotaStep, keyedQuota on a wall clock, and takeQuotas, all or none, with the give-back and readAt rules of polite-crawler 0.6.4. Its QuotaRecord and QuotaStore have the same shape as those of polite-crawler, so the files of SqliteHostStateStore do not change. The plan: quotaGate becomes an adapter over keyedQuota, a list in withQuota goes to takeQuotas, and the two record types become those of service. polite-crawler keeps the header reading (readQuotaHeaders), QuotaError and withQuota, and its QuotaStore with changeQuota (an adapter gives it the change method of service, so a store of your own does not break). A check of service 0.8.17 on 2026-11-15 found two gaps: no bound on a provider block (polite-crawler 0.7.0 caps it at maxBlockMs, by default one window), and a part of takeQuotas had to be a full KeyedQuota, so a gate of your own could not be one. Systems #535 added both: maxBlock in QuotaSpec and a narrow part type. The crawler side is written on a branch: quotaGate maps a quota to a spec of the limiter and keeps its store through an adapter, a list of gates takes through takeQuotas, and the crawler no longer needs @mark1russell7/algebra. Its 102 quota, host-state and API tests pass on a build of service with #535. The release train published service 0.8.18 seven seconds before #535 merged with the same number, so #535 ships as 0.8.19 (systems #538). Service 0.8.19 is on npm. The move then failed the browser size budget of polite-crawler/api: 16.6 KB gzip against 8.15 KB. Systems #543 made the limiter leaner (service 0.8.20, quantity 0.4.1: a time-only unit table, one file per module, rational imported by name): its three imports go from 11.2 KB to 7.7 KB gzip. The rest is the quota logic and the exact unit conversion, which stay (the quantity law). Only quotaGate and withQuota bundle the limiter. On service 0.8.20 the whole api entry is 13.4 KB gzip (7.9 KB in 0.7.4), the entry without those two functions is 4.9 KB, and fetchTransport alone is 0.8 KB. The decision: the budget of the whole entry is 16102 B (the size and 20 percent more), and a second budget in the smoke check holds the entry without the two functions at 5898 B. A new export of api counts in that part by default. The end: 2026-11-22.
 
 - Area: Package
 - Waits for: `api-quota`
-- Blocked: @mark1russell7/service/limiter 0.8.17 has no bound on a provider block (polite-crawler 0.7.0 maxBlockMs, default one window), and QuotaPart.quota needs a full KeyedQuota, so a gate of the user's own cannot be a part. Both requested of the systems session on 2026-11-15; the move continues on the service release that has them.
 - Started: 2026-11-15
 - [crawler #161 (the review that asks for the move)](https://github.com/mark1russell7/crawler/pull/161)
 - [systems #527 (SYS-115: service 0.8.15, algebra 0.8.9)](https://github.com/mark1russell7/systems/pull/527)
 - [systems #535 (maxBlock and the narrow part, merged 75f8efb)](https://github.com/mark1russell7/systems/pull/535)
 - [systems #538 (service 0.8.19)](https://github.com/mark1russell7/systems/pull/538)
+- [systems #543 (the leaner limiter: service 0.8.20, quantity 0.4.1)](https://github.com/mark1russell7/systems/pull/543)
 
 ## Later
 
@@ -77,6 +39,43 @@ The window counting of quotaGate (rolling buckets and calendar days and months i
 - Waits for: `mcp-host`, `api-review`, `eval-b`, `showhn`, `rel020`
 
 ## Shipped
+
+### `api-report-entries`: api-report: an option that keeps chunks of the bundler out of the report
+
+A test of the crawler holds that the API report names only the declaration files of the entry points, so a change of the bundler does not show as a change of the API. That check is general, so its home is @mark1russell7/api-report: an option of the apiReport config, off by default, that makes check and update fail when a declaration of the report is in another file. When a release of api-report has it, the crawler sets the option and removes its own test. The second test of the crawler (the counts of docs/API-REVIEW.md) stays, because that file is the crawler's own.
+
+- Area: Package
+- Waits for: `report-chunks`
+- Started: 2026-11-15
+- Shipped: 2026-11-15
+- [crawler test: the report names only entry points](https://github.com/mark1russell7/crawler/blob/main/packages/polite-crawler/src/api-report.test.ts)
+- [@mark1russell7/api-report 0.5.7 on npm (entriesOnly)](https://www.npmjs.com/package/@mark1russell7/api-report/v/0.5.7)
+- [crawler #173 (merged 87c997b)](https://github.com/mark1russell7/crawler/pull/173)
+
+### `api-fresh-until`: freshUntil in polite-crawler/api: when a kept answer is stale
+
+An API client that keeps the answers of poll and send must know when to ask again. The crawler already calculates the end of the freshness of each capture (RFC 9111: max-age, Expires minus Date, then 10 percent of the age of Last-Modified, with a maximum). #169 moves that calculation to its own module and exports it from polite-crawler/api as the beta function freshUntil, in milliseconds since the epoch. The field fresh_until of a capture does not change. The alerts sources asked for it and wrote the PR. The review passed, main (0.7.3) is merged into the branch, and CI runs. It ships in 0.7.4 with the watch-list fix of #170.
+
+- Area: Package
+- Waits for: `api-poll`
+- Started: 2026-11-15
+- Shipped: 2026-11-15
+- [crawler #169 (freshUntil)](https://github.com/mark1russell7/crawler/pull/169)
+- [#169 merged (e7ecefe)](https://github.com/mark1russell7/crawler/commit/e7ecefe689548c3c6b9c0e7359b477d881cd2b63)
+- [crawler #170 (the watch-list repair, merged cfdae6a)](https://github.com/mark1russell7/crawler/pull/170)
+- [crawler #172 (0.7.4, merged 49e6bcb)](https://github.com/mark1russell7/crawler/pull/172)
+- [polite-crawler 0.7.4 on npm](https://www.npmjs.com/package/polite-crawler/v/0.7.4)
+
+### `quota-hardening`: Quotas: the smaller points of the review of #162
+
+The smaller points of the review of #162. None of them makes a count too low. Done in this item: the docs of a take after a reading in the same millisecond (the count can be too high, not too low), of a store of your own (it keeps each field, else a give-back can go below the provider), of isApiError (a check by name), and of the check of a list of gates (name and key, also on two stores, with a clearer error); an entry-point test of polite-crawler/text. In #168 as 0.7.3 (PATCH). #168 merged (2db10e5) on 2026-11-15, and the release of 0.7.3 runs. Not here: a sequence number in the record for the same millisecond moves to quota-service, because the record of the service limiter replaces this one; the api-report test (the report names only entry points) goes as a PR to @mark1russell7/api-report. The end: 2026-11-29.
+
+- Area: Package
+- Waits for: `quota-followups`
+- Started: 2026-11-15
+- Shipped: 2026-11-15
+- [crawler #162 (the review)](https://github.com/mark1russell7/crawler/pull/162)
+- [crawler #168 (0.7.3)](https://github.com/mark1russell7/crawler/pull/168)
 
 ### `quota-followups`: Quotas: the follow-ups of the reviews (a list of gates, the reset forms, the longest block, onError)
 
@@ -147,6 +146,16 @@ linkedom 0.18.15 (2026-11-01) bundles the CSS parser cssomnom in place of @acemi
 - Shipped: 2026-11-15
 - [crawler #80 (budget raised to 192000)](https://github.com/mark1russell7/crawler/pull/80)
 - [crawler #164 (the check of a loose budget, merged 48e459a)](https://github.com/mark1russell7/crawler/pull/164)
+
+### `daemon-lock`: Daemon: a lock file for the single-daemon rule
+
+Two `polite-crawler daemon` starts at the same moment on one store both passed the single-daemon check, so both ran and the second replaced the MCP token file. The fix: the daemon holds the lock file <store>/daemon/lock until it stops, from acquireInstanceLock of @mark1russell7/service (an exclusive create, and the next start removes a stale lock of a stopped process). A failed start and the stop give the lock back. Two new tests: two starts at one moment give one daemon, and a stale lock goes. Found by an audit; rare. In PR #167 as 0.7.2 (PATCH). #167 merged (9559aae) on 2026-11-15. Its release run was still in the queue when #168 (0.7.3) merged, so the fix reaches npm in 0.7.2 or, if the newer run replaces it, in 0.7.3.
+
+- Area: Package
+- Started: 2026-11-15
+- Shipped: 2026-11-15
+- [polite-crawler 0.7.2 on npm](https://www.npmjs.com/package/polite-crawler/v/0.7.2)
+- [crawler #167 (0.7.2)](https://github.com/mark1russell7/crawler/pull/167)
 
 ### `api-poll`: API polls: conditional requests, a required User-Agent, a time limit
 

@@ -12,7 +12,8 @@
 //   2. An empty project installs the two tarballs from disk, with their dependencies from npm.
 //   3. Every subpath imports, and a store opens (SQLite with FTS5).
 //   4. A TypeScript project type-checks its use of each entry point (nodenext, and bundler).
-//   5. The entry points for a browser stay inside their size budgets (gzip, bundled with esbuild).
+//   5. The entry points for a browser stay inside their size budgets (gzip, bundled with esbuild),
+//      and no budget is more than 1.4 times its size.
 //   6. The commands run: --version, --help, find, and an MCP handshake over standard input and
 //      output, with polite-crawler-mcp and with the deprecated polite-crawler mcp.
 //   7. attw (the esm-only profile) and publint examine each tarball.
@@ -500,6 +501,11 @@ export const start: typeof startMcpServer = startMcpServer;
     api: 4950,
     html: 192_000,
   };
+  // A budget is the size of an entry and 20 percent more. When the entry shrinks, a budget that
+  // stays high lets the size grow back with no failure, so the gain is lost. Thus a budget more than
+  // 1.4 times its size fails: after a gain of about 15 percent, the budget comes down to the new size
+  // and 20 percent more. For example, a version of linkedom without cssomnom lowers the budget of html.
+  const loose = 1.4;
   for (const [name, budget] of Object.entries(budgets)) {
     const bundled = await build({
       stdin: {
@@ -520,6 +526,12 @@ export const start: typeof startMcpServer = startMcpServer;
     check(
       size <= budget,
       `${manifest.name}/${name}: ${String(size)} bytes after gzip, the budget is ${String(budget)}`,
+    );
+    check(
+      budget <= size * loose,
+      budget <= size * loose
+        ? `the budget of ${name} is at most ${String(loose)} times its size`
+        : `the budget of ${name} is more than ${String(loose)} times its size: make it ${String(Math.ceil(size * 1.2))}`,
     );
   }
 

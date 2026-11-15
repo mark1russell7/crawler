@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type { DatabaseSync, StatementSync } from "node:sqlite";
 import type { Migration } from "@mark1russell7/sqlite";
-import { migrate, openDatabase, schemaVersion, transaction } from "@mark1russell7/sqlite";
+import { migrate, openDatabase, transaction } from "@mark1russell7/sqlite";
 import type {
   HostCounts,
   HostResult,
@@ -12,7 +12,8 @@ import type {
   ValidatorVerdict,
 } from "./politeness.ts";
 import { nextValidatorMemo } from "./politeness.ts";
-import type { QuotaRecord, QuotaStore } from "./quota.ts";
+// through the entry ./api, so the declarations stay in its module of the build, not in a chunk
+import type { QuotaRecord, QuotaStore } from "./api.ts";
 
 /** A stop with no end goes into the table as this value, which is past each date that JavaScript can hold. */
 const NO_END = 9e15;
@@ -150,10 +151,9 @@ export class SqliteHostStateStore implements HostStateStore, QuotaStore {
     });
     try {
       // Each step of the schema adds only tables or columns, so this code works on the file of a
-      // later version, and the file keeps its number. Two versions of the crawler can thus share one
-      // file. TODO(sqlite): use the option of `migrate` for this, when @mark1russell7/sqlite has it.
-      if (schemaVersion(this.db) <= MIGRATIONS.length)
-        migrate(this.db, MIGRATIONS, { name: "host state store" });
+      // later version, and the file keeps its number (`newer: "keep"`). Two versions of the crawler
+      // can thus share one file.
+      migrate(this.db, MIGRATIONS, { name: "host state store", newer: "keep" });
     } catch (error) {
       this.db.close();
       throw error;
@@ -327,8 +327,7 @@ export class SqliteHostStateStore implements HostStateStore, QuotaStore {
   changeQuota(key: string, step: (record: QuotaRecord | undefined) => QuotaRecord): QuotaRecord {
     return this.step(() => {
       const row = this.stmt("SELECT record FROM quotas WHERE key = ?").get(key) as
-        | { record: string }
-        | undefined;
+        { record: string } | undefined;
       let stored: QuotaRecord | undefined;
       try {
         stored = row === undefined ? undefined : (JSON.parse(row.record) as QuotaRecord);

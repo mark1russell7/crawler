@@ -139,7 +139,6 @@ export interface Pace<S extends Signal = AbortSignal> {
  */
 export type Redact = (text: string, secrets: readonly string[]) => string;
 
-
 /**
  * One exchange of a client, and its context for the pace and the messages.
  *

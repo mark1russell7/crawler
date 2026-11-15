@@ -144,7 +144,9 @@ describe("the SQLite host state store", () => {
     open(path).close();
     // a later version adds a table and raises the number
     const later = new DatabaseSync(path);
-    later.exec(`CREATE TABLE later (x TEXT); PRAGMA user_version = ${String(HOST_STATE_SCHEMA + 1)}`);
+    later.exec(
+      `CREATE TABLE later (x TEXT); PRAGMA user_version = ${String(HOST_STATE_SCHEMA + 1)}`,
+    );
     later.close();
     const store = open(path);
     expect(store.record("a", "failure")).toEqual({ failures: 1, waits: 0 });

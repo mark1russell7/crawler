@@ -4,9 +4,9 @@
  * refuses a call over the quota before the provider does. `withQuota` puts a gate on any async
  * function: a `fetch`, a transport or a different client.
  *
- * The count is never lower than the count of the provider. A rolling window counts a call for each
- * time bucket, and a bucket stops counting only when all of it is out of the window. The answer of
- * the provider can make the count larger, never smaller.
+ * The count is not lower than the count of the provider. A rolling window puts each call in a time
+ * bucket, and a bucket counts until all of it is out of the window. The answer of the provider can
+ * make the count larger, but not smaller.
  *
  * The module imports no Node.js module, so a browser can use it. Each export is beta.
  */
@@ -16,7 +16,7 @@ import { ApiError } from "./api-error.ts";
  * The window of a quota.
  *
  * - `rolling`: the units of the last `ms` milliseconds. Use it when the provider does not tell when
- *   its count starts again, because it is stricter than each fixed window of the same length.
+ *   its count starts again. It is stricter than each fixed window of the same length.
  * - `calendar`: the units of a day or a month in the IANA time zone `timeZone`. A window starts at
  *   the hour `hour` (default 0) of the first day, in that zone.
  *
@@ -243,7 +243,9 @@ const spanOf = (window: QuotaWindow): Span => {
   }
   const hour = window.hour ?? 0;
   if (!Number.isInteger(hour) || hour < 0 || hour > 23) {
-    throw new ApiError(`The hour of the window is not a whole number from 0 to 23: ${String(hour)}.`);
+    throw new ApiError(
+      `The hour of the window is not a whole number from 0 to 23: ${String(hour)}.`,
+    );
   }
   try {
     formatOf(window.timeZone);
@@ -322,7 +324,7 @@ export interface QuotaGate {
    *
    * @throws QuotaError when the units are more than `left`, or when the provider refused the key.
    * The gate then counts nothing.
-   * @throws ApiError when the cost is not a number of 0 or more, or when it is more than the quota
+   * @throws ApiError when the cost is negative or not finite, or when it is more than the quota
    * gives in one window.
    */
   take(cost?: number): QuotaState;
@@ -362,7 +364,9 @@ export function quotaGate(quota: Quota, options: QuotaGateOptions): QuotaGate {
   const { limit, name } = quota;
   const reserve = quota.reserve ?? 0;
   if (!Number.isFinite(limit) || limit <= 0) {
-    throw new ApiError(`The limit of the quota ${name} is not a positive number: ${String(limit)}.`);
+    throw new ApiError(
+      `The limit of the quota ${name} is not a positive number: ${String(limit)}.`,
+    );
   }
   if (!Number.isFinite(reserve) || reserve < 0 || reserve >= limit) {
     throw new ApiError(
@@ -405,7 +409,7 @@ export function quotaGate(quota: Quota, options: QuotaGateOptions): QuotaGate {
         );
       }
       let refused: QuotaError | undefined;
-      const state = change((record, t) => {
+      const taken = change((record, t) => {
         if (record.blockedUntil !== undefined) {
           refused = new QuotaError(
             `The provider refused the quota ${name} of ${key} until ${iso(record.blockedUntil)}.`,
@@ -430,7 +434,7 @@ export function quotaGate(quota: Quota, options: QuotaGateOptions): QuotaGate {
         return add(span, record, t, cost);
       });
       if (refused !== undefined) throw refused;
-      return state;
+      return taken;
     },
     note(reading) {
       return change((record, t) => {
@@ -486,8 +490,8 @@ export interface WithQuotaOptions<A extends readonly unknown[], R> {
  * This function puts a gate on an async function, and keeps the type of the function. Each call
  * counts its units first. A call over the quota throws `QuotaError`, and the function does not start.
  *
- * Give the result to a client that takes a function of this type: `withQuota(gate, fetch)` is a
- * `fetch`, and `withQuota(gate, transport)` is a transport of `send` and `poll`. Put two gates on
+ * Give the result to a client that takes a function of this type. For example, `withQuota(gate,
+ * fetch)` is a `fetch`, and `withQuota(gate, transport)` is a transport of `send` and `poll`. Put two gates on
  * one function for two quotas of one key.
  *
  * @beta
@@ -546,11 +550,7 @@ export function readQuotaHeaders(
   const at = value(names.resetAt, SECONDS);
   const after = value(names.resetAfter, SECONDS);
   const resetAt =
-    after !== undefined
-      ? now + after * 1000
-      : at === undefined
-        ? undefined
-        : at * 1000;
+    after !== undefined ? now + after * 1000 : at === undefined ? undefined : at * 1000;
   if (remaining === undefined && resetAt === undefined) return undefined;
   return {
     ...(remaining === undefined ? {} : { remaining }),

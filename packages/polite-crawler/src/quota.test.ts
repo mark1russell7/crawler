@@ -27,7 +27,9 @@ const HOST = "api.example.com";
 const at = (iso: string): number => Date.parse(iso);
 
 /** A clock that moves only when the test moves it. */
-const clockAt = (iso: string): { now: () => number; set: (iso: string) => void; add: (ms: number) => void } => {
+const clockAt = (
+  iso: string,
+): { now: () => number; set: (iso: string) => void; add: (ms: number) => void } => {
   let t = at(iso);
   return {
     now: () => t,
@@ -41,9 +43,7 @@ const clockAt = (iso: string): { now: () => number; set: (iso: string) => void; 
 };
 
 /** A fetch function that records each call and gives a fixed answer. */
-const fakeFetch = (
-  headers: Record<string, string> = {},
-): { fetch: FetchLike; calls: string[] } => {
+const fakeFetch = (headers: Record<string, string> = {}): { fetch: FetchLike; calls: string[] } => {
   const calls: string[] = [];
   const fetch: FetchLike = (url) => {
     calls.push(url);
@@ -122,7 +122,10 @@ describe("withQuota on fetchTransport", () => {
     const clock = clockAt("2026-11-14T12:00:00Z");
     const gate = quotaGate(rolling(100, 3_600_000), { key: "example:account", now: clock.now });
     const reset = String(at("2026-11-14T13:00:00Z") / 1000);
-    const { fetch, calls } = fakeFetch({ "X-RateLimit-Remaining": "0", "X-RateLimit-Reset": reset });
+    const { fetch, calls } = fakeFetch({
+      "X-RateLimit-Remaining": "0",
+      "X-RateLimit-Reset": reset,
+    });
     const transport: Transport = withQuota(gate, fetchTransport({ userAgent: "app/1.0", fetch }), {
       read: (reply: Reply) =>
         readQuotaHeaders(
@@ -132,7 +135,11 @@ describe("withQuota on fetchTransport", () => {
         ),
     });
     await transport(get, undefined);
-    expect(gate.state()).toMatchObject({ used: 100, left: 0, blockedUntil: at("2026-11-14T13:00:00Z") });
+    expect(gate.state()).toMatchObject({
+      used: 100,
+      left: 0,
+      blockedUntil: at("2026-11-14T13:00:00Z"),
+    });
     const error = await failure(transport(get, undefined));
     expect(error).toBeInstanceOf(QuotaError);
     expect((error as QuotaError).resetAt).toBe(at("2026-11-14T13:00:00Z"));
@@ -174,7 +181,11 @@ describe("a calendar window", () => {
     const clock = clockAt("2026-11-01T12:00:00Z");
     const store = memoryQuotaStore();
     const gate = quotaGate(
-      { name: "Example", limit: 5, window: { kind: "calendar", unit: "day", timeZone: "America/Chicago" } },
+      {
+        name: "Example",
+        limit: 5,
+        window: { kind: "calendar", unit: "day", timeZone: "America/Chicago" },
+      },
       { key: "k", store, now: clock.now },
     );
     expect(gate.take().resetAt).toBe(at("2026-11-02T06:00:00Z"));

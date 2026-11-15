@@ -1330,7 +1330,8 @@ const gate = quotaGate(
 
 // a fetch for a client that takes one; only a message counts, not a read of a receipt
 const fetchWithQuota = withQuota(gate, fetch, {
-  cost: (url) => (String(url).endsWith("/messages.json") ? 1 : 0),
+  cost: (input) =>
+    new URL(input instanceof Request ? input.url : input).pathname.endsWith("/messages.json") ? 1 : 0,
   read: (response) =>
     readQuotaHeaders(
       (name) => response.headers.get(name),
@@ -1341,12 +1342,15 @@ const fetchWithQuota = withQuota(gate, fetch, {
 ```
 
 - **A refusal before the call.** A call over the quota throws `QuotaError` with `resetAt`, the time when the gate gives units again. The wrapped function does not start, so no request goes out. `send` and `poll` give the `QuotaError` as it is. The host keeps its state, because a refusal of the quota is not a failure of the host.
-- **The window.** A `calendar` window is a day or a month in an IANA time zone, from the hour `hour`. It follows the clock changes of the zone. A `rolling` window is the last `ms` milliseconds. When the provider does not tell when its count starts again, use a rolling window. A rolling window of 24 hours always counts at least as much as a day of the provider. A rolling window of 31 days always counts at least as much as a month.
-- **The count is not lower than the count of the provider.** A rolling window puts each call in a time bucket (60 in a window by default). A bucket counts until all of it is out of the window. The answer of the provider (`read`) can make the count larger, but not smaller. A count of 0 left, or a reset time with no count, stops the key until that time.
+- **A refusal of the provider.** While the provider refuses the key, `state().left` is 0. Then `resetAt` is the end of the refusal, or a later time when the window has the units of the call.
+- **The window.** A `calendar` window is a day or a month in an IANA time zone, from the hour `hour`. It follows the clock changes of the zone. A `rolling` window is the last `ms` milliseconds. When the provider does not tell when its count starts again, use a rolling window.
+- **The length of a rolling window.** A rolling window counts at least as much as a calendar window only when it is as long as the longest calendar window. In a zone with clock changes, a day can have 25 hours, and a month can have 31 days and 1 hour (745 hours). In UTC, a day always has 24 hours.
+- **The count is not lower than the count of the provider.** A rolling window puts each call in a time bucket (60 in a window by default). A bucket counts until all of it is out of the window. The answer of the provider (`read`) can make the count larger, but not smaller. A count of 0 left, or a reset time with no count, stops the key until that time. `readQuotaHeaders` reads the seconds until the reset, or the HTTP date of the reset, as `Retry-After` gives them.
 - **The reserve.** The gate keeps `reserve` units unused, for a different program on the same key or for a call that you must make.
 - **The cost.** A call counts 1 unit, or `cost` units. A cost of 0 counts nothing and refuses nothing. A cost of more than the quota gives in one window is a fault of the caller: the gate throws an `ApiError`.
 - **The store.** `memoryQuotaStore` keeps the counts in memory. `SqliteHostStateStore` keeps them in its file, so the count of a key stays after a restart and two processes share it. Each change of a count is one transaction. The key names the account that the provider counts. It is not the secret of the key: the store keeps it as text.
-- **Two quotas on one key.** Put two gates on one function, for example `withQuota(perMinute, withQuota(perDay, fetch))`.
+- **An error after the call.** When `read` or the store fails after the call, the request went out. So `withQuota` gives the result, and it gives the error to `onError`. It does not throw, because a retry after a throw sends the request again.
+- **Two quotas on one key.** Put two gates on one function, for example `withQuota(perMinute, withQuota(perDay, fetch))`. Give each quota a different name: the store keeps one record for each name and key. The outer gate counts a call before the inner gate examines it. So a refusal of the inner gate keeps a unit of the outer gate. Put the gate of the shortest window outside, so that this unit stops counting soon.
 
 These are the limits of the first providers, as their documents gave them on 2026-11-14:
 
@@ -1354,8 +1358,8 @@ These are the limits of the first providers, as their documents gave them on 202
 | --- | --- | --- | --- |
 | [Pushover](https://pushover.net/api#limits) | 10,000 messages each month for each user account (25,000 for a team). The applications of an account share it. | Calendar month, `America/Chicago`, from 00:00 on the 1st | `X-Limit-App-Remaining`, `X-Limit-App-Reset` (seconds since the epoch) |
 | [NASA FIRMS](https://firms.modaps.eosdis.nasa.gov/api/map_key/) | 5,000 transactions for each MAP_KEY | Rolling, 10 minutes | none |
-| [OpenSky Network](https://openskynetwork.github.io/opensky-api/rest.html) | 400 credits a day with no account, 4,000 for a registered user, 8,000 for an active feeder. `/states`, `/tracks` and `/flights` each have a quota: give each one a key. | Rolling, 24 hours (the document gives no reset time) | `X-Rate-Limit-Remaining`, `X-Rate-Limit-Retry-After-Seconds` (seconds until the reset) |
-| [TomTom](https://docs.tomtom.com/pricing) | 200,000 tile requests and 20,000 other map requests each month, free | Rolling, 31 days (the document gives no reset time) | none |
+| [OpenSky Network](https://openskynetwork.github.io/opensky-api/rest.html) | 400 credits a day with no account, 4,000 for a registered user, 8,000 for an active feeder. `/states`, `/tracks` and `/flights` each have a quota: give each one a key. | Rolling, 25 hours (the document gives no reset time or zone, and a day can have 25 hours) | `X-Rate-Limit-Remaining`, `X-Rate-Limit-Retry-After-Seconds` (seconds until the reset) |
+| [TomTom](https://docs.tomtom.com/pricing) | 200,000 tile requests and 20,000 other map requests each month, free | Rolling, 745 hours (the document gives no reset time or zone, and a month can have 31 days and 1 hour) | none |
 
 ## Stored copies and conditional requests
 

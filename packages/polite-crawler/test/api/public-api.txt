@@ -785,6 +785,7 @@ export type Transport<S extends Signal = AbortSignal> = (exchange: Exchange, sig
 interface WithQuotaOptions<A extends readonly unknown[], R> {
   readonly cost?: number | ((...args: A) => number) | undefined;
   readonly read?: ((result: R) => QuotaReading | undefined) | undefined;
+  readonly onError?: ((error: unknown) => void) | undefined;
 }
 
 ### build/api.d.mts#fetchTransport
@@ -2796,7 +2797,7 @@ export declare class SqliteHostStateStore implements HostStateStore, QuotaStore 
   reset(host?: string): void;
   validators(host: string): ValidatorMemo | undefined;
   noteValidators(host: string, report: ValidatorReport, now: number): ValidatorMemo;
-  changeQuota(key: string, step: (record: QuotaRecord | undefined) => QuotaRecord): QuotaRecord;
+  changeQuota(quota: string, key: string, step: (record: QuotaRecord | undefined) => QuotaRecord): QuotaRecord;
   get size(): number;
   close(): void;
 }
@@ -3728,7 +3729,7 @@ export interface QuotaRecord {
 
 ### build/politeness.d.mts#QuotaStore
 export interface QuotaStore {
-  changeQuota(key: string, step: (record: QuotaRecord | undefined) => QuotaRecord): QuotaRecord;
+  changeQuota(quota: string, key: string, step: (record: QuotaRecord | undefined) => QuotaRecord): QuotaRecord;
 }
 
 ### build/politeness.d.mts#Rest

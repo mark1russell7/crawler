@@ -48,10 +48,12 @@ const MIGRATIONS: readonly Migration[] = [
     since_probe INTEGER NOT NULL DEFAULT 0,
     changed_at REAL NOT NULL DEFAULT 0
   )`,
-  // Step 2 (0.6.3) adds the record of each quota key, as JSON (`QuotaRecord`).
+  // Step 2 (0.6.3) adds the record of each quota and key, as JSON (`QuotaRecord`).
   `CREATE TABLE IF NOT EXISTS quotas (
-    key TEXT PRIMARY KEY,
-    record TEXT NOT NULL
+    quota TEXT NOT NULL,
+    key TEXT NOT NULL,
+    record TEXT NOT NULL,
+    PRIMARY KEY (quota, key)
   )`,
 ];
 
@@ -120,7 +122,7 @@ export interface SqliteHostStateOptions {
  * The table `validators` keeps the validator memo of each host (`ValidatorMemo`), so the processes
  * share it and it stays after a restart. A file of version 0.1.0 gets the table when it opens.
  *
- * The table `quotas` keeps the record of each quota key of `polite-crawler/api` (`QuotaStore`). Give
+ * The table `quotas` keeps the record of each quota and key of `polite-crawler/api` (`QuotaStore`). Give
  * the store to `quotaGate`, so the count of a key stays after a restart and the processes share it.
  *
  * The state is not a projection of the capture log. A deletion of the file loses only the pace,
@@ -320,14 +322,20 @@ export class SqliteHostStateStore implements HostStateStore, QuotaStore {
   }
 
   /**
-   * This method changes the record of a quota key in one transaction, so two processes cannot count
-   * one call twice or lose a call. A row that is not JSON goes to `step` as no record. The gate of
-   * `quotaGate` examines each record that it gets.
+   * This method changes the record of a quota and a key in one transaction. So two processes cannot
+   * count one call twice or lose a call. A row that is not JSON goes to `step` as no record. The gate
+   * of `quotaGate` examines each record that it gets.
    */
-  changeQuota(key: string, step: (record: QuotaRecord | undefined) => QuotaRecord): QuotaRecord {
+  changeQuota(
+    quota: string,
+    key: string,
+    step: (record: QuotaRecord | undefined) => QuotaRecord,
+  ): QuotaRecord {
     return this.step(() => {
-      const row = this.stmt("SELECT record FROM quotas WHERE key = ?").get(key) as
-        { record: string } | undefined;
+      const row = this.stmt("SELECT record FROM quotas WHERE quota = ? AND key = ?").get(
+        quota,
+        key,
+      ) as { record: string } | undefined;
       let stored: QuotaRecord | undefined;
       try {
         stored = row === undefined ? undefined : (JSON.parse(row.record) as QuotaRecord);
@@ -336,8 +344,8 @@ export class SqliteHostStateStore implements HostStateStore, QuotaStore {
       }
       const next = step(stored);
       this.stmt(
-        "INSERT INTO quotas (key, record) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET record = excluded.record",
-      ).run(key, JSON.stringify(next));
+        "INSERT INTO quotas (quota, key, record) VALUES (?, ?, ?) ON CONFLICT(quota, key) DO UPDATE SET record = excluded.record",
+      ).run(quota, key, JSON.stringify(next));
       return next;
     });
   }

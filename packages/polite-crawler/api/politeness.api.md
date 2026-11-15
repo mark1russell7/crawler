@@ -160,7 +160,7 @@ export interface QuotaRecord {
 
 // @beta
 export interface QuotaStore {
-    changeQuota(key: string, step: (record: QuotaRecord | undefined) => QuotaRecord): QuotaRecord;
+    changeQuota(quota: string, key: string, step: (record: QuotaRecord | undefined) => QuotaRecord): QuotaRecord;
 }
 
 // @public (undocumented)

@@ -2071,7 +2071,7 @@ export interface QuotaRecord {
 
 // @beta
 export interface QuotaStore {
-    changeQuota(key: string, step: (record: QuotaRecord | undefined) => QuotaRecord): QuotaRecord;
+    changeQuota(quota: string, key: string, step: (record: QuotaRecord | undefined) => QuotaRecord): QuotaRecord;
 }
 
 // @public
@@ -2658,7 +2658,7 @@ export interface SqliteHostStateOptions {
 // @beta
 export class SqliteHostStateStore implements HostStateStore, QuotaStore {
     constructor(path: string, options?: SqliteHostStateOptions);
-    changeQuota(key: string, step: (record: QuotaRecord | undefined) => QuotaRecord): QuotaRecord;
+    changeQuota(quota: string, key: string, step: (record: QuotaRecord | undefined) => QuotaRecord): QuotaRecord;
     close(): void;
     // (undocumented)
     defer(host: string, until: number): void;

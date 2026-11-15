@@ -160,16 +160,22 @@ export interface QuotaRecord {
 
 /**
  * A store of the records of the keys. `memoryQuotaStore` keeps them in memory, and
- * `SqliteHostStateStore` keeps them in its file.
+ * `SqliteHostStateStore` keeps them in its file. A store keeps one record for each quota name and
+ * key, so two quotas of one key (for example a minute and a day) count apart.
  *
  * @beta
  */
 export interface QuotaStore {
   /**
-   * This method gives the record of `key` to `step`, keeps the record that `step` gives, and gives
-   * it. It is one step: a different call cannot change the record between the read and the write.
+   * This method gives the record of the quota `quota` of `key` to `step`, keeps the record that
+   * `step` gives, and gives it. It is one step: a different call cannot change the record between
+   * the read and the write.
    */
-  changeQuota(key: string, step: (record: QuotaRecord | undefined) => QuotaRecord): QuotaRecord;
+  changeQuota(
+    quota: string,
+    key: string,
+    step: (record: QuotaRecord | undefined) => QuotaRecord,
+  ): QuotaRecord;
 }
 
 /** This value tells the result that the crawler learned for one validator of a host. */

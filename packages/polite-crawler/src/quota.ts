@@ -8,18 +8,22 @@
  * bucket, and a bucket counts until all of it is out of the window. The answer of the provider can
  * make the count larger, but not smaller.
  *
- * The module imports no Node.js module, so a browser can use it. Each export is beta.
+ * The civil time of a calendar window comes from `@mark1russell7/algebra/clock`. The module imports
+ * no Node.js module, so a browser can use it. Each export is beta.
  */
+import { instantsOf, localTime, offsetChanges } from "@mark1russell7/algebra/clock";
 import { ApiError } from "./api-error.ts";
+import { parseRetryAfter } from "./classify.ts";
 import type { QuotaRecord, QuotaStore } from "./politeness.ts";
 
 /**
  * The window of a quota.
  *
  * - `rolling`: the units of the last `ms` milliseconds. Use it when the provider does not tell when
- *   its count starts again. It is stricter than each fixed window of the same length.
+ *   its count starts again. It is stricter than each fixed window of the same length or shorter.
  * - `calendar`: the units of a day or a month in the IANA time zone `timeZone`. A window starts at
- *   the hour `hour` (default 0) of the first day, in that zone.
+ *   the hour `hour` (default 0) of the first day, in that zone. When the clock jumps over that hour,
+ *   the window starts at the jump.
  *
  * @beta
  */
@@ -45,7 +49,10 @@ export type QuotaWindow =
  * @beta
  */
 export interface Quota {
-  /** This value names the quota in a message, for example `Example API requests`. */
+  /**
+   * This value names the quota in a message, for example `Example API requests`. A store keeps a
+   * record for each name and key, so give each quota of a key a different name.
+   */
   readonly name: string;
   /** This value is the count of units that the provider gives in one window. */
   readonly limit: number;
@@ -77,7 +84,10 @@ export interface QuotaReading {
 export interface QuotaState {
   /** This value is the count of units in the window. */
   readonly used: number;
-  /** This value is the count of units that the gate gives: the limit, less the reserve and `used`. */
+  /**
+   * This value is the count of units that the gate gives: the limit, less the reserve and `used`.
+   * It is 0 while the provider refuses the key.
+   */
   readonly left: number;
   /** The units come back from this time, in milliseconds since the epoch. With no unit in the window, it is not there. */
   readonly resetAt?: number | undefined;
@@ -106,69 +116,53 @@ export class QuotaError extends ApiError {
 
 const MAX_BUCKETS = 1000;
 const DEFAULT_BUCKETS = 60;
+const HOUR_MS = 3_600_000;
+/** The largest time of a `Date`, in milliseconds from the epoch. */
+const MAX_TIME = 8.64e15;
+
+const iso = (t: number): string => new Date(t).toISOString();
 
 /** The checked form of a window: the time bucket of a time, and the test of a bucket. */
 interface Span {
   /** This function gives the start and the end of the bucket of the time `t`. */
   bucket(t: number): readonly [start: number, end: number];
-  /** This function tells if the bucket that starts at `start` counts at the time `t`. */
-  counts(start: number, t: number): boolean;
+  /**
+   * This function gives the test of the buckets that count at the time `t`. A bucket of a later
+   * window counts too: after a step back of the clock, the calls of that window still count.
+   */
+  counting(t: number): (start: number) => boolean;
   /** This function gives the time when the bucket that starts at `start` stops counting. */
   freeAt(start: number): number;
 }
 
-const formats = new Map<string, Intl.DateTimeFormat>();
-
-const formatOf = (timeZone: string): Intl.DateTimeFormat => {
-  let format = formats.get(timeZone);
-  if (format === undefined) {
-    format = new Intl.DateTimeFormat("en-US", {
-      timeZone,
-      hourCycle: "h23",
-      year: "numeric",
-      month: "numeric",
-      day: "numeric",
-      hour: "numeric",
-      minute: "numeric",
-      second: "numeric",
-    });
-    formats.set(timeZone, format);
-  }
-  return format;
-};
-
 /** This function gives the clock time of `t` in a zone, as the milliseconds of that clock time in UTC. */
 const wallOf = (t: number, timeZone: string): number => {
-  const part: Record<string, number> = {};
-  for (const { type, value } of formatOf(timeZone).formatToParts(t)) part[type] = Number(value);
-  return Date.UTC(
-    part["year"] ?? 0,
-    (part["month"] ?? 1) - 1,
-    part["day"] ?? 1,
-    part["hour"] ?? 0,
-    part["minute"] ?? 0,
-    part["second"] ?? 0,
-  );
+  const local = localTime(t, timeZone);
+  if (local === undefined) throw new ApiError(`The time ${String(t)} is not a date.`);
+  const { year, month, day, hour, minute, second } = local;
+  return Date.UTC(year, month - 1, day, hour, minute, second);
 };
 
 /**
- * This function gives the time of a clock time of a zone. The arguments are those of `Date.UTC`, so
- * a day 0 is the last day of the month before. Two passes find the offset after a clock change.
+ * This function gives the first time at which the clock of the zone shows the clock time `wall`.
+ * In the gap of a change forward, the clock does not show `wall`. The function then gives the time
+ * of the change: the end of the gap.
  */
-const instantOf = (
-  timeZone: string,
-  year: number,
-  month: number,
-  day: number,
-  hour: number,
-): number => {
-  const wall = Date.UTC(year, month, day, hour);
-  const offsetAt = (t: number): number => wallOf(t, timeZone) - Math.floor(t / 1000) * 1000;
-  const first = wall - offsetAt(wall);
-  return wall - offsetAt(first);
+const firstAt = (wall: number, timeZone: string): number => {
+  const [first] = instantsOf(wall, timeZone) ?? [];
+  if (first !== undefined) return first;
+  // a time with the clock time `wall` is from 14 hours before `wall` to 12 hours after it
+  const changes = offsetChanges(wall - 15 * HOUR_MS, wall + 13 * HOUR_MS, timeZone) ?? [];
+  const change = changes.find(
+    (at) => wallOf(at - 1, timeZone) < wall && wallOf(at, timeZone) >= wall,
+  );
+  if (change === undefined) {
+    throw new ApiError(`The clock of ${timeZone} does not show or jump over ${iso(wall)}.`);
+  }
+  return change;
 };
 
-/** This function gives the calendar window of the time `t`. */
+/** This function gives the calendar window of the time `t`: its start, and the start of the next window. */
 const calendarOf = (
   unit: "day" | "month",
   timeZone: string,
@@ -178,19 +172,17 @@ const calendarOf = (
   const wall = new Date(wallOf(t, timeZone));
   const year = wall.getUTCFullYear();
   const month = wall.getUTCMonth();
-  const day = unit === "day" ? wall.getUTCDate() : 1;
-  const step = (back: number): readonly [number, number] =>
-    unit === "day"
-      ? [
-          instantOf(timeZone, year, month, day - back, hour),
-          instantOf(timeZone, year, month, day - back + 1, hour),
-        ]
-      : [
-          instantOf(timeZone, year, month - back, 1, hour),
-          instantOf(timeZone, year, month - back + 1, 1, hour),
-        ];
-  const window = step(0);
-  return window[0] <= t ? window : step(1);
+  const day = wall.getUTCDate();
+  // the start of the window that is `back` windows before the window of the date of `t`
+  const startOf = (back: number): number =>
+    firstAt(
+      unit === "day"
+        ? Date.UTC(year, month, day - back, hour)
+        : Date.UTC(year, month - back, 1, hour),
+      timeZone,
+    );
+  const start = startOf(0);
+  return start <= t ? [start, startOf(-1)] : [startOf(1), start];
 };
 
 const spanOf = (window: QuotaWindow): Span => {
@@ -211,7 +203,7 @@ const spanOf = (window: QuotaWindow): Span => {
         const start = Math.floor(t / size) * size;
         return [start, start + size];
       },
-      counts: (start, t) => start + size + ms > t,
+      counting: (t) => (start) => start + size + ms > t,
       freeAt: (start) => start + size + ms,
     };
   }
@@ -221,33 +213,38 @@ const spanOf = (window: QuotaWindow): Span => {
       `The hour of the window is not a whole number from 0 to 23: ${String(hour)}.`,
     );
   }
-  try {
-    formatOf(window.timeZone);
-  } catch {
+  if (localTime(0, window.timeZone) === undefined) {
     throw new ApiError(`The time zone of the window is not an IANA time zone: ${window.timeZone}.`);
   }
   const { unit, timeZone } = window;
   return {
     bucket: (t) => calendarOf(unit, timeZone, hour, t),
-    counts: (start, t) => calendarOf(unit, timeZone, hour, t)[0] === start,
+    // only the windows before the window of `t` stop counting
+    counting: (t) => {
+      const [first] = calendarOf(unit, timeZone, hour, t);
+      return (start) => start >= first;
+    },
     freeAt: (start) => calendarOf(unit, timeZone, hour, start)[1],
   };
 };
 
 const isTime = (value: unknown): value is number =>
-  typeof value === "number" && Number.isFinite(value);
+  typeof value === "number" && Number.isFinite(value) && Math.abs(value) <= MAX_TIME;
 
-/** This function gives the record of a store, or undefined for a value that is not a record. */
+/**
+ * This function gives the record of a store, or undefined for a value that is not a record. It
+ * removes each item that is not valid and keeps the other items, so the count stays as high as the
+ * record lets it.
+ */
 const recordOf = (value: unknown): QuotaRecord | undefined => {
   if (typeof value !== "object" || value === null) return undefined;
   const { spent, blockedUntil } = value as { spent?: unknown; blockedUntil?: unknown };
   if (!Array.isArray(spent)) return undefined;
   const items: (readonly [number, number])[] = [];
   for (const item of spent as unknown[]) {
-    if (!Array.isArray(item) || item.length !== 2) return undefined;
+    if (!Array.isArray(item) || item.length !== 2) continue;
     const [start, units] = item as unknown[];
-    if (!isTime(start) || !isTime(units) || units < 0) return undefined;
-    items.push([start, units]);
+    if (isTime(start) && isTime(units) && units >= 0) items.push([start, units]);
   }
   items.sort((a, b) => a[0] - b[0]);
   return isTime(blockedUntil) ? { spent: items, blockedUntil } : { spent: items };
@@ -255,7 +252,8 @@ const recordOf = (value: unknown): QuotaRecord | undefined => {
 
 /** This function removes the buckets that do not count at the time `t`, and an ended refusal. */
 const prune = (span: Span, record: QuotaRecord | undefined, t: number): QuotaRecord => {
-  const spent = (record?.spent ?? []).filter(([start]) => span.counts(start, t));
+  const counts = span.counting(t);
+  const spent = (record?.spent ?? []).filter(([start]) => counts(start));
   const blockedUntil = record?.blockedUntil;
   return blockedUntil !== undefined && blockedUntil > t ? { spent, blockedUntil } : { spent };
 };
@@ -297,7 +295,8 @@ export interface QuotaGate {
    * state. A cost of 0 counts nothing and refuses nothing.
    *
    * @throws QuotaError when the units are more than `left`, or when the provider refused the key.
-   * The gate then counts nothing.
+   * The gate then counts nothing. Its `resetAt` is the end of the refusal of the provider, or a later
+   * time when the window has the units of the call.
    * @throws ApiError when the cost is negative or not finite, or when it is more than the quota
    * gives in one window.
    */
@@ -324,8 +323,6 @@ export interface QuotaGateOptions {
   /** This function gives the time in milliseconds since the epoch. The default is `Date.now`. */
   readonly now?: (() => number) | undefined;
 }
-
-const iso = (t: number): string => new Date(t).toISOString();
 
 /**
  * This function makes the gate of one key.
@@ -356,14 +353,17 @@ export function quotaGate(quota: Quota, options: QuotaGateOptions): QuotaGate {
     const resetAt = record.spent.length === 0 ? undefined : span.freeAt(record.spent[0]![0]);
     return {
       used,
-      left: Math.max(0, allowed - used),
+      left: record.blockedUntil === undefined ? Math.max(0, allowed - used) : 0,
       ...(resetAt === undefined ? {} : { resetAt }),
       ...(record.blockedUntil === undefined ? {} : { blockedUntil: record.blockedUntil }),
     };
   };
+  // the record of the quota and the key, so two quotas of one key in one store count apart
   const change = (step: (record: QuotaRecord, t: number) => QuotaRecord): QuotaState => {
     const t = now();
-    const record = store.changeQuota(key, (stored) => step(prune(span, recordOf(stored), t), t));
+    const record = store.changeQuota(name, key, (stored) =>
+      step(prune(span, recordOf(stored), t), t),
+    );
     return stateOf(prune(span, recordOf(record), t));
   };
   // a read that writes the record back as it is, so a store needs only one method
@@ -384,24 +384,32 @@ export function quotaGate(quota: Quota, options: QuotaGateOptions): QuotaGate {
       }
       let refused: QuotaError | undefined;
       const taken = change((record, t) => {
-        if (record.blockedUntil !== undefined) {
+        const used = usedOf(record);
+        // the need is never more than the units of the window, because cost <= allowed
+        const free =
+          used + cost > allowed
+            ? (freeTime(span, record, used + cost - allowed) ?? span.bucket(t)[1])
+            : undefined;
+        const { blockedUntil } = record;
+        if (blockedUntil !== undefined) {
+          const resetAt = Math.max(blockedUntil, free ?? blockedUntil);
           refused = new QuotaError(
-            `The provider refused the quota ${name} of ${key} until ${iso(record.blockedUntil)}.`,
+            `The provider refused the quota ${name} of ${key} until ${iso(blockedUntil)}.` +
+              (resetAt > blockedUntil
+                ? ` The window has the units of the call at ${iso(resetAt)}.`
+                : ""),
             key,
-            record.blockedUntil,
+            resetAt,
           );
           return record;
         }
-        const used = usedOf(record);
-        if (used + cost > allowed) {
-          // the need is never more than the units of the window, because cost <= allowed
-          const resetAt = freeTime(span, record, used + cost - allowed) ?? span.bucket(t)[1];
+        if (free !== undefined) {
           refused = new QuotaError(
             `The quota ${name} of ${key} refused a call of ${String(cost)} units: ` +
               `${String(used)} of ${String(limit)} are used, and ${String(reserve)} stay in reserve. ` +
-              `It gives units again at ${iso(resetAt)}.`,
+              `It gives units again at ${iso(free)}.`,
             key,
-            resetAt,
+            free,
           );
           return record;
         }
@@ -435,11 +443,16 @@ export function quotaGate(quota: Quota, options: QuotaGateOptions): QuotaGate {
  * @beta
  */
 export function memoryQuotaStore(): QuotaStore {
-  const records = new Map<string, QuotaRecord>();
+  const records = new Map<string, Map<string, QuotaRecord>>();
   return {
-    changeQuota(key, step) {
-      const next = step(records.get(key));
-      records.set(key, next);
+    changeQuota(quota, key, step) {
+      let keys = records.get(quota);
+      if (keys === undefined) {
+        keys = new Map();
+        records.set(quota, keys);
+      }
+      const next = step(keys.get(key));
+      keys.set(key, next);
       return next;
     },
   };
@@ -458,6 +471,12 @@ export interface WithQuotaOptions<A extends readonly unknown[], R> {
   readonly cost?: number | ((...args: A) => number) | undefined;
   /** This function reads what the result of a call tells of the count of the provider, for example with `readQuotaHeaders`. */
   readonly read?: ((result: R) => QuotaReading | undefined) | undefined;
+  /**
+   * This function gets an error of `read` or of the store after the call. The call went out, so
+   * `withQuota` gives its result. It does not throw, because a retry after a throw sends the call
+   * again. With no function, the error is lost.
+   */
+  readonly onError?: ((error: unknown) => void) | undefined;
 }
 
 /**
@@ -475,12 +494,16 @@ export function withQuota<A extends readonly unknown[], R>(
   call: (...args: A) => Promise<R>,
   options: WithQuotaOptions<A, R> = {},
 ): (...args: A) => Promise<R> {
-  const { cost, read } = options;
+  const { cost, read, onError } = options;
   return async (...args: A): Promise<R> => {
     gate.take(typeof cost === "function" ? cost(...args) : (cost ?? 1));
     const result = await call(...args);
-    const reading = read?.(result);
-    if (reading !== undefined) gate.note(reading);
+    try {
+      const reading = read?.(result);
+      if (reading !== undefined) gate.note(reading);
+    } catch (error) {
+      onError?.(error);
+    }
     return result;
   };
 }
@@ -495,7 +518,10 @@ export interface QuotaHeaders {
   readonly remaining?: string | undefined;
   /** This header has the time of the reset in seconds since the epoch, for example `x-ratelimit-reset`. */
   readonly resetAt?: string | undefined;
-  /** This header has the seconds until the reset, for example `retry-after`. */
+  /**
+   * This header has the seconds until the reset, or the HTTP date of the reset, as `retry-after`
+   * gives them. When it has a value, the gate does not read `resetAt`.
+   */
   readonly resetAfter?: string | undefined;
 }
 
@@ -505,7 +531,8 @@ const SECONDS = /^\d{1,12}(?:\.\d{1,3})?$/;
 /**
  * This function reads the count of a provider from the headers of an answer. `get` gives the value
  * of one header, for example `(name) => response.headers.get(name)` for a `fetch` answer, or
- * `(name) => reply.headers[name]` for a `Reply`. A value that is not a number is not read.
+ * `(name) => reply.headers[name]` for a `Reply`. A value that is not a number is not read. A value of
+ * `resetAfter` can also be an HTTP date, as in `Retry-After`.
  *
  * @returns the reading, or undefined when no header has a value.
  * @beta
@@ -515,16 +542,23 @@ export function readQuotaHeaders(
   names: QuotaHeaders,
   now: number,
 ): QuotaReading | undefined {
+  const text = (name: string | undefined): string | undefined =>
+    name === undefined ? undefined : get(name.toLowerCase())?.trim();
   const value = (name: string | undefined, form: RegExp): number | undefined => {
-    if (name === undefined) return undefined;
-    const text = get(name.toLowerCase())?.trim();
-    return text !== undefined && form.test(text) ? Number(text) : undefined;
+    const found = text(name);
+    return found !== undefined && form.test(found) ? Number(found) : undefined;
   };
   const remaining = value(names.remaining, COUNT);
   const at = value(names.resetAt, SECONDS);
-  const after = value(names.resetAfter, SECONDS);
-  const resetAt =
-    after !== undefined ? now + after * 1000 : at === undefined ? undefined : at * 1000;
+  // seconds with a fraction, as some providers give, and then the two forms of Retry-After
+  const afterText = text(names.resetAfter);
+  const after =
+    afterText === undefined
+      ? undefined
+      : SECONDS.test(afterText)
+        ? Number(afterText) * 1000
+        : parseRetryAfter(afterText, now);
+  const resetAt = after !== undefined ? now + after : at === undefined ? undefined : at * 1000;
   if (remaining === undefined && resetAt === undefined) return undefined;
   return {
     ...(remaining === undefined ? {} : { remaining }),

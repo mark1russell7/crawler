@@ -272,7 +272,7 @@ export interface QuotaState {
 
 // @beta
 export interface QuotaStore {
-    changeQuota(key: string, step: (record: QuotaRecord | undefined) => QuotaRecord): QuotaRecord;
+    changeQuota(quota: string, key: string, step: (record: QuotaRecord | undefined) => QuotaRecord): QuotaRecord;
 }
 
 // @beta
@@ -391,6 +391,7 @@ export function withQuota<A extends readonly unknown[], R>(gate: QuotaGate, call
 // @beta
 export interface WithQuotaOptions<A extends readonly unknown[], R> {
     readonly cost?: number | ((...args: A) => number) | undefined;
+    readonly onError?: ((error: unknown) => void) | undefined;
     readonly read?: ((result: R) => QuotaReading | undefined) | undefined;
 }
 

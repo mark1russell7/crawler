@@ -79,10 +79,10 @@ const thrown = (work: () => unknown): Error => {
   throw new Error("The work did not throw.");
 };
 
-/** This function gives the record of a key in a store, and changes nothing. */
-const recordIn = (store: QuotaStore, key: string): QuotaRecord | undefined => {
+/** This function gives the record of a quota and a key in a store, and changes nothing. */
+const recordIn = (store: QuotaStore, quota: string, key: string): QuotaRecord | undefined => {
   let seen: QuotaRecord | undefined;
-  store.changeQuota(key, (record) => {
+  store.changeQuota(quota, key, (record) => {
     seen = record;
     return record ?? { spent: [] };
   });
@@ -119,7 +119,7 @@ describe("withQuota on fetchTransport", () => {
   });
 
   it("reads the count of the provider from the reply, and stops before the provider refuses", async () => {
-    const clock = clockAt("2026-11-14T12:00:00Z");
+    const clock = clockAt("2026-11-14T12:59:00Z");
     const gate = quotaGate(rolling(100, 3_600_000), { key: "example:account", now: clock.now });
     const reset = String(at("2026-11-14T13:00:00Z") / 1000);
     const { fetch, calls } = fakeFetch({
@@ -140,11 +140,106 @@ describe("withQuota on fetchTransport", () => {
       left: 0,
       blockedUntil: at("2026-11-14T13:00:00Z"),
     });
+    // the 100 units of the reading are in the bucket of 12:59, which counts until 14:00
     const error = await failure(transport(get, undefined));
     expect(error).toBeInstanceOf(QuotaError);
-    expect((error as QuotaError).resetAt).toBe(at("2026-11-14T13:00:00Z"));
-    expect(error.message).toContain("The provider refused");
-    expect(calls).toHaveLength(1);
+    expect((error as QuotaError).resetAt).toBe(at("2026-11-14T14:00:00Z"));
+    expect(error.message).toContain("The provider refused the quota Example requests");
+    expect(error.message).toContain("units of the call at 2026-11-14T14:00:00.000Z");
+    // the refusal of the provider ended, and the window gives the units at the same time as before
+    clock.set("2026-11-14T13:00:00Z");
+    const later = await failure(transport(get, undefined));
+    expect((later as QuotaError).resetAt).toBe(at("2026-11-14T14:00:00Z"));
+    clock.set("2026-11-14T14:00:00Z");
+    expect((await transport(get, undefined)).status).toBe(200);
+    expect(calls).toHaveLength(2);
+  });
+
+  it("gives the result of a call that went out when the store or the reading fails", async () => {
+    // a store that fails after the take, so the call went out before the note
+    const memory = memoryQuotaStore();
+    let changes = 0;
+    const failing: QuotaStore = {
+      changeQuota(quota, key, step) {
+        changes += 1;
+        if (changes > 1) throw new Error("database is locked");
+        return memory.changeQuota(quota, key, step);
+      },
+    };
+    const gate = quotaGate(rolling(10, 60_000), { key: "k", store: failing, now: () => 0 });
+    const errors: unknown[] = [];
+    let sent = 0;
+    const call = withQuota(
+      gate,
+      () => {
+        sent += 1;
+        return Promise.resolve("sent");
+      },
+      { read: () => ({ remaining: 0 }), onError: (error) => errors.push(error) },
+    );
+    expect(await call()).toBe("sent");
+    expect(sent).toBe(1);
+    expect(errors).toHaveLength(1);
+    expect((errors[0] as Error).message).toBe("database is locked");
+    // a read that throws goes to the same function, and with no function the result still comes back
+    const reading = new Error("bad header");
+    const other = quotaGate(rolling(10, 60_000), { key: "k", now: () => 0 });
+    const read = (): undefined => {
+      throw reading;
+    };
+    const seen: unknown[] = [];
+    const reads = withQuota(other, () => Promise.resolve(1), {
+      read,
+      onError: (e) => seen.push(e),
+    });
+    expect(await reads()).toBe(1);
+    expect(seen).toEqual([reading]);
+    expect(await withQuota(other, () => Promise.resolve(2), { read })()).toBe(2);
+  });
+});
+
+describe("two quotas on one key", () => {
+  it("counts each quota apart in one store", async () => {
+    // 10 calls in each 60 s and 20 in each UTC day: 50 tries in 20 minutes send 20 calls
+    const store = memoryQuotaStore();
+    let t = at("2026-11-14T12:00:00Z");
+    const now = (): number => t;
+    const minute = quotaGate(
+      { name: "Example per minute", limit: 10, window: { kind: "rolling", ms: 60_000 } },
+      { key: "example:account", store, now },
+    );
+    const day = quotaGate(
+      {
+        name: "Example per day",
+        limit: 20,
+        window: { kind: "calendar", unit: "day", timeZone: "UTC" },
+      },
+      { key: "example:account", store, now },
+    );
+    let sent = 0;
+    const call = withQuota(
+      minute,
+      withQuota(day, () => {
+        sent += 1;
+        return Promise.resolve();
+      }),
+    );
+    let refused = 0;
+    for (let round = 0; round < 50; round += 1) {
+      try {
+        await call();
+      } catch (error) {
+        if (!(error instanceof QuotaError)) throw error;
+        refused += 1;
+      }
+      t += 24_000;
+    }
+    expect(sent).toBe(20);
+    expect(refused).toBe(30);
+    expect(day.state()).toMatchObject({ used: 20, left: 0, resetAt: at("2026-11-15T00:00:00Z") });
+    expect(recordIn(store, "Example per day", "example:account")?.spent).toEqual([
+      [at("2026-11-14T00:00:00Z"), 20],
+    ]);
   });
 });
 
@@ -189,7 +284,81 @@ describe("a calendar window", () => {
       { key: "k", store, now: clock.now },
     );
     expect(gate.take().resetAt).toBe(at("2026-11-02T06:00:00Z"));
-    expect(recordIn(store, "k")?.spent).toEqual([[at("2026-11-01T05:00:00Z"), 1]]);
+    expect(recordIn(store, "Example", "k")?.spent).toEqual([[at("2026-11-01T05:00:00Z"), 1]]);
+  });
+
+  /** This function gives a gate of a day in a zone, from the hour `hour`, and its clock. */
+  const dayIn = (timeZone: string, hour: number, iso: string) => {
+    const clock = clockAt(iso);
+    const store = memoryQuotaStore();
+    const gate = quotaGate(
+      { name: "Example", limit: 5, window: { kind: "calendar", unit: "day", timeZone, hour } },
+      { key: "k", store, now: clock.now },
+    );
+    return { clock, gate, store };
+  };
+
+  it("starts a day at the end of the gap when the clock jumps over its hour", () => {
+    // in 2026, Santiago leaves 00:00 on September 6 for 01:00, at 04:00 UTC
+    const santiago = dayIn("America/Santiago", 0, "2026-09-06T03:30:00Z");
+    // 23:30 on September 5: the reset is in the future, so a loop that waits for it does not spin
+    expect(santiago.gate.take().resetAt).toBe(at("2026-09-06T04:00:00Z"));
+    santiago.clock.set("2026-09-06T04:00:00Z");
+    expect(santiago.gate.state()).toEqual({ used: 0, left: 5 });
+    expect(santiago.gate.take().resetAt).toBe(at("2026-09-07T03:00:00Z"));
+    // in 2026, Chicago leaves 02:00 on March 8 for 03:00, at 08:00 UTC
+    const chicago = dayIn("America/Chicago", 2, "2026-03-08T07:30:00Z");
+    // 01:30 on March 8 is in the day that started at 02:00 on March 7
+    expect(chicago.gate.take().resetAt).toBe(at("2026-03-08T08:00:00Z"));
+    expect(recordIn(chicago.store, "Example", "k")?.spent).toEqual([
+      [at("2026-03-07T08:00:00Z"), 1],
+    ]);
+    // the day of March 8 has 23 hours
+    chicago.clock.set("2026-03-08T08:00:00Z");
+    expect(chicago.gate.take()).toEqual({
+      used: 1,
+      left: 4,
+      resetAt: at("2026-03-09T07:00:00Z"),
+    });
+  });
+
+  it("gives a day of 25 hours when the clocks go back, from the first of two times with its hour", () => {
+    // in 2026, Berlin goes back from 03:00 to 02:00 on October 25, at 01:00 UTC
+    const berlin = dayIn("Europe/Berlin", 1, "2026-10-24T23:30:00Z");
+    // 01:30 summer time on October 25: the day started at 01:00, and it has 25 hours
+    expect(berlin.gate.take().resetAt).toBe(at("2026-10-26T00:00:00Z"));
+    expect(recordIn(berlin.store, "Example", "k")?.spent).toEqual([
+      [at("2026-10-24T23:00:00Z"), 1],
+    ]);
+    // 02:30 winter time is in the same day
+    berlin.clock.set("2026-10-25T01:30:00Z");
+    expect(berlin.gate.take()).toMatchObject({ used: 2, resetAt: at("2026-10-26T00:00:00Z") });
+    // the clock shows 02:00 twice on October 25: the day of the hour 2 starts at the first time
+    const twice = dayIn("Europe/Berlin", 2, "2026-10-25T01:30:00Z");
+    expect(twice.gate.take().resetAt).toBe(at("2026-10-26T01:00:00Z"));
+    expect(recordIn(twice.store, "Example", "k")?.spent).toEqual([[at("2026-10-25T00:00:00Z"), 1]]);
+  });
+
+  it("keeps the count of a later window after a step back of the clock", () => {
+    const clock = clockAt("2026-11-15T00:30:00Z");
+    const gate = quotaGate(
+      {
+        name: "Example",
+        limit: 3,
+        window: { kind: "calendar", unit: "day", timeZone: "UTC" },
+      },
+      { key: "k", now: clock.now },
+    );
+    gate.take(3);
+    // the clock goes back into November 14: the 3 calls of November 15 still count
+    clock.set("2026-11-14T23:30:00Z");
+    expect(gate.state()).toMatchObject({ used: 3, left: 0 });
+    const error = thrown(() => gate.take());
+    expect((error as QuotaError).resetAt).toBe(at("2026-11-16T00:00:00Z"));
+    // the clock comes back: still 3 calls in November 15, not 6
+    clock.set("2026-11-15T00:40:00Z");
+    expect(() => gate.take()).toThrow(QuotaError);
+    expect(gate.state()).toMatchObject({ used: 3, left: 0 });
   });
 
   it("starts a day at the hour of the window", () => {
@@ -244,6 +413,24 @@ describe("the gate", () => {
     const gate = quotaGate({ ...rolling(10, 60_000), reserve: 2 }, { key: "k", now: () => 0 });
     expect(gate.take(8)).toMatchObject({ used: 8, left: 0 });
     expect(() => gate.take()).toThrow(QuotaError);
+    // a call larger than the limit less the reserve can never pass, so it is a fault of the caller
+    const other = quotaGate({ ...rolling(10, 60_000), reserve: 2 }, { key: "k", now: () => 0 });
+    const large = thrown(() => other.take(9));
+    expect(large).toBeInstanceOf(ApiError);
+    expect(large).not.toBeInstanceOf(QuotaError);
+    expect(large.message).toContain("in one window: 8");
+    expect(other.state()).toEqual({ used: 0, left: 8 });
+  });
+
+  it("gives 0 units left while the provider refuses the key, and a call of cost 0 still passes", () => {
+    const clock = clockAt("2026-11-14T12:00:00Z");
+    const gate = quotaGate(rolling(10, 60_000), { key: "k", now: clock.now });
+    const until = at("2026-11-14T12:00:30Z");
+    expect(gate.note({ resetAt: until })).toEqual({ used: 0, left: 0, blockedUntil: until });
+    expect(gate.take(0)).toEqual({ used: 0, left: 0, blockedUntil: until });
+    expect((thrown(() => gate.take()) as QuotaError).resetAt).toBe(until);
+    clock.set("2026-11-14T12:00:30Z");
+    expect(gate.state()).toEqual({ used: 0, left: 10 });
   });
 
   it("counts the cost of the arguments of a call", async () => {
@@ -341,10 +528,20 @@ describe("the gate", () => {
 
   it("reads a record that is not valid as no record", () => {
     const store = memoryQuotaStore();
-    store.changeQuota("k", () => ({ spent: "no" }) as unknown as QuotaRecord);
+    store.changeQuota("Example requests", "k", () => ({ spent: "no" }) as unknown as QuotaRecord);
     const gate = quotaGate(rolling(2, 60_000), { key: "k", store, now: () => 0 });
     expect(gate.state()).toEqual({ used: 0, left: 2 });
     expect(gate.take()).toMatchObject({ used: 1 });
+  });
+
+  it("removes only the items of a record that are not valid", () => {
+    const store = memoryQuotaStore();
+    const items = [[0, 2], [1000, -5], ["x", 1], [2000], [3000, Number.NaN], [9e15, 1]];
+    store.changeQuota("Example requests", "k", () => ({ spent: items }) as unknown as QuotaRecord);
+    const gate = quotaGate(rolling(3, 60_000), { key: "k", store, now: () => 0 });
+    expect(gate.state()).toEqual({ used: 2, left: 1, resetAt: 61_000 });
+    expect(gate.take()).toMatchObject({ used: 3, left: 0 });
+    expect(() => gate.take()).toThrow(QuotaError);
   });
 });
 
@@ -366,6 +563,23 @@ describe("readQuotaHeaders", () => {
     ).toEqual({ remaining: 42, resetAt: 1_795_000_000_000 });
     expect(
       readQuotaHeaders(headersOf({ "retry-after": "30" }), { resetAfter: "Retry-After" }, now),
+    ).toEqual({ resetAt: now + 30_000 });
+    expect(
+      readQuotaHeaders(headersOf({ "x-reset-after": "1.5" }), { resetAfter: "X-Reset-After" }, now),
+    ).toEqual({ resetAt: now + 1500 });
+  });
+
+  it("reads the HTTP date of Retry-After", () => {
+    const names = { resetAfter: "Retry-After" };
+    expect(
+      readQuotaHeaders(headersOf({ "retry-after": "Sat, 14 Nov 2026 12:01:00 GMT" }), names, now),
+    ).toEqual({ resetAt: at("2026-11-14T12:01:00Z") });
+  });
+
+  it("takes the seconds until the reset over the time of the reset", () => {
+    const names = { resetAt: "x-reset", resetAfter: "retry-after" };
+    expect(
+      readQuotaHeaders(headersOf({ "x-reset": "1795000000", "retry-after": "30" }), names, now),
     ).toEqual({ resetAt: now + 30_000 });
   });
 
@@ -436,11 +650,30 @@ describe("the quotas of the SQLite host state store", () => {
     expect(three.state()).toMatchObject({ used: 2, left: 0 });
   });
 
+  it("changes a record in one transaction, so a different process waits", async () => {
+    const path = await pathIn();
+    const one = open(path);
+    const two = new SqliteHostStateStore(path, { busyTimeoutMs: 0 });
+    cleanups.push(() => two.close());
+    let inner: Error | undefined;
+    one.changeQuota("q", "k", (record) => {
+      // the first store holds the lock of the file, so the second store cannot change the record
+      inner = thrown(() => two.changeQuota("q", "k", (other) => other ?? { spent: [[0, 9]] }));
+      return record ?? { spent: [[0, 1]] };
+    });
+    expect(inner?.message).toMatch(/database is locked/);
+    expect(recordIn(two, "q", "k")).toEqual({ spent: [[0, 1]] });
+  });
+
   it("reads a row that is not JSON as no record", async () => {
     const path = await pathIn();
     open(path).close();
     const db = new DatabaseSync(path);
-    db.prepare("INSERT INTO quotas (key, record) VALUES (?, ?)").run("k", "{not json");
+    db.prepare("INSERT INTO quotas (quota, key, record) VALUES (?, ?, ?)").run(
+      "Example requests",
+      "k",
+      "{not json",
+    );
     db.close();
     const gate = quotaGate(rolling(2, 60_000), { key: "k", store: open(path), now: () => 0 });
     expect(gate.take()).toMatchObject({ used: 1 });

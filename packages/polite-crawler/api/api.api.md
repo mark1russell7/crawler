@@ -131,6 +131,12 @@ export interface HostStop {
 }
 
 // @beta
+export const isApiError: (value: unknown) => value is ApiError;
+
+// @beta
+export const isQuotaError: (value: unknown) => value is QuotaError;
+
+// @beta
 export function memoryQuotaStore(): QuotaStore;
 
 // @public
@@ -224,6 +230,7 @@ export class QuotaError extends ApiError {
 
 // @beta
 export interface QuotaGate {
+    giveBack?(cost: number, at: number): QuotaState;
     // (undocumented)
     readonly key: string;
     note(reading: QuotaReading): QuotaState;
@@ -239,6 +246,7 @@ export function quotaGate(quota: Quota, options: QuotaGateOptions): QuotaGate;
 // @beta
 export interface QuotaGateOptions {
     readonly key: string;
+    readonly maxBlockMs?: number | undefined;
     readonly now?: (() => number) | undefined;
     readonly store?: QuotaStore | undefined;
 }
@@ -259,11 +267,13 @@ export interface QuotaReading {
 // @beta
 export interface QuotaRecord {
     readonly blockedUntil?: number | undefined;
+    readonly readAt?: number | undefined;
     readonly spent: readonly (readonly [start: number, units: number])[];
 }
 
 // @beta
 export interface QuotaState {
+    readonly at?: number | undefined;
     readonly blockedUntil?: number | undefined;
     readonly left: number;
     readonly resetAt?: number | undefined;
@@ -386,13 +396,13 @@ export interface ValidatorReport {
 export type ValidatorVerdict = "unknown" | "works" | "fails";
 
 // @beta
-export function withQuota<A extends readonly unknown[], R>(gate: QuotaGate, call: (...args: A) => Promise<R>, options?: WithQuotaOptions<A, R>): (...args: A) => Promise<R>;
+export function withQuota<A extends readonly unknown[], R>(gate: QuotaGate | readonly QuotaGate[], call: (...args: A) => Promise<R>, options?: WithQuotaOptions<A, R>): (...args: A) => Promise<R>;
 
 // @beta
 export interface WithQuotaOptions<A extends readonly unknown[], R> {
     readonly cost?: number | ((...args: A) => number) | undefined;
     readonly onError?: ((error: unknown) => void) | undefined;
-    readonly read?: ((result: R) => QuotaReading | undefined) | undefined;
+    readonly read?: ((result: R, gate: QuotaGate) => QuotaReading | undefined) | undefined;
 }
 
 // (No @packageDocumentation comment for this package)

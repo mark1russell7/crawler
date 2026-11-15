@@ -18,9 +18,9 @@ import type { HostStateStore, Paced, PolicyOptions, ValidatorAnswer } from "./po
 import { policyFor, restAfter, validatorsToSend } from "./politeness.ts";
 import type { OutcomeFacts } from "./reaction.ts";
 import { outcomeResult, reactToOutcome } from "./reaction.ts";
-import { QuotaError } from "./quota.ts";
+import { isQuotaError } from "./quota.ts";
 
-export { ApiError } from "./api-error.ts";
+export { ApiError, isApiError } from "./api-error.ts";
 export type { Classified, Outcome } from "./classify.ts";
 export type {
   HostCounts,
@@ -49,7 +49,14 @@ export type {
   QuotaWindow,
   WithQuotaOptions,
 } from "./quota.ts";
-export { memoryQuotaStore, QuotaError, quotaGate, readQuotaHeaders, withQuota } from "./quota.ts";
+export {
+  isQuotaError,
+  memoryQuotaStore,
+  QuotaError,
+  quotaGate,
+  readQuotaHeaders,
+  withQuota,
+} from "./quota.ts";
 
 /**
  * One request of a client to an API.
@@ -246,8 +253,9 @@ export async function send<S extends Signal = AbortSignal>(
         try {
           reply = await transport(input.exchange, signal);
         } catch (error) {
-          // a quota refused the exchange before it started, so the host keeps its state and its pace
-          if (error instanceof QuotaError) return { value: { error }, delayMs: 0 };
+          // a quota refused the exchange before it started, so the host keeps its state and its pace.
+          // The guard accepts a refusal of another copy of the package too.
+          if (isQuotaError(error)) return { value: { error }, delayMs: 0 };
           // a request that the caller stopped is no fault of the host
           const cancelled = signal?.aborted === true;
           const facts: OutcomeFacts = {
@@ -279,7 +287,7 @@ export async function send<S extends Signal = AbortSignal>(
     );
   }
   if ("error" in attempt) {
-    if (signal?.aborted === true || attempt.error instanceof QuotaError) throw attempt.error;
+    if (signal?.aborted === true || isQuotaError(attempt.error)) throw attempt.error;
     throw new ApiError(
       redact(`${input.source} gave no answer to ${input.what}: ${messageOf(attempt.error)}`),
     );

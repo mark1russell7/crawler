@@ -6,6 +6,10 @@ This file records the changes to `polite-crawler-mcp` in each version. The chang
 
 ## Unreleased
 
+## 0.7.0 - 2026-11-15
+
+- **The server uses polite-crawler 0.7.0.** The changes of `polite-crawler/api` (a list of gates for two quotas, the guards `isApiError` and `isQuotaError`, the entry point `polite-crawler/text`) are in the [changelog of polite-crawler](../../CHANGELOG.md). The server does not change.
+
 ## 0.6.3 - 2026-11-15
 
 - New versions of the dependencies (the release train).

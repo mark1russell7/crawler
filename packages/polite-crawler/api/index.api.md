@@ -2066,6 +2066,7 @@ export interface ProductVariant {
 // @beta
 export interface QuotaRecord {
     readonly blockedUntil?: number | undefined;
+    readonly readAt?: number | undefined;
     readonly spent: readonly (readonly [start: number, units: number])[];
 }
 
@@ -3109,7 +3110,7 @@ export const verifySignature: (request: SignedRequest, directory: KeyDirectory, 
 }) => SignatureCheck;
 
 // @public
-export const VERSION = "0.6.3";
+export const VERSION = "0.7.0";
 
 // @public
 export interface VersionAt {

@@ -1,9 +1,12 @@
 import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { afterEach, describe, expect, it } from "vitest";
+import * as api from "./api.ts";
 import {
   ApiError,
   fetchTransport,
+  isApiError,
+  isQuotaError,
   memoryQuotaStore,
   QuotaError,
   quotaGate,
@@ -14,6 +17,8 @@ import {
   type FetchLike,
   type Pace,
   type Quota,
+  type QuotaGate,
+  type QuotaReading,
   type QuotaRecord,
   type QuotaStore,
   type Reply,
@@ -21,6 +26,7 @@ import {
 } from "./api.ts";
 import { HOST_STATE_SCHEMA, SqliteHostStateStore } from "./hoststate.ts";
 import { HostScheduler } from "./politeness.ts";
+import { MILLISECONDS_SINCE_EPOCH_FROM, resetTimeOf, SECONDS_SINCE_EPOCH_FROM } from "./quota.ts";
 import { fakeClock, removeDir, tempDir } from "./test-helpers.ts";
 
 const HOST = "api.example.com";
@@ -217,13 +223,10 @@ describe("two quotas on one key", () => {
       { key: "example:account", store, now },
     );
     let sent = 0;
-    const call = withQuota(
-      minute,
-      withQuota(day, () => {
-        sent += 1;
-        return Promise.resolve();
-      }),
-    );
+    const call = withQuota([minute, day], () => {
+      sent += 1;
+      return Promise.resolve();
+    });
     let refused = 0;
     for (let round = 0; round < 50; round += 1) {
       try {
@@ -240,6 +243,242 @@ describe("two quotas on one key", () => {
     expect(recordIn(store, "Example per day", "example:account")?.spent).toEqual([
       [at("2026-11-14T00:00:00Z"), 20],
     ]);
+    // the day refused the last calls, so the minute gave back their units
+    expect(minute.state()).toMatchObject({ used: 0, left: 10 });
+  });
+});
+
+describe("a list of gates", () => {
+  /** This function gives a gate of a minute (limit 10) and a gate of a UTC day (limit `perDay`) on one store. */
+  const pair = (perDay: number, store: QuotaStore = memoryQuotaStore()) => {
+    const clock = clockAt("2026-11-14T12:00:00Z");
+    const minute = quotaGate(
+      { name: "Example per minute", limit: 10, window: { kind: "rolling", ms: 60_000 } },
+      { key: "k", store, now: clock.now },
+    );
+    const day = quotaGate(
+      {
+        name: "Example per day",
+        limit: perDay,
+        window: { kind: "calendar", unit: "day", timeZone: "UTC" },
+      },
+      { key: "k", store, now: clock.now },
+    );
+    return { clock, minute, day, store };
+  };
+
+  it("counts a call in each gate or in none, and the call does not start", async () => {
+    const { minute, day } = pair(2);
+    let sent = 0;
+    const call = withQuota([minute, day], () => {
+      sent += 1;
+      return Promise.resolve("sent");
+    });
+    expect(await call()).toBe("sent");
+    expect(await call()).toBe("sent");
+    const error = await failure(call());
+    expect(error).toBeInstanceOf(QuotaError);
+    expect(error.message).toContain("Example per day");
+    expect(sent).toBe(2);
+    expect(minute.state()).toMatchObject({ used: 2, left: 8 });
+    expect(day.state()).toMatchObject({ used: 2, left: 0 });
+  });
+
+  it("gives the refusal with the latest reset, and keeps no units of the refused call", async () => {
+    const { minute, day } = pair(1);
+    const call = withQuota([minute, day], () => Promise.resolve());
+    await call();
+    // the day refuses until midnight, and the minute still gives units
+    const first = await failure(call());
+    expect((first as QuotaError).resetAt).toBe(at("2026-11-15T00:00:00Z"));
+    // the minute refuses too, until 12:01:01: the error still has the reset of the day
+    minute.take(9);
+    const second = await failure(call());
+    expect((second as QuotaError).resetAt).toBe(at("2026-11-15T00:00:00Z"));
+    expect(minute.state()).toMatchObject({ used: 10 });
+    expect(day.state()).toMatchObject({ used: 1 });
+  });
+
+  it("gives back the units when a later gate throws a fault of the caller", async () => {
+    const { minute, day } = pair(2);
+    // a cost of 5 is more than the day gives in one window: a fault of the caller, not a wait
+    const call = withQuota([minute, day], () => Promise.resolve(), { cost: 5 });
+    const error = await failure(call());
+    expect(error).toBeInstanceOf(ApiError);
+    expect(error).not.toBeInstanceOf(QuotaError);
+    expect(minute.state()).toMatchObject({ used: 0, left: 10 });
+  });
+
+  it("reads the count of the provider for each gate apart", async () => {
+    const { minute, day } = pair(100);
+    const call = withQuota([minute, day], () => Promise.resolve(), {
+      // the provider tells the count of its minute only
+      read: (_result, gate) => (gate === minute ? { remaining: 7 } : undefined),
+    });
+    await call();
+    expect(minute.state()).toMatchObject({ used: 3, left: 7 });
+    expect(day.state()).toMatchObject({ used: 1, left: 99 });
+  });
+
+  /**
+   * This function gives three gates on a store that fails at the second change of the minute: its
+   * give-back. The day has no units left, so it refuses each call.
+   */
+  const lockedMinute = () => {
+    const memory = memoryQuotaStore();
+    let minuteChanges = 0;
+    const failing: QuotaStore = {
+      changeQuota(quota, key, step) {
+        if (quota === "Example per minute") {
+          minuteChanges += 1;
+          if (minuteChanges === 2) throw new Error("database is locked");
+        }
+        return memory.changeQuota(quota, key, step);
+      },
+    };
+    const { clock, minute, day } = pair(1, failing);
+    const hour = quotaGate(
+      { name: "Example per hour", limit: 100, window: { kind: "rolling", ms: 3_600_000 } },
+      { key: "k", store: failing, now: clock.now },
+    );
+    day.take();
+    return { minute, hour, day };
+  };
+
+  it("gives an error of a give-back to onError, and the next gates still give back", async () => {
+    const { minute, hour, day } = lockedMinute();
+    const errors: unknown[] = [];
+    let sent = 0;
+    const call = withQuota(
+      [minute, hour, day],
+      () => {
+        sent += 1;
+        return Promise.resolve();
+      },
+      { onError: (error) => errors.push(error) },
+    );
+    expect(await failure(call())).toBeInstanceOf(QuotaError);
+    expect(errors.map((error) => (error as Error).message)).toEqual(["database is locked"]);
+    expect(sent).toBe(0);
+    // the minute keeps the unit that it could not give back, and the hour gives its unit back
+    expect(minute.state().used).toBe(1);
+    expect(hour.state().used).toBe(0);
+  });
+
+  it("keeps the refusal and the give-backs when onError throws", async () => {
+    const { minute, hour, day } = lockedMinute();
+    const call = withQuota([minute, hour, day], () => Promise.resolve(), {
+      onError: (error) => {
+        throw error;
+      },
+    });
+    expect(await failure(call())).toBeInstanceOf(QuotaError);
+    expect(hour.state().used).toBe(0);
+  });
+
+  it("gives the result of a call that went out when onError throws", async () => {
+    const { minute, day } = pair(10);
+    const call = withQuota([minute, day], () => Promise.resolve("sent"), {
+      read: () => {
+        throw new Error("a header that cannot be read");
+      },
+      onError: (error) => {
+        throw error;
+      },
+    });
+    expect(await call()).toBe("sent");
+    expect(minute.state().used).toBe(1);
+  });
+
+  it("refuses an empty list, a gate with no giveBack and two gates of one quota and key", () => {
+    const { minute, day } = pair(1);
+    expect(() => withQuota([], () => Promise.resolve())).toThrow(ApiError);
+    // a gate of a different program, with no giveBack
+    const noGiveBack: QuotaGate = {
+      quota: minute.quota,
+      key: minute.key,
+      take: (cost) => minute.take(cost),
+      note: (reading) => minute.note(reading),
+      state: () => minute.state(),
+    };
+    expect(() => withQuota([noGiveBack, day], () => Promise.resolve())).toThrow(
+      "cannot give back units",
+    );
+    // a gate with no giveBack can still be alone
+    expect(() => withQuota([noGiveBack], () => Promise.resolve())).not.toThrow();
+    const again = quotaGate(minute.quota, { key: "k" });
+    expect(() => withQuota([minute, again], () => Promise.resolve())).toThrow(
+      "Two gates of the list have the quota Example per minute of k.",
+    );
+  });
+});
+
+describe("giveBack", () => {
+  it("gives back the units of the bucket of their time", () => {
+    const clock = clockAt("1970-01-01T00:00:00Z");
+    const store = memoryQuotaStore();
+    const gate = quotaGate(rolling(10, 10_000, 10), { key: "k", store, now: clock.now });
+    gate.take(2);
+    clock.add(1_000);
+    const taken = gate.take(3);
+    expect(taken.at).toBe(1_000);
+    clock.add(500);
+    // the units of 1,000 are in the bucket of 1,000, not in the bucket of 0 or of the time now
+    expect(gate.giveBack?.(3, 1_000)).toMatchObject({ used: 2, left: 8 });
+    expect(recordIn(store, "Example requests", "k")?.spent).toEqual([[0, 2]]);
+    // a give-back of more units than the bucket has removes the bucket, and the count is not negative
+    expect(gate.giveBack?.(5, 0)).toMatchObject({ used: 0, left: 10 });
+    expect(gate.giveBack?.(0, 0)).toMatchObject({ used: 0 });
+  });
+
+  it("changes nothing after a reading of the provider at the time of the units or later", () => {
+    const clock = clockAt("2026-11-14T12:00:00Z");
+    const store = memoryQuotaStore();
+    const gate = quotaGate(rolling(10, 60_000), { key: "k", store, now: clock.now });
+    const taken = gate.take();
+    // the provider tells 9 left: its count can include the unit of this call
+    gate.note({ remaining: 9 });
+    expect(recordIn(store, "Example requests", "k")?.readAt).toBe(clock.now());
+    expect(gate.giveBack?.(1, taken.at ?? Number.NaN)).toMatchObject({ used: 1, left: 9 });
+    // a call after the reading can give back its units
+    clock.add(1);
+    const later = gate.take();
+    expect(gate.giveBack?.(1, later.at ?? Number.NaN)).toMatchObject({ used: 1, left: 9 });
+  });
+
+  it("keeps the latest time of a reading after a step back of the clock", () => {
+    const clock = clockAt("1970-01-01T00:00:08Z");
+    const gate = quotaGate(rolling(10, 60_000), { key: "k", now: clock.now });
+    const taken = gate.take();
+    clock.set("1970-01-01T00:00:10Z");
+    gate.note({ remaining: 9 });
+    // the clock goes back to before the units: the reading of 10 s still includes them
+    clock.set("1970-01-01T00:00:05Z");
+    gate.note({ remaining: 9 });
+    expect(gate.giveBack?.(1, taken.at ?? Number.NaN)).toMatchObject({ used: 1, left: 9 });
+  });
+
+  it("keeps nothing of a bucket that is out of the window", () => {
+    const clock = clockAt("1970-01-01T00:00:00Z");
+    const gate = quotaGate(rolling(10, 10_000, 10), { key: "k", now: clock.now });
+    gate.take(4);
+    clock.add(20_000);
+    gate.take(1);
+    expect(gate.giveBack?.(4, 0)).toMatchObject({ used: 1, left: 9 });
+  });
+
+  it("refuses a cost or a time that is not valid", () => {
+    const gate = quotaGate(rolling(10, 60_000), { key: "k", now: () => 0 });
+    for (const [cost, time] of [
+      [-1, 0],
+      [Number.NaN, 0],
+      [1, Number.NaN],
+      [1, 9e15],
+    ] as const) {
+      const error = thrown(() => gate.giveBack?.(cost, time));
+      expect(error).toBeInstanceOf(ApiError);
+      expect(error).not.toBeInstanceOf(QuotaError);
+    }
   });
 });
 
@@ -259,6 +498,7 @@ describe("a calendar window", () => {
       used: 9_999,
       left: 1,
       resetAt: at("2026-12-01T06:00:00Z"),
+      at: at("2026-11-14T15:00:00Z"),
     });
     expect(gate.take()).toMatchObject({ used: 10_000, left: 0 });
     const error = thrown(() => gate.take());
@@ -268,7 +508,12 @@ describe("a calendar window", () => {
     clock.set("2026-12-01T05:59:59Z");
     expect(() => gate.take()).toThrow(QuotaError);
     clock.set("2026-12-01T06:00:00Z");
-    expect(gate.take()).toEqual({ used: 1, left: 9_999, resetAt: at("2027-01-01T06:00:00Z") });
+    expect(gate.take()).toEqual({
+      used: 1,
+      left: 9_999,
+      resetAt: at("2027-01-01T06:00:00Z"),
+      at: at("2026-12-01T06:00:00Z"),
+    });
   });
 
   it("gives a day of 25 hours when the clocks go back", () => {
@@ -304,7 +549,7 @@ describe("a calendar window", () => {
     // 23:30 on September 5: the reset is in the future, so a loop that waits for it does not spin
     expect(santiago.gate.take().resetAt).toBe(at("2026-09-06T04:00:00Z"));
     santiago.clock.set("2026-09-06T04:00:00Z");
-    expect(santiago.gate.state()).toEqual({ used: 0, left: 5 });
+    expect(santiago.gate.state()).toEqual({ used: 0, left: 5, at: at("2026-09-06T04:00:00Z") });
     expect(santiago.gate.take().resetAt).toBe(at("2026-09-07T03:00:00Z"));
     // in 2026, Chicago leaves 02:00 on March 8 for 03:00, at 08:00 UTC
     const chicago = dayIn("America/Chicago", 2, "2026-03-08T07:30:00Z");
@@ -319,6 +564,7 @@ describe("a calendar window", () => {
       used: 1,
       left: 4,
       resetAt: at("2026-03-09T07:00:00Z"),
+      at: at("2026-03-08T08:00:00Z"),
     });
   });
 
@@ -374,7 +620,7 @@ describe("a calendar window", () => {
     );
     expect(gate.take().resetAt).toBe(at("2026-11-14T00:30:00Z"));
     clock.set("2026-11-14T00:30:00Z");
-    expect(gate.state()).toEqual({ used: 0, left: 5 });
+    expect(gate.state()).toEqual({ used: 0, left: 5, at: at("2026-11-14T00:30:00Z") });
   });
 });
 
@@ -386,7 +632,7 @@ describe("a rolling window", () => {
     clock.add(2_500);
     gate.take();
     clock.add(2_500);
-    expect(gate.take()).toEqual({ used: 3, left: 0, resetAt: 11_000 });
+    expect(gate.take()).toEqual({ used: 3, left: 0, resetAt: 11_000, at: 5_000 });
     clock.add(1_000);
     expect((thrown(() => gate.take()) as QuotaError).resetAt).toBe(11_000);
     // a window of the provider that started at 0 ends at 10,000, so the gate is the stricter of the two
@@ -419,18 +665,104 @@ describe("the gate", () => {
     expect(large).toBeInstanceOf(ApiError);
     expect(large).not.toBeInstanceOf(QuotaError);
     expect(large.message).toContain("in one window: 8");
-    expect(other.state()).toEqual({ used: 0, left: 8 });
+    expect(other.state()).toEqual({ used: 0, left: 8, at: 0 });
   });
 
   it("gives 0 units left while the provider refuses the key, and a call of cost 0 still passes", () => {
     const clock = clockAt("2026-11-14T12:00:00Z");
     const gate = quotaGate(rolling(10, 60_000), { key: "k", now: clock.now });
     const until = at("2026-11-14T12:00:30Z");
-    expect(gate.note({ resetAt: until })).toEqual({ used: 0, left: 0, blockedUntil: until });
-    expect(gate.take(0)).toEqual({ used: 0, left: 0, blockedUntil: until });
+    const noon = at("2026-11-14T12:00:00Z");
+    expect(gate.note({ resetAt: until })).toEqual({
+      used: 0,
+      left: 0,
+      blockedUntil: until,
+      at: noon,
+    });
+    expect(gate.take(0)).toEqual({ used: 0, left: 0, blockedUntil: until, at: noon });
     expect((thrown(() => gate.take()) as QuotaError).resetAt).toBe(until);
     clock.set("2026-11-14T12:00:30Z");
-    expect(gate.state()).toEqual({ used: 0, left: 10 });
+    expect(gate.state()).toEqual({ used: 0, left: 10, at: until });
+  });
+
+  describe("the longest block", () => {
+    const noon = at("2026-11-14T12:00:00Z");
+    // the bucket of 12:00:00 (10 s of 6 buckets) stops counting at 12:01:10
+    const windowEnd = at("2026-11-14T12:01:10Z");
+    const reset = (value: string): QuotaReading =>
+      readQuotaHeaders(
+        (name) => (name === "x-ratelimit-reset" ? value : null),
+        { remaining: "x-ratelimit-remaining", resetAt: "x-ratelimit-reset" },
+        noon,
+      ) ?? {};
+
+    it("ends a block of the provider at the latest one window after the reading", () => {
+      const clock = clockAt("2026-11-14T12:00:00Z");
+      const gate = quotaGate(rolling(10, 60_000, 6), { key: "k", now: clock.now });
+      // 15 digits with no count: milliseconds since the epoch, in the year 33658
+      const far = reset("999999999999999");
+      expect(new Date(far.resetAt ?? 0).getUTCFullYear()).toBe(33658);
+      expect(gate.note(far).blockedUntil).toBe(windowEnd);
+      expect((thrown(() => gate.take()) as QuotaError).resetAt).toBe(windowEnd);
+      clock.set("2026-11-14T12:01:10Z");
+      expect(gate.take()).toMatchObject({ used: 1, left: 9 });
+    });
+
+    it("ends a block of milliseconds that the header gives as seconds", () => {
+      const gate = quotaGate(rolling(10, 60_000, 6), { key: "k", now: () => noon });
+      // 30 s in milliseconds, read as 30000 s: 8 h 20 min
+      const late = reset("30000");
+      expect(late.resetAt).toBe(at("2026-11-14T20:20:00Z"));
+      expect(gate.note(late).blockedUntil).toBe(windowEnd);
+      // a reset in the window stays as it is
+      expect(gate.note(reset("30")).blockedUntil).toBe(windowEnd);
+      const other = quotaGate(rolling(10, 60_000, 6), { key: "other", now: () => noon });
+      expect(other.note(reset("30")).blockedUntil).toBe(at("2026-11-14T12:00:30Z"));
+    });
+
+    it("ends a block at the end of a calendar window, or after maxBlockMs", () => {
+      const day = quotaGate(
+        {
+          name: "Example per day",
+          limit: 100,
+          window: { kind: "calendar", unit: "day", timeZone: "UTC" },
+        },
+        { key: "k", now: () => noon },
+      );
+      expect(day.note(reset("999999999999999")).blockedUntil).toBe(at("2026-11-15T00:00:00Z"));
+      const longer = quotaGate(rolling(10, 60_000, 6), {
+        key: "k",
+        now: () => noon,
+        maxBlockMs: 86_400_000,
+      });
+      expect(longer.note(reset("30000")).blockedUntil).toBe(at("2026-11-14T20:20:00Z"));
+      expect(longer.note(reset("999999999999999")).blockedUntil).toBe(at("2026-11-15T12:00:00Z"));
+    });
+
+    it("ends a block that a record of an earlier version keeps, and writes the end", () => {
+      const store = memoryQuotaStore();
+      store.changeQuota("Example requests", "k", () => ({
+        spent: [],
+        blockedUntil: 999_999_999_999_999,
+      }));
+      const clock = clockAt("2026-11-14T12:00:00Z");
+      const gate = quotaGate(rolling(10, 60_000, 6), { key: "k", store, now: clock.now });
+      expect((thrown(() => gate.take()) as QuotaError).resetAt).toBe(windowEnd);
+      expect(recordIn(store, "Example requests", "k")?.blockedUntil).toBe(windowEnd);
+      // a later read does not move the end
+      clock.add(30_000);
+      expect(gate.state().blockedUntil).toBe(windowEnd);
+      clock.set("2026-11-14T12:01:10Z");
+      expect(gate.take()).toMatchObject({ used: 1 });
+    });
+
+    it("refuses a longest block that is not a positive number", () => {
+      for (const maxBlockMs of [0, -1, Number.NaN, Number.POSITIVE_INFINITY]) {
+        expect(() => quotaGate(rolling(10, 60_000), { key: "k", maxBlockMs })).toThrow(
+          "The longest block of the quota Example requests is not a positive number",
+        );
+      }
+    });
   });
 
   it("counts the cost of the arguments of a call", async () => {
@@ -479,6 +811,7 @@ describe("the gate", () => {
       used: 6,
       left: 4,
       resetAt: at("2026-11-14T12:01:01Z"),
+      at: at("2026-11-14T12:00:00Z"),
     });
     // a reset time with no count blocks until that time
     gate.note({ resetAt: clock.now() + 30_000 });
@@ -530,7 +863,7 @@ describe("the gate", () => {
     const store = memoryQuotaStore();
     store.changeQuota("Example requests", "k", () => ({ spent: "no" }) as unknown as QuotaRecord);
     const gate = quotaGate(rolling(2, 60_000), { key: "k", store, now: () => 0 });
-    expect(gate.state()).toEqual({ used: 0, left: 2 });
+    expect(gate.state()).toEqual({ used: 0, left: 2, at: 0 });
     expect(gate.take()).toMatchObject({ used: 1 });
   });
 
@@ -539,7 +872,7 @@ describe("the gate", () => {
     const items = [[0, 2], [1000, -5], ["x", 1], [2000], [3000, Number.NaN], [9e15, 1]];
     store.changeQuota("Example requests", "k", () => ({ spent: items }) as unknown as QuotaRecord);
     const gate = quotaGate(rolling(3, 60_000), { key: "k", store, now: () => 0 });
-    expect(gate.state()).toEqual({ used: 2, left: 1, resetAt: 61_000 });
+    expect(gate.state()).toEqual({ used: 2, left: 1, resetAt: 61_000, at: 0 });
     expect(gate.take()).toMatchObject({ used: 3, left: 0 });
     expect(() => gate.take()).toThrow(QuotaError);
   });
@@ -594,6 +927,42 @@ describe("readQuotaHeaders", () => {
     ).toBeUndefined();
     expect(readQuotaHeaders(() => null, names, now)).toBeUndefined();
   });
+
+  it("reads the time of the reset when the seconds until the reset cannot be read", () => {
+    const names = { resetAt: "x-reset", resetAfter: "retry-after" };
+    expect(
+      readQuotaHeaders(headersOf({ "x-reset": "1795000000", "retry-after": "soon" }), names, now),
+    ).toEqual({ resetAt: 1_795_000_000_000 });
+  });
+
+  it("tells the three forms of a reset apart at the bounds 10^9 and 10^11", () => {
+    expect(SECONDS_SINCE_EPOCH_FROM).toBe(1e9);
+    expect(MILLISECONDS_SINCE_EPOCH_FROM).toBe(1e11);
+    // under 10^9: seconds until the reset
+    expect(resetTimeOf(999_999_999, now)).toBe(now + 999_999_999_000);
+    // from 10^9: seconds since the epoch, 2001-09-09T01:46:40Z
+    expect(resetTimeOf(1_000_000_000, now)).toBe(at("2001-09-09T01:46:40Z"));
+    expect(resetTimeOf(99_999_999_999, now)).toBe(99_999_999_999_000);
+    // from 10^11: milliseconds since the epoch, 1973-03-03T09:46:40Z
+    expect(resetTimeOf(100_000_000_000, now)).toBe(at("1973-03-03T09:46:40Z"));
+  });
+
+  it("reads a reset in seconds until the reset, in seconds and in milliseconds since the epoch", () => {
+    const names = { remaining: "ratelimit-remaining", resetAt: "ratelimit-reset" };
+    const read = (reset: string) =>
+      readQuotaHeaders(
+        headersOf({ "ratelimit-remaining": "3", "ratelimit-reset": reset }),
+        names,
+        now,
+      );
+    // RateLimit-Reset of the IETF draft: not a time in 1970
+    expect(read("30")).toEqual({ remaining: 3, resetAt: now + 30_000 });
+    expect(read("1795000000.25")).toEqual({ remaining: 3, resetAt: 1_795_000_000_250 });
+    // milliseconds: not a time in the year 58851
+    expect(read("1795000000123")).toEqual({ remaining: 3, resetAt: 1_795_000_000_123 });
+    // more than 15 digits is not read
+    expect(read("1795000000123000")).toEqual({ remaining: 3 });
+  });
 });
 
 describe("send with a quota", () => {
@@ -616,6 +985,98 @@ describe("send with a quota", () => {
       expect(error.message).toContain("refused a call of 1 units");
     }
     expect(sent).toBe(1);
+    expect(scheduler.store.stopped(HOST, clock.now())).toBeUndefined();
+    expect(scheduler.store.record(HOST, "neutral")).toEqual({ failures: 0, waits: 0 });
+  });
+});
+
+/**
+ * The classes of a second copy of the package: the same names and the same fields, and no relation to
+ * the classes of this copy. A program has two copies when two of its packages depend on two versions.
+ */
+class OtherApiError extends Error {
+  override readonly name: string = "ApiError";
+}
+class OtherQuotaError extends OtherApiError {
+  override readonly name: string = "QuotaError";
+  constructor(
+    message: string,
+    readonly key: string,
+    readonly resetAt: number,
+  ) {
+    super(message);
+  }
+}
+
+describe("the guards isApiError and isQuotaError", () => {
+  it("accept the errors of this copy", () => {
+    const quota = new QuotaError("refused", "k", 1);
+    expect([isApiError(quota), isQuotaError(quota)]).toEqual([true, true]);
+    const other = new ApiError("no answer");
+    expect([isApiError(other), isQuotaError(other)]).toEqual([true, false]);
+  });
+
+  it("accept the errors of another copy, where instanceof is false", () => {
+    const quota = new OtherQuotaError("refused", "k", 1);
+    expect(quota).not.toBeInstanceOf(QuotaError);
+    expect([isApiError(quota), isQuotaError(quota)]).toEqual([true, true]);
+    const other = new OtherApiError("no answer");
+    expect(other).not.toBeInstanceOf(ApiError);
+    expect([isApiError(other), isQuotaError(other)]).toEqual([true, false]);
+  });
+
+  it("refuse each other value", () => {
+    const named = (name: string, fields: object = {}): Error =>
+      Object.assign(new Error("x"), { name, ...fields });
+    const values: unknown[] = [
+      new Error("x"),
+      new TypeError("x"),
+      named("QuotaError"),
+      named("QuotaError", { key: "k", resetAt: Number.NaN }),
+      named("QuotaError", { key: "k", resetAt: "1" }),
+      named("QuotaError", { key: 1, resetAt: 1 }),
+      { name: "QuotaError", message: "x", key: "k", resetAt: 1 },
+      "QuotaError",
+      undefined,
+      null,
+    ];
+    expect(values.map((value) => isQuotaError(value))).toEqual(values.map(() => false));
+    expect(isApiError(named("QuotaError", { key: "k", resetAt: Number.NaN }))).toBe(true);
+    expect(
+      [new Error("x"), named("Other"), { name: "ApiError" }].map((value) => isApiError(value)),
+    ).toEqual([false, false, false]);
+  });
+
+  it("know the name of each class of error that polite-crawler/api exports", () => {
+    type ErrorClass = new (...args: unknown[]) => Error;
+    const classes = (Object.values(api) as unknown[]).filter(
+      (value): value is ErrorClass =>
+        typeof value === "function" &&
+        (value === ApiError ||
+          (value as { readonly prototype?: unknown }).prototype instanceof ApiError),
+    );
+    expect(classes.length).toBeGreaterThanOrEqual(2);
+    for (const Class of classes) {
+      const instance = new Class("x", "k", 1);
+      // the error of another copy has the same name and fields, and another class
+      const copy = Object.assign(new Error("x"), { name: instance.name, key: "k", resetAt: 1 });
+      expect({ name: instance.name, known: isApiError(copy) }).toEqual({
+        name: instance.name,
+        known: true,
+      });
+    }
+  });
+
+  it("let send give a refusal of another copy as it is, and the host keeps its state", async () => {
+    const clock = fakeClock("2026-11-14T12:00:00Z");
+    const scheduler = new HostScheduler(clock, 4);
+    const pace: Pace = { scheduler, now: clock.now, random: () => 0.5 };
+    const refusal = new OtherQuotaError("refused", "k", clock.now() + 60_000);
+    const transport: Transport = () => Promise.reject(refusal);
+    const input = { source: "Example", host: HOST, what: "the thing", exchange: get };
+    for (let round = 0; round < 8; round += 1) {
+      expect(await failure(send(pace, transport, input))).toBe(refusal);
+    }
     expect(scheduler.store.stopped(HOST, clock.now())).toBeUndefined();
     expect(scheduler.store.record(HOST, "neutral")).toEqual({ failures: 0, waits: 0 });
   });
@@ -648,6 +1109,18 @@ describe("the quotas of the SQLite host state store", () => {
     expect(() => one.take()).toThrow(QuotaError);
     const three = quotaGate(quota, { key: "k", store: open(path), now });
     expect(three.state()).toMatchObject({ used: 2, left: 0 });
+  });
+
+  it("keeps the time of the last reading, so a give-back after a restart still changes nothing", async () => {
+    const path = await pathIn();
+    const quota = rolling(10, 3_600_000);
+    const now = (): number => 5_000;
+    const one = quotaGate(quota, { key: "k", store: open(path), now });
+    const taken = one.take();
+    one.note({ remaining: 9 });
+    const two = quotaGate(quota, { key: "k", store: open(path), now });
+    expect(recordIn(open(path), "Example requests", "k")?.readAt).toBe(5_000);
+    expect(two.giveBack?.(1, taken.at ?? Number.NaN)).toMatchObject({ used: 1, left: 9 });
   });
 
   it("changes a record in one transaction, so a different process waits", async () => {

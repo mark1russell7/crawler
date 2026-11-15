@@ -161,8 +161,8 @@ type OpenOptions: build/index.d.mts#OpenOptions
 type OpenedCrawler: build/index.d.mts#OpenedCrawler
 type Outcome: build/classify.d.mts#Outcome
 PRODUCT_LIMITS: build/index.d.mts#PRODUCT_LIMITS
-type PageExtract: build/html.chunk.d.mts#PageExtract
-type PageLink: build/html.chunk.d.mts#PageLink
+type PageExtract: build/html.d.mts#PageExtract
+type PageLink: build/html.d.mts#PageLink
 type PageOptions: build/index.d.mts#PageOptions
 type PageResult: build/index.d.mts#PageResult
 type Passage: build/index.d.mts#Passage
@@ -296,7 +296,7 @@ type Week: build/hours.d.mts#Week
 type WordPart: build/index.d.mts#WordPart
 archiveExtractor: build/index.d.mts#archiveExtractor
 archivedDocId: build/index.d.mts#archivedDocId
-bodyEncoding: build/html.chunk.d.mts#bodyEncoding
+bodyEncoding: build/text.d.mts#bodyEncoding
 browserMissing: build/index.d.mts#browserMissing
 cacheKeyOf: build/urls.d.mts#cacheKeyOf
 canonicalUrl: build/urls.d.mts#canonicalUrl
@@ -312,7 +312,7 @@ createRuntime: build/index.d.mts#createRuntime
 createWebBotAuthSigner: build/index.d.mts#createWebBotAuthSigner
 daemonStateFile: build/index.d.mts#daemonStateFile
 decide: build/robots.d.mts#decide
-decodeBody: build/html.chunk.d.mts#decodeBody
+decodeBody: build/text.d.mts#decodeBody
 defaultUserAgent: build/index.d.mts#defaultUserAgent
 defineRecipe: build/index.d.mts#defineRecipe
 describeWeek: build/hours.d.mts#describeWeek
@@ -326,7 +326,7 @@ estimateTokens: build/index.d.mts#estimateTokens
 exportWacz: build/index.d.mts#exportWacz
 exportWarc: build/index.d.mts#exportWarc
 extractDocument: build/index.d.mts#extractDocument
-extractPage: build/html.chunk.d.mts#extractPage
+extractPage: build/html.d.mts#extractPage
 feedDate: build/index.d.mts#feedDate
 fetchAndIndex: build/index.d.mts#fetchAndIndex
 fetchPage: build/index.d.mts#fetchPage
@@ -375,7 +375,7 @@ siteOf: build/urls.d.mts#siteOf
 startDaemon: build/index.d.mts#startDaemon
 toHoursWeek: build/hours.d.mts#toHoursWeek
 transformersEmbedder: build/index.d.mts#transformersEmbedder
-typesOf: build/html.chunk.d.mts#typesOf
+typesOf: build/html.d.mts#typesOf
 unitVector: build/index.d.mts#unitVector
 venueReadingsOf: build/index.d.mts#venueReadingsOf
 verifyQuote: build/index.d.mts#verifyQuote
@@ -425,16 +425,16 @@ toHoursWeek: build/hours.d.mts#toHoursWeek
 
 ## ./html (build/html.d.mts): names
 
-DomNode: build/html.chunk.d.mts#DomNode
-PageExtract: build/html.chunk.d.mts#PageExtract
-PageLink: build/html.chunk.d.mts#PageLink
-bodyEncoding: build/html.chunk.d.mts#bodyEncoding
+DomNode: build/html.d.mts#DomNode
+PageExtract: build/html.d.mts#PageExtract
+PageLink: build/html.d.mts#PageLink
+bodyEncoding: build/text.d.mts#bodyEncoding
 canonicalUrl: build/urls.d.mts#canonicalUrl
-decodeBody: build/html.chunk.d.mts#decodeBody
-extractPage: build/html.chunk.d.mts#extractPage
-readJsonLd: build/html.chunk.d.mts#readJsonLd
-typesOf: build/html.chunk.d.mts#typesOf
-visibleText: build/html.chunk.d.mts#visibleText
+decodeBody: build/text.d.mts#decodeBody
+extractPage: build/html.d.mts#extractPage
+readJsonLd: build/html.d.mts#readJsonLd
+typesOf: build/html.d.mts#typesOf
+visibleText: build/html.d.mts#visibleText
 
 ## ./classify (build/classify.d.mts): names
 
@@ -497,6 +497,11 @@ canonicalUrl: build/urls.d.mts#canonicalUrl
 scopeTest: build/urls.d.mts#scopeTest
 siteOf: build/urls.d.mts#siteOf
 
+## ./text (build/text.d.mts): names
+
+bodyEncoding: build/text.d.mts#bodyEncoding
+decodeBody: build/text.d.mts#decodeBody
+
 ## ./api (build/api.d.mts): names
 
 API_TIMEOUT_MS: build/api.d.mts#API_TIMEOUT_MS
@@ -546,6 +551,8 @@ type ValidatorReport: build/politeness.d.mts#ValidatorReport
 type ValidatorVerdict: build/politeness.d.mts#ValidatorVerdict
 type WithQuotaOptions: build/api.d.mts#WithQuotaOptions
 fetchTransport: build/api.d.mts#fetchTransport
+isApiError: build/api.d.mts#isApiError
+isQuotaError: build/api.d.mts#isQuotaError
 memoryQuotaStore: build/api.d.mts#memoryQuotaStore
 outcomeResult: build/api.d.mts#outcomeResult
 poll: build/api.d.mts#poll
@@ -691,6 +698,7 @@ interface QuotaGate {
   take(cost?: number): QuotaState;
   note(reading: QuotaReading): QuotaState;
   state(): QuotaState;
+  giveBack?(cost: number, at: number): QuotaState;
 }
 
 ### build/api.d.mts#QuotaGateOptions
@@ -698,6 +706,7 @@ interface QuotaGateOptions {
   readonly key: string;
   readonly store?: QuotaStore | undefined;
   readonly now?: (() => number) | undefined;
+  readonly maxBlockMs?: number | undefined;
 }
 
 ### build/api.d.mts#QuotaHeaders
@@ -719,6 +728,7 @@ interface QuotaState {
   readonly left: number;
   readonly resetAt?: number | undefined;
   readonly blockedUntil?: number | undefined;
+  readonly at?: number | undefined;
 }
 
 ### build/api.d.mts#QuotaWindow
@@ -784,12 +794,18 @@ export type Transport<S extends Signal = AbortSignal> = (exchange: Exchange, sig
 ### build/api.d.mts#WithQuotaOptions
 interface WithQuotaOptions<A extends readonly unknown[], R> {
   readonly cost?: number | ((...args: A) => number) | undefined;
-  readonly read?: ((result: R) => QuotaReading | undefined) | undefined;
+  readonly read?: ((result: R, gate: QuotaGate) => QuotaReading | undefined) | undefined;
   readonly onError?: ((error: unknown) => void) | undefined;
 }
 
 ### build/api.d.mts#fetchTransport
 export declare function fetchTransport(options: FetchTransportOptions): Transport;
+
+### build/api.d.mts#isApiError
+export declare const isApiError: (value: unknown) => value is ApiError;
+
+### build/api.d.mts#isQuotaError
+export declare const isQuotaError: (value: unknown) => value is QuotaError;
 
 ### build/api.d.mts#memoryQuotaStore
 export declare function memoryQuotaStore(): QuotaStore;
@@ -825,7 +841,7 @@ export declare function statusLine(reply: Reply): string;
 export declare function tokenStore<S extends Signal = AbortSignal>(grant: (signal: S | undefined) => Promise<Grant>, now: () => number): Tokens<S>;
 
 ### build/api.d.mts#withQuota
-export declare function withQuota<A extends readonly unknown[], R>(gate: QuotaGate, call: (...args: A) => Promise<R>, options?: WithQuotaOptions<A, R>): (...args: A) => Promise<R>;
+export declare function withQuota<A extends readonly unknown[], R>(gate: QuotaGate | readonly QuotaGate[], call: (...args: A) => Promise<R>, options?: WithQuotaOptions<A, R>): (...args: A) => Promise<R>;
 
 ### build/classify.d.mts#Classified
 export interface Classified {
@@ -921,8 +937,8 @@ export declare const toHoursWeek: (week: Week) => {
   readonly split: readonly Day[];
 };
 
-### build/html.chunk.d.mts#DomNode
-interface DomNode {
+### build/html.d.mts#DomNode
+export interface DomNode {
   readonly nodeType: number;
   readonly nodeName: string;
   readonly textContent: string | null;
@@ -933,8 +949,8 @@ interface DomNode {
   readonly remove?: (() => void) | undefined;
 }
 
-### build/html.chunk.d.mts#PageExtract
-interface PageExtract {
+### build/html.d.mts#PageExtract
+export interface PageExtract {
   readonly title: string;
   readonly description: string | null;
   readonly text: string;
@@ -953,29 +969,23 @@ interface PageExtract {
   readonly notes: readonly string[];
 }
 
-### build/html.chunk.d.mts#PageLink
-interface PageLink {
+### build/html.d.mts#PageLink
+export interface PageLink {
   readonly href: string;
   readonly text: string;
 }
 
-### build/html.chunk.d.mts#bodyEncoding
-declare const bodyEncoding: (bytes: Uint8Array, contentType: string | null) => string;
+### build/html.d.mts#extractPage
+export declare const extractPage: (html: string, pageUrl: string) => PageExtract;
 
-### build/html.chunk.d.mts#decodeBody
-declare const decodeBody: (bytes: Uint8Array, contentType: string | null) => string;
+### build/html.d.mts#readJsonLd
+export declare const readJsonLd: (sources: readonly string[]) => Record<string, unknown>[];
 
-### build/html.chunk.d.mts#extractPage
-declare const extractPage: (html: string, pageUrl: string) => PageExtract;
+### build/html.d.mts#typesOf
+export declare const typesOf: (record: Record<string, unknown>) => string[];
 
-### build/html.chunk.d.mts#readJsonLd
-declare const readJsonLd: (sources: readonly string[]) => Record<string, unknown>[];
-
-### build/html.chunk.d.mts#typesOf
-declare const typesOf: (record: Record<string, unknown>) => string[];
-
-### build/html.chunk.d.mts#visibleText
-declare const visibleText: (root: DomNode) => string;
+### build/html.d.mts#visibleText
+export declare const visibleText: (root: DomNode) => string;
 
 ### build/index.d.mts#ArchiveCounts
 interface ArchiveCounts {
@@ -2881,7 +2891,7 @@ export declare const VENUE_LIMITS: {
 };
 
 ### build/index.d.mts#VERSION
-export declare const VERSION = "0.6.3";
+export declare const VERSION = "0.7.0";
 
 ### build/index.d.mts#Variant
 type Variant = "plain" | "rendered";
@@ -3725,6 +3735,7 @@ export interface PolitenessPolicy {
 export interface QuotaRecord {
   readonly spent: readonly (readonly [start: number, units: number])[];
   readonly blockedUntil?: number | undefined;
+  readonly readAt?: number | undefined;
 }
 
 ### build/politeness.d.mts#QuotaStore
@@ -3924,6 +3935,12 @@ export declare const metaSignals: (html: string) => string[];
 
 ### build/signals.d.mts#readSignals
 export declare const readSignals: (robotsLines: readonly string[], header: (name: string) => string | undefined, pageLines?: readonly string[]) => Signals;
+
+### build/text.d.mts#bodyEncoding
+export declare const bodyEncoding: (bytes: Uint8Array, contentType: string | null) => string;
+
+### build/text.d.mts#decodeBody
+export declare const decodeBody: (bytes: Uint8Array, contentType: string | null) => string;
 
 ### build/urls.d.mts#ScopeOptions
 export interface ScopeOptions {

@@ -15,6 +15,29 @@ A prerelease version (`0.2.0-beta.1`) goes to the npm tag `next`. Each other ver
 
 ## Unreleased
 
+## 0.7.0 - 2026-11-15
+
+- **This version breaks the API of `polite-crawler/api`, so it is a minor version (0.7.0).** `read` of the options of `withQuota` gets the gate as its second argument: `(result, gate) => QuotaReading | undefined`. A function of one argument still fits. A program that calls `read` itself, or keeps it as a function of one argument, must give the gate too.
+- **The new entry point `polite-crawler/text`.** It gives the body decoder (`decodeBody`, `bodyEncoding`) and imports no module, so a browser gets it without linkedom. `polite-crawler/html` and the root still give both.
+- **The API report names only entry points.** Before, it named a chunk of the bundler (`build/html.chunk.d.mts`) for the declarations of `/html`. A new version of the bundler can rename a chunk, and the report then shows a change of the API that is not real. A new test fails when the report names a file that is not the declaration file of an entry point.
+- **The guards `isApiError` and `isQuotaError`** in `polite-crawler/api`. They tell an error of the API, or a refusal of a quota, from another failure. The error can come from another copy of the package, where `instanceof` is false. `send` and `poll` use the guard too, so a refusal from the `withQuota` of another copy does not count as a failure of the host.
+- The counts in `docs/API-REVIEW.md` are correct again (they were out of date since 0.6.2), and a test compares them with the reports.
+- **Two quotas on one call: a list of gates.** `withQuota([perMinute, perDay], call)` counts a call in each gate or in none.
+  - Before, the README told you to put one gate in the function of another. A refusal of the inner gate kept a unit of the outer gate.
+  - When a gate of a list refuses, the other gates give back the units, and the `QuotaError` has the latest reset.
+  - `read` gets each gate as its second argument.
+  - A list with no gates is an `ApiError`. So is a list with a gate that has no `giveBack`, and a list with two gates of one quota name and key.
+  - Do not nest gates.
+- **`giveBack` of a quota gate.** It removes units from the bucket of their time. When the gate read the count of the provider at that time or later, it changes nothing. So the count does not go below the count of the provider at any time. The record keeps the time of the last reading (`readAt`), also in `SqliteHostStateStore`. Each state has its time (`at`).
+- **The three forms of a reset header.** `readQuotaHeaders` read each `resetAt` value as seconds since the epoch.
+  - The seconds until the reset (`RateLimit-Reset` of the IETF draft) gave a time in 1970.
+  - Milliseconds since the epoch gave a time near the year 58851. With no count, that reading stopped the key for good.
+
+  In this version, a value under 10^9 is the seconds until the reset. A value from 10^9 to under 10^11 is seconds since the epoch, and a value from 10^11 is milliseconds. The bound 10^9 is 2001-09-09, and no provider gives a reset before it.
+- **The longest block of the provider.** A block of the provider ends at the latest one window after the reading. That is the time when the units of a call at the reading go free. Before, a reset header in a wrong form could stop a key for years. A value of 15 digits gave the year 33658. Milliseconds until the reset, in a header of seconds, gave hours. The option `maxBlockMs` of `quotaGate` sets a different bound. The bound also ends a longer block that a store keeps from an earlier version.
+- **An error of `onError` is lost.** Before, an `onError` that threw in a give-back of a list stopped the other give-backs, and the caller got that error, not the `QuotaError`. In this version, the caller gets the refusal, or the result of a call that went out. Each gate of the list gives back its units.
+- The docs of the quotas tell two more rules. The function reads `resetAfter` only when it can read its value. A reset header with no count stops the key, also after a 200.
+
 ## 0.6.3 - 2026-11-15
 
 - **Quotas of API keys in `polite-crawler/api`.** Each new export is beta.

@@ -758,8 +758,9 @@ describe("the gate", () => {
 
     it("refuses a longest block that is not a positive number", () => {
       for (const maxBlockMs of [0, -1, Number.NaN, Number.POSITIVE_INFINITY]) {
+        // the limiter checks the spec: maxBlockMs is its maxBlock
         expect(() => quotaGate(rolling(10, 60_000), { key: "k", maxBlockMs })).toThrow(
-          "The longest block of the quota Example requests is not a positive number",
+          "The quota Example requests is not valid: quota Example requests's maxBlock is not a finite time above zero.",
         );
       }
     });

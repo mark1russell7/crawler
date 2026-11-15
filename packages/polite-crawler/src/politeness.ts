@@ -161,8 +161,8 @@ export interface QuotaRecord {
    * give-back of units that the gate counted at this time or earlier changes nothing, because the
    * reading can include those units. Thus the units of a take after a reading in the same
    * millisecond stay counted until their bucket leaves the window. The count can be too high, but
-   * not too low. The record keeps this time also when no bucket is left. It is one number for each
-   * quota and key.
+   * not too low. The record drops this time when its bucket leaves the window, because a give-back
+   * changes only a bucket in the window. It is one number for each quota and key.
    */
   readonly readAt?: number | undefined;
 }

@@ -2895,7 +2895,7 @@ export declare const VENUE_LIMITS: {
 };
 
 ### build/index.d.mts#VERSION
-export declare const VERSION = "0.7.4";
+export declare const VERSION = "0.7.5";
 
 ### build/index.d.mts#Variant
 type Variant = "plain" | "rendered";

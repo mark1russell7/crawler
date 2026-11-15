@@ -231,7 +231,7 @@ importers:
         version: 0.8.20(@opentelemetry/api@1.10.0)(ws@8.22.0)(zod@4.6.7)
       '@mark1russell7/sqlite':
         specifier: ^0.3.2
-        version: 0.3.2
+        version: 0.3.3
       '@mozilla/readability':
         specifier: ^0.6.0
         version: 0.6.0
@@ -256,7 +256,7 @@ importers:
         version: 0.1.16
       '@mark1russell7/rigor-statistics':
         specifier: ^0.2.2
-        version: 0.2.2
+        version: 0.2.4
       '@microsoft/api-extractor':
         specifier: ^7.59.3
         version: 7.60.1(@types/node@22.20.5)
@@ -352,8 +352,8 @@ importers:
         specifier: ^5.3.0
         version: 5.3.0
       '@mark1russell7/site-pages':
-        specifier: ^0.4.1
-        version: 0.4.8
+        specifier: ^0.5.0
+        version: 0.5.0
       '@mark1russell7/text':
         specifier: ^0.0.6
         version: 0.0.6
@@ -1262,8 +1262,8 @@ packages:
     resolution: {integrity: sha512-UnBEZVSVSytwFH5pJ5ezlOCEs/19Ur0/REQ+Tq5BYs8uYWSNoP/hZNGx2tdqLN2Rn0u+A41GwieBnuM6DuWS4g==}
     engines: {node: '>=22'}
 
-  '@mark1russell7/rigor-statistics@0.2.2':
-    resolution: {integrity: sha512-DBcPP7mt0LsUFIVk8luMICkwbrt/JRCIosHCfpn/F/IM5PYbUKHrCvyzKfwglw4M7lKa7oO70vpcQ2jZZxqKeA==}
+  '@mark1russell7/rigor-statistics@0.2.4':
+    resolution: {integrity: sha512-0L075rT+toD6edxEwDdZHiFzHP4+dJrI64Pw5gh9V33VwCfNRUMQY90AooDpMgVcC9cuxHNXegDLSOYU9ZMIlA==}
     engines: {node: '>=22'}
 
   '@mark1russell7/service@0.8.20':
@@ -1296,13 +1296,13 @@ packages:
       zod:
         optional: true
 
-  '@mark1russell7/site-pages@0.4.8':
-    resolution: {integrity: sha512-uN7SV7VxrsMyH7/cPOUClFOnJhw24S2+qVaMIoNK+7AtJe3FB4l5qN2NowKAYvYgLcDpY4gUBlw9meJ6/Gq2pQ==}
+  '@mark1russell7/site-pages@0.5.0':
+    resolution: {integrity: sha512-sGDFRCr2fIRarRV4FCoDvfYBSOln134N9ApuwNMKXYtiiXpPv8LMeUUB/19QQU7fJDKWGZgqPSAJZ/+RA7p63A==}
     engines: {node: '>=22'}
     hasBin: true
 
-  '@mark1russell7/sqlite@0.3.2':
-    resolution: {integrity: sha512-3eX6QuGbiLjpSxdYHaJUQ8Ow6mYPIA/N5qZuxKgon4iq2v3wr0Hp888ZbkSWhxQdpo4rD7MVZoQXWL4g5VjxEA==}
+  '@mark1russell7/sqlite@0.3.3':
+    resolution: {integrity: sha512-FQmvcDymVQtT/atS1Yv7khd05GF3rc5D62YXRsDG2ICJP96leTNnpAwSNDbaKwKBbQyBbgQ9rux7MQOd3sefUg==}
     engines: {node: '>=22.16'}
 
   '@mark1russell7/ste-lint@https://codeload.github.com/mark1russell7/ste-lint/tar.gz/f597d6c1e09bcfcb487bb575825d6d5f29e9e0c7':
@@ -5047,7 +5047,7 @@ snapshots:
     dependencies:
       '@mark1russell7/algebra': 0.8.10(zod@4.6.7)
       '@mark1russell7/optional': 1.2.0
-      '@mark1russell7/rigor-statistics': 0.2.2
+      '@mark1russell7/rigor-statistics': 0.2.4
     transitivePeerDependencies:
       - zod
 
@@ -5083,7 +5083,7 @@ snapshots:
     dependencies:
       '@mark1russell7/rigor-generators': 0.1.16
 
-  '@mark1russell7/rigor-statistics@0.2.2':
+  '@mark1russell7/rigor-statistics@0.2.4':
     dependencies:
       '@mark1russell7/rigor-generators': 0.1.16
 
@@ -5100,11 +5100,11 @@ snapshots:
       ws: 8.22.0
       zod: 4.6.7
 
-  '@mark1russell7/site-pages@0.4.8':
+  '@mark1russell7/site-pages@0.5.0':
     dependencies:
-      '@mark1russell7/rigor-statistics': 0.1.27
+      '@mark1russell7/rigor-statistics': 0.2.4
 
-  '@mark1russell7/sqlite@0.3.2': {}
+  '@mark1russell7/sqlite@0.3.3': {}
 
   '@mark1russell7/ste-lint@https://codeload.github.com/mark1russell7/ste-lint/tar.gz/f597d6c1e09bcfcb487bb575825d6d5f29e9e0c7':
     dependencies:

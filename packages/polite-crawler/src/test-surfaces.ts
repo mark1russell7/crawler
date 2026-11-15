@@ -118,8 +118,8 @@ export const BAKERY: string = `<!doctype html><html lang="en"><head><title>Forno
 
 /**
  * The held-back sentence of the members pages of the tests. A check that the text does not leak looks for this
- * sentence, not only for its digits: an id such as a capture id is a hash, and a hash can contain the digits 7319
- * (the capture fetch.2a27319cb9c7 failed main on 2026-11-15).
+ * sentence, not only for its digits. A capture id is a hash, and a hash can contain the digits 7319. For example,
+ * the capture fetch.2a27319cb9c7 failed main on 2026-11-15.
  */
 export const HELD_BACK: string = "The access code is 7319";
 

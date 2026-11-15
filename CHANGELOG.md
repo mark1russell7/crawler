@@ -15,6 +15,8 @@ A prerelease version (`0.2.0-beta.1`) goes to the npm tag `next`. Each other ver
 
 ## Unreleased
 
+- **The quotas count their windows with the limiter of `@mark1russell7/service`.** `quotaGate` maps a quota to a quota spec of `@mark1russell7/service/limiter` and gives your `QuotaStore` to it through an adapter. A list of gates in `withQuota` takes through `takeQuotas`, all or none. The API does not change, and the files of `SqliteHostStateStore` do not change. The option `maxBlockMs`, the bound on a provider block, goes to `maxBlock` of the spec. The crawler needs `@mark1russell7/service` 0.8.19 or later, and it no longer needs `@mark1russell7/algebra` directly.
+
 ## 0.7.3 - 2026-11-15
 
 - **The smaller points of the review of the quotas.** A take after a reading in the same millisecond keeps its units, so the count can be too high, but not too low. A store of your own keeps each field of the record. A store that drops `readAt` lets a give-back go below the count of the provider. `isApiError` checks the name, so use it on the errors of `polite-crawler/api`. A list with two gates of one name and key is an error, also on two stores.

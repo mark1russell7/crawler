@@ -226,12 +226,9 @@ importers:
 
   packages/polite-crawler:
     dependencies:
-      '@mark1russell7/algebra':
-        specifier: ^0.8.9
-        version: 0.8.9(zod@4.6.7)
       '@mark1russell7/service':
-        specifier: ^0.8.15
-        version: 0.8.15(@opentelemetry/api@1.10.0)(ws@8.22.0)(zod@4.6.7)
+        specifier: ^0.8.19
+        version: 0.8.19(@opentelemetry/api@1.10.0)(ws@8.22.0)(zod@4.6.7)
       '@mark1russell7/sqlite':
         specifier: ^0.3.2
         version: 0.3.2
@@ -1267,38 +1264,8 @@ packages:
     resolution: {integrity: sha512-4m8yw4giLH/y1HcsroBQSHAWByC5fK/iJb4dNGCPT6Eelr26bxvBz7kMC7UMFSzGcR+W8GTrAwlAQmmFnQDMuA==}
     engines: {node: '>=22'}
 
-  '@mark1russell7/service@0.8.15':
-    resolution: {integrity: sha512-gv+XKlfX/zt8jS2nvfuR2usVK2p25bgty4ap+eBKqH/lCQMzE0bpl5LaFbUv6L8xNZoJMJTv5liq8Jhrc9jl/g==}
-    engines: {node: '>=22.19'}
-    peerDependencies:
-      '@grpc/grpc-js': ^1.14.6
-      '@opentelemetry/api': ^1.9.0
-      amqplib: ^2.2.0
-      ioredis: ^6.0.0
-      mongodb: ^7.7.0
-      pg: ^8.23.1
-      ws: ^8.22.0
-      zod: ^4.1.0
-    peerDependenciesMeta:
-      '@grpc/grpc-js':
-        optional: true
-      '@opentelemetry/api':
-        optional: true
-      amqplib:
-        optional: true
-      ioredis:
-        optional: true
-      mongodb:
-        optional: true
-      pg:
-        optional: true
-      ws:
-        optional: true
-      zod:
-        optional: true
-
-  '@mark1russell7/service@0.8.6':
-    resolution: {integrity: sha512-BX5effgTFE+EyT1Id/w9Xr8xcUmRfs+PuvaLhYGGXraXTe1v0ISRiqL3hM3MNi7gCpfvve/n6lSvZoC8pBPlnw==}
+  '@mark1russell7/service@0.8.19':
+    resolution: {integrity: sha512-d5JcSbhpK/zpHXfE38dGu6JOYHOfHUn3U1JZmYzOIp3ZbwtlFVqz7QqRXn/o6iZu8eXrwgXOQuctGrW1qYpDng==}
     engines: {node: '>=22.19'}
     peerDependencies:
       '@grpc/grpc-js': ^1.14.6
@@ -1353,6 +1320,10 @@ packages:
 
   '@mark1russell7/text@0.0.5':
     resolution: {integrity: sha512-Ql1eBET3PgEBL5DWZHZ20GRZmorkq6mWdnfj21cqXfLvZdikO+GlvSAfbv1ld7YCnEqxOa7eg6ESfl+jzPGe9w==}
+    engines: {node: '>=22.12'}
+
+  '@mark1russell7/text@0.0.6':
+    resolution: {integrity: sha512-IwKQHx9U+k5AbEzZ8q4CxImQCuYXSFhvzMOSgy5UGYrZRIBO9RES7SYrXDrKqQFtMl5qD2QbibffevUPsrUW+A==}
     engines: {node: '>=22.12'}
 
   '@microsoft/api-extractor-model@7.33.16':
@@ -5120,25 +5091,13 @@ snapshots:
     dependencies:
       '@mark1russell7/rigor-generators': 0.1.16
 
-  '@mark1russell7/service@0.8.15(@opentelemetry/api@1.10.0)(ws@8.22.0)(zod@4.6.7)':
+  '@mark1russell7/service@0.8.19(@opentelemetry/api@1.10.0)(ws@8.22.0)(zod@4.6.7)':
     dependencies:
       '@mark1russell7/algebra': 0.8.9(zod@4.6.7)
       '@mark1russell7/collections': 0.11.0(zod@4.6.7)
       '@mark1russell7/quantity': 0.4.0(zod@4.6.7)
-      '@mark1russell7/rigor-generators': 0.1.14
-      '@mark1russell7/text': 0.0.5
-    optionalDependencies:
-      '@opentelemetry/api': 1.10.0
-      ws: 8.22.0
-      zod: 4.6.7
-
-  '@mark1russell7/service@0.8.6(@opentelemetry/api@1.10.0)(ws@8.22.0)(zod@4.6.7)':
-    dependencies:
-      '@mark1russell7/algebra': 0.8.4(zod@4.6.7)
-      '@mark1russell7/collections': 0.10.0(zod@4.6.7)
-      '@mark1russell7/quantity': 0.3.5(zod@4.6.7)
-      '@mark1russell7/rigor-generators': 0.1.14
-      '@mark1russell7/text': 0.0.2
+      '@mark1russell7/rigor-generators': 0.1.16
+      '@mark1russell7/text': 0.0.6
     optionalDependencies:
       '@opentelemetry/api': 1.10.0
       ws: 8.22.0
@@ -5161,6 +5120,8 @@ snapshots:
   '@mark1russell7/text@0.0.2': {}
 
   '@mark1russell7/text@0.0.5': {}
+
+  '@mark1russell7/text@0.0.6': {}
 
   '@microsoft/api-extractor-model@7.33.16(@types/node@22.20.5)':
     dependencies:
@@ -5404,7 +5365,7 @@ snapshots:
       '@mark1russell7/coeval': 0.29.0(zod@4.6.7)
       '@mark1russell7/collections': 0.10.0(zod@4.6.7)
       '@mark1russell7/quantity': 0.3.5(zod@4.6.7)
-      '@mark1russell7/service': 0.8.6(@opentelemetry/api@1.10.0)(ws@8.22.0)(zod@4.6.7)
+      '@mark1russell7/service': 0.8.19(@opentelemetry/api@1.10.0)(ws@8.22.0)(zod@4.6.7)
       '@opentelemetry/api': 1.10.0
       '@types/ws': 8.18.2
       ws: 8.22.0

@@ -100,7 +100,7 @@ Version 0.2.0 removes these exports from the root entry point. `durationMs` stay
 
 ## The entry points of the readers
 
-`polite-crawler/robots`, `/hours`, `/html`, `/classify`, `/politeness`, `/signals` and `/urls` are stable as a whole. They import no Node.js module, so a browser can use them. The site and its tools use them.
+`polite-crawler/robots`, `/hours`, `/html`, `/classify`, `/politeness`, `/signals`, `/urls` and `/text` are stable as a whole. They import no Node.js module, so a browser can use them. The site and its tools use them.
 
 Each export of its own in `polite-crawler/api` is beta. The entry also gives the types of its signatures from `/classify` and `/politeness`, and these stay stable. It imports no Node.js module too.
 
@@ -143,7 +143,7 @@ The package is the MCP server of polite-crawler since 0.2.0. Its tiers follow th
 
 | Entry point | Stable | Beta | Deprecated |
 | --- | --- | --- | --- |
-| polite-crawler root | 238 | 135 | 0 |
-| `/robots`, `/hours`, `/html`, `/classify`, `/politeness`, `/signals`, `/urls` | 92 | 0 | 0 |
-| `/api` | 13 | 23 | 0 |
+| polite-crawler root | 238 | 137 | 0 |
+| `/robots`, `/hours`, `/html`, `/classify`, `/politeness`, `/signals`, `/urls`, `/text` | 94 | 2 | 0 |
+| `/api` | 13 | 46 | 0 |
 | polite-crawler-mcp | 17 | 5 | 0 |

@@ -49,6 +49,7 @@ The package is ESM only, and it includes its TypeScript declarations. It has the
 | `polite-crawler/politeness` | The queue that keeps one request in progress for each host | Yes |
 | `polite-crawler/signals` | The reader of usage signals (`Content-Signal`) | Yes |
 | `polite-crawler/urls` | The canonical form of a URL, its cache key and its site. It imports no module. | Yes |
+| `polite-crawler/text` | The decoder of a body in its declared encoding. It imports no module. | Yes |
 | `polite-crawler/api` | The polite send of a documented API, with conditional polls and the OAuth 2.0 client credentials grant. [Send to a documented API](#send-to-a-documented-api) tells how. | Yes |
 
 The entry points that work in a browser import no Node.js module. The package loads no MCP SDK and no `zod`: the MCP server is the package `polite-crawler-mcp`.
@@ -269,7 +270,7 @@ These parts are the stable API:
 - The watch list: `WatchList`, `WatchOptions`, `WatchEntry`, `WatchPending`, `WatchKind`, `WatchRun`, `WatchRunOptions`, `WatchEvent`, `WatchSummary`, `WatchStop`, `WATCH_LIMITS` and the file `watch.sqlite` (`WATCH_SCHEMA`).
 - The daemon: `startDaemon`, `scheduleWatches`, `changeCommand`, `readDaemonState`, `daemonStateFile`, `DAEMON_DEFAULTS`, their options and results, and the state file (`DAEMON_STATE_SCHEMA`). The MCP seam of the daemon is the engine: `DaemonMcpHooks`, `DaemonMcpHost`, `DaemonMcpOptions`, `DaemonMcpService`, the options `mcp` and `mcpHost`, and `Daemon.mcp`. The MCP server of the daemon is `mcpHttpHost` of `polite-crawler-mcp`.
 - The options and the results of `discover` and `crawl`: `DiscoverOptions`, `DiscoverResult`, `DiscoveredUrl`, `DiscoverSource`, `DiscoverStop`, `CrawlOptions`, `CrawlRun`, `CrawlPage`, `CrawlSummary`, `CrawlStop`, `UrlPattern` and `ScopeOptions`.
-- The readers: `polite-crawler/robots`, `/hours`, `/html`, `/classify`, `/politeness` and `/signals`. The site and its tools use them in the browser.
+- The readers: `polite-crawler/robots`, `/hours`, `/html`, `/classify`, `/politeness`, `/signals`, `/urls` and `/text`. The site and its tools use them in the browser.
 - The command line, its exit codes, the store on disk and `polite-crawler/record.schema.json`.
 - The export: `exportWarc` and `exportWacz`, their options (`ArchiveOptions`, `ArchiveFilter`, `ArchiveSource`), their results (`WarcResult`, `WaczResult`, `ArchiveCounts`) and the records of the archive.
 - The archived fallback: `fallback` and `archiveDespiteRobots` of `FetchOptions`, the field `archived` of the results, and the types `Archived` and `WebArchive`.

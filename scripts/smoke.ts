@@ -385,6 +385,7 @@ import { classify } from "polite-crawler/classify";
 import { DEFAULT_POLICY } from "polite-crawler/politeness";
 import { readSignals, type Signals } from "polite-crawler/signals";
 import { canonicalUrl } from "polite-crawler/urls";
+import { decodeBody } from "polite-crawler/text";
 import { readGrant, type Reply } from "polite-crawler/api";
 import schema from "polite-crawler/record.schema.json" with { type: "json" };
 
@@ -402,7 +403,8 @@ export const check = async (): Promise<string> => {
   const outcome: string = classify(200, () => undefined, Date.now()).outcome;
   const reply: Reply = { status: 200, statusText: "OK", headers: {}, body: '{"access_token":"token-0001","expires_in":600}' };
   const until: number = readGrant(reply, "Example API", Date.now()).until;
-  return [allowed, week, extract.title, signals.ai_input, verified.found, DEFAULT_POLICY.pageIntervalMs, schema.title, caught?.mode, outcome, canonicalUrl("https://Example.com:443/?utm_source=x"), until].join();
+  const decoded: string = decodeBody(new TextEncoder().encode("ok"), "text/plain");
+  return [allowed, week, extract.title, signals.ai_input, verified.found, DEFAULT_POLICY.pageIntervalMs, schema.title, caught?.mode, outcome, canonicalUrl("https://Example.com:443/?utm_source=x"), until, decoded].join();
 };
 `,
   );
@@ -496,6 +498,8 @@ export const start: typeof startMcpServer = startMcpServer;
     signals: 1100,
     // the size of version 0.5.1, and 20 percent more
     urls: 850,
+    // the size of version 0.6.4 (1126 B, the body decoder), and 20 percent more
+    text: 1360,
     // the size of version 0.6.3 (6793 B, with fetchTransport, poll, the quotas and the civil time of
     // @mark1russell7/algebra/clock), and 20 percent more
     api: 8150,

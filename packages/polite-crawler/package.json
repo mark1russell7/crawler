@@ -52,6 +52,7 @@
     "./politeness": "./src/politeness.ts",
     "./signals": "./src/signals.ts",
     "./urls": "./src/urls.ts",
+    "./text": "./src/text.ts",
     "./api": "./src/api.ts",
     "./record.schema.json": "./record.schema.json",
     "./package.json": "./package.json"
@@ -153,6 +154,10 @@
       "./urls": {
         "types": "./build/urls.d.mts",
         "default": "./build/urls.mjs"
+      },
+      "./text": {
+        "types": "./build/text.d.mts",
+        "default": "./build/text.mjs"
       },
       "./api": {
         "types": "./build/api.d.mts",

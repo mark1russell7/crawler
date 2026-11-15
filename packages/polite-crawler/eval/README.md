@@ -220,7 +220,7 @@ The run did not start the WebFetch arm again, because it changed nothing for Web
 
 Part C asks a different question. The venue recipe (`readVenue`) makes two choices with a fixed rule. How frequently does the rule choose correctly? The hours of OpenStreetMap are the reference.
 
-Step 1 of part C uses no model. It makes the labelled data. Step 2 uses these labels to compare a model, Laya, with the rule (see "Step 2: Laya against the rule"). The code is in `decisions/`.
+Step 1 of part C uses no model. It makes the labelled data. Step 2 uses these labels to compare a model, Laya, with the rule (refer to "Step 2: Laya against the rule"). The code is in `decisions/`.
 
 ### The two choices
 
@@ -338,7 +338,7 @@ The questions:
 - Each candidate link is one state with one choice of two options: does the page of the link show the opening hours (`hours` or `other`)? The model fetches the links with the highest probability, as many as the rule fetches (3). Links with equal probabilities go in the order of the page.
 - Each reading is one state with one choice of two options: is it the regular week (`regular` or `other`)? The model chooses the reading with the highest probability.
 
-A choice over all the links of a venue at one time is not used, because a choice of many options loses accuracy (the model card). A state holds only what the crawler sees when it chooses: the text, the path and the place of a link, and the fields of a reading. It does not hold the rank of the rule, so the arm measures the model alone.
+A choice over all the links of a venue at one time is not used, because a choice of many options loses accuracy (the model card). A state holds only what the crawler sees when it chooses. For a link, this is the text, the path and the place on the page. For a reading, it is the fields of the reading. A state does not hold the rank of the rule, so the arm measures the model alone.
 
 The targets come from the labels of step 1:
 
@@ -354,11 +354,15 @@ The arms:
 | `untrained` | The checkpoint `laya-typed-decisions` at a pinned revision, with no training |
 | `trained-full` or `trained-head` | The same checkpoint, trained with `laya-train` on the rows of the train half, with seed 0 |
 
-The base checkpoints of Laya are near chance with no training (the model card), so the untrained arm uses the checkpoint that is fine-tuned for typed decisions. The CI runners have no GPU. Thus the job times one epoch of 64 rows in each mode before the training: `full` trains the whole model, and `head` does not change the encoder. `trainingPlan` takes the mode whose time fits in the budget (120 minutes), first `full`, then `head`, else no training. The trial time holds the load of the checkpoint, so the plan is high, never low.
+The base checkpoints of Laya are near chance with no training (the model card), so the untrained arm uses the checkpoint that is fine-tuned for typed decisions. The CI runners have no GPU. Thus, before the training, the job times one epoch of 64 rows in each mode. The mode `full` trains the whole model, and the mode `head` does not change the encoder. `trainingPlan` takes the mode whose time fits in the budget (120 minutes), first `full`, then `head`, else no training. The trial time holds the load of the checkpoint, so the time of the plan can be too high, but it is not too low.
 
-The test half decides. Nothing of the test half goes into the training rows or into the temperature. For each choice, the result gives the rate of the rule and the rate of the model on the same venues of the test half, each with its Wilson interval. It also gives the venues where only the model hits (better), the venues where only the rule hits (worse), and the two-sided sign test over them (`signTest` of `@mark1russell7/rigor-statistics`). For each question, one temperature is fitted on the train half (the lowest log-loss, from 1/8 to 8). The result gives the Brier score of the test half with the probabilities of the server and with the fitted temperature.
+The test half decides. Nothing of the test half goes into the training rows or into the temperature. For each choice, the result gives the rate of the rule and the rate of the model on the same venues of the test half. Each rate has its Wilson interval. The result also counts the venues where only the model hits (better) and the venues where only the rule hits (worse). A two-sided sign test (`signTest` of `@mark1russell7/rigor-statistics`) compares the two counts.
 
-The runtime: the job installs the Python package `laya` (a pinned version) on the CPU build of torch, and downloads the checkpoint at its pinned revision into a folder. `laya-serve` listens only on 127.0.0.1, with a key that the job makes for the run. It loads a checkpoint at the first request, and takes a built-in checkpoint only at its reviewed revision (`LAYA_REVISION=reviewed`). `laya-run.mts score` waits for `/health`, sends the states in batches of 64 (`POST /v1/systemone/batch`), and scores the arm. The server is a process of the job, not a site of others, so the requests do not go through the polite transport. The eval itself stays TypeScript.
+For each question, one temperature is fitted on the train half (the lowest log-loss, from 1/8 to 8). The result gives the Brier score of the test half with the probabilities of the server and with the fitted temperature.
+
+The runtime: the job installs a pinned version of the Python package `laya` on the CPU build of torch. Then it downloads the checkpoint at its pinned revision into a folder. `laya-serve` listens only on 127.0.0.1, with a key that the job makes for the run. It loads a checkpoint at the first request, and takes a built-in checkpoint only at its reviewed revision (`LAYA_REVISION=reviewed`).
+
+`laya-run.mts score` waits for `/health`, sends the states in batches of 64 (`POST /v1/systemone/batch`), and scores the arm. The server is a process of the job, not a site of others, so the requests do not go through the polite transport. The eval itself stays TypeScript.
 
 Start step 2 with the labels of an earlier run, with no new crawl:
 
@@ -366,6 +370,19 @@ Start step 2 with the labels of an earlier run, with no new crawl:
 gh workflow run decisions.yml -R mark1russell7/crawler -f labels_run=<run id> -f train=auto -f train_budget=120 -f epochs=4
 ```
 
-With no `labels_run`, step 2 runs after step 1 in the same run. `-f laya=false` stops it. `-f train=none` scores only the untrained arm. The job `laya` uploads the artifact `laya-result`: the result and the tables of each arm (`laya-untrained.json`, `laya-trained.json` and their `.md` files), the plan of the training (`laya-plan.json`), the training rows (`laya-train.jsonl`), the versions of the Python packages (`laya-pip-freeze.txt`) and the logs of the server. The trained checkpoint is not kept: the rows and the seed make it again. The training rows hold data of OpenStreetMap and URLs of other sites, so they are artifacts of CI only, as the labels are.
+With no `labels_run`, step 2 runs after step 1 in the same run. `-f laya=false` stops it. `-f train=none` scores only the untrained arm. The job `laya` uploads the artifact `laya-result`. It holds:
 
-`laya.test.ts` tests the pure functions with made-up venues: the batches, the reading of a response, the choices and their ties, the paired comparison, the fit of a known temperature, the training rows (none from the test half) and the training plan.
+- the result and the tables of each arm (`laya-untrained.json`, `laya-trained.json` and their `.md` files)
+- the plan of the training (`laya-plan.json`)
+- the training rows (`laya-train.jsonl`)
+- the versions of the Python packages (`laya-pip-freeze.txt`)
+- the logs of the server.
+
+The trained checkpoint is not kept: the rows and the seed make it again. The training rows hold data of OpenStreetMap and URLs of other sites, so they are artifacts of CI only, as the labels are.
+
+`laya.test.ts` tests the pure functions with made-up venues:
+
+- the batches and the reading of a response
+- the choices and their ties
+- the paired comparison and the fit of a known temperature
+- the training rows (none from the test half) and the training plan.

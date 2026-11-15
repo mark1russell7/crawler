@@ -146,9 +146,13 @@ describe("the requests and the answers", () => {
     const good = responseOf("link", "hours", "other", [0.9]);
     expect(() => probabilitiesOf(good, "link", 2)).toThrow("needs 2 results");
     expect(() => probabilitiesOf(good, "reading", 1)).toThrow('"regular"');
-    expect(() => probabilitiesOf(responseOf("link", "hours", "other", [1.5]), "link", 1)).toThrow();
-    expect(() => probabilitiesOf({ results: [{}] }, "link", 1)).toThrow();
-    expect(() => probabilitiesOf(null, "link", 0)).toThrow();
+    expect(() => probabilitiesOf(responseOf("link", "hours", "other", [1.5]), "link", 1)).toThrow(
+      'result 0: no probability of "hours"',
+    );
+    expect(() => probabilitiesOf({ results: [{}] }, "link", 1)).toThrow(
+      'result 0: no probability of "hours"',
+    );
+    expect(() => probabilitiesOf(null, "link", 0)).toThrow("needs 0 results");
   });
 
   it("puts the probabilities back in their venues", () => {
@@ -166,7 +170,7 @@ describe("the requests and the answers", () => {
     const venues = byVenue(labels, items, [0.1, 0.2, 0.3, 0.4]);
     expect(venues.get("node/1")).toEqual({ links: [0.1, 0.2], readings: [] });
     expect(venues.get("way/2")).toEqual({ links: [], readings: [0.3, 0.4] });
-    expect(() => byVenue(labels, items, [0.1])).toThrow();
+    expect(() => byVenue(labels, items, [0.1])).toThrow("4 items need 4 probabilities");
     expect(() => byVenue(labels.slice(1), items, [0.1, 0.2, 0.3, 0.4])).toThrow("no venue node/1");
   });
 });

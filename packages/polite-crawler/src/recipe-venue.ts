@@ -369,14 +369,21 @@ const HOURS_TYPES =
  * different thing, for example a phone number, and such a line tells nothing.
  */
 const OTHER_SCHEDULE =
-  /brunch|lunch|dinner|breakfast|happy|kitchen|bar|deliver|take.?out|pick.?up|patio|holiday|season|summer|winter|special|late|menu/i;
+  /brunch|lunch|dinner|breakfast|happy|kitchen|deliver|take.?out|pick.?up|patio|holiday|season|summer|winter|special|late|menu/i;
 
 /**
  * A label of a service beside the opening hours, or of an office. Its hours are a different
  * schedule, also when the label says "hours" ("Happy hour", "Kitchen hours", "Office hours").
  */
 const SERVICE =
-  /happy|kitchen|deliver|take.?out|pick.?up|brunch|holiday|special|patio|bar|late.?night|office/i;
+  /happy|kitchen|deliver|take.?out|pick.?up|brunch|holiday|special|patio|late.?night|office/i;
+
+/**
+ * The word "bar" in a label. At a restaurant, "Bar hours" is a schedule beside the opening hours.
+ * At a bar, "Bar hours" or the name of the bar ("Murphy's Bar") is the opening hours. So the word
+ * decides only together with the other readings: see `settleBar`.
+ */
+const BAR = /\bbar\b/i;
 
 const rankOf = (from: VenueReading["from"], label: string | null): number => {
   if (from === "jsonld") return 0;
@@ -385,6 +392,29 @@ const rankOf = (from: VenueReading["from"], label: string | null): number => {
   if (SERVICE.test(text)) return 4;
   if (/hour|open/i.test(text)) return 1;
   return OTHER_SCHEDULE.test(text) ? 4 : 3;
+};
+
+/** This value is true for a reading of the opening hours whose label has the word "bar". */
+const barOpening = (one: VenueReading): boolean =>
+  one.from === "text" &&
+  one.label !== null &&
+  BAR.test(one.label) &&
+  rankOf(one.from, one.label) <= 3;
+
+/**
+ * This function gives the readings with the rule of the word "bar". A reading whose label has the
+ * word is a different schedule when another reading of the same venue is an opening reading
+ * (JSON-LD, OpenStreetMap or a text label with no "bar"). With no such reading, it keeps the rank
+ * of its label. The result does not depend on the order of the readings, and a second call changes
+ * nothing.
+ */
+const settleBar = (readings: readonly VenueReading[]): VenueReading[] => {
+  const otherOpening = readings.some((one) => !barOpening(one) && rankOf(one.from, one.label) <= 3);
+  return readings.map((one) => {
+    if (!barOpening(one)) return one;
+    const rank = otherOpening ? 4 : rankOf(one.from, one.label);
+    return rank === one.rank ? one : { ...one, rank, schedule: rank <= 3 ? "opening" : "other" };
+  });
 };
 
 const reading = (
@@ -519,7 +549,7 @@ export const venueReadingsOf = (
     if (menus.some((menu) => menu.url === link.href)) continue;
     menus.push({ url: link.href, text });
   }
-  return { readings, phone, menus, notes, steps };
+  return { readings: settleBar(readings), phone, menus, notes, steps };
 };
 
 // ── the recipe ──────────────────────────────────────────────────────────────
@@ -758,7 +788,7 @@ export const readVenue = async (
 
   // one reading for each source, label and week: a site that repeats its JSON-LD on each page said it once
   const firstOf = new Map<string, VenueReading>();
-  for (const one of readings) {
+  for (const one of settleBar(readings)) {
     const key = `${one.from}|${one.label ?? ""}|${one.hours}|${one.season ?? ""}`;
     if (!firstOf.has(key)) firstOf.set(key, one);
   }

@@ -113,6 +113,21 @@ describe("VectorStore", () => {
     expect(store.search("e", v(0, 1, 0)).map((hit) => hit.sha)).toEqual(["s2", "s1"]);
   });
 
+  it("reads the vectors while a different process holds the write lock", async () => {
+    const { path, store } = await open();
+    write(store, "s1", [v(1, 0, 0)], ["a"]);
+    const writer = new DatabaseSync(path);
+    cleanups.push(() => writer.close());
+    writer.exec("PRAGMA busy_timeout = 0");
+    writer.exec("BEGIN IMMEDIATE");
+    // the read of the vectors takes no write lock: a write lock would wait, then throw "database is locked"
+    expect(store.search("e", v(1, 0, 0)).map((hit) => hit.sha)).toEqual(["s1"]);
+    writer.exec("COMMIT");
+    // the read transaction ends, and the store can write again
+    write(store, "s2", [v(0, 1, 0)], ["b"]);
+    expect(store.search("e", v(0, 1, 0)).map((hit) => hit.sha)).toEqual(["s2", "s1"]);
+  });
+
   it("refuses a vector of the wrong length and new dimensions for a known embedder", async () => {
     const { store } = await open();
     expect(() => write(store, "s1", [new Float32Array(2)], ["a"])).toThrow(
@@ -146,11 +161,37 @@ describe("VectorStore", () => {
     const again = new VectorStore(path);
     cleanups.push(() => again.close());
     expect(again.counts()).toEqual({ texts: 0, chunks: 0, docs: 0, bytes: 0 });
+    // the file gets this version, and the store works on it
+    const raw = new DatabaseSync(path);
+    expect(raw.prepare("PRAGMA user_version").get()).toEqual({ user_version: VECTORS_SCHEMA });
+    raw.close();
+    write(again, "s1", [v(1, 0, 0)], ["a"]);
+    expect(again.counts().texts).toBe(1);
     store.close();
     expect(() => store.plan("e", "s1")).toThrow(/closed/);
     expect(() => write(store, "s1", [v(1, 0, 0)], ["a"])).toThrow(/closed/);
     const memory = new VectorStore(":memory:");
     expect(memory.counts().texts).toBe(0);
     memory.close();
+  });
+
+  it("keeps a file of its version, and makes a table that such a file lacks", async () => {
+    const { path, store } = await open();
+    write(store, "s1", [v(1, 0, 0)], ["a"]);
+    store.close();
+    const kept = new VectorStore(path);
+    expect(kept.counts().texts).toBe(1);
+    kept.close();
+    const db = new DatabaseSync(path);
+    db.exec("DROP TABLE vectors_meta");
+    db.close();
+    const again = new VectorStore(path);
+    cleanups.push(() => again.close());
+    expect(again.counts()).toEqual({ texts: 1, chunks: 1, docs: 1, bytes: 12 });
+    const raw = new DatabaseSync(path);
+    expect(raw.prepare("SELECT name FROM sqlite_master WHERE name = 'vectors_meta'").get()).toEqual(
+      { name: "vectors_meta" },
+    );
+    raw.close();
   });
 });

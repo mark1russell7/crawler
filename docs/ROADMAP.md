@@ -64,6 +64,15 @@ Five follow-ups from the reviews of the quotas, in 0.7.0 (#162). 1. Two quotas o
 - [crawler #162 (0.7.0)](https://github.com/mark1russell7/crawler/pull/162)
 - [crawler #161 (the review)](https://github.com/mark1russell7/crawler/pull/161)
 
+### `quota-hardening`: Quotas: the smaller points of the review of #162
+
+The smaller points of the review of #162. None of them makes a count too low. Done in this item: the docs of a take after a reading in the same millisecond (the count can be too high, not too low), of a store of your own (it keeps each field, else a give-back can go below the provider), of isApiError (a check by name), and of the check of a list of gates (name and key, also on two stores, with a clearer error); an entry-point test of polite-crawler/text. In the PR as 0.7.3 (PATCH), stacked on #167. Not here: a sequence number in the record for the same millisecond moves to quota-service, because the record of the service limiter replaces this one; the api-report test (the report names only entry points) goes as a PR to @mark1russell7/api-report. The end: 2026-11-29.
+
+- Area: Package
+- Waits for: `quota-followups`
+- Started: 2026-11-15
+- [crawler #162 (the review)](https://github.com/mark1russell7/crawler/pull/162)
+
 ## Later
 
 ### `v1`: Version 1.0
@@ -82,14 +91,6 @@ The window counting of quotaGate (rolling buckets and calendar days and months i
 - [crawler #161 (the review that asks for the move)](https://github.com/mark1russell7/crawler/pull/161)
 - [systems #527 (SYS-115: service 0.8.15, algebra 0.8.9)](https://github.com/mark1russell7/systems/pull/527)
 
-### `quota-hardening`: Quotas: the smaller points of the review of #162
-
-The smaller points of the review of #162. None of them makes a count too low. 1. A reading in the same millisecond as a take: readAt cannot tell their order, so a give-back keeps the unit (the count is too high, not too low). A sequence number in the record fixes it. 2. isApiError accepts each error with the name ApiError, also of a different library: document it, or check a field of polite-crawler. 3. The duplicate check of a list of gates compares the quota name and the key, not the store: two stores with one name and key pass. 4. readAt is never pruned, and a custom QuotaStore must keep the record as it is: document both. 5. An entry-point test for polite-crawler/text, as urls.test.ts. 6. The api-report test (the report names only the declaration files of entries) goes as a PR to @mark1russell7/api-report. The end: 2026-11-29.
-
-- Area: Package
-- Waits for: `quota-followups`
-- [crawler #162 (the review)](https://github.com/mark1russell7/crawler/pull/162)
-
 ## Shipped
 
 ### `api-quota`: API quotas: count each key over its day, month or window, and stop before the provider
@@ -105,7 +106,7 @@ For the alerts project: free API keys have a documented quota (as read on 2026-1
 
 ### `html-size`: The html entry grew 25 % with linkedom 0.18.15
 
-linkedom 0.18.15 (2026-11-01) bundles the CSS parser cssomnom in place of @acemir/cssom. The gzip size of polite-crawler/html went from 128362 to 160188 bytes (+25 %), over the 138000 budget. #80 raised the budget to 192000 to unblock CI. Measured on 2026-11-15 (esbuild, browser, minified, as the smoke test): 160,172 bytes gzip, 499,612 raw, and cssomnom is 199,261 raw bytes (40 %). linkedom uses it in one place, the lazy getter HTMLStyleElement.sheet. extractPage and Readability never read it, but a bundler cannot drop a static import of a class that it keeps. A browser build that uses the DOMParser of the browser does not work: the page reader of the site runs extractPage in a Web Worker, and a worker has no DOMParser, so linkedom must ship. A pin to linkedom 0.18.14 is debt with no end. The decision: accept the size. The budget of 192,000 is already the size with 0.18.15 and 20 percent more, as for each other entry, and smoke.ts states the reason. The end of the debt is a new check in the smoke test: a budget more than 40 percent over its size fails. So when a linkedom version drops cssomnom (html near 128 KB), the PR that brings it must lower the budget, and each entry that shrinks 15 percent keeps its gain. A request to linkedom for a lazy CSS parser is outside the fleet, so it is not made.
+linkedom 0.18.15 (2026-11-01) bundles the CSS parser cssomnom in place of @acemir/cssom. The gzip size of polite-crawler/html went from 128362 to 160188 bytes (+25 %), over the 138000 budget. #80 raised the budget to 192000 to unblock CI. Measured on 2026-11-15 (esbuild, browser, minified, as the smoke test): 160,172 bytes gzip, 499,612 raw, and cssomnom is 199,261 raw bytes (40 %). linkedom uses it in one place, the lazy getter HTMLStyleElement.sheet. extractPage and Readability never read it, but a bundler cannot drop a static import of a class that it keeps. A browser build that uses the DOMParser of the browser does not work: the page reader of the site runs extractPage in a Web Worker, and a worker has no DOMParser, so linkedom must ship. A pin to linkedom 0.18.14 is debt with no end. The decision: accept the size. The budget of 192,000 is already the size with 0.18.15 and 20 percent more, as for each other entry, and smoke.ts states the reason. The end of the debt is a new check in the smoke test: a budget more than 40 percent over its size fails. So when a linkedom version drops cssomnom (html near 128 KB), the PR that brings it must lower the budget, and each entry that shrinks 15 percent keeps its gain. A request to linkedom for a lazy CSS parser is outside this project, so it is not made.
 
 - Area: Package
 - Started: 2026-11-15

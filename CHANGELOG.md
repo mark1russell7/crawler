@@ -17,6 +17,12 @@ A prerelease version (`0.2.0-beta.1`) goes to the npm tag `next`. Each other ver
 
 - **The new function `freshUntil` in `polite-crawler/api`.** It gives the end of the freshness of an answer, as RFC 9111 §4.2 calculates it, in milliseconds since the epoch. A client that keeps the answers of `poll` and `send` asks again at that time. The sources in sequence are `max-age`, `Expires` minus `Date`, and 10 percent of the age of `Last-Modified`, with a maximum. The crawler uses the same function for the field `fresh_until` of a capture, so the freshness of a capture does not change. The function is beta.
 
+## 0.7.3 - 2026-11-15
+
+- **The smaller points of the review of the quotas.** A take after a reading in the same millisecond keeps its units, so the count can be too high, but not too low. A store of your own keeps each field of the record. A store that drops `readAt` lets a give-back go below the count of the provider. `isApiError` checks the name, so use it on the errors of `polite-crawler/api`. A list with two gates of one name and key is an error, also on two stores.
+- **The error of two gates of one name and key** tells you to give each quota a different name.
+- **A test of the entry point `polite-crawler/text`**, as the test of `polite-crawler/urls`. It checks the paths in `package.json`, that the file has no import, and the same functions as the root and `polite-crawler/html`.
+
 ## 0.7.2 - 2026-11-15
 
 - **One daemon on a store, also for two starts at the same moment.** Before, the state file of a start came after the browser check and the MCP start, so two starts at one moment both started. The daemon holds the lock file `<store>/daemon/lock` until it stops, made by `acquireInstanceLock` of `@mark1russell7/service/host` only when the file is not there. The next start removes a stale lock of a stopped process, and a failed start or the stop gives the lock back. The check of the state file stays, for a daemon of an earlier version. The new dependency `@mark1russell7/service` is `^0.8.15`, and `@mark1russell7/algebra` goes to `^0.8.9` for one copy in the tree.

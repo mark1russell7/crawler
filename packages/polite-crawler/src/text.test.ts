@@ -1,5 +1,42 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
+import * as html from "./html.ts";
+import * as root from "./index.ts";
 import { bodyEncoding, decodeBody } from "./text.ts";
+
+/** The fields of package.json that name the entry point `polite-crawler/text`. */
+interface Manifest {
+  readonly exports: Readonly<Record<string, unknown>>;
+  readonly publishConfig: { readonly exports: Readonly<Record<string, unknown>> };
+}
+
+const manifest = JSON.parse(
+  readFileSync(new URL("../package.json", import.meta.url), "utf8"),
+) as Manifest;
+
+describe("the entry point polite-crawler/text", () => {
+  it("maps to src/text.ts in the workspace and to build/text.mjs in the package", () => {
+    expect(manifest.exports["./text"]).toBe("./src/text.ts");
+    expect(manifest.publishConfig.exports["./text"]).toEqual({
+      types: "./build/text.d.mts",
+      default: "./build/text.mjs",
+    });
+  });
+
+  it("imports no module, so a browser can load it", () => {
+    const source = readFileSync(new URL("text.ts", import.meta.url), "utf8");
+    expect(source).not.toMatch(/^\s*import\b/m);
+    expect(source).not.toMatch(/\bimport\(/);
+    expect(source).not.toMatch(/\brequire\(/);
+  });
+
+  it("gives the same functions as the root entry point and polite-crawler/html", () => {
+    expect(root.decodeBody).toBe(decodeBody);
+    expect(root.bodyEncoding).toBe(bodyEncoding);
+    expect(html.decodeBody).toBe(decodeBody);
+    expect(html.bodyEncoding).toBe(bodyEncoding);
+  });
+});
 
 const bytes = (...parts: Array<string | Iterable<number>>): Uint8Array => {
   const out: number[] = [];

@@ -159,7 +159,10 @@ export interface QuotaRecord {
   /**
    * The gate last read the count of the provider at this time, in milliseconds since the epoch. A
    * give-back of units that the gate counted at this time or earlier changes nothing, because the
-   * reading can include those units.
+   * reading can include those units. Thus the units of a take after a reading in the same
+   * millisecond stay counted until their bucket leaves the window. The count can be too high, but
+   * not too low. The record keeps this time also when no bucket is left. It is one number for each
+   * quota and key.
    */
   readonly readAt?: number | undefined;
 }
@@ -168,6 +171,10 @@ export interface QuotaRecord {
  * A store of the records of the keys. `memoryQuotaStore` keeps them in memory, and
  * `SqliteHostStateStore` keeps them in its file. A store keeps one record for each quota name and
  * key, so two quotas of one key (for example a minute and a day) count apart.
+ *
+ * A store of your own keeps each field of the record that `step` gives, also a field that it does not
+ * know. A store that drops `readAt` lets a give-back make the count lower than the count of the
+ * provider.
  *
  * @beta
  */

@@ -15,6 +15,8 @@ A prerelease version (`0.2.0-beta.1`) goes to the npm tag `next`. Each other ver
 
 ## Unreleased
 
+## 0.7.6 - 2026-11-15
+
 - **The new function `chooseVenueReadings`.** It orders the readings of a venue, as `readVenue` does. It gives the best reading, the best reading of the site and the days of disagreement. `readVenue` uses it, and the result of `readVenue` does not change. The decision eval (part C of `eval/README.md`) uses it to score the choice of `readVenue` with no copy of the rule. The function and its type `VenueChoice` are beta.
 
 ## 0.7.5 - 2026-11-15

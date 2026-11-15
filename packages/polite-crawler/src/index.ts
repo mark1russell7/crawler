@@ -209,6 +209,7 @@ export type { PageExtract, PageLink } from "./html.ts";
 export { extractPage, typesOf } from "./html.ts";
 export type { SqliteHostStateOptions } from "./hoststate.ts";
 export { SqliteHostStateStore } from "./hoststate.ts";
+export type { QuotaRecord, QuotaStore } from "./quota.ts";
 export type {
   CaptureFilter,
   CaptureLogOptions,

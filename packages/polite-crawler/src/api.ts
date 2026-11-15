@@ -11,13 +11,16 @@
  * and a time limit. `poll` sends conditional requests. Each export is beta: a minor version can
  * change it.
  */
+import { ApiError } from "./api-error.ts";
 import type { Classified } from "./classify.ts";
 import { classify } from "./classify.ts";
 import type { HostStateStore, Paced, PolicyOptions, ValidatorAnswer } from "./politeness.ts";
 import { policyFor, restAfter, validatorsToSend } from "./politeness.ts";
 import type { OutcomeFacts } from "./reaction.ts";
 import { outcomeResult, reactToOutcome } from "./reaction.ts";
+import { QuotaError } from "./quota.ts";
 
+export { ApiError } from "./api-error.ts";
 export type { Classified, Outcome } from "./classify.ts";
 export type {
   HostCounts,
@@ -34,6 +37,19 @@ export type {
 } from "./politeness.ts";
 export type { HostReaction, OutcomeFacts, ReactionContext } from "./reaction.ts";
 export { outcomeResult, reactToOutcome } from "./reaction.ts";
+export type {
+  Quota,
+  QuotaGate,
+  QuotaGateOptions,
+  QuotaHeaders,
+  QuotaReading,
+  QuotaRecord,
+  QuotaState,
+  QuotaStore,
+  QuotaWindow,
+  WithQuotaOptions,
+} from "./quota.ts";
+export { memoryQuotaStore, QuotaError, quotaGate, readQuotaHeaders, withQuota } from "./quota.ts";
 
 /**
  * One request of a client to an API.
@@ -123,14 +139,6 @@ export interface Pace<S extends Signal = AbortSignal> {
  */
 export type Redact = (text: string, secrets: readonly string[]) => string;
 
-/**
- * An error of the send or of the token. The `redact` function of the send examined its message.
- *
- * @beta
- */
-export class ApiError extends Error {
-  override readonly name: string = "ApiError";
-}
 
 /**
  * One exchange of a client, and its context for the pace and the messages.
@@ -194,10 +202,12 @@ export function statusLine(reply: Reply): string {
  * - A 429, 502, 503 or 504 parks the host for its `Retry-After`, or for a backoff with jitter.
  * - A 401 or a 403 stops the host for 1 hour. A 402 and a bot challenge stop it for 24 hours.
  * - An error 5xx and an exchange with no answer are failures. After 5 failures in sequence, the host stops.
+ * - A `QuotaError` of the transport (`withQuota`) does not change the host.
  *
  * The function gives each answer, with each status. The caller reads the status.
  *
  * @throws ApiError when the API gives no answer, or when the host is stopped. `redact` examined the message.
+ * @throws QuotaError of the transport, as it is, when a quota refuses the exchange.
  * @throws the reason of the signal, when the signal stops the exchange.
  * @beta
  */
@@ -237,6 +247,8 @@ export async function send<S extends Signal = AbortSignal>(
         try {
           reply = await transport(input.exchange, signal);
         } catch (error) {
+          // a quota refused the exchange before it started, so the host keeps its state and its pace
+          if (error instanceof QuotaError) return { value: { error }, delayMs: 0 };
           // a request that the caller stopped is no fault of the host
           const cancelled = signal?.aborted === true;
           const facts: OutcomeFacts = {
@@ -268,7 +280,7 @@ export async function send<S extends Signal = AbortSignal>(
     );
   }
   if ("error" in attempt) {
-    if (signal?.aborted === true) throw attempt.error;
+    if (signal?.aborted === true || attempt.error instanceof QuotaError) throw attempt.error;
     throw new ApiError(
       redact(`${input.source} gave no answer to ${input.what}: ${messageOf(attempt.error)}`),
     );

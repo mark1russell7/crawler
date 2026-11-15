@@ -14,6 +14,16 @@ List the MCP server in the directories that need a submission, then post polite-
 - Waits for: `eval`, `eval-b`
 - What Mark does: Read the prepared post text, then post it from your Hacker News account.
 
+## In progress
+
+### `api-quota`: API quotas: count each key over its day, month or window, and stop before the provider
+
+For the alerts project: free API keys have a documented quota (as read on 2026-11-14: Pushover 10,000 messages a month for each user account, reset at 00:00 Central Time on the 1st; NASA FIRMS 5,000 transactions in 10 minutes; OpenSky 400 to 8,000 credits a day for each endpoint group; TomTom 200,000 tiles and 20,000 other map requests a month). polite-crawler/api paced each host and reacted to a 429, but it counted no quota, so a program found the limit only when the provider refused it. quotaGate counts each key over a calendar day or month in a time zone, or a rolling window, with a cost for each call and a reserve. withQuota puts the gate on any async function (a fetch, a transport, a client), so a call over the quota is refused with its reset time and no request goes out. The headers of the provider make the count larger, never smaller. The counts stay after a restart in the SQLite host state store (schema 2 through @mark1russell7/sqlite).
+
+- Area: Package
+- Waits for: `api-poll`
+- Started: 2026-11-14
+
 ## Later
 
 ### `v1`: Version 1.0
@@ -36,7 +46,26 @@ linkedom 0.18.15 (2026-11-01) bundles the CSS parser cssomnom in place of @acemi
 - Area: Package
 - [crawler #80 (budget raised to 192000)](https://github.com/mark1russell7/crawler/pull/80)
 
+### `sqlite-projections`: SQLite: move the index, the vectors and the watch list onto @mark1russell7/sqlite
+
+The map of homes puts the SQLite code in @mark1russell7/sqlite. The host state store moved onto it with api-quota (0.6.3). The search index (docs.ts), the vectors (vectors.ts) and the watch list (watch.ts) still have their own pragmas, versions and rebuilds. The index and the vectors are projections, so they move to ensureProjection of @mark1russell7/sqlite 0.2.4: a file of a different version opens empty and the crawler fills it again from the capture log. watch.ts is a store, so it moves to migrate. Also: when @mark1russell7/sqlite 0.2.5 is on npm, hoststate.ts gives migrate the option newer: "keep" and drops its own check of the version. It waits for the end of the alerts work.
+
+- Area: Package
+- Waits for: `api-quota`
+- [sqlite #12 (migrate newer: keep, 0.2.5)](https://github.com/mark1russell7/sqlite/pull/12)
+
 ## Shipped
+
+### `api-poll`: API polls: conditional requests, a required User-Agent, a time limit
+
+For the alerts project (DEFCON 1). polite-crawler/api (0.6.1) already sends documented API calls at the host pace with the outcome actions. This adds what a poll every 30 to 60 s needs: a fetch transport with a required User-Agent and a time limit, and conditional requests (ETag and If-Modified-Since kept per URL, with the crawler's validator memo), so a 304 or the same body costs little. Ships as 0.6.2 (PATCH: new exports).
+
+- Area: Package
+- Started: 2026-11-14
+- Shipped: 2026-11-14
+- [crawler #159 (feature and 0.6.2)](https://github.com/mark1russell7/crawler/pull/159)
+- [npm polite-crawler 0.6.2](https://www.npmjs.com/package/polite-crawler/v/0.6.2)
+- [merge 17c24d1](https://github.com/mark1russell7/crawler/commit/17c24d1c7154bceed3a4bb72f61eedafbb77add0)
 
 ### `mcp-lean`: MCP server: a smaller fixed cost in each session
 

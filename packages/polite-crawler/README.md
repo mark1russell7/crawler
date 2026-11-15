@@ -1309,6 +1309,54 @@ if (polled.changed) {
 - **The validator memo of the crawler.** Some hosts give an `ETag` that changes at each answer. With a store of the scheduler that keeps the validator memo, the poll then sends only `If-Modified-Since`, as the crawler does.
 - **One store for one set of headers.** A store keeps one entry for each URL. Give a second store to a request with a different `accept` header.
 
+### Quotas of a key
+
+Many free API keys have a quota: a count of calls or messages in each day, month or window. The pace of the host does not count it. `quotaGate` counts the calls of one key, and it refuses a call over the quota before the provider does. `withQuota` puts a gate on an async function and keeps its type, so it fits each path of a call: a `fetch` that a client takes, a transport of `send` and `poll`, or a different client.
+
+```ts
+import { quotaGate, readQuotaHeaders, withQuota } from "polite-crawler/api";
+import { SqliteHostStateStore } from "polite-crawler";
+
+// Pushover: 10,000 messages each month for each user account, reset at 00:00 Central Time on the 1st
+const gate = quotaGate(
+  {
+    name: "Pushover messages",
+    limit: 10_000,
+    reserve: 100,
+    window: { kind: "calendar", unit: "month", timeZone: "America/Chicago" },
+  },
+  { key: "pushover:account-1", store: new SqliteHostStateStore("state/hosts.sqlite") },
+);
+
+// a fetch for a client that takes one; only a message counts, not a read of a receipt
+const fetchWithQuota = withQuota(gate, fetch, {
+  cost: (url) => (String(url).endsWith("/messages.json") ? 1 : 0),
+  read: (response) =>
+    readQuotaHeaders(
+      (name) => response.headers.get(name),
+      { remaining: "X-Limit-App-Remaining", resetAt: "X-Limit-App-Reset" },
+      Date.now(),
+    ),
+});
+```
+
+- **A refusal before the call.** A call over the quota throws `QuotaError` with `resetAt`, the time when the gate gives units again. The wrapped function does not start, so no request goes out. `send` and `poll` give the `QuotaError` as it is, and the host keeps its state: a refusal of the quota is not a failure of the host.
+- **The window.** A `calendar` window is a day or a month in an IANA time zone, from the hour `hour`. It follows the clock changes of the zone. A `rolling` window is the last `ms` milliseconds. When the provider does not tell when its count starts again, use a rolling window: a rolling window of 24 hours never counts less than a day of the provider, and one of 31 days never counts less than a month.
+- **The count is never lower than that of the provider.** A rolling window counts a call for each time bucket (60 in a window, as default), and a bucket stops counting only when all of it is out of the window. The answer of the provider (`read`) can make the count larger, never smaller. A count of 0 left, or a reset time with no count, stops the key until that time.
+- **The reserve.** The gate keeps `reserve` units unused, for a different program on the same key or for a call that you must make.
+- **The cost.** A call counts 1 unit, or `cost` units. A cost of 0 counts nothing and refuses nothing. A cost of more than the quota gives in one window is a fault of the caller: the gate throws an `ApiError`.
+- **The store.** `memoryQuotaStore` keeps the counts in memory. `SqliteHostStateStore` keeps them in its file, so the count of a key stays after a restart and two processes share it. Each change of a count is one transaction. The key names the account that the provider counts. It is not the secret of the key: the store keeps it as text.
+- **Two quotas on one key.** Put two gates on one function, for example `withQuota(perMinute, withQuota(perDay, fetch))`.
+
+These are the limits of the first providers, as their documents gave them on 2026-11-14:
+
+| Provider | Limit | Window | Headers |
+| --- | --- | --- | --- |
+| [Pushover](https://pushover.net/api#limits) | 10,000 messages each month for each user account (25,000 for a team). The applications of an account share it. | Calendar month, `America/Chicago`, from 00:00 on the 1st | `X-Limit-App-Remaining`, `X-Limit-App-Reset` (seconds since the epoch) |
+| [NASA FIRMS](https://firms.modaps.eosdis.nasa.gov/api/map_key/) | 5,000 transactions for each MAP_KEY | Rolling, 10 minutes | none |
+| [OpenSky Network](https://openskynetwork.github.io/opensky-api/rest.html) | 400 credits a day with no account, 4,000 for a registered user, 8,000 for an active feeder. `/states`, `/tracks` and `/flights` each have a quota: give each one a key. | Rolling, 24 hours (the document gives no reset time) | `X-Rate-Limit-Remaining`, `X-Rate-Limit-Retry-After-Seconds` (seconds until the reset) |
+| [TomTom](https://docs.tomtom.com/pricing) | 200,000 tile requests and 20,000 other map requests each month, free | Rolling, 31 days (the document gives no reset time) | none |
+
 ## Stored copies and conditional requests
 
 A fetch uses the stored copy of a URL, with no request, while the copy is younger than `maxAge` (24 hours by default). With `maxAge: "auto"`, the crawler uses the freshness that the server gave: `Cache-Control`, `Expires`, or 10 percent of the age of `Last-Modified`. With `"auto"`, `no-store` and `no-cache` make a copy stale at once. A fixed `maxAge` ignores them. A response that varies on a request header (`Vary`) is used again only for a request with the same value of that header. The store keeps one copy for each URL, so a request with a different value replaces it.

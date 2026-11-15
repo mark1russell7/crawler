@@ -8,6 +8,11 @@
 #   the store as one WACZ file.
 # - The job "score" replays the WACZ file with no network, labels each venue and scores the two
 #   choices. The job summary has the tables.
+# - The job "laya" (step 2) scores Laya, an open-weight decision model, on the same two choices:
+#   first the checkpoint laya-typed-decisions with no training, then the same checkpoint trained on
+#   the train half. It runs the Python package laya on 127.0.0.1 with a key of this run, and the
+#   eval calls it. A timed trial of each training mode chooses the mode that fits the budget. With
+#   labels_run, it takes the labels of an earlier run, and the two jobs before it do not run.
 #
 # The data of OpenStreetMap is © OpenStreetMap contributors (ODbL). The venues, the WACZ file of
 # other sites, the labels and the result are artifacts only. They never go into the repository.
@@ -23,6 +28,24 @@ on:
       budget:
         description: The minutes of the crawl after which no visit starts
         default: "80"
+      laya:
+        description: Score Laya on the labels (step 2)
+        type: boolean
+        default: true
+      train:
+        description: "The training of Laya: auto (a timed trial chooses), full, head (the encoder does not change) or none"
+        type: choice
+        options: [auto, full, head, none]
+        default: auto
+      train_budget:
+        description: The most minutes of the training of Laya
+        default: "120"
+      epochs:
+        description: The epochs of the training of Laya
+        default: "4"
+      labels_run:
+        description: The id of an earlier run whose labels Laya takes (empty = collect and label in this run)
+        default: ""
 
 permissions:
   contents: read
@@ -39,6 +62,7 @@ defaults:
 jobs:
   archive:
     name: Collect the venues and archive their sites
+    if: ${{ inputs.labels_run == '' }}
     runs-on: ubuntu-latest
     timeout-minutes: 120
     env:
@@ -82,6 +106,7 @@ jobs:
   score:
     name: Label and score from the WACZ file, with no network
     needs: archive
+    if: ${{ inputs.labels_run == '' }}
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
@@ -114,5 +139,168 @@ jobs:
             labels.jsonl
             result.json
             decisions-summary.md
+          if-no-files-found: warn
+          retention-days: 90
+
+  laya:
+    name: Score Laya against the rule, with no training and trained on the train half
+    needs: score
+    if: ${{ !cancelled() && inputs.laya && (needs.score.result == 'success' || inputs.labels_run != '') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 340
+    permissions:
+      contents: read
+      actions: read
+    env:
+      # The checkpoint laya-typed-decisions at the revision that was read for this eval.
+      BASE_REVISION: 1a793eb568e6718f15941d08f85432581df534e3
+      LAYA_VERSION: 0.4.34
+      TRAIN: ${{ inputs.train || 'auto' }}
+      TRAIN_BUDGET: ${{ inputs.train_budget || '120' }}
+      EPOCHS: ${{ inputs.epochs || '4' }}
+      # The server listens only on this runner, loads a checkpoint at its first request, and takes
+      # each built-in checkpoint only at its reviewed revision.
+      LAYA_HOST: 127.0.0.1
+      LAYA_PORT: "8765"
+      LAYA_PRELOAD: "0"
+      LAYA_REVISION: reviewed
+      LAYA_DEVICE: cpu
+      LAYA_THREADS: "4"
+      HF_HUB_DISABLE_TELEMETRY: "1"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: decisions-result
+          path: .
+          run-id: ${{ inputs.labels_run || github.run_id }}
+          github-token: ${{ github.token }}
+
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.12"
+      # The CPU build of torch first, so the package does not bring the CUDA build. The list of the
+      # installed versions is an artifact.
+      - name: Install laya
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install --index-url https://download.pytorch.org/whl/cpu torch
+          python -m pip install "laya[serve]==$LAYA_VERSION" "huggingface_hub>=0.34"
+          python -m pip freeze > laya-pip-freeze.txt
+
+      # The training does not read LAYA_REVISION, so the checkpoint comes to a folder at its pinned
+      # revision, and both arms load it from there.
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        id: base
+        with:
+          path: laya-base
+          key: laya-typed-decisions-${{ env.BASE_REVISION }}
+      - name: Download the checkpoint
+        if: ${{ steps.base.outputs.cache-hit != 'true' }}
+        run: >-
+          hf download convaiinnovations/laya-typed-decisions --revision "$BASE_REVISION"
+          --local-dir laya-base --include rl_agent_config.json model.safetensors "tokenizer/*" "encoder/*"
+
+      # A key of this run only. The logs and the step summary never show it.
+      - name: Make the key of the server
+        run: |
+          key=$(openssl rand -hex 32)
+          echo "::add-mask::$key"
+          echo "LAYA_API_KEY=$key" >> "$GITHUB_ENV"
+
+      - name: Score the checkpoint with no training
+        timeout-minutes: 120
+        run: |
+          LAYA_EXTRA_MODELS="{\"untrained\": \"$PWD/laya-base\"}" nohup laya-serve > laya-serve-untrained.log 2>&1 &
+          pid=$!
+          trap 'kill "$pid" 2>/dev/null || true' EXIT
+          pnpm exec tsx packages/polite-crawler/eval/decisions/laya-run.mts score \
+            --labels labels.jsonl --model untrained --arm untrained --out laya-untrained.json \
+            --markdown laya-untrained.md --summary "$GITHUB_STEP_SUMMARY" \
+            --laya "$LAYA_VERSION" --revision "$BASE_REVISION"
+
+      - name: Write the training rows of the train half
+        run: >-
+          pnpm exec tsx packages/polite-crawler/eval/decisions/laya-run.mts rows
+          --labels labels.jsonl --out laya-train.jsonl --trial laya-trial.jsonl --trial-rows 64
+
+      # One epoch of the first 64 rows in each mode. The time holds the load of the checkpoint, so
+      # the plan is high, never low.
+      - name: Time a trial of each training mode
+        id: trial
+        if: ${{ env.TRAIN == 'auto' }}
+        run: |
+          rows=$(wc -l < laya-trial.jsonl)
+          echo "rows=$rows" >> "$GITHUB_OUTPUT"
+          if [ "$rows" -eq 0 ]; then exit 0; fi
+          start=$SECONDS
+          laya-train --data laya-trial.jsonl --base laya-base --out trial-full --epochs 1 --device cpu --seed 0
+          echo "full=$((SECONDS - start))" >> "$GITHUB_OUTPUT"
+          start=$SECONDS
+          laya-train --data laya-trial.jsonl --base laya-base --out trial-head --epochs 1 --device cpu --seed 0 --freeze-encoder
+          echo "head=$((SECONDS - start))" >> "$GITHUB_OUTPUT"
+          rm -rf trial-full trial-head
+
+      - name: Plan the training
+        id: plan
+        env:
+          TRIAL_ROWS: ${{ steps.trial.outputs.rows }}
+          FULL_SECONDS: ${{ steps.trial.outputs.full }}
+          HEAD_SECONDS: ${{ steps.trial.outputs.head }}
+        run: |
+          if [ "$TRAIN" != auto ]; then echo "mode=$TRAIN" >> "$GITHUB_OUTPUT"; exit 0; fi
+          if [ "$TRIAL_ROWS" = 0 ]; then echo "mode=none" >> "$GITHUB_OUTPUT"; exit 0; fi
+          pnpm exec tsx packages/polite-crawler/eval/decisions/laya-run.mts plan \
+            --rows laya-train.jsonl --trial-rows "$TRIAL_ROWS" --full-seconds "$FULL_SECONDS" \
+            --head-seconds "$HEAD_SECONDS" --epochs "$EPOCHS" --budget "$TRAIN_BUDGET" \
+            --out laya-plan.json --output "$GITHUB_OUTPUT"
+
+      # A training that passes the budget stops, and the arm with no training keeps its score.
+      - name: Train on the train half
+        if: ${{ steps.plan.outputs.mode == 'full' || steps.plan.outputs.mode == 'head' }}
+        continue-on-error: true
+        timeout-minutes: ${{ fromJSON(inputs.train_budget || '120') }}
+        env:
+          HEAD_ONLY: ${{ steps.plan.outputs.mode == 'head' && '--freeze-encoder' || '' }}
+        run: >-
+          laya-train --data laya-train.jsonl --base laya-base --out laya-trained
+          --epochs "$EPOCHS" --device cpu --seed 0 $HEAD_ONLY
+
+      - name: Score the trained checkpoint
+        if: ${{ hashFiles('laya-trained/model.safetensors') != '' }}
+        timeout-minutes: 120
+        env:
+          ARM: trained-${{ steps.plan.outputs.mode }}
+        run: |
+          LAYA_EXTRA_MODELS="{\"trained\": \"$PWD/laya-trained\"}" nohup laya-serve > laya-serve-trained.log 2>&1 &
+          pid=$!
+          trap 'kill "$pid" 2>/dev/null || true' EXIT
+          pnpm exec tsx packages/polite-crawler/eval/decisions/laya-run.mts score \
+            --labels labels.jsonl --model trained --arm "$ARM" --out laya-trained.json \
+            --markdown laya-trained.md --summary "$GITHUB_STEP_SUMMARY" \
+            --laya "$LAYA_VERSION" --revision "$BASE_REVISION"
+
+      # The trained checkpoint is not kept: the rows and the seed make it again.
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: ${{ !cancelled() }}
+        with:
+          name: laya-result
+          path: |
+            laya-untrained.json
+            laya-untrained.md
+            laya-trained.json
+            laya-trained.md
+            laya-plan.json
+            laya-train.jsonl
+            laya-pip-freeze.txt
+            laya-serve-*.log
           if-no-files-found: warn
           retention-days: 90

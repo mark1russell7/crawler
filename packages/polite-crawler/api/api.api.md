@@ -131,6 +131,12 @@ export interface HostStop {
 }
 
 // @beta
+export const isApiError: (value: unknown) => value is ApiError;
+
+// @beta
+export const isQuotaError: (value: unknown) => value is QuotaError;
+
+// @beta
 export function memoryQuotaStore(): QuotaStore;
 
 // @public

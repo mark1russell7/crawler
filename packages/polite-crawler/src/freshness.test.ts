@@ -118,6 +118,13 @@ describe("freshUntil", () => {
     expect(fresh({ date: DATE }, 301)).toBe(FETCHED + CAP);
     expect(fresh({ date: DATE }, 308)).toBe(FETCHED + CAP);
     expect(fresh({ date: DATE }, 302)).toBeUndefined();
+    // a Last-Modified at or after Date, or one that is not a date, counts as no Last-Modified
+    expect(fresh({ date: DATE, "last-modified": DATE }, 301)).toBe(FETCHED + CAP);
+    expect(fresh({ date: DATE, "last-modified": "Thu, 08 Oct 2026 12:00:00 GMT" }, 308)).toBe(
+      FETCHED + CAP,
+    );
+    expect(fresh({ date: DATE, "last-modified": "yesterday" }, 301)).toBe(FETCHED + CAP);
+    expect(fresh({ date: DATE, "last-modified": DATE }, 200)).toBeUndefined();
     // the cap does not apply to an explicit freshness
     expect(fresh({ "cache-control": "max-age=1209600" }, 200, undefined, DAY)).toBe(
       FETCHED + 14 * DAY,

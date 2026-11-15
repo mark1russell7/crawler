@@ -40,8 +40,9 @@ const directives = (value: string | undefined): Map<string, string> => {
  *
  * The sources in sequence are `max-age` of `Cache-Control`, `Expires` minus `Date`, and 10
  * percent of the age of `Last-Modified`. Only a heuristic status (RFC 9110 §15.1) uses the last
- * source, and `capMs` is its maximum. A permanent redirect with no `Last-Modified` gets `capMs`.
- * The function subtracts the `Age` of the response. Ten years is the maximum lifetime.
+ * source, and `capMs` is its maximum. A permanent redirect with no `Last-Modified` before `Date`
+ * gets `capMs`. A header that is not a date counts as no header. The function subtracts the `Age`
+ * of the response. Ten years is the maximum lifetime.
  *
  * A response with `no-store` or `no-cache` is stale at once, so the function gives `fetchedAt`.
  * An `Expires` that is not a date also gives `fetchedAt`.

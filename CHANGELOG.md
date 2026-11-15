@@ -15,6 +15,8 @@ A prerelease version (`0.2.0-beta.1`) goes to the npm tag `next`. Each other ver
 
 ## Unreleased
 
+## 0.7.4 - 2026-11-15
+
 - **The new function `freshUntil` in `polite-crawler/api`.** It gives the end of the freshness of an answer, as RFC 9111 §4.2 calculates it, in milliseconds since the epoch. A client that keeps the answers of `poll` and `send` asks again at that time. The sources in sequence are `max-age`, `Expires` minus `Date`, and 10 percent of the age of `Last-Modified`, with a maximum. The crawler uses the same function for the field `fresh_until` of a capture, so the freshness of a capture does not change. The function is beta.
 - **The watch list makes its table and its index at each open again**, as before 0.7.1. In 0.7.1, `migrate` started no step on a file of version 1. Thus a file that lost the table `watches` or the index `watches_due`, for example by a hand edit, failed. Such a file works again. The watches of a lost table do not come back.
 

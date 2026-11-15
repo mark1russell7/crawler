@@ -698,6 +698,7 @@ interface QuotaGate {
   take(cost?: number): QuotaState;
   note(reading: QuotaReading): QuotaState;
   state(): QuotaState;
+  giveBack?(cost: number, at: number): QuotaState;
 }
 
 ### build/api.d.mts#QuotaGateOptions
@@ -726,6 +727,7 @@ interface QuotaState {
   readonly left: number;
   readonly resetAt?: number | undefined;
   readonly blockedUntil?: number | undefined;
+  readonly at?: number | undefined;
 }
 
 ### build/api.d.mts#QuotaWindow
@@ -791,7 +793,7 @@ export type Transport<S extends Signal = AbortSignal> = (exchange: Exchange, sig
 ### build/api.d.mts#WithQuotaOptions
 interface WithQuotaOptions<A extends readonly unknown[], R> {
   readonly cost?: number | ((...args: A) => number) | undefined;
-  readonly read?: ((result: R) => QuotaReading | undefined) | undefined;
+  readonly read?: ((result: R, gate: QuotaGate) => QuotaReading | undefined) | undefined;
   readonly onError?: ((error: unknown) => void) | undefined;
 }
 
@@ -838,7 +840,7 @@ export declare function statusLine(reply: Reply): string;
 export declare function tokenStore<S extends Signal = AbortSignal>(grant: (signal: S | undefined) => Promise<Grant>, now: () => number): Tokens<S>;
 
 ### build/api.d.mts#withQuota
-export declare function withQuota<A extends readonly unknown[], R>(gate: QuotaGate, call: (...args: A) => Promise<R>, options?: WithQuotaOptions<A, R>): (...args: A) => Promise<R>;
+export declare function withQuota<A extends readonly unknown[], R>(gate: QuotaGate | readonly QuotaGate[], call: (...args: A) => Promise<R>, options?: WithQuotaOptions<A, R>): (...args: A) => Promise<R>;
 
 ### build/classify.d.mts#Classified
 export interface Classified {
@@ -3732,6 +3734,7 @@ export interface PolitenessPolicy {
 export interface QuotaRecord {
   readonly spent: readonly (readonly [start: number, units: number])[];
   readonly blockedUntil?: number | undefined;
+  readonly readAt?: number | undefined;
 }
 
 ### build/politeness.d.mts#QuotaStore

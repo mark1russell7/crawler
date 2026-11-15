@@ -113,6 +113,21 @@ describe("VectorStore", () => {
     expect(store.search("e", v(0, 1, 0)).map((hit) => hit.sha)).toEqual(["s2", "s1"]);
   });
 
+  it("reads the vectors while a different process holds the write lock", async () => {
+    const { path, store } = await open();
+    write(store, "s1", [v(1, 0, 0)], ["a"]);
+    const writer = new DatabaseSync(path);
+    cleanups.push(() => writer.close());
+    writer.exec("PRAGMA busy_timeout = 0");
+    writer.exec("BEGIN IMMEDIATE");
+    // the read of the vectors takes no write lock: a write lock would wait, then throw "database is locked"
+    expect(store.search("e", v(1, 0, 0)).map((hit) => hit.sha)).toEqual(["s1"]);
+    writer.exec("COMMIT");
+    // the read transaction ends, and the store can write again
+    write(store, "s2", [v(0, 1, 0)], ["b"]);
+    expect(store.search("e", v(0, 1, 0)).map((hit) => hit.sha)).toEqual(["s2", "s1"]);
+  });
+
   it("refuses a vector of the wrong length and new dimensions for a known embedder", async () => {
     const { store } = await open();
     expect(() => write(store, "s1", [new Float32Array(2)], ["a"])).toThrow(

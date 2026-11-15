@@ -15,6 +15,9 @@ A prerelease version (`0.2.0-beta.1`) goes to the npm tag `next`. Each other ver
 
 ## Unreleased
 
+- **The search index, the vectors and the watch list open their files through `@mark1russell7/sqlite`**, as the host state store does since 0.6.3. The files (`index.sqlite`, `vectors.sqlite` and `watch.sqlite`) do not change. A file of each earlier version opens as before, and a file of a later version works as before.
+- **The vector store reads its vectors with `readTransaction` of `@mark1russell7/sqlite` 0.3.2**, in place of a hand-made `BEGIN`. As before, the read takes no write lock, so a writer of a different process does not wait for it. The work cannot write (`query_only`), and an error rolls back. A new test holds the write lock in a different connection during a search. The dependency is `^0.3.2`.
+
 ## 0.7.0 - 2026-11-15
 
 - **This version breaks the API of `polite-crawler/api`, so it is a minor version (0.7.0).** `read` of the options of `withQuota` gets the gate as its second argument: `(result, gate) => QuotaReading | undefined`. A function of one argument still fits. A program that calls `read` itself, or keeps it as a function of one argument, must give the gate too.

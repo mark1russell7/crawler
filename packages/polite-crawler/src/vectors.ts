@@ -1,5 +1,10 @@
 import type { DatabaseSync, StatementSync } from "node:sqlite";
-import { ensureProjection, openDatabase, transaction } from "@mark1russell7/sqlite";
+import {
+  ensureProjection,
+  openDatabase,
+  readTransaction,
+  transaction,
+} from "@mark1russell7/sqlite";
 
 /**
  * The vector store keeps the vectors of hybrid search in `vectors.sqlite`, beside the index. It is
@@ -416,17 +421,10 @@ export class VectorStore {
     const dims = this.dimensions(embedder);
     if (dims === undefined) return undefined;
     // one read transaction: the count, the rows and the pointers come from one snapshot of the file.
-    // The `transaction` of @mark1russell7/sqlite starts only `BEGIN IMMEDIATE`, which takes the write
-    // lock and waits for the writers. TODO(sqlite): use a read transaction (`BEGIN DEFERRED`) of
-    // @mark1russell7/sqlite when it has one, and remove this code.
-    this.db.exec("BEGIN");
-    try {
-      const matrix = this.load(embedder, dims, version);
-      this.matrices.set(embedder, matrix);
-      return matrix;
-    } finally {
-      if (this.db.isTransaction) this.db.exec("COMMIT");
-    }
+    // It takes no write lock, so a writer on a different connection does not wait for it.
+    const matrix = readTransaction(this.db, () => this.load(embedder, dims, version));
+    this.matrices.set(embedder, matrix);
+    return matrix;
   }
 
   private load(embedder: string, dims: number, version: number): Matrix {

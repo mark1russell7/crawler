@@ -92,6 +92,22 @@ describe("the readings of one document", () => {
     expect(read.notes).toEqual([]);
   });
 
+  it("reads the hours of a bar as a different schedule, and not each word that has bar in it", () => {
+    const readingsOf = (text: string) =>
+      venueReadingsOf({ url: `${FORNO}/`, text, meta: {} }).readings.map((one) => [
+        one.rank,
+        one.label,
+        one.schedule,
+      ]);
+    expect(readingsOf(`Forno Esempio\n\n${HOURS_TEXT}\n\nBar hours\nFriday 4pm - 11pm`)).toEqual([
+      [1, "Hours", "opening"],
+      [4, "Bar hours", "other"],
+    ]);
+    expect(readingsOf("Forno Esempio\n\nBarbecue hours\nSaturday 12pm - 4pm")).toEqual([
+      [1, "Barbecue hours", "opening"],
+    ]);
+  });
+
   it("reads only the location of the venue on a page that lists more than one", () => {
     const branch = (street: string, lat: number, days: string) => ({
       "@type": "Restaurant",

@@ -369,14 +369,14 @@ const HOURS_TYPES =
  * different thing, for example a phone number, and such a line tells nothing.
  */
 const OTHER_SCHEDULE =
-  /brunch|lunch|dinner|breakfast|happy|kitchen|bar|deliver|take.?out|pick.?up|patio|holiday|season|summer|winter|special|late|menu/i;
+  /brunch|lunch|dinner|breakfast|happy|kitchen|\bbar\b|deliver|take.?out|pick.?up|patio|holiday|season|summer|winter|special|late|menu/i;
 
 /**
  * A label of a service beside the opening hours, or of an office. Its hours are a different
  * schedule, also when the label says "hours" ("Happy hour", "Kitchen hours", "Office hours").
  */
 const SERVICE =
-  /happy|kitchen|deliver|take.?out|pick.?up|brunch|holiday|special|patio|bar|late.?night|office/i;
+  /happy|kitchen|deliver|take.?out|pick.?up|brunch|holiday|special|patio|\bbar\b|late.?night|office/i;
 
 const rankOf = (from: VenueReading["from"], label: string | null): number => {
   if (from === "jsonld") return 0;

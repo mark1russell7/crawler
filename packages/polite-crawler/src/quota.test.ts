@@ -408,7 +408,7 @@ describe("a list of gates", () => {
     expect(() => withQuota([noGiveBack], () => Promise.resolve())).not.toThrow();
     const again = quotaGate(minute.quota, { key: "k" });
     expect(() => withQuota([minute, again], () => Promise.resolve())).toThrow(
-      "Two gates of the list have the quota Example per minute of k.",
+      "Two gates of the list have the quota Example per minute of k. Give each quota a different name.",
     );
   });
 });

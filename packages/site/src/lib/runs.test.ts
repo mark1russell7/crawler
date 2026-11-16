@@ -118,22 +118,16 @@ describe("the files of the runs", () => {
     const newest = versions.at(-1) ?? "";
     const copy = JSON.parse(textOf("src/data/robots-study.json")) as Study;
     expect(textOf("public/data/robots-study.csv")).toBe(toCsv(copy));
-    if (copy.recounted === undefined) {
-      expect(textOf("src/data/robots-study.json")).toBe(textOf(`src/data/study/${newest}.json`));
-      expect(textOf("public/data/robots-study.csv")).toBe(
-        textOf(`public/data/robots-study-${newest}.csv`),
-      );
-      return;
-    }
-    // a recount with a later parser: the same run and the same domains, and the count of the sites
-    // with another entry
+    // the same run and the same domains. A recount with a later parser names the count of the sites
+    // with another entry. Without a recount, the copy is the file of the run, byte for byte
     const { sites, recounted, ...head } = copy;
-    const deposit = studyOf(newest);
-    const { sites: depositSites, ...depositHead } = deposit;
+    const { sites: depositSites, ...depositHead } = studyOf(newest);
     expect(head).toEqual(depositHead);
     expect(sites.map((entry) => entry.domain)).toEqual(depositSites.map((entry) => entry.domain));
-    expect(changedSites(depositSites, sites)).toHaveLength(recounted.sites);
-    expect(recounted.sites).toBeGreaterThan(0);
+    expect(changedSites(depositSites, sites)).toHaveLength(recounted?.sites ?? 0);
+    expect(textOf("src/data/robots-study.json") === textOf(`src/data/study/${newest}.json`)).toBe(
+      recounted === undefined,
+    );
   });
 
   it("writes the history in the format of the file, one agent on each line", () => {

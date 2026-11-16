@@ -9,6 +9,7 @@
 //   pnpm exec tsx packages/site/scripts/robots-study.ts tranco <out.csv>
 //   pnpm exec tsx packages/site/scripts/robots-study.ts fetch <tranco.csv> <list id> <list date> [store dir]
 //   pnpm exec tsx packages/site/scripts/robots-study.ts derive <store dir>
+//   pnpm exec tsx packages/site/scripts/robots-study.ts recount
 //   pnpm exec tsx packages/site/scripts/robots-study.ts history
 //   pnpm exec tsx packages/site/scripts/robots-study.ts doi <version> <doi>
 //   pnpm exec tsx packages/site/scripts/robots-study.ts report <out.md> [check...]
@@ -26,7 +27,13 @@
 // request.
 //
 // `derive` reads answers.ndjson and the bodies again and writes the files of the run. It sends no
-// request, so a change to the classification in src/lib/study.ts needs no new run.
+// request, so a change to the classification in src/lib/study.ts needs no new run. For the newest
+// run, it also writes the raw file src/data/robots-study.raw.ndjson.gz: the answers with their bodies.
+//
+// `recount` counts the rules of the newest run again from its raw file, with the parser of the
+// workspace, and writes the copy that the pages read. The files of the run stay as Zenodo has them.
+// A test of the site does the same count at each commit: when a new parser changes an entry, the
+// test names the sites, and this command takes the new entries into the pages.
 //
 // `history` writes study-history.json again from the files in src/data/study, and keeps each DOI.
 // `doi` records the DOI of a version on Zenodo in the history, and in study-doi.json for the newest run.
@@ -43,18 +50,15 @@ import {
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import type { Robots, RobotsDecision } from "polite-crawler";
 import {
-  ALLOW_ALL,
   CaptureLog,
   Crawler,
   DEFAULT_TOKEN,
   DocIndex,
   FileBlobStore,
-  decide,
+  VERSION,
   defaultUserAgent,
 } from "polite-crawler";
-import { robotsFromResponse } from "polite-crawler/robots";
 import type { StudyDoi } from "../src/lib/cite.ts";
 import { studyVersion } from "../src/lib/cite.ts";
 import { studyDoiFile } from "../src/lib/dataset.ts";
@@ -72,60 +76,16 @@ import {
   withDoi,
   withRun,
 } from "../src/lib/runs.ts";
-import type { RawAnswer, Study, StudySite } from "../src/lib/study.ts";
-import { DATA_LICENSE, answerOf, runCommit, toCsv } from "../src/lib/study.ts";
-
-/** The agents of the study, in the order of the dataset. */
-const AGENTS = [
-  // crawlers that collect training data (or tokens that control the use for training)
-  { token: "GPTBot", owner: "OpenAI", role: "training" },
-  { token: "ClaudeBot", owner: "Anthropic", role: "training" },
-  { token: "Google-Extended", owner: "Google", role: "training" },
-  { token: "CCBot", owner: "Common Crawl", role: "training" },
-  { token: "Applebot-Extended", owner: "Apple", role: "training" },
-  { token: "Bytespider", owner: "ByteDance", role: "training" },
-  { token: "meta-externalagent", owner: "Meta", role: "training" },
-  // crawlers for AI search
-  { token: "OAI-SearchBot", owner: "OpenAI", role: "search" },
-  { token: "Claude-SearchBot", owner: "Anthropic", role: "search" },
-  { token: "PerplexityBot", owner: "Perplexity", role: "search" },
-  // agents that fetch a page because a person asked
-  { token: "ChatGPT-User", owner: "OpenAI", role: "user" },
-  { token: "Claude-User", owner: "Anthropic", role: "user" },
-  { token: "Perplexity-User", owner: "Perplexity", role: "user" },
-  // controls
-  { token: "Googlebot", owner: "Google", role: "control" },
-  { token: DEFAULT_TOKEN, owner: "polite-crawler", role: "control" },
-] as const;
-
-/** A page path that no rule names: a site that refuses it refuses the agent for its pages. */
-const PAGE_PATH = "/polite-crawler-study/a-page";
-
-/** One line of answers.ndjson: what the crawler got for one domain. */
-interface Stored {
-  readonly rank: number;
-  readonly domain: string;
-  readonly url: string;
-  readonly status: number;
-  readonly outcome: string;
-  readonly contentType?: string;
-  readonly note?: string;
-  readonly blob?: string;
-  readonly bytes?: number;
-}
-
-/** The facts of a run, in run.json. */
-interface Run {
-  readonly list: Study["list"];
-  readonly fetched: Study["fetched"];
-  readonly userAgent: string;
-  readonly runner?: string;
-  readonly commit?: string;
-}
+import type { Study } from "../src/lib/study.ts";
+import { runCommit, toCsv } from "../src/lib/study.ts";
+import { changedSites, sitesOf, studyText } from "../src/lib/study-derive.ts";
+import type { KeptAnswer, RawRun, RunFacts, StoredAnswer } from "../src/lib/study-raw.ts";
+import { RAW_FILE, rawFile, readRawFile } from "../src/lib/study-raw.ts";
 
 const site = fileURLToPath(new URL("..", import.meta.url));
 const jsonOut = join(site, "src/data/robots-study.json");
 const csvOut = join(site, "public/data/robots-study.csv");
+const rawOut = join(site, RAW_FILE);
 const runsDir = join(site, "src/data/study");
 const historyOut = join(site, "src/data/study-history.json");
 const doiOut = join(site, "src/data/study-doi.json");
@@ -139,9 +99,9 @@ const readHistory = (): StudyHistory =>
 
 /**
  * This function writes the files of one run: its dataset, its CSV and its line in the history. When
- * the run is the newest, it also writes the latest copy that the pages read.
+ * the run is the newest, it also writes the latest copy that the pages read, and gives true.
  */
-const writeRun = (text: string): void => {
+const writeRun = (text: string): boolean => {
   const study = JSON.parse(text) as Study;
   const version = studyVersion(study);
   const csv = toCsv(study);
@@ -152,12 +112,14 @@ const writeRun = (text: string): void => {
   const history = withRun(readHistory(), runOf(study));
   writeFileSync(historyOut, historyText(history));
   const written = [runJson(version), runCsv(version), historyOut];
-  if (latestRun(history)?.version === version) {
+  const newest = latestRun(history)?.version === version;
+  if (newest) {
     writeFileSync(jsonOut, text);
     writeFileSync(csvOut, csv);
     written.push(jsonOut, csvOut);
   }
   console.info(`wrote ${written.join(", ")}`);
+  return newest;
 };
 
 /** This function gets the newest daily Tranco list through polite-crawler and writes its top domains. */
@@ -207,17 +169,6 @@ const tranco = async (out: string): Promise<void> => {
   }
 };
 
-/** One code for each agent: refused by a named group, refused by `*`, permitted by a named group, permitted. */
-const code = (decision: RobotsDecision, token: string): string => {
-  // the product token of a user-agent line, as the parser matches it
-  const tokenOf = (agent: string): string => /^[a-z_-]+/.exec(agent.trim())?.[0] ?? "";
-  const named = (decision.groups ?? []).some((group) =>
-    group.agents.some((agent) => agent !== "*" && tokenOf(agent) === token.toLowerCase()),
-  );
-  if (!decision.allowed) return named ? "N" : "S";
-  return named ? "n" : ".";
-};
-
 const fetchAll = async (
   csv: string,
   listId: string,
@@ -263,7 +214,7 @@ const fetchAll = async (
         accept: "text/plain",
         maxBytes: 512 * 1024,
       });
-      const stored: Stored = {
+      const stored: StoredAnswer = {
         rank,
         domain,
         url: fetched.url,
@@ -281,7 +232,7 @@ const fetchAll = async (
   );
   await crawler.close();
   const runner = process.env["STUDY_RUNNER"]?.trim();
-  const run: Run = {
+  const run: RunFacts = {
     list: {
       name: "Tranco",
       id: listId,
@@ -299,119 +250,56 @@ const fetchAll = async (
   return store;
 };
 
-const derive = async (store: string): Promise<void> => {
-  const run = JSON.parse(readFileSync(join(store, "run.json"), "utf8")) as Run;
+/** This function reads a store of the fetch step: its run, its answers and their bodies. */
+const readStore = async (store: string): Promise<RawRun> => {
+  const run = JSON.parse(readFileSync(join(store, "run.json"), "utf8")) as RunFacts;
   const blobs = new FileBlobStore(join(store, "blobs"));
   const stored = readFileSync(join(store, "answers.ndjson"), "utf8")
     .split("\n")
     .filter((line) => line.length > 0)
-    .map((line) => JSON.parse(line) as Stored)
-    .sort((a, b) => a.rank - b.rank);
-  const sites: StudySite[] = [];
+    .map((line) => JSON.parse(line) as StoredAnswer);
+  const answers: KeptAnswer[] = [];
   for (const answer of stored) {
     const body = answer.blob === undefined ? undefined : await blobs.get(answer.blob);
-    const text = body === undefined ? undefined : new TextDecoder("utf-8").decode(body);
-    const raw: RawAnswer = {
-      status: answer.status,
-      outcome: answer.outcome,
-      contentType: answer.contentType,
-      text,
-      note: answer.note,
-    };
-    const { state, html, reason } = answerOf(raw);
-    const host = new URL(answer.url).host;
-    const counted = state === "file" || state === "none";
-    // the rules: a file is read as the crawler reads it (robotsFromResponse), and no file gives no rules
-    const robots: Robots =
-      state === "file"
-        ? robotsFromResponse(200, answer.contentType, body ?? new Uint8Array())
-        : ALLOW_ALL;
-    const out: {
-      -readonly [key in keyof StudySite]: StudySite[key];
-    } = { rank: answer.rank, domain: answer.domain, status: answer.status, state, p: "" };
-    if (host !== answer.domain) out.host = host;
-    if (reason !== undefined) out.reason = reason.replace(/\s+/g, " ").trim().slice(0, 160);
-    if (html) out.html = true;
-    if (state === "file") {
-      out.bytes = answer.bytes ?? 0;
-      out.groups = robots.groups.length;
-      // a file can repeat its signal in each group: keep each line one time. Only the content signals
-      // count here, not the RSL License lines that the parser also keeps
-      const signals = [
-        ...new Set(
-          robots.signals
-            .filter((line) => /^content-(?:signal|usage):/i.test(line))
-            .map((line) => line.trim().slice(0, 200)),
-        ),
-      ];
-      if (signals.length > 0) out.signals = signals;
-      if (robots.sitemaps.length > 0) out.sitemaps = robots.sitemaps.length;
-    }
-    if (!counted) {
-      const mark = state === "blocked" ? "B" : "U";
-      out.p = mark.repeat(AGENTS.length);
-      sites.push(out);
-      continue;
-    }
-    const source = text?.split(/\r\n|\r|\n/) ?? [];
-    const lines: Record<string, string> = {};
-    const refs: Array<[number, number] | 0> = [];
-    let page = "";
-    let home = "";
-    for (const agent of AGENTS) {
-      const onPage = decide(robots, [agent.token], PAGE_PATH);
-      const onHome = decide(robots, [agent.token], "/");
-      page += code(onPage, agent.token);
-      home += code(onHome, agent.token);
-      const group = onPage.groups?.find(
-        (candidate) => onPage.rule !== undefined && candidate.rules.includes(onPage.rule),
-      );
-      const ruleLine = onPage.rule?.line ?? 0;
-      const groupLine = group?.line ?? 0;
-      if (ruleLine > 0 && state === "file") {
-        refs.push([groupLine, ruleLine]);
-        for (const line of [groupLine, ruleLine]) {
-          if (line > 0) lines[String(line)] = (source[line - 1] ?? "").trim().slice(0, 160);
-        }
-      } else refs.push(0);
-      if (
-        agent.token === DEFAULT_TOKEN &&
-        onPage.crawlDelaySeconds !== undefined &&
-        state === "file"
-      )
-        out.delay = onPage.crawlDelaySeconds;
-    }
-    out.p = page;
-    if (home !== page) out.h = home;
-    if (refs.some((ref) => ref !== 0)) {
-      out.r = refs;
-      out.lines = lines;
-    }
-    sites.push(out);
+    answers.push(body === undefined ? answer : { ...answer, body });
   }
+  return { run, answers };
+};
 
-  const head = JSON.stringify({
-    list: run.list,
-    fetched: run.fetched,
-    userAgent: run.userAgent,
-    ...(run.runner === undefined ? {} : { runner: run.runner }),
-    ...(run.commit === undefined ? {} : { commit: run.commit }),
-    pagePath: PAGE_PATH,
-    license: DATA_LICENSE.id,
-    agents: AGENTS,
-  });
-  // one site on each line, so that the next run gives a readable diff
-  writeRun(
-    [
-      `${head.slice(0, -1)},"sites":[`,
-      sites.map((entry) => JSON.stringify(entry)).join(",\n"),
-      "]}",
-      "",
-    ].join("\n"),
-  );
+const derive = async (store: string): Promise<void> => {
+  const raw = await readStore(store);
+  const sites = sitesOf(raw.answers);
+  if (writeRun(studyText(raw.run, sites))) {
+    writeFileSync(rawOut, rawFile(raw));
+    console.info(`wrote ${rawOut}`);
+  }
   const states = new Map<string, number>();
   for (const entry of sites) states.set(entry.state, (states.get(entry.state) ?? 0) + 1);
   console.info(`${String(sites.length)} sites`, Object.fromEntries(states));
+};
+
+/**
+ * This function counts the rules of the newest run again from its raw file, with the parser of the
+ * workspace. Then it writes the copy that the pages read. When each entry is the same as in the files
+ * of the run, the copy is the dataset of the run again. Else the copy names the version and the count.
+ */
+const recount = (): void => {
+  const raw = readRawFile(readFileSync(rawOut));
+  const sites = sitesOf(raw.answers);
+  const version = raw.run.fetched.from.slice(0, 10);
+  const runText = readFileSync(runJson(version), "utf8");
+  const changed = changedSites((JSON.parse(runText) as Study).sites, sites);
+  const text =
+    changed.length === 0
+      ? runText
+      : studyText(raw.run, sites, { engine: VERSION, sites: changed.length });
+  writeFileSync(jsonOut, text);
+  writeFileSync(csvOut, toCsv(JSON.parse(text) as Study));
+  console.info(
+    changed.length === 0
+      ? `wrote ${jsonOut} and ${csvOut}: each entry is the same as in the run of ${version}`
+      : `wrote ${jsonOut} and ${csvOut}: ${String(changed.length)} sites changed (${changed.join(", ")})`,
+  );
 };
 
 /** This function writes study-history.json again from the files of the runs, and keeps each DOI. */
@@ -449,6 +337,7 @@ const USAGE = [
   "usage: robots-study.ts tranco <out.csv>",
   "       robots-study.ts fetch <tranco.csv> <list id> <list date> [store dir]",
   "       robots-study.ts derive <store dir>",
+  "       robots-study.ts recount",
   "       robots-study.ts history",
   "       robots-study.ts doi <version> <doi>",
   "       robots-study.ts report <out.md> [check...]",
@@ -460,6 +349,8 @@ if (command === "fetch" && args.length >= 3) {
   await derive(await fetchAll(csv, listId, listDate, store));
 } else if (command === "derive" && args[0] !== undefined) {
   await derive(args[0]);
+} else if (command === "recount") {
+  recount();
 } else if (command === "tranco" && args[0] !== undefined) {
   await tranco(args[0]);
 } else if (command === "history") {

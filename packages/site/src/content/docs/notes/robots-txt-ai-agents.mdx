@@ -19,7 +19,7 @@ head:
 
 import { Code } from "@astrojs/starlight/components";
 import study from "../../../data/robots-study.json";
-import { STUDY_LIMIT_TEXT } from "../../../lib/data-stamps.ts";
+import { STUDY_ENGINE_VERSION, STUDY_LIMIT_TEXT } from "../../../lib/data-stamps.ts";
 import studyDoi from "../../../data/study-doi.json";
 import history from "../../../data/study-history.json";
 import { PRESS_CONTACT, bibtex, conceptOf, datasetCitation, doiOf, doiUrl, studyCitation, studyVersion } from "../../../lib/cite.ts";
@@ -145,7 +145,7 @@ The table gives each run, the newest first. The DOI of a run comes after the own
 1. **The list.** The study used the top 1,000 domains of the Tranco list <code>{study.list.id}</code>, from {study.list.date}. Tranco makes the list from the ranks of five sources across 30 days.
 2. **The requests.** The crawler sent one request for `https://<domain>/robots.txt` to each domain, and followed a maximum of 5 redirects. It did not try again, and it did not try `www.<domain>`. All requests went out from one computer{study.runner !== undefined ? ` (${study.runner})` : ""} on {day}, with a new, empty store.
 3. **The User-Agent.** Each request sent <code>{study.userAgent}</code>, with no contact. The address in it goes to [the page for site owners](../../bot/).
-4. **The verdicts.** The function `decide` of polite-crawler decided each agent alone, as RFC 9309 specifies. The path was <code>{study.pagePath}</code>, a page path that no site names. Thus a refusal of this path is a refusal of the pages of the site.
+4. **The verdicts.** The function `decide` of polite-crawler {STUDY_ENGINE_VERSION} decided each agent alone, as RFC 9309 specifies. The path was <code>{study.pagePath}</code>, a page path that no site names. Thus a refusal of this path is a refusal of the pages of the site. The repository keeps the robots.txt files of the run, and CI counts the rules again with each version of the parser.{study.recounted === undefined ? "" : ` ${study.recounted.sites} sites have another entry than in the dataset on Zenodo, because version ${study.recounted.engine} reads their files in another way.`}
 5. **Redirects.** RFC 9309 lets a crawler read more than 5 redirects as "no file". The study, as the crawler, reads them as unreachable.
 6. **One file for two domains.** Two domains can redirect to the same file. The crawler then asks for the file a second time with its `ETag`, and the server can answer `304 Not Modified`. The study uses the stored copy of the file, as the crawler does.
 

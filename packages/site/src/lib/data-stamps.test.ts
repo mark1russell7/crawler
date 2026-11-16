@@ -8,6 +8,7 @@ import history from "../data/study-history.json";
 import {
   EVAL_A_LIMIT_DAYS,
   EVAL_A_LIMIT_TEXT,
+  STUDY_ENGINE_VERSION,
   STUDY_LIMIT_DAYS,
   STUDY_LIMIT_TEXT,
   STUDY_PAGES,
@@ -142,11 +143,21 @@ describe("studyLimitStamps", () => {
     expect(new Set(stamps.map((stamp) => JSON.stringify([stamp.limit, stamp.runs]))).size).toBe(1);
     expect(stamps[0]?.limit?.days).toBe(33);
     expect(stamps[0]?.runs[0]?.date).toBe(study.fetched.from);
-    expect(stamps[0]?.runs[0]?.engines).toEqual({ "polite-crawler": versionOf(study.userAgent) });
+    expect(stamps[0]?.runs[0]?.engines).toEqual({ "polite-crawler": STUDY_ENGINE_VERSION });
+  });
+
+  it("names the parser of the workspace, not the version that fetched the files", () => {
+    const crawler = JSON.parse(
+      readFileSync(new URL("../../../polite-crawler/package.json", import.meta.url), "utf8"),
+    ) as { readonly version: string };
+    expect(STUDY_ENGINE_VERSION).toBe(crawler.version);
+    expect(studyLimitStamps(study, "9.9.9")[0]?.runs[0]?.engines).toEqual({
+      "polite-crawler": "9.9.9",
+    });
   });
 
   it("names the full commit of the run on each page when the data has one", () => {
-    const run = { fetched: { from: "2026-12-02T06:40:00.000Z" }, userAgent: study.userAgent };
+    const run = { fetched: { from: "2026-12-02T06:40:00.000Z" } };
     const commit = "ce312b9c3bd9676f8379f841d80c62a44c4fb6f8";
     for (const stamp of studyLimitStamps({ ...run, commit })) {
       expect(stamp.runs, stamp.page).toEqual([
@@ -154,7 +165,7 @@ describe("studyLimitStamps", () => {
           id: "study of 2026-12-02",
           url: "https://github.com/mark1russell7/crawler/actions/workflows/study-monthly.yml",
           date: run.fetched.from,
-          engines: { "polite-crawler": versionOf(study.userAgent) },
+          engines: { "polite-crawler": STUDY_ENGINE_VERSION },
           commit,
         },
       ]);

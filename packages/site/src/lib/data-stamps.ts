@@ -7,6 +7,7 @@ import evalA from "../data/eval-a.json";
 import evalB from "../data/eval-b.json";
 import survey from "../data/restaurant-survey.json";
 import study from "../data/robots-study.json";
+import crawlerPackage from "polite-crawler/package.json";
 
 const REPOSITORY = "https://github.com/mark1russell7/crawler";
 
@@ -76,18 +77,28 @@ export const STUDY_PAGES = [
   "bot/index.html",
 ] as const;
 
+/**
+ * The version of polite-crawler in the workspace. At each commit, a test counts the rules of the
+ * study again with this parser (study-derive.test.ts). Thus the numbers of the study pages come from
+ * this version, and the date of the fetch is the only age of their data.
+ */
+export const STUDY_ENGINE_VERSION: string = crawlerPackage.version;
+
 /** The facts of a study run that its stamp names. */
 export interface StudyRunFacts {
   readonly fetched: { readonly from: string };
-  readonly userAgent: string;
   readonly commit?: string;
 }
 
 /**
  * This function gives the stamps of the pages that show the robots.txt study. The default run is
- * the newest run in the repository. A run with a commit gives the commit to the freshness gate.
+ * the newest run in the repository. The engine is the parser that counted the rules, not the
+ * version that fetched the files. A run with a commit gives the commit to the freshness gate.
  */
-export function studyLimitStamps(latest: StudyRunFacts = study): PageStamp[] {
+export function studyLimitStamps(
+  latest: StudyRunFacts = study,
+  engine: string = STUDY_ENGINE_VERSION,
+): PageStamp[] {
   return STUDY_PAGES.map((page) => ({
     page,
     limit: {
@@ -101,7 +112,7 @@ export function studyLimitStamps(latest: StudyRunFacts = study): PageStamp[] {
         id: `study of ${latest.fetched.from.slice(0, 10)}`,
         url: `${REPOSITORY}/actions/workflows/study-monthly.yml`,
         date: latest.fetched.from,
-        engines: { "polite-crawler": versionOf(latest.userAgent) },
+        engines: { "polite-crawler": engine },
         ...(latest.commit === undefined ? {} : { commit: latest.commit }),
       },
     ],

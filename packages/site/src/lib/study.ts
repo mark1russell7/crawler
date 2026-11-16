@@ -75,6 +75,8 @@ export interface Study {
   readonly userAgent: string;
   /** where the requests went out, for example a GitHub Actions runner. The dataset of 12 October 2026 has none. */
   readonly runner?: string;
+  /** the full commit of the code that ran the study. The runs to 2 November 2026 have none. */
+  readonly commit?: string;
   readonly pagePath: string;
   /** the license of the dataset, as an SPDX id */
   readonly license?: string;
@@ -126,6 +128,22 @@ export const STUDY_AUTHOR = {
   name: "Mark Russell",
   url: "https://github.com/mark1russell7",
 } as const;
+
+/**
+ * The commit of a run, from the environment of the run: a full git commit of 40 hexadecimal
+ * characters. An empty value gives no commit. A short or invalid value stops the run, because the
+ * record must name one commit.
+ */
+export function runCommit(value: string | undefined): string | undefined {
+  const commit = value?.trim() ?? "";
+  if (commit.length === 0) return undefined;
+  if (!/^[0-9a-f]{40}$/.test(commit)) {
+    throw new Error(
+      `The commit of the run must be a full git commit of 40 hexadecimal characters, not "${commit}".`,
+    );
+  }
+  return commit;
+}
 
 /* ---------------------------------------------------------------------------------------------- */
 /* The classification of one answer                                                               */

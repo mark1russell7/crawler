@@ -145,6 +145,25 @@ describe("studyLimitStamps", () => {
     expect(stamps[0]?.runs[0]?.engines).toEqual({ "polite-crawler": versionOf(study.userAgent) });
   });
 
+  it("names the full commit of the run on each page when the data has one", () => {
+    const run = { fetched: { from: "2026-12-02T06:40:00.000Z" }, userAgent: study.userAgent };
+    const commit = "ce312b9c3bd9676f8379f841d80c62a44c4fb6f8";
+    for (const stamp of studyLimitStamps({ ...run, commit })) {
+      expect(stamp.runs, stamp.page).toEqual([
+        {
+          id: "study of 2026-12-02",
+          url: "https://github.com/mark1russell7/crawler/actions/workflows/study-monthly.yml",
+          date: run.fetched.from,
+          engines: { "polite-crawler": versionOf(study.userAgent) },
+          commit,
+        },
+      ]);
+    }
+    for (const stamp of studyLimitStamps(run)) {
+      expect(stamp.runs[0], stamp.page).not.toHaveProperty("commit");
+    }
+  });
+
   it("shows the limit in plain words on each page, from the one data file", () => {
     for (const page of STUDY_PAGES) {
       const text = readFileSync(new URL(SOURCE_OF_PAGE[page], SRC), "utf8");

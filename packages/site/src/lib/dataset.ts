@@ -135,7 +135,7 @@ ${table(
 ## The method
 
 1. **The list.** The study used the top ${size} domains of the Tranco list \`${study.list.id}\` (${study.list.url}), from ${study.list.date}. Tranco makes the list from the ranks of five sources across 30 days.
-2. **The requests.** The crawler polite-crawler sent one request for \`https://<domain>/robots.txt\` to each domain, and followed a maximum of 5 redirects. It did not try again, and it did not try \`www.<domain>\`. All requests went out from one computer${study.runner === undefined ? "" : ` (${study.runner})`}, with a new, empty store.
+2. **The requests.** The crawler polite-crawler sent one request for \`https://<domain>/robots.txt\` to each domain, and followed a maximum of 5 redirects. It did not try again, and it did not try \`www.<domain>\`. All requests went out from one computer${study.runner === undefined ? "" : ` (${study.runner})`}, with a new, empty store.${study.commit === undefined ? "" : ` The code of the run was the commit \`${study.commit}\` of the repository.`}
 3. **The User-Agent.** Each request sent \`${study.userAgent}\`, with no contact.
 4. **The verdicts.** The function \`decide\` of polite-crawler decided each agent alone, as RFC 9309 specifies. The path was \`${study.pagePath}\`, a page path that no site names. Thus a refusal of this path is a refusal of the pages of the site.
 5. **The answers.** The study put each answer into one of four states:
@@ -204,6 +204,7 @@ The verdicts:
 - \`fetched\`: the time of the first request and of the last answer (\`from\`, \`to\`), in ISO 8601 and UTC.
 - \`userAgent\`, \`pagePath\` and \`license\` (an SPDX id).
 - \`runner\`: the computer that sent the requests, for example a GitHub Actions runner. The first run does not have this field.
+- \`commit\`: the full git commit of the code that ran the study. The runs of 2 November 2026 and before do not have this field.
 - \`agents\`: the agents, in the sequence of the codes (\`token\`, \`owner\`, \`role\`). The role is \`training\`, \`search\`, \`user\` or \`control\`.
 - \`sites\`: one object for each domain, in the sequence of the ranks:
   - \`rank\`, \`domain\`, \`status\`, \`state\`, and \`host\` when it is different from the domain.

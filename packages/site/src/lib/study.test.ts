@@ -9,6 +9,7 @@ import {
   formatDay,
   niceMax,
   pack,
+  runCommit,
   summarize,
   ticks,
   toCsv,
@@ -277,5 +278,42 @@ describe("the dataset in the repository", () => {
       "utf8",
     );
     expect(csv).toBe(toCsv(real));
+  });
+});
+
+interface HistoryRun {
+  readonly version: string;
+  readonly fetched: { readonly from: string };
+}
+
+describe("the commit of a run", () => {
+  it("keeps a full commit of 40 hexadecimal characters, without the spaces around it", () => {
+    const commit = "ce312b9c3bd9676f8379f841d80c62a44c4fb6f8";
+    expect(runCommit(commit)).toBe(commit);
+    expect(runCommit(` ${commit}\t\r\n`)).toBe(commit);
+  });
+
+  it("gives no commit for an empty value", () => {
+    expect(runCommit(undefined)).toBeUndefined();
+    expect(runCommit("")).toBeUndefined();
+    expect(runCommit("  ")).toBeUndefined();
+  });
+
+  it("stops for a short commit, a capital letter or a name of a branch", () => {
+    for (const value of ["ce312b9", "CE312B9C3BD9676F8379F841D80C62A44C4FB6F8", "main"]) {
+      expect(() => runCommit(value), value).toThrow(/40 hexadecimal characters/);
+    }
+  });
+
+  it("is in no run of 2 November 2026 or before, so the deposited files stay the same", () => {
+    const runs = new URL("../data/study/", import.meta.url);
+    const history = JSON.parse(
+      readFileSync(new URL("../data/study-history.json", import.meta.url), "utf8"),
+    ) as { readonly runs: readonly HistoryRun[] };
+    for (const run of history.runs) {
+      if (run.fetched.from >= "2026-11-03") continue;
+      const text = readFileSync(new URL(`${run.version}.json`, runs), "utf8");
+      expect(text, run.version).not.toContain('"commit":');
+    }
   });
 });

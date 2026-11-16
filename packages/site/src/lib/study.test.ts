@@ -290,8 +290,7 @@ describe("the commit of a run", () => {
   it("keeps a full commit of 40 hexadecimal characters, without the spaces around it", () => {
     const commit = "ce312b9c3bd9676f8379f841d80c62a44c4fb6f8";
     expect(runCommit(commit)).toBe(commit);
-    expect(runCommit(` ${commit}
-`)).toBe(commit);
+    expect(runCommit(` ${commit}\t\r\n`)).toBe(commit);
   });
 
   it("gives no commit for an empty value", () => {

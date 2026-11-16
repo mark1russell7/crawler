@@ -15,6 +15,9 @@ A prerelease version (`0.2.0-beta.1`) goes to the npm tag `next`. Each other ver
 
 ## Unreleased
 
+- **A body in bytes for the API clients.** An `Exchange` of `polite-crawler/api` with `read: "bytes"` gets the body of the answer in `bytes` of the `Reply`, as a `Uint8Array`, and an empty `body`. Thus a client gets a binary file, for example a tarball, with the pace of its host. The default stays `text`, so each caller gets the same result as before. The two new fields are beta.
+- **`fetchTransport` and `poll` read bytes.** `fetchTransport` reads such a body with `arrayBuffer`. A `FetchLike` with no `arrayBuffer` gives an `ApiError` only for an exchange that reads bytes. `poll` takes the SHA-256 of the bytes, so it finds a change of a binary body that its text does not show.
+
 ## 0.7.6 - 2026-11-15
 
 - **The new function `chooseVenueReadings`.** It orders the readings of a venue, as `readVenue` does. It gives the best reading, the best reading of the site and the days of disagreement. `readVenue` uses it, and the result of `readVenue` does not change. The decision eval (part C of `eval/README.md`) uses it to score the choice of `readVenue` with no copy of the rule. The function and its type `VenueChoice` are beta.

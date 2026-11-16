@@ -73,6 +73,11 @@ export interface Exchange {
   readonly headers: Readonly<Record<string, string>>;
   /** This value is the body of the request, or null. */
   readonly body: string | null;
+  /**
+   * This value tells how the transport reads the body of the answer. The default `text` gives the
+   * body as text. With `bytes`, the reply has the body in `bytes`, and its `body` is empty.
+   */
+  readonly read?: "text" | "bytes" | undefined;
 }
 
 /**
@@ -86,7 +91,10 @@ export interface Reply {
   readonly statusText: string;
   /** These are the headers of the answer. Each name is in lowercase. */
   readonly headers: Readonly<Record<string, string>>;
+  /** This value is the body as text. It is empty when the exchange reads `bytes`. */
   readonly body: string;
+  /** This value is the body as bytes, when the exchange reads `bytes`. */
+  readonly bytes?: Uint8Array | undefined;
 }
 
 /**
@@ -459,6 +467,8 @@ export type FetchLike = (
   readonly statusText: string;
   readonly headers: { forEach(callback: (value: string, name: string) => void): void };
   text(): Promise<string>;
+  /** The transport uses this member only for an exchange that reads `bytes`. */
+  arrayBuffer?(): Promise<ArrayBuffer>;
 }>;
 
 /**
@@ -493,7 +503,8 @@ const USER_AGENT = /^[!-~](?:[ -~]{0,510}[!-~])?$/;
  * This function makes a transport over `fetch`. The transport sends the User-Agent, does not
  * follow a redirect, and stops a request after the time limit. A request that the time limit
  * stopped throws an error, and `send` counts it as a failure of the host. A request that the
- * signal stopped throws the reason of the signal.
+ * signal stopped throws the reason of the signal. For an exchange that reads `bytes`, the
+ * transport reads the body with `arrayBuffer`.
  *
  * @throws ApiError when the User-Agent is not printable ASCII, or when the time limit is not a positive number.
  * @beta
@@ -524,18 +535,23 @@ export function fetchTransport(options: FetchTransportOptions): Transport {
         redirect: "manual",
         signal: both,
       });
-      // the time limit also stops a body that does not end
-      const body = await response.text();
       const replyHeaders: Record<string, string> = {};
       response.headers.forEach((value, name) => {
         replyHeaders[name.toLowerCase()] = value;
       });
-      return {
+      const head = {
         status: response.status,
         statusText: response.statusText,
         headers: replyHeaders,
-        body,
       };
+      // the time limit also stops a body that does not end
+      if (exchange.read !== "bytes") return { ...head, body: await response.text() };
+      if (response.arrayBuffer === undefined) {
+        throw new ApiError(
+          "The fetch function gives no arrayBuffer, so the transport cannot read bytes.",
+        );
+      }
+      return { ...head, body: "", bytes: new Uint8Array(await response.arrayBuffer()) };
     } catch (error) {
       if (timeout.aborted && signal?.aborted !== true) {
         throw new Error(`no answer in ${String(Math.ceil(timeoutMs / 1000))} s`, { cause: error });
@@ -585,11 +601,10 @@ export interface Polled extends Answer {
 
 const HEX = "0123456789abcdef";
 
-/** This function gives the SHA-256 of a text, in hexadecimal. */
-const digestOf = async (text: string): Promise<string> => {
-  const bytes = new Uint8Array(
-    await globalThis.crypto.subtle.digest("SHA-256", new TextEncoder().encode(text)),
-  );
+/** This function gives the SHA-256 of a text or of bytes, in hexadecimal. */
+const digestOf = async (body: string | Uint8Array): Promise<string> => {
+  const data = typeof body === "string" ? new TextEncoder().encode(body) : body;
+  const bytes = new Uint8Array(await globalThis.crypto.subtle.digest("SHA-256", data));
   let hex = "";
   for (const byte of bytes) hex += (HEX[byte >> 4] ?? "") + (HEX[byte & 15] ?? "");
   return hex;
@@ -641,7 +656,7 @@ export async function poll<S extends Signal = AbortSignal>(
   let changed = false;
   if (reply.status === 304) verdict = "not-modified";
   else if (reply.status >= 200 && reply.status <= 299) {
-    const digest = await digestOf(reply.body);
+    const digest = await digestOf(reply.bytes ?? reply.body);
     changed = last?.digest !== digest;
     verdict = changed ? "changed" : "same";
     conditions.set(exchange.url, {

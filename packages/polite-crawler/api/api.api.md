@@ -57,6 +57,7 @@ export interface Exchange {
     readonly body: string | null;
     readonly headers: Readonly<Record<string, string>>;
     readonly method: string;
+    readonly read?: "text" | "bytes" | undefined;
     // (undocumented)
     readonly url: string;
 }
@@ -75,6 +76,7 @@ export type FetchLike = (url: string, init: {
         forEach(callback: (value: string, name: string) => void): void;
     };
     text(): Promise<string>;
+    arrayBuffer?(): Promise<ArrayBuffer>;
 }>;
 
 // @beta
@@ -322,8 +324,8 @@ export type Redact = (text: string, secrets: readonly string[]) => string;
 
 // @beta
 export interface Reply {
-    // (undocumented)
     readonly body: string;
+    readonly bytes?: Uint8Array | undefined;
     readonly headers: Readonly<Record<string, string>>;
     // (undocumented)
     readonly status: number;

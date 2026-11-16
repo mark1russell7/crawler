@@ -424,16 +424,18 @@ describe("sendWithToken", () => {
   });
 });
 
-/** A fetch function that records each call and gives a fixed answer. */
+/** A fetch function that records each call and gives a fixed answer. With `bytes`, the answer has `arrayBuffer`. */
 const fakeFetch = (
   answer: {
     status: number;
     statusText?: string;
     headers?: Record<string, string>;
     body?: string;
+    bytes?: Uint8Array;
   } = { status: 200 },
 ): { fetch: FetchLike; calls: { url: string; init: Parameters<FetchLike>[1] }[] } => {
   const calls: { url: string; init: Parameters<FetchLike>[1] }[] = [];
+  const { bytes } = answer;
   const fetch: FetchLike = (url, init) => {
     calls.push({ url, init });
     return Promise.resolve({
@@ -441,6 +443,7 @@ const fakeFetch = (
       statusText: answer.statusText ?? "",
       headers: new Headers(answer.headers ?? {}),
       text: () => Promise.resolve(answer.body ?? ""),
+      ...(bytes === undefined ? {} : { arrayBuffer: () => Promise.resolve(bytes.slice().buffer) }),
     });
   };
   return { fetch, calls };
@@ -500,6 +503,27 @@ describe("fetchTransport", () => {
     await transport(get({ "user-agent": "own/2.0" }), undefined);
     expect(calls[0]!.init.headers["user-agent"]).toBe("own/2.0");
     expect("body" in calls[0]!.init).toBe(false);
+  });
+
+  it("gives a binary body byte for byte to an exchange that reads bytes", async () => {
+    // the bytes of a gzip header, and two bytes that are not UTF-8
+    const binary = new Uint8Array([0x1f, 0x8b, 0x08, 0x00, 0xff, 0xfe]);
+    const { fetch } = fakeFetch({ status: 200, body: "not read", bytes: binary });
+    const transport = fetchTransport({ userAgent: "app/1.0", fetch });
+    const answer = await transport({ ...get(), read: "bytes" }, undefined);
+    expect(answer.body).toBe("");
+    expect(answer.bytes).toEqual(binary);
+    const text = await transport({ ...get(), read: "text" }, undefined);
+    expect(text.body).toBe("not read");
+    expect("bytes" in text).toBe(false);
+  });
+
+  it("refuses to read bytes with a fetch function that gives no arrayBuffer", async () => {
+    const { fetch } = fakeFetch({ status: 200, body: "x" });
+    const transport = fetchTransport({ userAgent: "app/1.0", fetch });
+    const error = await failure(transport({ ...get(), read: "bytes" }, undefined));
+    expect(error).toBeInstanceOf(ApiError);
+    expect(error.message).toContain("arrayBuffer");
   });
 
   it("refuses a User-Agent that is empty, that is not ASCII, or that has a control character", () => {
@@ -579,6 +603,30 @@ describe("poll", () => {
     // the SHA-256 of "b"
     expect(conditions.get(url)?.digest).toBe(
       "3e23e8160039594a33894f6564e1b1348bbd7a0088d42c4acb73eeaed59c009d",
+    );
+  });
+
+  it("compares the bytes of a body that reads bytes, also where their text is the same", async () => {
+    const { pace, clock } = fakePace();
+    // as text, each body is two U+FFFD characters
+    const bodies = [
+      new Uint8Array([0xff, 0xfe]),
+      new Uint8Array([0xff, 0xfe]),
+      new Uint8Array([0xff, 0xfd]),
+    ];
+    const { transport } = fakeTransport(clock, (_, index) => ({
+      ...reply(200, ""),
+      bytes: bodies[index],
+    }));
+    const conditions = new Map<string, Condition>();
+    const changed: boolean[] = [];
+    const bytes = input({ exchange: { ...input().exchange, read: "bytes" } });
+    for (let round = 0; round < bodies.length; round += 1)
+      changed.push((await poll(pace, transport, conditions, bytes)).changed);
+    expect(changed).toEqual([true, false, true]);
+    // the SHA-256 of the bytes ff fd
+    expect(conditions.get(url)?.digest).toBe(
+      "e37ebf9386af53684064f4c6053faf2ee35662571e72eabdad46108d841bd892",
     );
   });
 

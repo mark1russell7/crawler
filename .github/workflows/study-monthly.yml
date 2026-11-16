@@ -69,6 +69,8 @@ jobs:
           LIST_ID: ${{ steps.tranco.outputs.id }}
           LIST_DATE: ${{ steps.tranco.outputs.date }}
           STUDY_RUNNER: a GitHub Actions runner, ubuntu-latest
+          # the full commit of the code of the run: the dataset names it
+          STUDY_COMMIT: ${{ github.sha }}
         run: >-
           pnpm exec tsx packages/site/scripts/robots-study.ts fetch
           "$RUNNER_TEMP/tranco.csv" "$LIST_ID" "$LIST_DATE" "$RUNNER_TEMP/store"

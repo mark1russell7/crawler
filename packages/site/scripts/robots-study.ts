@@ -21,6 +21,9 @@
 // crawler sends no conditional request, so no answer is a 304. Without a store dir, it makes one in
 // the temp folder. The store keeps the capture log, the bodies and answers.ndjson. The environment
 // variable STUDY_RUNNER names the computer of the run in the dataset, for example a GitHub runner.
+// The variable STUDY_COMMIT gives the full git commit of the code of the run, for example the
+// commit of the workflow run. A value that is not a full commit stops the run before its first
+// request.
 //
 // `derive` reads answers.ndjson and the bodies again and writes the files of the run. It sends no
 // request, so a change to the classification in src/lib/study.ts needs no new run.
@@ -70,7 +73,7 @@ import {
   withRun,
 } from "../src/lib/runs.ts";
 import type { RawAnswer, Study, StudySite } from "../src/lib/study.ts";
-import { DATA_LICENSE, answerOf, toCsv } from "../src/lib/study.ts";
+import { DATA_LICENSE, answerOf, runCommit, toCsv } from "../src/lib/study.ts";
 
 /** The agents of the study, in the order of the dataset. */
 const AGENTS = [
@@ -117,6 +120,7 @@ interface Run {
   readonly fetched: Study["fetched"];
   readonly userAgent: string;
   readonly runner?: string;
+  readonly commit?: string;
 }
 
 const site = fileURLToPath(new URL("..", import.meta.url));
@@ -220,6 +224,8 @@ const fetchAll = async (
   listDate: string,
   given: string | undefined,
 ): Promise<string> => {
+  // before the first request: a run with an invalid commit stops here
+  const commit = runCommit(process.env["STUDY_COMMIT"]);
   const store = given ?? mkdtempSync(join(tmpdir(), "robots-study-"));
   if (existsSync(store) && readdirSync(store).length > 0) {
     console.error(
@@ -286,6 +292,7 @@ const fetchAll = async (
     fetched: { from, to: new Date().toISOString() },
     userAgent: defaultUserAgent(),
     ...(runner === undefined || runner.length === 0 ? {} : { runner }),
+    ...(commit === undefined ? {} : { commit }),
   };
   writeFileSync(join(store, "run.json"), `${JSON.stringify(run, null, 2)}\n`);
   console.info(`the store is ${store}`);
@@ -388,6 +395,7 @@ const derive = async (store: string): Promise<void> => {
     fetched: run.fetched,
     userAgent: run.userAgent,
     ...(run.runner === undefined ? {} : { runner: run.runner }),
+    ...(run.commit === undefined ? {} : { commit: run.commit }),
     pagePath: PAGE_PATH,
     license: DATA_LICENSE.id,
     agents: AGENTS,

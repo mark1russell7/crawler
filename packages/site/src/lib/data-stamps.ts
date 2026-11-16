@@ -76,8 +76,18 @@ export const STUDY_PAGES = [
   "bot/index.html",
 ] as const;
 
-/** This function gives the stamps of the pages that show the robots.txt study. */
-export function studyLimitStamps(): PageStamp[] {
+/** The facts of a study run that its stamp names. */
+export interface StudyRunFacts {
+  readonly fetched: { readonly from: string };
+  readonly userAgent: string;
+  readonly commit?: string;
+}
+
+/**
+ * This function gives the stamps of the pages that show the robots.txt study. The default run is
+ * the newest run in the repository. A run with a commit gives the commit to the freshness gate.
+ */
+export function studyLimitStamps(latest: StudyRunFacts = study): PageStamp[] {
   return STUDY_PAGES.map((page) => ({
     page,
     limit: {
@@ -88,10 +98,11 @@ export function studyLimitStamps(): PageStamp[] {
     },
     runs: [
       {
-        id: `study of ${study.fetched.from.slice(0, 10)}`,
+        id: `study of ${latest.fetched.from.slice(0, 10)}`,
         url: `${REPOSITORY}/actions/workflows/study-monthly.yml`,
-        date: study.fetched.from,
-        engines: { "polite-crawler": versionOf(study.userAgent) },
+        date: latest.fetched.from,
+        engines: { "polite-crawler": versionOf(latest.userAgent) },
+        ...(latest.commit === undefined ? {} : { commit: latest.commit }),
       },
     ],
   }));

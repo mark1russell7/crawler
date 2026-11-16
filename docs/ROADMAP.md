@@ -14,6 +14,18 @@ List the MCP server in the directories that need a submission, then post polite-
 - Waits for: `eval`, `eval-b`
 - What Mark does: Read the prepared post text, then post it from your Hacker News account.
 
+## In progress
+
+### `study-recompute`: The robots.txt study: count the rules again with each version of the parser
+
+The 4 pages of the robots.txt study show counts from the robots.txt parser of polite-crawler. The freshness gate of the site template asks each page to name the version of the parser that computed its numbers. From 2026-11-30 a page fails when that version is more than one minor version behind the package. The counts of 2 November 2026 came from 0.2.4, and the package is 0.7.6. The fix keeps the robots.txt files of the newest run in the repository (about 2.4 MB, gzip). At each commit, CI counts the rules again with the parser of the workspace, and the stamp names that version. Then a new version needs no new fetch: the 33-day limit holds the age of the fetch only. When a new parser changes a verdict, CI lists each changed site. The page copy then takes the new counts and says how many sites changed. The files of each run on Zenodo stay as they are. Due before 2026-11-30.
+
+- Area: Site and growth
+- Waits for: `study-monthly`
+- Started: 2026-11-16
+- [crawler #186 (the commit of each study run)](https://github.com/mark1russell7/crawler/pull/186)
+- [template #383 (the version rule of the freshness gate)](https://github.com/mark1russell7/template/pull/383)
+
 ## Later
 
 ### `v1`: Version 1.0

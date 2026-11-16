@@ -10,19 +10,30 @@ import { mkdirSync, readFileSync, readdirSync, writeFileSync, realpathSync } fro
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { StudyDoi } from "../src/lib/cite.ts";
-import { conceptOf } from "../src/lib/cite.ts";
+import { conceptOf, studyVersion } from "../src/lib/cite.ts";
 import type { DatasetFile, DatasetInput } from "../src/lib/dataset.ts";
 import { datasetFiles } from "../src/lib/dataset.ts";
+import { runCsvPath } from "../src/lib/runs.ts";
+import type { Study } from "../src/lib/study.ts";
 
 const site = fileURLToPath(new URL("..", import.meta.url));
 
 /**
- * This function reads the input of the dataset from the site: the JSON and the CSV of the newest run,
- * the study page, and the concept DOI in study-doi.json.
+ * This function reads the input of the dataset from the site. That is the JSON and the CSV of the
+ * newest run, the study page, and the concept DOI in study-doi.json. It reads the files of the run,
+ * not the copy that the pages read. A recount with a later parser changes only that copy.
  */
-export const readInput = (doi?: string): DatasetInput => ({
-  json: new Uint8Array(readFileSync(join(site, "src/data/robots-study.json"))),
-  csv: new Uint8Array(readFileSync(join(site, "public/data/robots-study.csv"))),
+export const readInput = (doi?: string): DatasetInput => {
+  const latest = JSON.parse(
+    readFileSync(join(site, "src/data/robots-study.json"), "utf8"),
+  ) as Study;
+  const version = studyVersion(latest);
+  return inputOf(version, doi);
+};
+
+const inputOf = (version: string, doi?: string): DatasetInput => ({
+  json: new Uint8Array(readFileSync(join(site, `src/data/study/${version}.json`))),
+  csv: new Uint8Array(readFileSync(join(site, "public", runCsvPath(version)))),
   page: readFileSync(join(site, "src/content/docs/notes/robots-txt-ai-agents.mdx"), "utf8"),
   doi,
   concept: conceptOf(

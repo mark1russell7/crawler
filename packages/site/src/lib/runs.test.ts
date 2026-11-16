@@ -20,6 +20,7 @@ import {
 } from "./runs.ts";
 import type { Study } from "./study.ts";
 import { toCsv } from "./study.ts";
+import { changedSites } from "./study-derive.ts";
 
 // No test sends a request: the files of the runs are on disk, and the other runs are synthetic.
 
@@ -115,9 +116,17 @@ describe("the files of the runs", () => {
 
   it("keeps the newest run as the latest copy that the pages read", () => {
     const newest = versions.at(-1) ?? "";
-    expect(textOf("src/data/robots-study.json")).toBe(textOf(`src/data/study/${newest}.json`));
-    expect(textOf("public/data/robots-study.csv")).toBe(
-      textOf(`public/data/robots-study-${newest}.csv`),
+    const copy = JSON.parse(textOf("src/data/robots-study.json")) as Study;
+    expect(textOf("public/data/robots-study.csv")).toBe(toCsv(copy));
+    // the same run and the same domains. A recount with a later parser names the count of the sites
+    // with another entry. Without a recount, the copy is the file of the run, byte for byte
+    const { sites, recounted, ...head } = copy;
+    const { sites: depositSites, ...depositHead } = studyOf(newest);
+    expect(head).toEqual(depositHead);
+    expect(sites.map((entry) => entry.domain)).toEqual(depositSites.map((entry) => entry.domain));
+    expect(changedSites(depositSites, sites)).toHaveLength(recounted?.sites ?? 0);
+    expect(textOf("src/data/robots-study.json") === textOf(`src/data/study/${newest}.json`)).toBe(
+      recounted === undefined,
     );
   });
 

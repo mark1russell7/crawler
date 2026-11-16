@@ -50,7 +50,11 @@ jobs:
       # check:conventions reads each commit of a pull request back to its merge base (the rules release-files
       # and unreleased-change). The whole history is about 2 MB.
       fetch-depth: 0
-      timeout-minutes: 40
+      # The limit of the job is the sum of these times, rounded up:
+      #   6.5 min  the worst success of this job (83 successes in CI and Release to 2026-11-16)
+      #   10 min   the limit of one command of the input run (below)
+      #   3.1 min  the spread of the successes (3.4 to 6.5 min)
+      timeout-minutes: 20
       # .nvmrc has 24
       node-versions: '["24"]'
       # smoke: the npm builds, packed and installed into an empty project the way a user gets them
@@ -61,23 +65,35 @@ jobs:
       # 1. The coverage of polite-crawler. The thresholds are in packages/polite-crawler/vitest.config.ts.
       # 2. The archive tools read the exports of src/archive.test.ts: warcio reads the WARC files,
       #    py-wacz the WACZ file, and zipfile each ZIP (also one with Zip64 records). Pinned versions.
+      # Each command has a time limit of 10 min (the function limit). The limit is the worst success of the whole
+      # job (6.5 min) plus the spread of its successes (3.1 min), rounded up. A command that hangs fails with its log.
+      # On 2026-11-15 this step hung, and the job stopped at its limit of 40 min with no log.
+      # timeout signals the process group of the command, so the workers of vitest stop too.
       run: |
-        pnpm --filter polite-crawler test:coverage
+        limit() {
+          local code=0
+          timeout --kill-after=30s 10m "$@" || code=$?
+          if [ "$code" -eq 124 ] || [ "$code" -eq 137 ]; then
+            echo "::error::This command did not end in 10 min: $*"
+          fi
+          return "$code"
+        }
+        limit pnpm --filter polite-crawler test:coverage
         export POLITE_CRAWLER_ARCHIVE_OUT="$RUNNER_TEMP/archives"
-        python3 -m venv "$RUNNER_TEMP/archive-tools"
+        limit python3 -m venv "$RUNNER_TEMP/archive-tools"
         . "$RUNNER_TEMP/archive-tools/bin/activate"
-        pip install --disable-pip-version-check --quiet warcio==1.8.1 wacz==0.6.0 cdxj-indexer==1.4.6 frictionless==5.15.6 boilerpy3==1.0.7 shortuuid==1.0.13 jsonlines==4.0.0
-        pnpm --filter polite-crawler exec vitest run src/archive.test.ts
+        limit pip install --disable-pip-version-check --quiet warcio==1.8.1 wacz==0.6.0 cdxj-indexer==1.4.6 frictionless==5.15.6 boilerpy3==1.0.7 shortuuid==1.0.13 jsonlines==4.0.0
+        limit pnpm --filter polite-crawler exec vitest run src/archive.test.ts
         (
           cd "$POLITE_CRAWLER_ARCHIVE_OUT"
           for file in *.warc.gz; do
-            warcio check -v "$file"
-            warcio index -f warc-type,warc-target-uri,http:status,offset,length "$file" > "$file.index"
+            limit warcio check -v "$file"
+            limit warcio index -f warc-type,warc-target-uri,http:status,offset,length "$file" > "$file.index"
             echo "$file: $(wc -l < "$file.index") records"
             cat "$file.index"
           done
-          for file in *.wacz; do wacz validate -f "$file"; done
-          python3 -I - *.wacz *.zip <<'EOF'
+          for file in *.wacz; do limit wacz validate -f "$file"; done
+          limit python3 -I - *.wacz *.zip <<'EOF'
         import sys, zipfile
         for name in sys.argv[1:]:
             with zipfile.ZipFile(name) as archive:

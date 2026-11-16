@@ -219,11 +219,14 @@ export function statusLine(reply: Reply): string {
  * - A 401 or a 403 stops the host for 1 hour. A 402 and a bot challenge stop it for 24 hours.
  * - An error 5xx and an exchange with no answer are failures. After 5 failures in sequence, the host stops.
  * - A `QuotaError` of the transport (`withQuota`) does not change the host.
+ * - An `ApiError` of the transport is a refusal of the client, for example a `FetchLike` with no
+ *   `arrayBuffer` for an exchange that reads bytes. The host gets only its rest, and its counts do not change.
  *
  * The function gives each answer, with each status. The caller reads the status.
  *
  * @throws ApiError when the API gives no answer, or when the host is stopped. `redact` examined the message.
  * @throws QuotaError of the transport, as it is, when a quota refuses the exchange.
+ * @throws the ApiError of the transport, as it is, when the transport refuses the exchange.
  * @throws the reason of the signal, when the signal stops the exchange.
  * @beta
  */
@@ -266,12 +269,13 @@ export async function send<S extends Signal = AbortSignal>(
           // a quota refused the exchange before it started, so the host keeps its state and its pace.
           // The guard accepts a refusal of another copy of the package too.
           if (isQuotaError(error)) return { value: { error }, delayMs: 0 };
-          // a request that the caller stopped is no fault of the host
-          const cancelled = signal?.aborted === true;
+          // a request that the caller stopped is no fault of the host, and neither is a refusal of the
+          // client. Only an ApiError of this copy is a refusal: an error of a different library can have its name.
+          const neutral = signal?.aborted === true || error instanceof ApiError;
           const facts: OutcomeFacts = {
             outcome: "error",
             status: 0,
-            ...(cancelled ? { result: "neutral" as const } : {}),
+            ...(neutral ? { result: "neutral" as const } : {}),
           };
           return { value: { error }, delayMs: settle(facts, pace.now() - started) };
         }
@@ -297,9 +301,10 @@ export async function send<S extends Signal = AbortSignal>(
     );
   }
   if ("error" in attempt) {
-    if (signal?.aborted === true || isQuotaError(attempt.error)) throw attempt.error;
+    const { error } = attempt;
+    if (signal?.aborted === true || isQuotaError(error) || error instanceof ApiError) throw error;
     throw new ApiError(
-      redact(`${input.source} gave no answer to ${input.what}: ${messageOf(attempt.error)}`),
+      redact(`${input.source} gave no answer to ${input.what}: ${messageOf(error)}`),
     );
   }
   return attempt;
@@ -547,6 +552,8 @@ export function fetchTransport(options: FetchTransportOptions): Transport {
       // the time limit also stops a body that does not end
       if (exchange.read !== "bytes") return { ...head, body: await response.text() };
       if (response.arrayBuffer === undefined) {
+        // with undici, a body that nobody reads keeps its socket until garbage collection
+        await response.text().catch(() => "");
         throw new ApiError(
           "The fetch function gives no arrayBuffer, so the transport cannot read bytes.",
         );

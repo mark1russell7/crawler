@@ -526,6 +526,23 @@ describe("fetchTransport", () => {
     expect(error.message).toContain("arrayBuffer");
   });
 
+  it("counts a refusal of the client as no failure of the host, and gives the refusal as it is", async () => {
+    const { pace, scheduler } = fakePace();
+    const { fetch, calls } = fakeFetch({ status: 200, body: "x" });
+    const transport = fetchTransport({ userAgent: "app/1.0", fetch });
+    const bytes = input({ exchange: { ...input().exchange, read: "bytes" } });
+    for (let round = 0; round < 6; round += 1) {
+      const error = await failure(send(pace, transport, bytes));
+      expect(error).toBeInstanceOf(ApiError);
+      expect(error.message).toBe(
+        "The fetch function gives no arrayBuffer, so the transport cannot read bytes.",
+      );
+    }
+    expect(scheduler.store.record(HOST, "neutral")).toEqual({ failures: 0, waits: 0 });
+    expect((await send(pace, transport, input())).reply.body).toBe("x");
+    expect(calls).toHaveLength(7);
+  });
+
   it("refuses a User-Agent that is empty, that is not ASCII, or that has a control character", () => {
     for (const userAgent of ["", " app/1.0", "app/1.0 ", "app\r\nx: y", "äpp/1.0", "a".repeat(513)])
       expect(() => fetchTransport({ userAgent })).toThrow(ApiError);

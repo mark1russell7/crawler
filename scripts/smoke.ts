@@ -525,12 +525,12 @@ export const start: typeof startMcpServer = startMcpServer;
       { readonly entry: string; readonly without: readonly string[]; readonly budget: number }
     >
   > = {
-    // the size with freshUntil and the quotas of @mark1russell7/service 0.8.20 (4915 B), and 20
-    // percent more
+    // the size with freshUntil, the quotas of @mark1russell7/service 0.8.20 and the kept answers
+    // (6217 B in CI), and 20 percent more
     "api without the quota gates": {
       entry: "api",
       without: ["quotaGate", "withQuota"],
-      budget: 5898,
+      budget: 7460,
     },
   };
   const resolveInConsumer = createRequire(join(consumer, "package.json")).resolve;

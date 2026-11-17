@@ -15,6 +15,8 @@ A prerelease version (`0.2.0-beta.1`) goes to the npm tag `next`. Each other ver
 
 ## Unreleased
 
+## 0.7.9 - 2026-11-17
+
 - **Kept answers for the API clients.** `keptFetch` of `polite-crawler/api` puts a store of kept answers on a `fetch`. A GET sends the validators of its kept answer, and a 304 then gives the kept answer with its body. Thus a client that asks for the same data again gets the full answer. An API that does not count a 304 in its rate limit then counts fewer requests. The REST API of GitHub is an example. The store is data: `keptStore` gives the entries that a run used, and `readKept` reads them back and drops each damaged entry. A client can keep them between two runs.
 - **Only a full answer in UTF-8 is kept.** The store keeps an answer 200, 203 or 204 with an `ETag` or a `Last-Modified` date. The answer needs a text, JSON or XML type in UTF-8 and a body in the limit. A request with its own conditional or range header, a POST and a binary answer go to the server as they are. Each export is beta. [Keep the answers of an API](packages/polite-crawler/README.md#keep-the-answers-of-an-api) tells how.
 

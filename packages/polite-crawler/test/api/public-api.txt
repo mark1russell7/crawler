@@ -618,6 +618,7 @@ export interface Exchange {
   readonly url: string;
   readonly headers: Readonly<Record<string, string>>;
   readonly body: string | null;
+  readonly read?: "text" | "bytes" | undefined;
 }
 
 ### build/api.d.mts#FetchLike
@@ -634,6 +635,7 @@ export type FetchLike = (url: string, init: {
     forEach(callback: (value: string, name: string) => void): void;
   };
   text(): Promise<string>;
+  arrayBuffer?(): Promise<ArrayBuffer>;
 }>;
 
 ### build/api.d.mts#FetchTransportOptions
@@ -763,6 +765,7 @@ export interface Reply {
   readonly statusText: string;
   readonly headers: Readonly<Record<string, string>>;
   readonly body: string;
+  readonly bytes?: Uint8Array | undefined;
 }
 
 ### build/api.d.mts#Send
@@ -2897,7 +2900,7 @@ export declare const VENUE_LIMITS: {
 };
 
 ### build/index.d.mts#VERSION
-export declare const VERSION = "0.7.6";
+export declare const VERSION = "0.7.7";
 
 ### build/index.d.mts#Variant
 type Variant = "plain" | "rendered";

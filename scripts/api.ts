@@ -47,6 +47,7 @@ interface Entry {
 }
 /** The field of package.json that names the entry points of the build. */
 interface Manifest {
+  readonly name: string;
   readonly publishConfig: { readonly exports: Readonly<Record<string, unknown>> };
 }
 
@@ -81,7 +82,16 @@ for (const name of PACKAGES) {
   );
   mkdirSync(REPORTS, { recursive: true });
   mkdirSync(TEMP, { recursive: true });
-  report(PKG, REPORTS, TEMP, name, entries);
+  // A build file can import an entry of its own package by its name, as src/pinned.ts imports polite-crawler/api. The
+  // workspace resolves such a name to src/. Thus the report maps each name of an entry to its declarations in build/, as
+  // npm gives them.
+  const own = Object.fromEntries(
+    entries.map((entry) => [
+      entry.subpath === "." ? manifest.name : `${manifest.name}/${entry.subpath.slice(2)}`,
+      [entry.types],
+    ]),
+  );
+  report(PKG, REPORTS, TEMP, name, entries, own);
 }
 
 /** This function writes or checks the reports of one package. */
@@ -91,6 +101,7 @@ function report(
   TEMP: string,
   packageName: string,
   entries: readonly Entry[],
+  own: Readonly<Record<string, readonly string[]>>,
 ): void {
   for (const entry of entries) {
     if (!existsSync(entry.types)) {
@@ -114,6 +125,7 @@ function report(
               // The workspace resolves polite-crawler to its source (.ts imports) in the report of polite-crawler-mcp
               allowImportingTsExtensions: true,
               noEmit: true,
+              paths: own,
             },
           },
         },

@@ -45,7 +45,7 @@ defaults:
 
 jobs:
   ci:
-    uses: mark1russell7/template/.github/workflows/reusable-ci.yml@f7e9a04c2e3965d20d1aea5a2e83e96ce8d23d16 # main
+    uses: mark1russell7/template/.github/workflows/reusable-ci.yml@2030c7dec9485afebb504772f79f41f23bdb2df7 # main
     with:
       # check:conventions reads each commit of a pull request back to its merge base (the rules release-files
       # and unreleased-change). The whole history is about 2 MB.
@@ -106,7 +106,7 @@ jobs:
 
   # 22.19.0 is the floor of "engines": its SQLite has FTS5, and undici 8 needs it.
   test-node:
-    uses: mark1russell7/template/.github/workflows/reusable-ci.yml@f7e9a04c2e3965d20d1aea5a2e83e96ce8d23d16 # main
+    uses: mark1russell7/template/.github/workflows/reusable-ci.yml@2030c7dec9485afebb504772f79f41f23bdb2df7 # main
     with:
       node-versions: '["22.19.0", "26"]'
       timeout-minutes: 30
@@ -117,7 +117,7 @@ jobs:
       coverage-on-main: false
 
   test-os:
-    uses: mark1russell7/template/.github/workflows/reusable-ci.yml@f7e9a04c2e3965d20d1aea5a2e83e96ce8d23d16 # main
+    uses: mark1russell7/template/.github/workflows/reusable-ci.yml@2030c7dec9485afebb504772f79f41f23bdb2df7 # main
     with:
       os: '["windows-latest", "macos-latest"]'
       node-versions: '["24"]'
@@ -200,6 +200,13 @@ jobs:
           if-no-files-found: warn
           retention-days: 14
 
+  # The site of .github/site.json: the build, the site check and the probe, with no deploy (CI.md of the
+  # template, "The site config"). The Pages workflow deploys the same site from main.
+  site:
+    uses: mark1russell7/template/.github/workflows/reusable-pages-check.yml@2030c7dec9485afebb504772f79f41f23bdb2df7 # main
+    permissions:
+      contents: read
+
   # The one check of the ruleset (CI.md of mark1russell7/template, "The check of the ruleset").
   # It passes only when each job of needs passed, or was skipped by its own if and ALLOW_SKIP names it.
   # A new job of this file goes in needs, so the ruleset never has to change, and gh pr merge --auto
@@ -207,7 +214,7 @@ jobs:
   ci-ok:
     name: CI OK
     if: ${{ !cancelled() }}
-    needs: [ci, test-node, test-os, api-and-site]
+    needs: [ci, test-node, test-os, api-and-site, site]
     runs-on: ubuntu-latest
     timeout-minutes: 2
     permissions: {}

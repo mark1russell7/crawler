@@ -15,6 +15,11 @@ A prerelease version (`0.2.0-beta.1`) goes to the npm tag `next`. Each other ver
 
 ## Unreleased
 
+## 0.7.8 - 2026-11-17
+
+- **A new entry point `polite-crawler/pinned`: the download of a pinned file.** A client names a file by the SHA-256 of its bytes, and gives its URL and its mirrors. `downloadPinned` tries each mirror, then the URL, at the pace of each host through `send` of `polite-crawler/api`. An error of the server or a request with no answer gets more tries after the backoff of the host. Bytes with a different SHA-256 go to the next source.
+- **No read, and a folder that is a cache.** When no source gives the bytes, it throws a `NoRead` with each try, so a test gate can show no read and not a pass. `pinnedFile` keeps the file in a folder, and a file with the correct SHA-256 gets no request. Each export is beta. [Download a pinned file](packages/polite-crawler/README.md#download-a-pinned-file) tells how.
+
 ## 0.7.7 - 2026-11-16
 
 - **A body in bytes for the API clients.** An `Exchange` of `polite-crawler/api` with `read: "bytes"` gets the body of the answer in `bytes` of the `Reply`, as a `Uint8Array`, and an empty `body`. Thus a client gets a binary file, for example a tarball, with the pace of its host. The default stays `text`, so each caller gets the same result as before. The three new members (`Exchange.read`, `Reply.bytes` and `FetchLike.arrayBuffer`) are beta.

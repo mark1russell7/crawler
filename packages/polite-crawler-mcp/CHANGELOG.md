@@ -6,6 +6,10 @@ This file records the changes to `polite-crawler-mcp` in each version. The chang
 
 ## Unreleased
 
+## 0.7.8 - 2026-11-17
+
+- **The server uses polite-crawler 0.7.8.** The changes of the library are in the [changelog of polite-crawler](../../CHANGELOG.md). The server does not change.
+
 ## 0.7.7 - 2026-11-16
 
 - **The server uses polite-crawler 0.7.7.** The changes of the library are in the [changelog of polite-crawler](../../CHANGELOG.md). The server does not change.

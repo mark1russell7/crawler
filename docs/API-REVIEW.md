@@ -75,6 +75,7 @@ The reports also show what API Extractor found:
 | `Answer`, `ApiError`, `ApiScheduler`, `Exchange`, `Grant`, `isApiError`, `Pace`, `readGrant`, `Redact`, `Reply`, `send`, `Send`, `sendWithToken`, `Signal`, `statusLine`, `TOKEN_MARGIN_MS`, `Tokens`, `tokenStore`, `Transport`, `API_TIMEOUT_MS`, `Condition`, `Conditions`, `FetchLike`, `fetchTransport`, `FetchTransportOptions`, `poll`, `Polled` | `/api` | The polite send of a documented API. It is new in 0.6.1, and the poll is new in 0.6.2, so the first API clients can change it. |
 | `isQuotaError`, `memoryQuotaStore`, `Quota`, `QuotaError`, `quotaGate`, `QuotaGate`, `QuotaGateOptions`, `QuotaHeaders`, `QuotaReading`, `QuotaRecord`, `QuotaState`, `QuotaStore`, `QuotaWindow`, `readQuotaHeaders`, `withQuota`, `WithQuotaOptions` | `/api` (and `QuotaRecord`, `QuotaStore` at the root and at `/politeness`) | The quotas of API keys. They are new in 0.6.3, so the first API clients can change them. |
 | `freshUntil` | `/api` | The end of the freshness of an answer, as RFC 9111 calculates it. A client that keeps answers asks again at that time. It is new, so the first API clients can change it. |
+| `downloadPinned`, `DownloadOptions`, `isNoRead`, `NoRead`, `PINNED_TIMEOUT_MS`, `pinnedClient`, `PinnedClient`, `PinnedClientOptions`, `pinnedFile`, `PinnedSource`, `PinnedTry`, `sha256Of` | `/pinned` | The download of a pinned file. It is new, so the first clients can change it. |
 
 These members of stable types are beta:
 
@@ -104,6 +105,8 @@ Version 0.2.0 removes these exports from the root entry point. `durationMs` stay
 `polite-crawler/robots`, `/hours`, `/html`, `/classify`, `/politeness`, `/signals`, `/urls` and `/text` are stable as a whole. They import no Node.js module, so a browser can use them. The site and its tools use them.
 
 Each export of its own in `polite-crawler/api` is beta. The entry also gives the types of its signatures from `/classify` and `/politeness`, and these stay stable. It imports no Node.js module too.
+
+Each export of its own in `polite-crawler/pinned` is beta. The entry also gives the types of its signatures from `/api` and `/politeness`, and each keeps its tier. It imports `node:fs` and `node:crypto`, so it needs Node.js.
 
 ## What 0.2.0 changes
 
@@ -147,4 +150,5 @@ The package is the MCP server of polite-crawler since 0.2.0. Its tiers follow th
 | polite-crawler root | 238 | 139 | 0 |
 | `/robots`, `/hours`, `/html`, `/classify`, `/politeness`, `/signals`, `/urls`, `/text` | 94 | 2 | 0 |
 | `/api` | 13 | 49 | 0 |
+| `/pinned` | 12 | 20 | 0 |
 | polite-crawler-mcp | 17 | 5 | 0 |

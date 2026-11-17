@@ -569,6 +569,41 @@ statusLine: build/api.d.mts#statusLine
 tokenStore: build/api.d.mts#tokenStore
 withQuota: build/api.d.mts#withQuota
 
+## ./pinned (build/pinned.d.mts): names
+
+type ApiScheduler: polite-crawler/api#ApiScheduler (external)
+type Clock: polite-crawler/politeness#Clock (external)
+DownloadOptions: build/pinned.d.mts#DownloadOptions
+type Exchange: polite-crawler/api#Exchange (external)
+type HostCounts: polite-crawler/politeness#HostCounts (external)
+type HostResult: polite-crawler/politeness#HostResult (external)
+type HostStateStore: polite-crawler/politeness#HostStateStore (external)
+type HostStop: polite-crawler/politeness#HostStop (external)
+NoRead: build/pinned.d.mts#NoRead
+PINNED_TIMEOUT_MS: build/pinned.d.mts#PINNED_TIMEOUT_MS
+type Pace: polite-crawler/api#Pace (external)
+type Paced: polite-crawler/politeness#Paced (external)
+PinnedClient: build/pinned.d.mts#PinnedClient
+PinnedClientOptions: build/pinned.d.mts#PinnedClientOptions
+PinnedSource: build/pinned.d.mts#PinnedSource
+PinnedTry: build/pinned.d.mts#PinnedTry
+type PolicyOptions: polite-crawler/politeness#PolicyOptions (external)
+type PolitenessPolicy: polite-crawler/politeness#PolitenessPolicy (external)
+type QuotaRecord: polite-crawler/politeness#QuotaRecord (external)
+type QuotaStore: polite-crawler/politeness#QuotaStore (external)
+type Reply: polite-crawler/api#Reply (external)
+type Signal: polite-crawler/api#Signal (external)
+type Transport: polite-crawler/api#Transport (external)
+type ValidatorAnswer: polite-crawler/politeness#ValidatorAnswer (external)
+type ValidatorMemo: polite-crawler/politeness#ValidatorMemo (external)
+type ValidatorReport: polite-crawler/politeness#ValidatorReport (external)
+type ValidatorVerdict: polite-crawler/politeness#ValidatorVerdict (external)
+downloadPinned: build/pinned.d.mts#downloadPinned
+isNoRead: build/pinned.d.mts#isNoRead
+pinnedClient: build/pinned.d.mts#pinnedClient
+pinnedFile: build/pinned.d.mts#pinnedFile
+sha256Of: build/pinned.d.mts#sha256Of
+
 ## ./record.schema.json: no declaration file for ./record.schema.json
 
 file ./record.schema.json: record.schema.json
@@ -2900,7 +2935,7 @@ export declare const VENUE_LIMITS: {
 };
 
 ### build/index.d.mts#VERSION
-export declare const VERSION = "0.7.7";
+export declare const VERSION = "0.7.8";
 
 ### build/index.d.mts#Variant
 type Variant = "plain" | "rendered";
@@ -3634,6 +3669,65 @@ export declare const verifySignature: (request: SignedRequest, directory: KeyDir
 
 ### build/index.d.mts#versionAtTime
 export declare const versionAtTime: (runtime: CrawlRuntime, id: string, at: string) => VersionAt;
+
+### build/pinned.d.mts#DownloadOptions
+export interface DownloadOptions {
+  readonly tries?: number | undefined;
+  readonly redirects?: number | undefined;
+  readonly signal?: AbortSignal | undefined;
+}
+
+### build/pinned.d.mts#NoRead
+export declare class NoRead extends Error {
+  readonly file: string;
+  readonly tries: readonly PinnedTry[];
+  constructor(file: string, tries: readonly PinnedTry[]);
+}
+
+### build/pinned.d.mts#PINNED_TIMEOUT_MS
+export declare const PINNED_TIMEOUT_MS = 3e5;
+
+### build/pinned.d.mts#PinnedClient
+export interface PinnedClient {
+  readonly pace: Pace$1;
+  readonly transport: Transport$1;
+}
+
+### build/pinned.d.mts#PinnedClientOptions
+export interface PinnedClientOptions {
+  readonly userAgent: string;
+  readonly timeoutMs?: number | undefined;
+  readonly maxActive?: number | undefined;
+  readonly clock?: Clock$1 | undefined;
+}
+
+### build/pinned.d.mts#PinnedSource
+export interface PinnedSource {
+  readonly url: string;
+  readonly sha256: string;
+  readonly mirrors?: readonly string[] | undefined;
+}
+
+### build/pinned.d.mts#PinnedTry
+export interface PinnedTry {
+  readonly url: string;
+  readonly result: string;
+}
+
+### build/pinned.d.mts#downloadPinned
+export declare function downloadPinned(client: PinnedClient, name: string, source: PinnedSource, options?: DownloadOptions): Promise<Uint8Array>;
+
+### build/pinned.d.mts#isNoRead
+export declare const isNoRead: (value: unknown) => value is NoRead;
+
+### build/pinned.d.mts#pinnedClient
+export declare function pinnedClient(options: PinnedClientOptions): PinnedClient;
+
+### build/pinned.d.mts#pinnedFile
+export declare function pinnedFile(client: PinnedClient, folder: string, name: string, source: PinnedSource, options?: DownloadOptions): Promise<Uint8Array>;
+
+### build/pinned.d.mts#sha256Of
+export declare function sha256Of(bytes: Uint8Array): string;
 
 ### build/politeness.d.mts#Clock
 export interface Clock {

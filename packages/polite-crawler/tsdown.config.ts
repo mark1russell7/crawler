@@ -15,7 +15,11 @@ export default defineConfig({
     "src/urls.ts",
     "src/text.ts",
     "src/api.ts",
+    "src/pinned.ts",
   ],
+  // An import of an entry of this package by its name (for example in src/pinned.ts) stays an import. Thus no two entries
+  // share a chunk, and the report of the API has the declarations of each entry in its own file.
+  deps: { neverBundle: [/^polite-crawler\//] },
   outDir: "build",
   format: "esm",
   platform: "node",

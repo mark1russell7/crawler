@@ -51,6 +51,7 @@ The package is ESM only, and it includes its TypeScript declarations. It has the
 | `polite-crawler/urls` | The canonical form of a URL, its cache key and its site. It imports no module. | Yes |
 | `polite-crawler/text` | The decoder of a body in its declared encoding. It imports no module. | Yes |
 | `polite-crawler/api` | The polite send of a documented API, with conditional polls and the OAuth 2.0 client credentials grant. [Send to a documented API](#send-to-a-documented-api) tells how. | Yes |
+| `polite-crawler/pinned` | The download of a file that the client names by its SHA-256, from the mirrors first, at the pace of each host. [Download a pinned file](#download-a-pinned-file) tells how. | No. It needs Node.js. |
 
 The entry points that work in a browser import no Node.js module. The package loads no MCP SDK and no `zod`: the MCP server is the package `polite-crawler-mcp`.
 
@@ -1378,6 +1379,29 @@ These are the limits of the first providers, as their documents gave them on 202
 | [NASA FIRMS](https://firms.modaps.eosdis.nasa.gov/api/map_key/) | 5,000 transactions for each MAP_KEY | Rolling, 10 minutes | none |
 | [OpenSky Network](https://openskynetwork.github.io/opensky-api/rest.html) | 400 credits a day with no account, 4,000 for a registered user, 8,000 for an active feeder. `/states`, `/tracks` and `/flights` each have a quota: give each one a key. | Rolling, 25 hours (the document gives no reset time or zone, and a day can have 25 hours) | `X-Rate-Limit-Remaining`, `X-Rate-Limit-Retry-After-Seconds` (seconds until the reset) |
 | [TomTom](https://docs.tomtom.com/pricing) | 200,000 tile requests and 20,000 other map requests each month, free | Rolling, 745 hours (the document gives no reset time or zone, and a month can have 31 days and 1 hour) | none |
+
+## Download a pinned file
+
+The entry point `polite-crawler/pinned` downloads a file that a client names by the SHA-256 of its bytes. An example is a word list or a data file that a test needs. The SHA-256 decides, so each source with the same bytes is correct: a mirror, the origin, or a copy in a cache.
+
+```ts
+import { pinnedClient, pinnedFile } from "polite-crawler/pinned";
+
+const client = pinnedClient({ userAgent: "example-tests/1.0 (+https://example.com/tests)" });
+const bytes = await pinnedFile(client, "cache/words", "words.txt", {
+  url: "https://files.example.com/words.txt",
+  sha256: "<the SHA-256 of the file, in hexadecimal>",
+  mirrors: ["https://mirror.example.org/words.txt"],
+});
+```
+
+- **Mirrors first.** The download tries each mirror, then the URL. Thus the origin gets fewer requests. Some sites ask each automated download to use a mirror, for example Project Gutenberg.
+- **The pace of each host.** Each request goes through `send` of `polite-crawler/api`. A host gets one request at a time, and a 429 or an error of the server starts the backoff of the host. Use one client for all the downloads of a process.
+- **Tries.** A 408, 425, 429 or 5xx answer, or a request with no answer, gets more tries: 3 for each source by default (`tries`). Each other status, and bytes with a different SHA-256, go to the next source at once. A redirect to an HTTP or HTTPS URL is not a try. The download follows 5 redirects for each source by default (`redirects`).
+- **No read.** When no source gives the bytes, the download throws a `NoRead`. Its `tries` give each URL and what it gave. A test gate that needs the file shows it as no read. A no read is not a result of the change, and it is not a pass. `isNoRead` tells a `NoRead` from a different error.
+- **The folder is a cache.** `pinnedFile` reads the file from the folder when its SHA-256 is correct, and sends no request. If not, it downloads the file and writes it to a temporary file first, then renames it. Thus a stopped run leaves no part of a file. `downloadPinned` gives the bytes and writes no file.
+- **No robots.txt.** The download requests only the files that the client names. It does not crawl, so it does not read robots.txt.
+- **A time limit.** `pinnedClient` stops a request and its body after `timeoutMs`: 5 minutes by default (`PINNED_TIMEOUT_MS`), because a pinned file can be large.
 
 ## Stored copies and conditional requests
 

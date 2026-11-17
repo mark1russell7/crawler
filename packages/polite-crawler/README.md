@@ -1312,6 +1312,29 @@ if (polled.changed) {
 - **The validator memo of the crawler.** Some hosts give an `ETag` that changes at each answer. With a store of the scheduler that keeps the validator memo, the poll then sends only `If-Modified-Since`, as the crawler does.
 - **One store for one set of headers.** A store keeps one entry for each URL. Give a second store to a request with a different `accept` header.
 
+### Keep the answers of an API
+
+`poll` tells only if the data changed. A client that needs the data at each request uses `keptFetch`. It keeps the last full answer of each GET with its body. The next GET of the same URL sends the validators. A 304 then gives the kept answer: the status, the body and the kept headers, with the new fields of the 304. Some APIs do not count a 304 in the rate limit, for example the REST API of GitHub. A run that reads the same files again then counts fewer requests.
+
+```ts
+import { fetchTransport, keptFetch, keptStore, readKept } from "polite-crawler/api";
+
+// The entries of the last run, for example from a file of the cache of a CI job
+const store = keptStore(readKept(JSON.parse(lastRun)));
+const transport = fetchTransport({
+  userAgent: "example-app/1.0 (+https://example.com/app)",
+  fetch: keptFetch((url, init) => fetch(url, init), store),
+});
+// ... the run sends its requests through the transport ...
+const nextRun = JSON.stringify(store.used());
+```
+
+- **The server decides.** A kept answer goes to the client only after a 304 of the server. The key of an answer is its URL and its `accept` header. The server examines the access of each request, so a 304 comes only for a request that can read the answer.
+- **A store keeps text only.** It keeps an answer 200, 203 or 204 with an `ETag` or a `Last-Modified` date. The answer needs a text, JSON or XML type in UTF-8, and a body of at most `KEPT_BODY_MAX` UTF-16 code units. Each other answer goes to the client as it is. A binary body is not read, so an exchange with `read: "bytes"` gets its bytes.
+- **Your request stays yours.** A request with its own `If-None-Match`, `If-Modified-Since`, other `If-` header or `Range` goes to the server as it is. So does each request that is not a GET with no body.
+- **The store stays small.** `used()` gives only the entries that the run read or wrote. Save these, and an answer that no run asks for again goes away. `readKept` drops each entry with a bad shape, so a damaged file gives fewer kept answers and no error.
+- **A file of answers holds data.** A file of the cache of a public repository can be read by others. Encrypt the file when the answers hold private data.
+
 ### Quotas of a key
 
 Many free API keys have a quota: a count of calls or messages in each day, month or window. The pace of the host does not count it. `quotaGate` counts the calls of one key, and it refuses a call over the quota before the provider does. `withQuota` puts a gate on an async function and keeps its type. So it fits each path of a call: a `fetch` that a client takes, a transport of `send` and `poll`, or a different client.

@@ -9,8 +9,10 @@
  * The module also has the OAuth 2.0 client credentials grant (RFC 6749, section 4.4): `readGrant`,
  * `tokenStore` and `sendWithToken`. `fetchTransport` is a transport over `fetch` with a User-Agent
  * and a time limit. `poll` sends conditional requests. `freshUntil` gives the end of the freshness
- * of an answer (RFC 9111), so a client that keeps answers knows when to ask again. Each export is
- * beta: a minor version can change it.
+ * of an answer (RFC 9111), so a client that keeps answers knows when to ask again. `keptFetch` and
+ * `keepAnswer` keep the last full answer of a GET with its body, so a 304 gives the kept answer. The
+ * client decides where the store is: a store is data. Each export is beta: a minor version can
+ * change it.
  */
 import { ApiError } from "./api-error.ts";
 import type { Classified } from "./classify.ts";
@@ -20,10 +22,32 @@ import { policyFor, restAfter, validatorsToSend } from "./politeness.ts";
 import type { OutcomeFacts } from "./reaction.ts";
 import { outcomeResult, reactToOutcome } from "./reaction.ts";
 import { isQuotaError } from "./quota.ts";
+import type { KeepOptions, KeptStore } from "./kept.ts";
+import {
+  hasValidator,
+  isTextType,
+  keepAnswer,
+  KEPT_STATUSES,
+  keptKey,
+  keptRequestHeaders,
+} from "./kept.ts";
 
 export { ApiError, isApiError } from "./api-error.ts";
 export type { Classified, Outcome } from "./classify.ts";
 export { freshUntil } from "./freshness.ts";
+export type { KeepOptions, Kept, KeptAnswer, KeptMemory, KeptStore } from "./kept.ts";
+export {
+  hasValidator,
+  isTextType,
+  keepAnswer,
+  KEPT_BODY_MAX,
+  KEPT_HEADERS,
+  KEPT_STATUSES,
+  keptKey,
+  keptRequestHeaders,
+  keptStore,
+  readKept,
+} from "./kept.ts";
 export type {
   HostCounts,
   HostResult,
@@ -565,6 +589,51 @@ export function fetchTransport(options: FetchTransportOptions): Transport {
       }
       throw error;
     }
+  };
+}
+
+/**
+ * This function makes a `fetch` with kept answers, for example for `fetchTransport`. A GET with no
+ * body and no conditional or range header of its own (`hasValidator`) sends the validators of its
+ * kept answer. The key of the answer is `keptKey`. A 304 then gives the kept answer, as
+ * `keepAnswer` tells, and a full answer with a text body in UTF-8 goes into the store. The function does not read a body
+ * of a different media type, so an exchange that reads `bytes` gets the bytes. Each other request
+ * goes to `fetch` as it is. The key does not hold the `authorization` header: the server examines
+ * the access of each request before it answers 304.
+ *
+ * @beta
+ */
+export function keptFetch(
+  fetch: FetchLike,
+  store: KeptStore,
+  options: KeepOptions = {},
+): FetchLike {
+  return async (url, init) => {
+    const plain = init.method.toUpperCase() === "GET" && init.body === undefined;
+    if (!plain || hasValidator(init.headers)) return fetch(url, init);
+    const key = keptKey(url, init.headers);
+    const kept = store.get(key);
+    const response = await fetch(url, { ...init, headers: keptRequestHeaders(kept, init.headers) });
+    const headers: Record<string, string> = {};
+    response.headers.forEach((value, name) => {
+      headers[name.toLowerCase()] = value;
+    });
+    const unchanged = response.status === 304 && kept !== undefined;
+    const full = KEPT_STATUSES.includes(response.status) && isTextType(headers["content-type"]);
+    if (!unchanged && !full) return response;
+    const body = response.status === 304 ? "" : await response.text();
+    const answer = keepAnswer(store, key, { status: response.status, headers, body }, options);
+    return {
+      status: answer.status,
+      statusText: answer.notModified ? "" : response.statusText,
+      headers: {
+        forEach(callback: (value: string, name: string) => void): void {
+          for (const [name, value] of Object.entries(answer.headers)) callback(value, name);
+        },
+      },
+      text: () => Promise.resolve(answer.body),
+      arrayBuffer: () => Promise.resolve(new TextEncoder().encode(answer.body).slice().buffer),
+    };
   };
 }
 

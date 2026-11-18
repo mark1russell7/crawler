@@ -15,6 +15,10 @@ A prerelease version (`0.2.0-beta.1`) goes to the npm tag `next`. Each other ver
 
 ## Unreleased
 
+## 0.7.10 - 2026-11-18
+
+- **Seal a store of kept answers.** `sealKept` of `polite-crawler/api` encrypts the entries of a store with AES-256-GCM. The key comes from a secret by HKDF-SHA-256, with a new random salt for each seal. `openKept` gives the entries back. Data that does not open gives an empty store and a note, and no error. Thus a client can keep its answers in a place that others can read, for example the cache of a public repository. Each entry is compressed alone, so the size of the seal does not tell how two answers match. Each export is beta. [Seal a store](packages/polite-crawler/README.md#seal-a-store) tells how.
+
 ## 0.7.9 - 2026-11-17
 
 - **Kept answers for the API clients.** `keptFetch` of `polite-crawler/api` puts a store of kept answers on a `fetch`. A GET sends the validators of its kept answer, and a 304 then gives the kept answer with its body. Thus a client that asks for the same data again gets the full answer. An API that does not count a 304 in its rate limit then counts fewer requests. The REST API of GitHub is an example. The store is data: `keptStore` gives the entries that a run used, and `readKept` reads them back and drops each damaged entry. A client can keep them between two runs.

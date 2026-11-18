@@ -176,6 +176,12 @@ export const KEPT_BODY_MAX: number;
 export const KEPT_HEADERS: readonly string[];
 
 // @beta
+export const KEPT_SEAL_FORMAT = "polite-crawler-kept-sealed/1";
+
+// @beta
+export const KEPT_SEAL_SECRET_MIN = 16;
+
+// @beta
 export const KEPT_STATUSES: readonly number[];
 
 // @beta
@@ -211,6 +217,15 @@ export function keptStore(entries?: Iterable<readonly [string, Kept]>): KeptMemo
 
 // @beta
 export function memoryQuotaStore(): QuotaStore;
+
+// @beta
+export interface OpenedKept {
+    readonly entries: [string, Kept][];
+    readonly note?: string | undefined;
+}
+
+// @beta
+export function openKept(sealed: Uint8Array, secret: string | Uint8Array, options?: SealOptions): Promise<OpenedKept>;
 
 // @public
 export type Outcome = "ok" | "not-modified" | "redirect" | "challenge" | "payment-required" | "blocked" | "not-found" | "rate-limited" | "unavailable" | "error";
@@ -401,6 +416,14 @@ export interface Reply {
     // (undocumented)
     readonly status: number;
     readonly statusText: string;
+}
+
+// @beta
+export function sealKept(entries: Iterable<readonly [string, Kept]>, secret: string | Uint8Array, options?: SealOptions): Promise<Uint8Array<ArrayBuffer>>;
+
+// @beta
+export interface SealOptions {
+    readonly label?: string | undefined;
 }
 
 // @beta

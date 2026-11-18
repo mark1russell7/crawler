@@ -1333,7 +1333,27 @@ const nextRun = JSON.stringify(store.used());
 - **A store keeps text only.** It keeps an answer 200, 203 or 204 with an `ETag` or a `Last-Modified` date. The answer needs a text, JSON or XML type in UTF-8, and a body of at most `KEPT_BODY_MAX` UTF-16 code units. Each other answer goes to the client as it is. A binary body is not read, so an exchange with `read: "bytes"` gets its bytes.
 - **Your request stays yours.** A request with its own `If-None-Match`, `If-Modified-Since`, other `If-` header or `Range` goes to the server as it is. So does each request that is not a GET with no body.
 - **The store stays small.** `used()` gives only the entries that the run read or wrote. Save these, and an answer that no run asks for again goes away. `readKept` drops each entry with a bad shape, so a damaged file gives fewer kept answers and no error.
-- **A file of answers holds data.** A file of the cache of a public repository can be read by others. Encrypt the file when the answers hold private data.
+- **A file of answers holds data.** A file of the cache of a public repository can be read by others. Seal the file when the answers hold private data, as the next section tells.
+
+#### Seal a store
+
+`sealKept` encrypts the entries of a store, and `openKept` gives them back. Use them for a place that others can read, for example the cache of a public repository in GitHub Actions.
+
+```ts
+import { keptStore, openKept, sealKept } from "polite-crawler/api";
+
+// The secret is a random key of 16 bytes or more, for example a secret of the repository
+const opened = await openKept(sealedBytes, process.env.KEPT_KEY!, { label: "example-app" });
+const store = keptStore(opened.entries);
+// ... the run sends its requests ...
+const nextSeal = await sealKept(store.used(), process.env.KEPT_KEY!, { label: "example-app" });
+```
+
+- **The cipher.** AES-256-GCM. The key comes from the secret by HKDF-SHA-256, with a new random salt for each seal and the label as the info. Two labels give two keys from one secret. The format name `KEPT_SEAL_FORMAT` is the first line of the bytes and the associated data of the cipher.
+- **The secret must be a key.** HKDF does not slow a guess, so give a random key, not a password. A secret of fewer than `KEPT_SEAL_SECRET_MIN` bytes (16) throws a `RangeError`.
+- **A bad seal gives an empty store.** Another format, another secret, another label or damaged bytes give no entries and a `note`, and no error. The client then goes on with an empty store, and the server sends full answers.
+- **One compression for each entry.** Each entry is compressed alone before the encryption. So the size of the seal does not tell how the text of one answer matches the text of another answer.
+- **Web APIs only.** The functions use `crypto.subtle` and `CompressionStream`, so they run in Node.js and in a browser.
 
 ### Quotas of a key
 

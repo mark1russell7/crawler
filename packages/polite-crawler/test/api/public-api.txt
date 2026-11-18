@@ -522,6 +522,14 @@ type HostReaction: build/api.d.mts#HostReaction
 type HostResult: build/politeness.d.mts#HostResult
 type HostStateStore: build/politeness.d.mts#HostStateStore
 type HostStop: build/politeness.d.mts#HostStop
+KEPT_BODY_MAX: build/api.d.mts#KEPT_BODY_MAX
+KEPT_HEADERS: build/api.d.mts#KEPT_HEADERS
+KEPT_STATUSES: build/api.d.mts#KEPT_STATUSES
+type KeepOptions: build/api.d.mts#KeepOptions
+type Kept: build/api.d.mts#Kept
+type KeptAnswer: build/api.d.mts#KeptAnswer
+type KeptMemory: build/api.d.mts#KeptMemory
+type KeptStore: build/api.d.mts#KeptStore
 type Outcome: build/classify.d.mts#Outcome
 type OutcomeFacts: build/api.d.mts#OutcomeFacts
 Pace: build/api.d.mts#Pace
@@ -554,14 +562,22 @@ type ValidatorVerdict: build/politeness.d.mts#ValidatorVerdict
 type WithQuotaOptions: build/api.d.mts#WithQuotaOptions
 fetchTransport: build/api.d.mts#fetchTransport
 freshUntil: build/api.d.mts#freshUntil
+hasValidator: build/api.d.mts#hasValidator
 isApiError: build/api.d.mts#isApiError
 isQuotaError: build/api.d.mts#isQuotaError
+isTextType: build/api.d.mts#isTextType
+keepAnswer: build/api.d.mts#keepAnswer
+keptFetch: build/api.d.mts#keptFetch
+keptKey: build/api.d.mts#keptKey
+keptRequestHeaders: build/api.d.mts#keptRequestHeaders
+keptStore: build/api.d.mts#keptStore
 memoryQuotaStore: build/api.d.mts#memoryQuotaStore
 outcomeResult: build/api.d.mts#outcomeResult
 poll: build/api.d.mts#poll
 quotaGate: build/api.d.mts#quotaGate
 reactToOutcome: build/api.d.mts#reactToOutcome
 readGrant: build/api.d.mts#readGrant
+readKept: build/api.d.mts#readKept
 readQuotaHeaders: build/api.d.mts#readQuotaHeaders
 send: build/api.d.mts#send
 sendWithToken: build/api.d.mts#sendWithToken
@@ -691,6 +707,49 @@ interface HostReaction {
   readonly restMs: number;
   readonly longer: "backoff" | "retry-after" | undefined;
   readonly stop: HostStop | undefined;
+}
+
+### build/api.d.mts#KEPT_BODY_MAX
+export declare const KEPT_BODY_MAX: number;
+
+### build/api.d.mts#KEPT_HEADERS
+export declare const KEPT_HEADERS: readonly string[];
+
+### build/api.d.mts#KEPT_STATUSES
+export declare const KEPT_STATUSES: readonly number[];
+
+### build/api.d.mts#KeepOptions
+interface KeepOptions {
+  readonly headers?: readonly string[] | undefined;
+  readonly maxBody?: number | undefined;
+}
+
+### build/api.d.mts#Kept
+interface Kept {
+  readonly etag?: string | undefined;
+  readonly lastModified?: string | undefined;
+  readonly status: number;
+  readonly headers: Readonly<Record<string, string>>;
+  readonly body: string;
+}
+
+### build/api.d.mts#KeptAnswer
+interface KeptAnswer {
+  readonly status: number;
+  readonly headers: Readonly<Record<string, string>>;
+  readonly body: string;
+  readonly notModified: boolean;
+}
+
+### build/api.d.mts#KeptMemory
+interface KeptMemory extends KeptStore {
+  used(): [string, Kept][];
+}
+
+### build/api.d.mts#KeptStore
+interface KeptStore {
+  get(key: string): Kept | undefined;
+  set(key: string, kept: Kept): void;
 }
 
 ### build/api.d.mts#OutcomeFacts
@@ -845,11 +904,36 @@ export declare function fetchTransport(options: FetchTransportOptions): Transpor
 ### build/api.d.mts#freshUntil
 export declare function freshUntil(header: (name: string) => string | undefined, status: number, fetchedAt: number, lastModified: string | undefined, capMs: number): number | undefined;
 
+### build/api.d.mts#hasValidator
+export declare function hasValidator(headers: Readonly<Record<string, string>>): boolean;
+
 ### build/api.d.mts#isApiError
 export declare const isApiError: (value: unknown) => value is ApiError;
 
 ### build/api.d.mts#isQuotaError
 export declare const isQuotaError: (value: unknown) => value is QuotaError;
+
+### build/api.d.mts#isTextType
+export declare function isTextType(contentType: string | undefined): boolean;
+
+### build/api.d.mts#keepAnswer
+export declare function keepAnswer(store: KeptStore, key: string, answer: {
+  readonly status: number;
+  readonly headers: Readonly<Record<string, string>>;
+  readonly body: string;
+}, options?: KeepOptions): KeptAnswer;
+
+### build/api.d.mts#keptFetch
+export declare function keptFetch(fetch: FetchLike, store: KeptStore, options?: KeepOptions): FetchLike;
+
+### build/api.d.mts#keptKey
+export declare function keptKey(url: string, headers: Readonly<Record<string, string>>): string;
+
+### build/api.d.mts#keptRequestHeaders
+export declare function keptRequestHeaders(kept: Kept | undefined, headers: Readonly<Record<string, string>>): Record<string, string>;
+
+### build/api.d.mts#keptStore
+export declare function keptStore(entries?: Iterable<readonly [string, Kept]>): KeptMemory;
 
 ### build/api.d.mts#memoryQuotaStore
 export declare function memoryQuotaStore(): QuotaStore;
@@ -868,6 +952,9 @@ export declare const reactToOutcome: (facts: OutcomeFacts, counts: HostCounts, c
 
 ### build/api.d.mts#readGrant
 export declare function readGrant(reply: Reply, source: string, issuedAt: number, secrets?: readonly string[], redact?: Redact): Grant;
+
+### build/api.d.mts#readKept
+export declare function readKept(data: unknown): [string, Kept][];
 
 ### build/api.d.mts#readQuotaHeaders
 export declare function readQuotaHeaders(get: (name: string) => string | null | undefined, names: QuotaHeaders, now: number): QuotaReading | undefined;
@@ -2935,7 +3022,7 @@ export declare const VENUE_LIMITS: {
 };
 
 ### build/index.d.mts#VERSION
-export declare const VERSION = "0.7.8";
+export declare const VERSION = "0.7.9";
 
 ### build/index.d.mts#Variant
 type Variant = "plain" | "rendered";

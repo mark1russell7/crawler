@@ -180,12 +180,9 @@ export const KEPT_STATUSES: readonly number[];
 
 // @beta
 export interface KeptAnswer {
-    // (undocumented)
     readonly body: string;
-    // (undocumented)
     readonly headers: Readonly<Record<string, string>>;
     readonly notModified: boolean;
-    // (undocumented)
     readonly status: number;
 }
 
@@ -205,9 +202,7 @@ export function keptRequestHeaders(kept: Kept | undefined, headers: Readonly<Rec
 
 // @beta
 export interface KeptStore {
-    // (undocumented)
     get(key: string): Kept | undefined;
-    // (undocumented)
     set(key: string, kept: Kept): void;
 }
 

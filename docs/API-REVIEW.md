@@ -75,6 +75,7 @@ The reports also show what API Extractor found:
 | `Answer`, `ApiError`, `ApiScheduler`, `Exchange`, `Grant`, `isApiError`, `Pace`, `readGrant`, `Redact`, `Reply`, `send`, `Send`, `sendWithToken`, `Signal`, `statusLine`, `TOKEN_MARGIN_MS`, `Tokens`, `tokenStore`, `Transport`, `API_TIMEOUT_MS`, `Condition`, `Conditions`, `FetchLike`, `fetchTransport`, `FetchTransportOptions`, `poll`, `Polled` | `/api` | The polite send of a documented API. It is new in 0.6.1, and the poll is new in 0.6.2, so the first API clients can change it. |
 | `isQuotaError`, `memoryQuotaStore`, `Quota`, `QuotaError`, `quotaGate`, `QuotaGate`, `QuotaGateOptions`, `QuotaHeaders`, `QuotaReading`, `QuotaRecord`, `QuotaState`, `QuotaStore`, `QuotaWindow`, `readQuotaHeaders`, `withQuota`, `WithQuotaOptions` | `/api` (and `QuotaRecord`, `QuotaStore` at the root and at `/politeness`) | The quotas of API keys. They are new in 0.6.3, so the first API clients can change them. |
 | `hasValidator`, `isTextType`, `keepAnswer`, `KeepOptions`, `Kept`, `KeptAnswer`, `KEPT_BODY_MAX`, `KEPT_HEADERS`, `keptFetch`, `keptKey`, `KeptMemory`, `keptRequestHeaders`, `KEPT_STATUSES`, `KeptStore`, `keptStore`, `readKept` | `/api` | The kept answers of a GET: a 304 gives the kept body. They are new, so the first API clients can change them. |
+| `KEPT_SEAL_FORMAT`, `KEPT_SEAL_SECRET_MIN`, `OpenedKept`, `openKept`, `SealOptions`, `sealKept` | `/api` | The sealed form of a store of kept answers, for a place that others can read. It is new, so the first API clients can change it. A change of the bytes gets a new format name. |
 | `freshUntil` | `/api` | The end of the freshness of an answer, as RFC 9111 calculates it. A client that keeps answers asks again at that time. It is new, so the first API clients can change it. |
 | `downloadPinned`, `DownloadOptions`, `isNoRead`, `NoRead`, `PINNED_TIMEOUT_MS`, `pinnedClient`, `PinnedClient`, `PinnedClientOptions`, `pinnedFile`, `PinnedSource`, `PinnedTry`, `sha256Of` | `/pinned` | The download of a pinned file. It is new, so the first clients can change it. |
 
@@ -150,6 +151,6 @@ The package is the MCP server of polite-crawler since 0.2.0. Its tiers follow th
 | --- | --- | --- | --- |
 | polite-crawler root | 238 | 139 | 0 |
 | `/robots`, `/hours`, `/html`, `/classify`, `/politeness`, `/signals`, `/urls`, `/text` | 94 | 2 | 0 |
-| `/api` | 13 | 65 | 0 |
+| `/api` | 13 | 71 | 0 |
 | `/pinned` | 12 | 20 | 0 |
 | polite-crawler-mcp | 17 | 5 | 0 |

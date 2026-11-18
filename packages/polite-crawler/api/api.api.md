@@ -99,6 +99,9 @@ export interface Grant {
     readonly until: number;
 }
 
+// @beta
+export function hasValidator(headers: Readonly<Record<string, string>>): boolean;
+
 // @public
 export interface HostCounts {
     readonly failures: number;
@@ -140,6 +143,76 @@ export const isApiError: (value: unknown) => value is ApiError;
 
 // @beta
 export const isQuotaError: (value: unknown) => value is QuotaError;
+
+// @beta
+export function isTextType(contentType: string | undefined): boolean;
+
+// @beta
+export function keepAnswer(store: KeptStore, key: string, answer: {
+    readonly status: number;
+    readonly headers: Readonly<Record<string, string>>;
+    readonly body: string;
+}, options?: KeepOptions): KeptAnswer;
+
+// @beta
+export interface KeepOptions {
+    readonly headers?: readonly string[] | undefined;
+    readonly maxBody?: number | undefined;
+}
+
+// @beta
+export interface Kept {
+    readonly body: string;
+    readonly etag?: string | undefined;
+    readonly headers: Readonly<Record<string, string>>;
+    readonly lastModified?: string | undefined;
+    readonly status: number;
+}
+
+// @beta
+export const KEPT_BODY_MAX: number;
+
+// @beta
+export const KEPT_HEADERS: readonly string[];
+
+// @beta
+export const KEPT_STATUSES: readonly number[];
+
+// @beta
+export interface KeptAnswer {
+    // (undocumented)
+    readonly body: string;
+    // (undocumented)
+    readonly headers: Readonly<Record<string, string>>;
+    readonly notModified: boolean;
+    // (undocumented)
+    readonly status: number;
+}
+
+// @beta
+export function keptFetch(fetch: FetchLike, store: KeptStore, options?: KeepOptions): FetchLike;
+
+// @beta
+export function keptKey(url: string, headers: Readonly<Record<string, string>>): string;
+
+// @beta
+export interface KeptMemory extends KeptStore {
+    used(): [string, Kept][];
+}
+
+// @beta
+export function keptRequestHeaders(kept: Kept | undefined, headers: Readonly<Record<string, string>>): Record<string, string>;
+
+// @beta
+export interface KeptStore {
+    // (undocumented)
+    get(key: string): Kept | undefined;
+    // (undocumented)
+    set(key: string, kept: Kept): void;
+}
+
+// @beta
+export function keptStore(entries?: Iterable<readonly [string, Kept]>): KeptMemory;
 
 // @beta
 export function memoryQuotaStore(): QuotaStore;
@@ -315,6 +388,9 @@ export const reactToOutcome: (facts: OutcomeFacts, counts: HostCounts, context: 
 
 // @beta
 export function readGrant(reply: Reply, source: string, issuedAt: number, secrets?: readonly string[], redact?: Redact): Grant;
+
+// @beta
+export function readKept(data: unknown): [string, Kept][];
 
 // @beta
 export function readQuotaHeaders(get: (name: string) => string | null | undefined, names: QuotaHeaders, now: number): QuotaReading | undefined;

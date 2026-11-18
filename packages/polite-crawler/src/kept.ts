@@ -32,7 +32,9 @@ export interface Kept {
  * @beta
  */
 export interface KeptStore {
+  /** This function gives the kept answer of the key, or undefined when the store has none. */
   get(key: string): Kept | undefined;
+  /** This function keeps the answer under the key, in place of an earlier one. */
   set(key: string, kept: Kept): void;
 }
 
@@ -42,8 +44,11 @@ export interface KeptStore {
  * @beta
  */
 export interface KeptAnswer {
+  /** The status of the answer. After a 304, it is the status of the kept answer. */
   readonly status: number;
+  /** The headers of the answer, by name in lowercase. */
   readonly headers: Readonly<Record<string, string>>;
+  /** The body of the answer as text. After a 304, it is the kept body. */
   readonly body: string;
   /** This value is true when the server answered 304 and the answer is the kept answer. */
   readonly notModified: boolean;

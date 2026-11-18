@@ -48,6 +48,8 @@ export {
   keptStore,
   readKept,
 } from "./kept.ts";
+export type { OpenedKept, SealOptions } from "./kept-seal.ts";
+export { KEPT_SEAL_FORMAT, KEPT_SEAL_SECRET_MIN, openKept, sealKept } from "./kept-seal.ts";
 export type {
   HostCounts,
   HostResult,

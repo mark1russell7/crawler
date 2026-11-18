@@ -3,7 +3,7 @@
   "name": "io.github.metrograph-labs/polite-crawler",
   "title": "polite-crawler",
   "description": "A polite crawler for agents: obeys robots.txt, fetches each page once, finds and verifies quotes.",
-  "version": "0.7.9",
+  "version": "0.7.10",
   "websiteUrl": "https://metrograph-labs.github.io/crawler/",
   "repository": {
     "url": "https://github.com/metrograph-labs/crawler",
@@ -15,7 +15,7 @@
       "registryType": "npm",
       "registryBaseUrl": "https://registry.npmjs.org",
       "identifier": "polite-crawler-mcp",
-      "version": "0.7.9",
+      "version": "0.7.10",
       "runtimeHint": "npx",
       "transport": {
         "type": "stdio"

@@ -3,10 +3,10 @@
 **Fetch a source one time, keep it, and read it many times.** `polite-crawler` is a polite web crawler for research and for AI agents. It obeys robots.txt, sends one request at a time to each site, and keeps each response on your disk. Then it answers each later question from a local full-text index, with no new request.
 
 [![npm](https://img.shields.io/npm/v/polite-crawler)](https://www.npmjs.com/package/polite-crawler)
-[![CI](https://github.com/mark1russell7/crawler/actions/workflows/ci.yml/badge.svg)](https://github.com/mark1russell7/crawler/actions/workflows/ci.yml)
-[![license](https://img.shields.io/npm/l/polite-crawler)](https://github.com/mark1russell7/crawler/blob/main/LICENSE)
+[![CI](https://github.com/metrograph-labs/crawler/actions/workflows/ci.yml/badge.svg)](https://github.com/metrograph-labs/crawler/actions/workflows/ci.yml)
+[![license](https://img.shields.io/npm/l/polite-crawler)](https://github.com/metrograph-labs/crawler/blob/main/LICENSE)
 
-The site has interactive demos with the real code: <https://mark1russell7.github.io/crawler/>
+The site has interactive demos with the real code: <https://metrograph-labs.github.io/crawler/>
 
 - **Polite.** The crawler obeys robots.txt (RFC 9309), and the rules for `Claude-User` too when an assistant asks. It sends one request at a time to each host and obeys `Retry-After`. A challenge, a 401, a 402 or a 403 stops the host for a time.
 - **Fetch one time.** Each response goes into a capture log and a store of bodies by hash. A repeated question reads the disk, so it costs no request.
@@ -191,7 +191,7 @@ The default ranking (`rank: "exact"`) gives a BM25 score to each document that m
 
 The command line has `find --rank fast`, and the tool `crawl_find` has the parameter `rank`. `DocIndex.rankWithin` takes `{ rank: "fast" }` too. It then leaves out each document that holds only common words.
 
-The benchmark `bench/find.mts` measured the two modes in CI ([the results](https://github.com/mark1russell7/crawler/actions/runs/39057146797)). The index had 30,000 documents of 900 words, with a Zipf spread of the words. Each time is the median of 12 questions on Node.js 24:
+The benchmark `bench/find.mts` measured the two modes in CI ([the results](https://github.com/metrograph-labs/crawler/actions/runs/39057146797)). The index had 30,000 documents of 900 words, with a Zipf spread of the words. Each time is the median of 12 questions on Node.js 24:
 
 | Search | `exact` | `fast` | Speed | Same top 10 | Same order |
 | --- | ---: | ---: | ---: | ---: | ---: |
@@ -257,7 +257,7 @@ The readers give more facts than before:
 
 ### Which parts are stable
 
-Before version 1.0.0, a minor version can change the API, and `CHANGELOG.md` tells what to change. Some parts change only for a strong reason. Other parts are the engine, and they change more often. The declaration of each part of the engine has the TSDoc tag `@beta`, so your editor shows it. [The API review](https://github.com/mark1russell7/crawler/blob/main/docs/API-REVIEW.md) gives the tier of each export.
+Before version 1.0.0, a minor version can change the API, and `CHANGELOG.md` tells what to change. Some parts change only for a strong reason. Other parts are the engine, and they change more often. The declaration of each part of the engine has the TSDoc tag `@beta`, so your editor shows it. [The API review](https://github.com/metrograph-labs/crawler/blob/main/docs/API-REVIEW.md) gives the tier of each export.
 
 These parts are the stable API:
 
@@ -412,7 +412,7 @@ const embedder: Embedder = {
 - A vector takes 4 bytes for each dimension: 1.5 KiB for 384 dimensions and 3 KiB for 768. With the keys and the indexes of SQLite, a chunk of 384 dimensions took 2.4 KiB of the file in the benchmark.
 - The first hybrid search reads the vectors of the embedder into memory. Thus the memory is approximately the size of the vectors.
 
-The benchmark `bench/find.mts --hybrid` measured the time in CI ([the results](https://github.com/mark1russell7/crawler/actions/runs/39082851222)). A fake embedder of almost no cost gave the vectors, so the time of a real model comes on top. The index had 30,000 documents of 900 words, which gave 89,100 chunks of 384 dimensions. Each time is the median of 12 questions on Node.js 24:
+The benchmark `bench/find.mts --hybrid` measured the time in CI ([the results](https://github.com/metrograph-labs/crawler/actions/runs/39082851222)). A fake embedder of almost no cost gave the vectors, so the time of a real model comes on top. The index had 30,000 documents of 900 words, which gave 89,100 chunks of 384 dimensions. Each time is the median of 12 questions on Node.js 24:
 
 | Step | Time |
 | --- | ---: |
@@ -1241,7 +1241,7 @@ GitHub Pages cannot serve a key directory of the type `directory` for a project 
 2. **One request at a time for each host.** A host rests for 3 seconds or more between two requests, and longer after a slow response. Many hosts run in parallel, so a crawl is fast across sites and gentle on each one.
 3. **Stops.** A 401 or a 403 stops the host for 1 hour, and a challenge or a 402 for 24 hours. Five failures in sequence stop the host for 1 hour. A `Retry-After` longer than 1 hour stops the host for that time, up to 30 days. The note of a skipped fetch says `host stopped until <time>: <reason>`. The crawler does not try again with a different identity.
 4. **Failures and backoff.** A client error (a 404, for example), a 429 and a 503 do not count toward a stop. After an error or a request to wait, the crawler waits 5 seconds, then longer, up to 300 seconds, with random jitter.
-5. **An honest `User-Agent`.** The default is `PoliteCrawler/0.1.0 (+https://mark1russell7.github.io/crawler/bot/)`. The `contact` option adds an address. An email address also goes into the `From` header, and a URL does not, because `From` holds only a mailbox. The constructor of `Crawler` throws an error for a bad option. Examples are a token that is not a product token, a `User-Agent` or a `From` that HTTP cannot send, and a `maxActive` less than 1.
+5. **An honest `User-Agent`.** The default is `PoliteCrawler/0.1.0 (+https://metrograph-labs.github.io/crawler/bot/)`. The `contact` option adds an address. An email address also goes into the `From` header, and a URL does not, because `From` holds only a mailbox. The constructor of `Crawler` throws an error for a bad option. Examples are a token that is not a product token, a `User-Agent` or a `From` that HTTP cannot send, and a `maxActive` less than 1.
 6. **Public addresses only.** By default, the crawler fetches only `http:` and `https:` URLs on public addresses. It checks the address after DNS and at each redirect. In the headless browser, it checks each request of the page and each redirect of that request. A refusal is a skipped fetch with the note `egress policy: <address> is a loopback address; set allowPrivate to fetch it`.
 7. **Usage signals.** When a page asks not to be AI input (`ai-input=no` content signals), the crawler keeps it but holds back its text from the AI reader. The crawler also records the RSL `License` lines of robots.txt and the TDMRep reservation (the `tdm-reservation` and `tdm-policy` headers and `<meta>` tags) with each capture. These records change nothing, because a reservation of text and data mining is not a refusal of AI input.
 8. **Signed requests, as an option.** With a `signer`, each request has a Web Bot Auth signature, so a site can verify where it comes from. [Signed requests](#signed-requests-web-bot-auth) tells how.
@@ -1527,7 +1527,7 @@ console.log(result.responses, result.revisits, result.pages);
 
 ## Contributing
 
-[`CONTRIBUTING.md`](https://github.com/mark1russell7/crawler/blob/main/CONTRIBUTING.md) tells how to set up the repository and test a change. [`CHANGELOG.md`](https://github.com/mark1russell7/crawler/blob/main/CHANGELOG.md) records the changes in each version. Report a vulnerability privately, as [`SECURITY.md`](https://github.com/mark1russell7/crawler/blob/main/SECURITY.md) tells.
+[`CONTRIBUTING.md`](https://github.com/metrograph-labs/crawler/blob/main/CONTRIBUTING.md) tells how to set up the repository and test a change. [`CHANGELOG.md`](https://github.com/metrograph-labs/crawler/blob/main/CHANGELOG.md) records the changes in each version. Report a vulnerability privately, as [`SECURITY.md`](https://github.com/metrograph-labs/crawler/blob/main/SECURITY.md) tells.
 
 ## License
 

@@ -105,7 +105,7 @@ The steps of each month:
 
 1. The workflow does the study and the checks of the site. It opens a pull request from the branch `study/<YYYY-MM>` and starts `ci.yml` on that branch.
 2. A session or Mark reviews the pull request. Merge it when CI passes.
-3. Make the new version on Zenodo: `gh workflow run study-zenodo.yml -R mark1russell7/crawler -f new_version_of=<record id>`.
+3. Make the new version on Zenodo: `gh workflow run study-zenodo.yml -R metrograph-labs/crawler -f new_version_of=<record id>`.
 4. Mark checks the draft on Zenodo and clicks Publish.
 5. Record the DOI: `pnpm exec tsx packages/site/scripts/robots-study.ts doi <version> <doi>`. Commit the change on a branch and open a pull request.
 

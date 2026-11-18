@@ -31,7 +31,7 @@ describe("evalAStamp", () => {
     expect(stamp.runs).toEqual([
       {
         id: String(evalA.run),
-        url: `https://github.com/mark1russell7/crawler/actions/runs/${String(evalA.run)}`,
+        url: `https://github.com/metrograph-labs/crawler/actions/runs/${String(evalA.run)}`,
         date: evalA.started,
         engines: { "polite-crawler": versionOf(evalA.package) },
         commit: evalA.commitSha,
@@ -163,7 +163,7 @@ describe("studyLimitStamps", () => {
       expect(stamp.runs, stamp.page).toEqual([
         {
           id: "study of 2026-12-02",
-          url: "https://github.com/mark1russell7/crawler/actions/workflows/study-monthly.yml",
+          url: "https://github.com/metrograph-labs/crawler/actions/workflows/study-monthly.yml",
           date: run.fetched.from,
           engines: { "polite-crawler": STUDY_ENGINE_VERSION },
           commit,

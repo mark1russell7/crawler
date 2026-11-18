@@ -33,8 +33,8 @@ The 4 pages of the robots.txt study show counts from the robots.txt parser of po
 - Waits for: `study-monthly`
 - Started: 2026-11-16
 - Shipped: 2026-11-16
-- [crawler #186 (the commit of each study run, merged 7122698)](https://github.com/mark1russell7/crawler/pull/186)
-- [crawler #187 (count the rules again, merged 119a326)](https://github.com/mark1russell7/crawler/pull/187)
+- [crawler #186 (the commit of each study run, merged 7122698)](https://github.com/metrograph-labs/crawler/pull/186)
+- [crawler #187 (count the rules again, merged 119a326)](https://github.com/metrograph-labs/crawler/pull/187)
 - [template #383 (the version rule of the freshness gate)](https://github.com/mark1russell7/template/pull/383)
 
 ### `api-report-entries`: api-report: an option that keeps chunks of the bundler out of the report
@@ -45,9 +45,9 @@ A test of the crawler holds that the API report names only the declaration files
 - Waits for: `report-chunks`
 - Started: 2026-11-15
 - Shipped: 2026-11-15
-- [crawler test: the report names only entry points](https://github.com/mark1russell7/crawler/blob/main/packages/polite-crawler/src/api-report.test.ts)
+- [crawler test: the report names only entry points](https://github.com/metrograph-labs/crawler/blob/main/packages/polite-crawler/src/api-report.test.ts)
 - [@mark1russell7/api-report 0.5.7 on npm (entriesOnly)](https://www.npmjs.com/package/@mark1russell7/api-report/v/0.5.7)
-- [crawler #173 (merged 87c997b)](https://github.com/mark1russell7/crawler/pull/173)
+- [crawler #173 (merged 87c997b)](https://github.com/metrograph-labs/crawler/pull/173)
 
 ### `api-fresh-until`: freshUntil in polite-crawler/api: when a kept answer is stale
 
@@ -57,10 +57,10 @@ An API client that keeps the answers of poll and send must know when to ask agai
 - Waits for: `api-poll`
 - Started: 2026-11-15
 - Shipped: 2026-11-15
-- [crawler #169 (freshUntil)](https://github.com/mark1russell7/crawler/pull/169)
-- [#169 merged (e7ecefe)](https://github.com/mark1russell7/crawler/commit/e7ecefe689548c3c6b9c0e7359b477d881cd2b63)
-- [crawler #170 (the watch-list repair, merged cfdae6a)](https://github.com/mark1russell7/crawler/pull/170)
-- [crawler #172 (0.7.4, merged 49e6bcb)](https://github.com/mark1russell7/crawler/pull/172)
+- [crawler #169 (freshUntil)](https://github.com/metrograph-labs/crawler/pull/169)
+- [#169 merged (e7ecefe)](https://github.com/metrograph-labs/crawler/commit/e7ecefe689548c3c6b9c0e7359b477d881cd2b63)
+- [crawler #170 (the watch-list repair, merged cfdae6a)](https://github.com/metrograph-labs/crawler/pull/170)
+- [crawler #172 (0.7.4, merged 49e6bcb)](https://github.com/metrograph-labs/crawler/pull/172)
 - [polite-crawler 0.7.4 on npm](https://www.npmjs.com/package/polite-crawler/v/0.7.4)
 
 ### `quota-hardening`: Quotas: the smaller points of the review of #162
@@ -71,8 +71,8 @@ The smaller points of the review of #162. None of them makes a count too low. Do
 - Waits for: `quota-followups`
 - Started: 2026-11-15
 - Shipped: 2026-11-15
-- [crawler #162 (the review)](https://github.com/mark1russell7/crawler/pull/162)
-- [crawler #168 (0.7.3)](https://github.com/mark1russell7/crawler/pull/168)
+- [crawler #162 (the review)](https://github.com/metrograph-labs/crawler/pull/162)
+- [crawler #168 (0.7.3)](https://github.com/metrograph-labs/crawler/pull/168)
 
 ### `quota-followups`: Quotas: the follow-ups of the reviews (a list of gates, the reset forms, the longest block, onError)
 
@@ -82,8 +82,8 @@ Five follow-ups from the reviews of the quotas, in 0.7.0 (#162). 1. Two quotas o
 - Waits for: `api-quota`
 - Started: 2026-11-15
 - Shipped: 2026-11-15
-- [crawler #162 (0.7.0, merged dff2fe8)](https://github.com/mark1russell7/crawler/pull/162)
-- [crawler #161 (the review)](https://github.com/mark1russell7/crawler/pull/161)
+- [crawler #162 (0.7.0, merged dff2fe8)](https://github.com/metrograph-labs/crawler/pull/162)
+- [crawler #161 (the review)](https://github.com/metrograph-labs/crawler/pull/161)
 - [polite-crawler 0.7.0 on npm](https://www.npmjs.com/package/polite-crawler/v/0.7.0)
 
 ### `quota-service`: Quotas: move the window counting to @mark1russell7/service
@@ -94,12 +94,12 @@ The window counting of quotaGate (rolling buckets and calendar days and months i
 - Waits for: `api-quota`
 - Started: 2026-11-15
 - Shipped: 2026-11-15
-- [crawler #161 (the review that asks for the move)](https://github.com/mark1russell7/crawler/pull/161)
+- [crawler #161 (the review that asks for the move)](https://github.com/metrograph-labs/crawler/pull/161)
 - [systems #527 (SYS-115: service 0.8.15, algebra 0.8.9)](https://github.com/mark1russell7/systems/pull/527)
 - [systems #535 (maxBlock and the narrow part, merged 75f8efb)](https://github.com/mark1russell7/systems/pull/535)
 - [systems #538 (service 0.8.19)](https://github.com/mark1russell7/systems/pull/538)
 - [systems #543 (the leaner limiter: service 0.8.20, quantity 0.4.1)](https://github.com/mark1russell7/systems/pull/543)
-- [crawler #171 (merged 468e5cc)](https://github.com/mark1russell7/crawler/pull/171)
+- [crawler #171 (merged 468e5cc)](https://github.com/metrograph-labs/crawler/pull/171)
 - [polite-crawler 0.7.5 on npm](https://www.npmjs.com/package/polite-crawler/v/0.7.5)
 
 ### `api-guards`: isQuotaError and isApiError: tell a quota refusal across two copies of the package
@@ -110,7 +110,7 @@ For the alerts project: a package that gets a transport of withQuota, with no de
 - Waits for: `api-quota`
 - Started: 2026-11-15
 - Shipped: 2026-11-15
-- [crawler #162 (api-guards, 0.7.0, merged dff2fe8)](https://github.com/mark1russell7/crawler/pull/162)
+- [crawler #162 (api-guards, 0.7.0, merged dff2fe8)](https://github.com/metrograph-labs/crawler/pull/162)
 - [alerts PR 19 (the ask)](https://github.com/mark1russell7/alerts/pull/19)
 - [polite-crawler 0.7.0 on npm](https://www.npmjs.com/package/polite-crawler/v/0.7.0)
 
@@ -122,7 +122,7 @@ The API report named build/html.chunk.d.mts 24 times. A chunk name is not a stab
 - Waits for: `api-quota`
 - Started: 2026-11-14
 - Shipped: 2026-11-15
-- [crawler #162 (report-chunks, 0.7.0, merged dff2fe8)](https://github.com/mark1russell7/crawler/pull/162)
+- [crawler #162 (report-chunks, 0.7.0, merged dff2fe8)](https://github.com/metrograph-labs/crawler/pull/162)
 - [polite-crawler 0.7.0 on npm](https://www.npmjs.com/package/polite-crawler/v/0.7.0)
 
 ### `sqlite-projections`: SQLite: move the index, the vectors and the watch list onto @mark1russell7/sqlite
@@ -134,10 +134,10 @@ The map of homes puts the SQLite code in @mark1russell7/sqlite. The host state s
 - Started: 2026-11-15
 - Shipped: 2026-11-15
 - [sqlite #12 (migrate newer: keep, 0.2.5, done)](https://github.com/mark1russell7/sqlite/pull/12)
-- [crawler #165 (0.7.1, merged f9bc739)](https://github.com/mark1russell7/crawler/pull/165)
+- [crawler #165 (0.7.1, merged f9bc739)](https://github.com/metrograph-labs/crawler/pull/165)
 - [sqlite 0.3.2 (readTransaction, for this item)](https://github.com/mark1russell7/sqlite/releases/tag/v0.3.2)
 - [polite-crawler 0.7.1 on npm](https://www.npmjs.com/package/polite-crawler/v/0.7.1)
-- [crawler #170 (the follow-ups of the review)](https://github.com/mark1russell7/crawler/pull/170)
+- [crawler #170 (the follow-ups of the review)](https://github.com/metrograph-labs/crawler/pull/170)
 
 ### `api-quota`: API quotas: count each key over its day, month or window, and stop before the provider
 
@@ -147,7 +147,7 @@ For the alerts project: free API keys have a documented quota (as read on 2026-1
 - Waits for: `api-poll`
 - Started: 2026-11-14
 - Shipped: 2026-11-15
-- [crawler #161 (quotas, merged 71aa6f3)](https://github.com/mark1russell7/crawler/pull/161)
+- [crawler #161 (quotas, merged 71aa6f3)](https://github.com/metrograph-labs/crawler/pull/161)
 - [polite-crawler 0.6.3 on npm](https://www.npmjs.com/package/polite-crawler/v/0.6.3)
 
 ### `html-size`: The html entry grew 25 % with linkedom 0.18.15
@@ -157,8 +157,8 @@ linkedom 0.18.15 (2026-11-01) bundles the CSS parser cssomnom in place of @acemi
 - Area: Package
 - Started: 2026-11-15
 - Shipped: 2026-11-15
-- [crawler #80 (budget raised to 192000)](https://github.com/mark1russell7/crawler/pull/80)
-- [crawler #164 (the check of a loose budget, merged 48e459a)](https://github.com/mark1russell7/crawler/pull/164)
+- [crawler #80 (budget raised to 192000)](https://github.com/metrograph-labs/crawler/pull/80)
+- [crawler #164 (the check of a loose budget, merged 48e459a)](https://github.com/metrograph-labs/crawler/pull/164)
 
 ### `daemon-lock`: Daemon: a lock file for the single-daemon rule
 
@@ -168,7 +168,7 @@ Two `polite-crawler daemon` starts at the same moment on one store both passed t
 - Started: 2026-11-15
 - Shipped: 2026-11-15
 - [polite-crawler 0.7.2 on npm](https://www.npmjs.com/package/polite-crawler/v/0.7.2)
-- [crawler #167 (0.7.2)](https://github.com/mark1russell7/crawler/pull/167)
+- [crawler #167 (0.7.2)](https://github.com/metrograph-labs/crawler/pull/167)
 
 ### `api-poll`: API polls: conditional requests, a required User-Agent, a time limit
 
@@ -177,9 +177,9 @@ For the alerts project (DEFCON 1). polite-crawler/api (0.6.1) already sends docu
 - Area: Package
 - Started: 2026-11-14
 - Shipped: 2026-11-14
-- [crawler #159 (feature and 0.6.2)](https://github.com/mark1russell7/crawler/pull/159)
+- [crawler #159 (feature and 0.6.2)](https://github.com/metrograph-labs/crawler/pull/159)
 - [npm polite-crawler 0.6.2](https://www.npmjs.com/package/polite-crawler/v/0.6.2)
-- [merge 17c24d1](https://github.com/mark1russell7/crawler/commit/17c24d1c7154bceed3a4bb72f61eedafbb77add0)
+- [merge 17c24d1](https://github.com/metrograph-labs/crawler/commit/17c24d1c7154bceed3a4bb72f61eedafbb77add0)
 
 ### `mcp-lean`: MCP server: a smaller fixed cost in each session
 
@@ -189,9 +189,9 @@ Shipped in 0.2.3 (#38). The re-run of part B (run 40163619030, Sonnet, 90 sessio
 - Waits for: `eval-b`
 - Started: 2026-10-25
 - Shipped: 2026-10-25
-- [crawler #38](https://github.com/mark1russell7/crawler/pull/38)
-- [crawler #41 (the numbers on the site)](https://github.com/mark1russell7/crawler/pull/41)
-- [Real Claude Code sessions](https://mark1russell7.github.io/crawler/notes/claude-code-sessions/)
+- [crawler #38](https://github.com/metrograph-labs/crawler/pull/38)
+- [crawler #41 (the numbers on the site)](https://github.com/metrograph-labs/crawler/pull/41)
+- [Real Claude Code sessions](https://metrograph-labs.github.io/crawler/notes/claude-code-sessions/)
 
 ### `security-alerts`: Security alerts: undici and body-parser CVEs, CodeQL findings
 
@@ -200,12 +200,12 @@ Fixed in #44 (undici ^8.12.3 for CVE-2026-109869, so a server can no longer stop
 - Area: Package
 - Started: 2026-10-25
 - Shipped: 2026-10-25
-- [crawler #43 (the security workflow)](https://github.com/mark1russell7/crawler/pull/43)
-- [Code scanning alerts](https://github.com/mark1russell7/crawler/security/code-scanning)
-- [crawler #44 (dependencies)](https://github.com/mark1russell7/crawler/pull/44)
-- [crawler #45 (CodeQL fixes)](https://github.com/mark1russell7/crawler/pull/45)
-- [release PR #46 (0.2.4)](https://github.com/mark1russell7/crawler/pull/46)
-- [v0.2.4 release](https://github.com/mark1russell7/crawler/releases/tag/v0.2.4)
+- [crawler #43 (the security workflow)](https://github.com/metrograph-labs/crawler/pull/43)
+- [Code scanning alerts](https://github.com/metrograph-labs/crawler/security/code-scanning)
+- [crawler #44 (dependencies)](https://github.com/metrograph-labs/crawler/pull/44)
+- [crawler #45 (CodeQL fixes)](https://github.com/metrograph-labs/crawler/pull/45)
+- [release PR #46 (0.2.4)](https://github.com/metrograph-labs/crawler/pull/46)
+- [v0.2.4 release](https://github.com/metrograph-labs/crawler/releases/tag/v0.2.4)
 
 ### `watch-api`: Watch API: a job for runWatch, a schedule setter, and add that keeps next_at
 
@@ -215,9 +215,9 @@ Shipped in 0.2.3 (crawler #36): runWatch takes job (a name in the captures), cra
 - Waits for: `watch`
 - Started: 2026-10-24
 - Shipped: 2026-10-25
-- [crawler #36](https://github.com/mark1russell7/crawler/pull/36)
-- [release PR #37 (0.2.3)](https://github.com/mark1russell7/crawler/pull/37)
-- [v0.2.3 release](https://github.com/mark1russell7/crawler/releases/tag/v0.2.3)
+- [crawler #36](https://github.com/metrograph-labs/crawler/pull/36)
+- [release PR #37 (0.2.3)](https://github.com/metrograph-labs/crawler/pull/37)
+- [v0.2.3 release](https://github.com/metrograph-labs/crawler/releases/tag/v0.2.3)
 
 ### `hybrid-rejection`: Hybrid search: no unhandled rejection from a shared embedding
 
@@ -226,7 +226,7 @@ An audit found that two hybrid searches that share a text, and both fail, could 
 - Area: Package
 - Started: 2026-10-25
 - Shipped: 2026-10-24
-- [crawler #29](https://github.com/mark1russell7/crawler/pull/29)
+- [crawler #29](https://github.com/metrograph-labs/crawler/pull/29)
 
 ### `eval-b`: Eval, part B: real Claude Code runs
 
@@ -236,11 +236,11 @@ Run the same claims through Claude Code (claude -p, one model for both arms) wit
 - Waits for: `eval`
 - Started: 2026-10-24
 - Shipped: 2026-10-24
-- [crawler #26 (part B workflow)](https://github.com/mark1russell7/crawler/pull/26)
-- [crawler #28 (page check, repeats)](https://github.com/mark1russell7/crawler/pull/28)
-- [crawler #30 (Markdown in the page check)](https://github.com/mark1russell7/crawler/pull/30)
-- [Sonnet run 40153411428](https://github.com/mark1russell7/crawler/actions/runs/40153411428)
-- [Opus run 40154501047](https://github.com/mark1russell7/crawler/actions/runs/40154501047)
+- [crawler #26 (part B workflow)](https://github.com/metrograph-labs/crawler/pull/26)
+- [crawler #28 (page check, repeats)](https://github.com/metrograph-labs/crawler/pull/28)
+- [crawler #30 (Markdown in the page check)](https://github.com/metrograph-labs/crawler/pull/30)
+- [Sonnet run 40153411428](https://github.com/metrograph-labs/crawler/actions/runs/40153411428)
+- [Opus run 40154501047](https://github.com/metrograph-labs/crawler/actions/runs/40154501047)
 
 ### `rel021`: Release 0.2.1
 
@@ -250,8 +250,8 @@ A patch release: polite-crawler 0.2.1 (exports for the types of its signatures) 
 - Waits for: `remote-host`, `api-review`
 - Started: 2026-10-19
 - Shipped: 2026-10-19
-- [crawler #22](https://github.com/mark1russell7/crawler/pull/22)
-- [Release v0.2.1](https://github.com/mark1russell7/crawler/releases/tag/v0.2.1)
+- [crawler #22](https://github.com/metrograph-labs/crawler/pull/22)
+- [Release v0.2.1](https://github.com/metrograph-labs/crawler/releases/tag/v0.2.1)
 - [npm polite-crawler-mcp 0.2.1](https://www.npmjs.com/package/polite-crawler-mcp/v/0.2.1)
 
 ### `renovate`: Renovate in place of Dependabot
@@ -261,8 +261,8 @@ Mark installed Renovate for his repositories. crawler extends the shared preset 
 - Area: Release and CI
 - Started: 2026-10-19
 - Shipped: 2026-10-19
-- [crawler #18](https://github.com/mark1russell7/crawler/pull/18)
-- [crawler #23 (the shared preset)](https://github.com/mark1russell7/crawler/pull/23)
+- [crawler #18](https://github.com/metrograph-labs/crawler/pull/18)
+- [crawler #23 (the shared preset)](https://github.com/metrograph-labs/crawler/pull/23)
 
 ### `release-docs`: CLAUDE.md: the version places of two packages
 
@@ -271,7 +271,7 @@ Mark said yes (2026-10-19). The release section of the crawler CLAUDE.md names t
 - Area: Release and CI
 - Waits for: `rel020`
 - Shipped: 2026-10-19
-- [Commit 4d0c06f](https://github.com/mark1russell7/crawler/commit/4d0c06f)
+- [Commit 4d0c06f](https://github.com/metrograph-labs/crawler/commit/4d0c06f)
 
 ### `remote-host`: The loopback Host rule on a remote bind too
 
@@ -281,7 +281,7 @@ With allowRemote, the HTTP listener of polite-crawler-mcp accepted any Host head
 - Waits for: `rel020`
 - Started: 2026-10-19
 - Shipped: 2026-10-19
-- [crawler #19](https://github.com/mark1russell7/crawler/pull/19)
+- [crawler #19](https://github.com/metrograph-labs/crawler/pull/19)
 
 ### `rel020`: Release 0.2.0: polite-crawler and polite-crawler-mcp
 
@@ -291,10 +291,10 @@ A minor release: before 1.0.0, a breaking change raises the minor version. polit
 - Waits for: `mcp-host`, `mcp-publish`, `api-report`
 - Started: 2026-10-19
 - Shipped: 2026-10-19
-- [Release v0.2.0](https://github.com/mark1russell7/crawler/releases/tag/v0.2.0)
+- [Release v0.2.0](https://github.com/metrograph-labs/crawler/releases/tag/v0.2.0)
 - [npm polite-crawler 0.2.0](https://www.npmjs.com/package/polite-crawler/v/0.2.0)
 - [npm polite-crawler-mcp 0.2.0](https://www.npmjs.com/package/polite-crawler-mcp/v/0.2.0)
-- [Release run 39323762591](https://github.com/mark1russell7/crawler/actions/runs/39323762591)
+- [Release run 39323762591](https://github.com/metrograph-labs/crawler/actions/runs/39323762591)
 
 ### `api-review`: API review before 1.0
 
@@ -304,8 +304,8 @@ The API review before 1.0 is complete. Each export of polite-crawler and of poli
 - Waits for: `mcp-host`, `api-report`
 - Started: 2026-10-19
 - Shipped: 2026-10-19
-- [crawler #20](https://github.com/mark1russell7/crawler/pull/20)
-- [docs/API-REVIEW.md](https://github.com/mark1russell7/crawler/blob/main/docs/API-REVIEW.md)
+- [crawler #20](https://github.com/metrograph-labs/crawler/pull/20)
+- [docs/API-REVIEW.md](https://github.com/metrograph-labs/crawler/blob/main/docs/API-REVIEW.md)
 
 ### `api-report`: The API report that CI compares, and the tiers for 1.0
 
@@ -314,8 +314,8 @@ API Extractor makes one report of the public API for each entry point, in packag
 - Area: Package
 - Started: 2026-10-19
 - Shipped: 2026-10-19
-- [docs/API-REVIEW.md](https://github.com/mark1russell7/crawler/blob/main/docs/API-REVIEW.md)
-- [Commit 9ebeca3](https://github.com/mark1russell7/crawler/commit/9ebeca3)
+- [docs/API-REVIEW.md](https://github.com/metrograph-labs/crawler/blob/main/docs/API-REVIEW.md)
+- [Commit 9ebeca3](https://github.com/metrograph-labs/crawler/commit/9ebeca3)
 
 ### `eval-page`: A page for the eval: tokens to prove a claim
 
@@ -325,8 +325,8 @@ A site page for part A of the eval: for each of the 30 claims, the tokens of the
 - Waits for: `eval`
 - Started: 2026-10-19
 - Shipped: 2026-10-19
-- [The page: Tokens to prove a claim](https://mark1russell7.github.io/crawler/notes/tokens-per-claim/)
-- [Commit 168b8a1](https://github.com/mark1russell7/crawler/commit/168b8a1)
+- [The page: Tokens to prove a claim](https://metrograph-labs.github.io/crawler/notes/tokens-per-claim/)
+- [Commit 168b8a1](https://github.com/metrograph-labs/crawler/commit/168b8a1)
 
 ### `mcp-publish`: The first publish of polite-crawler-mcp
 
@@ -345,7 +345,7 @@ Mark's decision D12 (OTH-3): the MCP server of polite-crawler is the package pol
 - Waits for: `rel013`
 - Started: 2026-10-19
 - Shipped: 2026-10-19
-- [crawler #15](https://github.com/mark1russell7/crawler/pull/15)
+- [crawler #15](https://github.com/metrograph-labs/crawler/pull/15)
 - [npm polite-crawler-mcp](https://www.npmjs.com/package/polite-crawler-mcp)
 - [client #59 (CLI-35)](https://github.com/mark1russell7/client/pull/59)
 
@@ -357,10 +357,10 @@ Live on the site since 2026-10-18. A robots.txt builder with a verdict for each 
 - Waits for: `site-review`
 - Started: 2026-10-18
 - Shipped: 2026-10-18
-- [Main at 1ff8af7](https://github.com/mark1russell7/crawler/commit/1ff8af7)
-- [The robots.txt builder](https://mark1russell7.github.io/crawler/block-ai-training-crawlers/)
-- [An hour on your site](https://mark1russell7.github.io/crawler/bot/)
-- [The pace of each crawler](https://mark1russell7.github.io/crawler/guide/compare/)
+- [Main at 1ff8af7](https://github.com/metrograph-labs/crawler/commit/1ff8af7)
+- [The robots.txt builder](https://metrograph-labs.github.io/crawler/block-ai-training-crawlers/)
+- [An hour on your site](https://metrograph-labs.github.io/crawler/bot/)
+- [The pace of each crawler](https://metrograph-labs.github.io/crawler/guide/compare/)
 
 ### `site-tables`: Tables that read well on a phone, and a filter for the command options
 
@@ -370,8 +370,8 @@ On a phone, tables with three or more columns are one card per row, with each fi
 - Waits for: `site-review`
 - Started: 2026-10-18
 - Shipped: 2026-10-18
-- [Main at e0337bb](https://github.com/mark1russell7/crawler/commit/e0337bb)
-- [Command line reference](https://mark1russell7.github.io/crawler/reference/cli/)
+- [Main at e0337bb](https://github.com/metrograph-labs/crawler/commit/e0337bb)
+- [Command line reference](https://metrograph-labs.github.io/crawler/reference/cli/)
 
 ### `types26`: The declaration files type-check with @types/node 26
 
@@ -381,8 +381,8 @@ On a phone, tables with three or more columns are one card per row, with each fi
 - Waits for: `rel013`
 - Started: 2026-10-18
 - Shipped: 2026-10-18
-- [Commit 01e105f](https://github.com/mark1russell7/crawler/commit/01e105f)
-- [Release v0.1.4](https://github.com/mark1russell7/crawler/releases/tag/v0.1.4)
+- [Commit 01e105f](https://github.com/metrograph-labs/crawler/commit/01e105f)
+- [Release v0.1.4](https://github.com/metrograph-labs/crawler/releases/tag/v0.1.4)
 
 ### `rel014`: Release 0.1.4
 
@@ -392,8 +392,8 @@ A patch release, on npm since 2026-10-18: the venue and product commands, and th
 - Waits for: `cli-recipes`, `types26`
 - Started: 2026-10-18
 - Shipped: 2026-10-18
-- [Pull request #9](https://github.com/mark1russell7/crawler/pull/9)
-- [Release v0.1.4](https://github.com/mark1russell7/crawler/releases/tag/v0.1.4)
+- [Pull request #9](https://github.com/metrograph-labs/crawler/pull/9)
+- [Release v0.1.4](https://github.com/metrograph-labs/crawler/releases/tag/v0.1.4)
 - [npm 0.1.4](https://www.npmjs.com/package/polite-crawler/v/0.1.4)
 
 ### `site-review`: A full screenshot review of the site
@@ -404,8 +404,8 @@ Every page, on phone and desktop, in light and dark mode, from CI screenshots. A
 - Waits for: `site-visuals`
 - Started: 2026-10-18
 - Shipped: 2026-10-18
-- [Main at 65acb3b](https://github.com/mark1russell7/crawler/commit/65acb3b)
-- [The site](https://mark1russell7.github.io/crawler/)
+- [Main at 65acb3b](https://github.com/metrograph-labs/crawler/commit/65acb3b)
+- [The site](https://metrograph-labs.github.io/crawler/)
 
 ### `cli-recipes`: venue and product commands
 
@@ -415,7 +415,7 @@ Shipped in 0.1.4 on 2026-10-18. polite-crawler venue <url> prints a venue's hour
 - Waits for: `rel013`
 - Started: 2026-10-18
 - Shipped: 2026-10-18
-- [Release v0.1.4](https://github.com/mark1russell7/crawler/releases/tag/v0.1.4)
+- [Release v0.1.4](https://github.com/metrograph-labs/crawler/releases/tag/v0.1.4)
 
 ### `site-visuals`: Visuals for the 0.1.3 features on the site
 
@@ -425,10 +425,10 @@ Live on the site since 2026-10-18. How hybrid search ranks: three ranked columns
 - Waits for: `rel013`
 - Started: 2026-10-18
 - Shipped: 2026-10-18
-- [Main at df9c039](https://github.com/mark1russell7/crawler/commit/df9c039)
-- [How hybrid search ranks](https://mark1russell7.github.io/crawler/guide/search/)
-- [Recipe reader](https://mark1russell7.github.io/crawler/tools/recipe-reader/)
-- [The daemon, tick by tick](https://mark1russell7.github.io/crawler/guide/daemon/)
+- [Main at df9c039](https://github.com/metrograph-labs/crawler/commit/df9c039)
+- [How hybrid search ranks](https://metrograph-labs.github.io/crawler/guide/search/)
+- [Recipe reader](https://metrograph-labs.github.io/crawler/tools/recipe-reader/)
+- [The daemon, tick by tick](https://metrograph-labs.github.io/crawler/guide/daemon/)
 
 ### `eval`: Eval, part A: tokens per verified claim in CI
 
@@ -438,8 +438,8 @@ Live on the site since 2026-10-18. How hybrid search ranks: three ranked columns
 - Waits for: `rel011`
 - Started: 2026-10-18
 - Shipped: 2026-10-18
-- [Eval run](https://github.com/mark1russell7/crawler/actions/runs/39085336453)
-- [eval/README.md](https://github.com/mark1russell7/crawler/blob/main/packages/polite-crawler/eval/README.md)
+- [Eval run](https://github.com/metrograph-labs/crawler/actions/runs/39085336453)
+- [eval/README.md](https://github.com/metrograph-labs/crawler/blob/main/packages/polite-crawler/eval/README.md)
 
 ### `study-monthly`: The robots.txt study, every month
 
@@ -449,7 +449,7 @@ On main. On the 2nd of each month a CI job runs the study again on the top 1,000
 - Waits for: `w12`
 - Started: 2026-10-18
 - Shipped: 2026-10-18
-- [Main at 65803c5](https://github.com/mark1russell7/crawler/commit/65803c5)
+- [Main at 65803c5](https://github.com/metrograph-labs/crawler/commit/65803c5)
 - [Concept DOI](https://doi.org/10.5281/zenodo.23443374)
 
 ### `sdk`: A recipe SDK
@@ -459,7 +459,7 @@ Shipped in 0.1.3 on 2026-10-18. defineRecipe and runRecipe let anyone write a re
 - Area: Package
 - Started: 2026-10-18
 - Shipped: 2026-10-18
-- [Release v0.1.3](https://github.com/mark1russell7/crawler/releases/tag/v0.1.3)
+- [Release v0.1.3](https://github.com/metrograph-labs/crawler/releases/tag/v0.1.3)
 
 ### `hybrid`: Hybrid search: full text plus a local vector index
 
@@ -469,7 +469,7 @@ Shipped in 0.1.3 on 2026-10-18. One Embedder interface with two adapters: transf
 - Waits for: `s30`
 - Started: 2026-10-17
 - Shipped: 2026-10-18
-- [Release v0.1.3](https://github.com/mark1russell7/crawler/releases/tag/v0.1.3)
+- [Release v0.1.3](https://github.com/metrograph-labs/crawler/releases/tag/v0.1.3)
 
 ### `daemon`: A daemon mode, with MCP tasks for long jobs
 
@@ -479,7 +479,7 @@ Shipped in 0.1.3 on 2026-10-18. polite-crawler daemon runs the watch list on a s
 - Waits for: `watch`
 - Started: 2026-10-18
 - Shipped: 2026-10-18
-- [Release v0.1.3](https://github.com/mark1russell7/crawler/releases/tag/v0.1.3)
+- [Release v0.1.3](https://github.com/metrograph-labs/crawler/releases/tag/v0.1.3)
 
 ### `rel013`: Release 0.1.3
 
@@ -489,8 +489,8 @@ A patch release, on npm since 2026-10-18: hybrid search, the daemon with MCP tas
 - Waits for: `hybrid`, `daemon`, `consent-fix`, `sdk`
 - Started: 2026-10-18
 - Shipped: 2026-10-18
-- [Pull request #8](https://github.com/mark1russell7/crawler/pull/8)
-- [Release v0.1.3](https://github.com/mark1russell7/crawler/releases/tag/v0.1.3)
+- [Pull request #8](https://github.com/metrograph-labs/crawler/pull/8)
+- [Release v0.1.3](https://github.com/metrograph-labs/crawler/releases/tag/v0.1.3)
 - [npm 0.1.3](https://www.npmjs.com/package/polite-crawler/v/0.1.3)
 
 ### `actions-pr`: Let the monthly study open its pull request
@@ -500,7 +500,7 @@ GitHub Actions may open pull requests in the repository since 2026-10-18, so the
 - Area: Release and CI
 - Waits for: `study-monthly`
 - Shipped: 2026-10-18
-- [Actions settings](https://github.com/mark1russell7/crawler/settings/actions)
+- [Actions settings](https://github.com/metrograph-labs/crawler/settings/actions)
 
 ### `consent-fix`: A failed consent question keeps a page held back
 
@@ -510,8 +510,8 @@ When the MCP client can ask the user before releasing a held-back page, but the 
 - Waits for: `pub010`
 - Started: 2026-10-18
 - Shipped: 2026-10-18
-- [Commit 38caa18](https://github.com/mark1russell7/crawler/commit/38caa18)
-- [Release v0.1.3](https://github.com/mark1russell7/crawler/releases/tag/v0.1.3)
+- [Commit 38caa18](https://github.com/metrograph-labs/crawler/commit/38caa18)
+- [Release v0.1.3](https://github.com/metrograph-labs/crawler/releases/tag/v0.1.3)
 
 ### `timetravel`: Read a page as it was on a date
 
@@ -521,7 +521,7 @@ On main since 2026-10-17, in 0.1.2. read, verify and extract take `at` and use t
 - Waits for: `pub010`
 - Started: 2026-10-17
 - Shipped: 2026-10-17
-- [Main at 52b5bd5](https://github.com/mark1russell7/crawler/commit/52b5bd5)
+- [Main at 52b5bd5](https://github.com/metrograph-labs/crawler/commit/52b5bd5)
 
 ### `extraction`: Verified structured extraction
 
@@ -531,7 +531,7 @@ On main since 2026-10-17, in 0.1.2. extract checks the field values a caller pro
 - Waits for: `pub010`
 - Started: 2026-10-17
 - Shipped: 2026-10-17
-- [Main at 52b5bd5](https://github.com/mark1russell7/crawler/commit/52b5bd5)
+- [Main at 52b5bd5](https://github.com/metrograph-labs/crawler/commit/52b5bd5)
 
 ### `conformance`: A conformance page for the standards
 
@@ -541,7 +541,7 @@ The site's Standards page shows, rule by rule, how the crawler follows RFC 9309,
 - Waits for: `rel011`
 - Started: 2026-10-17
 - Shipped: 2026-10-17
-- [Standards page](https://mark1russell7.github.io/crawler/reference/standards/)
+- [Standards page](https://metrograph-labs.github.io/crawler/reference/standards/)
 
 ### `botauth`: Signed requests (Web Bot Auth)
 
@@ -551,7 +551,7 @@ On main since 2026-10-17, in 0.1.2. Ed25519 HTTP message signatures (RFC 9421, W
 - Waits for: `pub010`
 - Started: 2026-10-17
 - Shipped: 2026-10-17
-- [Main at 52b5bd5](https://github.com/mark1russell7/crawler/commit/52b5bd5)
+- [Main at 52b5bd5](https://github.com/metrograph-labs/crawler/commit/52b5bd5)
 
 ### `warc`: Export the store as WARC or WACZ
 
@@ -561,7 +561,7 @@ On main since 2026-10-17, in the next release. WARC/1.1 and WACZ 1.1.1 export, c
 - Waits for: `pub010`
 - Started: 2026-10-17
 - Shipped: 2026-10-17
-- [Main at 3c3a800](https://github.com/mark1russell7/crawler/commit/3c3a800)
+- [Main at 3c3a800](https://github.com/metrograph-labs/crawler/commit/3c3a800)
 
 ### `watch`: Watch pages for changes, with diffs
 
@@ -571,7 +571,7 @@ On main since 2026-10-17, in 0.1.2. A watch list kept in its own watch.sqlite, a
 - Waits for: `sitemaps`
 - Started: 2026-10-17
 - Shipped: 2026-10-17
-- [Main at 52b5bd5](https://github.com/mark1russell7/crawler/commit/52b5bd5)
+- [Main at 52b5bd5](https://github.com/metrograph-labs/crawler/commit/52b5bd5)
 
 ### `fallback`: An archived copy after a refusal
 
@@ -581,7 +581,7 @@ On main since 2026-10-17, in 0.1.2. Opt-in archived copies from the Wayback Mach
 - Waits for: `pub010`
 - Started: 2026-10-17
 - Shipped: 2026-10-17
-- [Main at 52b5bd5](https://github.com/mark1russell7/crawler/commit/52b5bd5)
+- [Main at 52b5bd5](https://github.com/metrograph-labs/crawler/commit/52b5bd5)
 
 ### `frontier`: A small crawl frontier with a budget
 
@@ -591,7 +591,7 @@ On main since 2026-10-17, in the next release. crawler.crawl follows a site's li
 - Waits for: `sitemaps`
 - Started: 2026-10-17
 - Shipped: 2026-10-17
-- [Main at 3c3a800](https://github.com/mark1russell7/crawler/commit/3c3a800)
+- [Main at 3c3a800](https://github.com/metrograph-labs/crawler/commit/3c3a800)
 
 ### `sitemaps`: Find pages from sitemaps and feeds
 
@@ -601,7 +601,7 @@ On main since 2026-10-17, in the next release. crawler.discover finds a site's p
 - Waits for: `pub010`
 - Started: 2026-10-17
 - Shipped: 2026-10-17
-- [Main at 3c3a800](https://github.com/mark1russell7/crawler/commit/3c3a800)
+- [Main at 3c3a800](https://github.com/metrograph-labs/crawler/commit/3c3a800)
 
 ### `tag-rule`: Let CI create release tags
 
@@ -610,7 +610,7 @@ With Mark's direct OK, the release tags ruleset now blocks only changing and del
 - Area: Release and CI
 - Waits for: `rel011`
 - Shipped: 2026-10-17
-- [Rulesets](https://github.com/mark1russell7/crawler/settings/rules)
+- [Rulesets](https://github.com/metrograph-labs/crawler/settings/rules)
 
 ### `rel012`: Release 0.1.2
 
@@ -621,8 +621,8 @@ polite-crawler 0.1.2 is on npm, published by CI with provenance: discovery and t
 - Started: 2026-10-17
 - Shipped: 2026-10-17
 - [npm package](https://www.npmjs.com/package/polite-crawler)
-- [GitHub release v0.1.2](https://github.com/mark1russell7/crawler/releases/tag/v0.1.2)
-- [Pull request #6](https://github.com/mark1russell7/crawler/pull/6)
+- [GitHub release v0.1.2](https://github.com/metrograph-labs/crawler/releases/tag/v0.1.2)
+- [Pull request #6](https://github.com/metrograph-labs/crawler/pull/6)
 
 ### `w12`: A DOI for the study, and a press contact (W-12)
 
@@ -632,7 +632,7 @@ The robots.txt study is a citable CC BY 4.0 dataset on Zenodo with the DOI 10.52
 - Started: 2026-10-17
 - Shipped: 2026-10-17
 - [DOI 10.5281/zenodo.23443375](https://doi.org/10.5281/zenodo.23443375)
-- [The study](https://mark1russell7.github.io/crawler/)
+- [The study](https://metrograph-labs.github.io/crawler/)
 
 ### `rel011`: Release 0.1.1
 
@@ -643,7 +643,7 @@ polite-crawler 0.1.1 is on npm, published by CI with provenance, with the cache 
 - Started: 2026-10-17
 - Shipped: 2026-10-17
 - [npm package](https://www.npmjs.com/package/polite-crawler)
-- [GitHub release v0.1.1](https://github.com/mark1russell7/crawler/releases/tag/v0.1.1)
+- [GitHub release v0.1.1](https://github.com/metrograph-labs/crawler/releases/tag/v0.1.1)
 
 ### `s30`: Ranking options, full quality by default (S-30)
 
@@ -653,8 +653,8 @@ Exact ranking stays the default. The opt-in rank 'fast' is 2.45x faster on long 
 - Waits for: `pub010`
 - Started: 2026-10-17
 - Shipped: 2026-10-17
-- [Commit 46fc00c](https://github.com/mark1russell7/crawler/commit/46fc00c)
-- [Benchmark run](https://github.com/mark1russell7/crawler/actions/runs/39057146797)
+- [Commit 46fc00c](https://github.com/metrograph-labs/crawler/commit/46fc00c)
+- [Benchmark run](https://github.com/metrograph-labs/crawler/actions/runs/39057146797)
 
 ### `a13`: Learn which cache check works on each site (A-13)
 
@@ -664,8 +664,8 @@ Some sites change their ETag on each request, so the server ignores the date che
 - Waits for: `pub010`
 - Started: 2026-10-17
 - Shipped: 2026-10-17
-- [Commit 65b06df](https://github.com/mark1russell7/crawler/commit/65b06df)
-- [CI run](https://github.com/mark1russell7/crawler/actions/runs/39057736301)
+- [Commit 65b06df](https://github.com/metrograph-labs/crawler/commit/65b06df)
+- [CI run](https://github.com/metrograph-labs/crawler/actions/runs/39057736301)
 
 ### `stdrelease`: Standard npm release from the template
 
@@ -675,7 +675,7 @@ A release now starts when a version change merges to main, after your approval. 
 - Waits for: `registry`
 - Started: 2026-10-17
 - Shipped: 2026-10-17
-- [Pull request #2](https://github.com/mark1russell7/crawler/pull/2)
+- [Pull request #2](https://github.com/metrograph-labs/crawler/pull/2)
 
 ### `registry`: MCP registry entry and GitHub release
 
@@ -685,7 +685,7 @@ The release workflow listed polite-crawler in the MCP registry and made the GitH
 - Waits for: `settings`
 - Started: 2026-10-13
 - Shipped: 2026-10-13
-- [GitHub release v0.1.0](https://github.com/mark1russell7/crawler/releases/tag/v0.1.0)
+- [GitHub release v0.1.0](https://github.com/metrograph-labs/crawler/releases/tag/v0.1.0)
 
 ### `settings`: Repository security and release rules
 
@@ -696,7 +696,7 @@ Security alerts and CodeQL, actions pinned to a commit, rulesets for main and fo
 - Owner: Mark
 - Started: 2026-10-13
 - Shipped: 2026-10-13
-- [Rulesets](https://github.com/mark1russell7/crawler/settings/rules)
+- [Rulesets](https://github.com/metrograph-labs/crawler/settings/rules)
 
 ### `pub010`: polite-crawler 0.1.0 on npm
 
@@ -707,7 +707,7 @@ The first release, byte for byte the tarball that the tests passed.
 - Started: 2026-10-13
 - Shipped: 2026-10-13
 - [npm package](https://www.npmjs.com/package/polite-crawler)
-- [GitHub release v0.1.0](https://github.com/mark1russell7/crawler/releases/tag/v0.1.0)
+- [GitHub release v0.1.0](https://github.com/metrograph-labs/crawler/releases/tag/v0.1.0)
 
 ### `accept`: Acceptance pass: 244 of 250 fixed
 
@@ -717,7 +717,7 @@ Three reviewers re-ran every reproduction against the result. A fourth pass fixe
 - Waits for: `wave2`
 - Started: 2026-10-12
 - Shipped: 2026-10-13
-- [Commit 1e829de](https://github.com/mark1russell7/crawler/commit/1e829de)
+- [Commit 1e829de](https://github.com/metrograph-labs/crawler/commit/1e829de)
 
 ### `wave2`: Fixes: versioned store, safe reindex, MCP and CLI
 
@@ -727,7 +727,7 @@ Search sees the current text of a page, a rebuild never wipes the index, process
 - Waits for: `wave1`
 - Started: 2026-10-12
 - Shipped: 2026-10-12
-- [Commit 4e7abd8](https://github.com/mark1russell7/crawler/commit/4e7abd8)
+- [Commit 4e7abd8](https://github.com/metrograph-labs/crawler/commit/4e7abd8)
 
 ### `wave1`: Fixes: fetch, readers, CI and site
 
@@ -737,7 +737,7 @@ The network-exposure guard, robots.txt that fails closed, linear-time parsing, c
 - Waits for: `review`
 - Started: 2026-10-12
 - Shipped: 2026-10-12
-- [Commit 4e08422](https://github.com/mark1russell7/crawler/commit/4e08422)
+- [Commit 4e08422](https://github.com/metrograph-labs/crawler/commit/4e08422)
 
 ### `review`: Deep review: 250 findings
 

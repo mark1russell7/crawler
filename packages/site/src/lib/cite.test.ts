@@ -72,7 +72,7 @@ describe("the citation of the study", () => {
       "title        = {{Who lets AI agents in? The robots.txt rules of the top 1,000 domains}}",
     );
     expect(article).toContain(
-      "url          = {https://mark1russell7.github.io/crawler/notes/robots-txt-ai-agents/}",
+      "url          = {https://metrograph-labs.github.io/crawler/notes/robots-txt-ai-agents/}",
     );
     expect(article).not.toContain("doi");
     const dataset = bibtex(study, "10.5281/zenodo.1234567");

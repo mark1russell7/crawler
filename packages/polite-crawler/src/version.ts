@@ -5,4 +5,4 @@ export const VERSION = "0.7.9";
 export const DEFAULT_TOKEN = "PoliteCrawler";
 
 /** This page tells a site owner what the crawler is and how to control it. */
-export const BOT_PAGE = "https://mark1russell7.github.io/crawler/bot/";
+export const BOT_PAGE = "https://metrograph-labs.github.io/crawler/bot/";

@@ -14,7 +14,7 @@ import { FEED_PATH, FEED_TITLE } from "./lib/feed.ts";
 import type { Study } from "./lib/study.ts";
 import { DATA_LICENSE, STUDY_AUTHOR, headline, summarize } from "./lib/study.ts";
 
-const SITE = "https://mark1russell7.github.io/crawler/";
+const SITE = "https://metrograph-labs.github.io/crawler/";
 const NAME = "polite-crawler";
 const STUDY_ID = "notes/robots-txt-ai-agents";
 /** The base of the build, with a `/` at the end: `/crawler/`. */
@@ -78,7 +78,7 @@ const studyData = (url: string, title: string, description: string): unknown => 
         isBasedOn: data.list.url,
         // the same data in the repository, and the package that made it
         sameAs: [
-          "https://github.com/mark1russell7/crawler/tree/main/packages/site/src/data",
+          "https://github.com/metrograph-labs/crawler/tree/main/packages/site/src/data",
           "https://www.npmjs.com/package/polite-crawler",
         ],
         license: DATA_LICENSE.url,
@@ -116,7 +116,7 @@ const homeData = (description: string): unknown => ({
       "@type": "SoftwareSourceCode",
       name: NAME,
       description,
-      codeRepository: "https://github.com/mark1russell7/crawler",
+      codeRepository: "https://github.com/metrograph-labs/crawler",
       programmingLanguage: "TypeScript",
       runtimePlatform: "Node.js",
       license: "https://opensource.org/licenses/MIT",
@@ -132,7 +132,7 @@ const homeData = (description: string): unknown => ({
       softwareVersion: pkg.version,
       downloadUrl: "https://www.npmjs.com/package/polite-crawler",
       sameAs: [
-        "https://github.com/mark1russell7/crawler",
+        "https://github.com/metrograph-labs/crawler",
         "https://www.npmjs.com/package/polite-crawler",
       ],
       offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },

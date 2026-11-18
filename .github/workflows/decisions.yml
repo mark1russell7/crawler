@@ -1,7 +1,7 @@
 # The decision eval, part C (packages/polite-crawler/eval/README.md tells the method). It measures
 # two choices of the venue recipe against the hours of OpenStreetMap: the links that readVenue
 # fetches, and the reading that it chooses. It calls no model.
-#   gh workflow run decisions.yml -R mark1russell7/crawler --ref <branch>
+#   gh workflow run decisions.yml -R metrograph-labs/crawler --ref <branch>
 #
 # - The job "archive" asks the Overpass API for the venues of the areas (eval/decisions/areas.json),
 #   visits each venue with polite-crawler (robots.txt and the pace of each site apply), and exports

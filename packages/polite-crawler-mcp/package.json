@@ -18,14 +18,14 @@
     "research",
     "full-text-search"
   ],
-  "homepage": "https://mark1russell7.github.io/crawler/guide/mcp/",
+  "homepage": "https://metrograph-labs.github.io/crawler/guide/mcp/",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/mark1russell7/crawler.git",
+    "url": "git+https://github.com/metrograph-labs/crawler.git",
     "directory": "packages/polite-crawler-mcp"
   },
   "bugs": {
-    "url": "https://github.com/mark1russell7/crawler/issues"
+    "url": "https://github.com/metrograph-labs/crawler/issues"
   },
   "license": "MIT",
   "author": "Mark Russell (https://github.com/mark1russell7)",

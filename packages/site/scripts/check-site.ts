@@ -137,7 +137,7 @@ const graphs = [
 );
 const dataset = graphs.find((node) => node["@type"] === "Dataset");
 for (const same of [
-  "https://github.com/mark1russell7/crawler/",
+  "https://github.com/metrograph-labs/crawler/",
   "https://www.npmjs.com/package/polite-crawler",
 ]) {
   if (!(dataset?.sameAs ?? []).some((url) => url.startsWith(same)))
@@ -282,7 +282,7 @@ for (const path of pages) {
 // the feed of the monthly runs: XML that a parser reads, one item for each CSV of a run, and each
 // address of an item goes to a file of the build. The study page names the feed in its head.
 {
-  const SITE = "https://mark1russell7.github.io/crawler/";
+  const SITE = "https://metrograph-labs.github.io/crawler/";
   const feed = join(dist, "study", "feed.xml");
   const runs = readdirSync(join(dist, "data")).filter((name) =>
     /^robots-study-\d{4}-\d{2}-\d{2}\.csv$/.test(name),

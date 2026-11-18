@@ -60,7 +60,7 @@ export interface Deposition {
 
 /** An error of the API, with the method, the path and the status. */
 /** The User-Agent of the requests to Zenodo. Zenodo refuses the default User-Agent of Node.js. */
-export const ZENODO_USER_AGENT = "polite-crawler-study (+https://mark1russell7.github.io/crawler/)";
+export const ZENODO_USER_AGENT = "polite-crawler-study (+https://metrograph-labs.github.io/crawler/)";
 
 export class ZenodoError extends Error {
   readonly status: number;

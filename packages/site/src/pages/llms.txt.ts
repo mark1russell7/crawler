@@ -11,7 +11,7 @@ import type { Study } from "../lib/study.ts";
 import { FEED_URL } from "../lib/feed.ts";
 import { DATA_LICENSE, agentRows, summarize } from "../lib/study.ts";
 
-const SITE = "https://mark1russell7.github.io/crawler/";
+const SITE = "https://metrograph-labs.github.io/crawler/";
 const evalB = evalBData as EvalBData;
 
 /** This function gives the text of llms.txt for a dataset. */
@@ -73,7 +73,7 @@ Install it with \`npm install polite-crawler\`. Use \`openCrawler({ dir })\` and
 - [What 300 restaurant websites taught a crawler](${SITE}notes/restaurant-websites/): a survey
 - [Tokens to prove a claim](${SITE}notes/tokens-per-claim/): eval part A. To prove ${String(evalA.summary.claims)} claims with exact quotes, the polite-crawler path (fetch, find, read, verify) read ${evalA.summary.polite.total.toLocaleString("en-US")} tokens, and the pages as Markdown have ${evalA.summary.markdown.total.toLocaleString("en-US")} (${String(evalA.summary.ratio.markdownTotal)} times; the median for one claim is ${String(evalA.summary.ratio.markdownMedian)}). The tokenizer ${evalA.tokenizer} is a proxy, not the tokenizer of Claude
 - [Real Claude Code sessions](${SITE}notes/claude-code-sessions/): eval part B. In real sessions of Claude Code (${lean.model}), the median session that proves one claim cost $${webfetch.medianCostUsd.toFixed(4)} with WebFetch and $${mcp.medianCostUsd.toFixed(4)} with the MCP tools of polite-crawler-mcp ${lean.mcp}${quote === undefined ? "" : ` ($${quote.medianCostUsd.toFixed(4)} with \`--tools quote\`)`}. WebFetch gives the page to a small model (${evalB.helper}), and the main model of polite-crawler writes the text of the page to its cache, the most expensive kind of input token. Each quote was word for word on the page in ${String(mcp.onPage)} of ${String(mcp.sessions)} sessions with polite-crawler and ${String(webfetch.onPage)} of ${String(webfetch.sessions)} with WebFetch. The WebFetch arm ran with polite-crawler-mcp ${sonnet.mcp}, and the run of ${lean.mcp} did not run it again
-- [The source](https://github.com/mark1russell7/crawler)
+- [The source](https://github.com/metrograph-labs/crawler)
 - [Sitemap](${SITE}sitemap-index.xml): each page of the site, with the date of its last change
 `;
 };

@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://mark1russell7.github.io/crawler/record.schema.json",
+  "$id": "https://metrograph-labs.github.io/crawler/record.schema.json",
   "title": "polite-crawler capture record",
   "description": "One line of the capture log of polite-crawler (captures/<source>/<year>/<month>.ndjson): a record of one fetch decision, the payload of schema 2. A reader ignores the fields that it does not know.",
   "type": "object",

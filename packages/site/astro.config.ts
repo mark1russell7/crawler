@@ -11,7 +11,7 @@ import { defineConfig } from "astro/config";
 import { pureCrawler } from "./pure-crawler.ts";
 
 const base = process.env["SITE_BASE"] ?? "/crawler";
-const site = "https://mark1russell7.github.io";
+const site = "https://metrograph-labs.github.io";
 // The share card of each page (Open Graph and Twitter). scripts/og-image.ts renders it.
 const card = `${site}${base}/og.png`;
 
@@ -283,10 +283,10 @@ export default defineConfig({
       logo: { src: "./src/assets/mark.svg", replacesTitle: false },
       favicon: "/favicon.svg",
       social: [
-        { icon: "github", label: "GitHub", href: "https://github.com/mark1russell7/crawler" },
+        { icon: "github", label: "GitHub", href: "https://github.com/metrograph-labs/crawler" },
         { icon: "npm", label: "npm", href: "https://www.npmjs.com/package/polite-crawler" },
       ],
-      editLink: { baseUrl: "https://github.com/mark1russell7/crawler/edit/main/packages/site/" },
+      editLink: { baseUrl: "https://github.com/metrograph-labs/crawler/edit/main/packages/site/" },
       customCss: [
         "@fontsource-variable/atkinson-hyperlegible-next",
         "@fontsource-variable/atkinson-hyperlegible-mono",
@@ -343,8 +343,8 @@ export default defineConfig({
         {
           label: "Project",
           items: [
-            { label: "Releases", link: "https://mark1russell7.github.io/crawler/releases/" },
-            { label: "Status", link: "https://mark1russell7.github.io/crawler/status/" },
+            { label: "Releases", link: "https://metrograph-labs.github.io/crawler/releases/" },
+            { label: "Status", link: "https://metrograph-labs.github.io/crawler/status/" },
           ],
         },
       ],

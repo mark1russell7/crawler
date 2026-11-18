@@ -1,7 +1,7 @@
 # The search benchmark (finding S-30): a synthetic index of 30,000 documents, the time of find and
 # rankWithin in each ranking mode, and the quality of each mode against exact ranking.
 # It runs only when a person starts it, because a shared runner gives numbers for a comparison, not a gate.
-#   gh workflow run bench.yml -R mark1russell7/crawler --ref <branch>
+#   gh workflow run bench.yml -R metrograph-labs/crawler --ref <branch>
 # The JSON results are the artifact bench-find-node<version>. The job summary has the table.
 # With hybrid, it also times hybrid search over the same index: a fake embedder gives the vectors,
 # so the times are those of the chunks, the vector store, the cosine and the fusion (time only).

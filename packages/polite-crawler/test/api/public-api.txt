@@ -1162,7 +1162,7 @@ interface Archived {
 }
 
 ### build/index.d.mts#BOT_PAGE
-export declare const BOT_PAGE = "https://mark1russell7.github.io/crawler/bot/";
+export declare const BOT_PAGE = "https://metrograph-labs.github.io/crawler/bot/";
 
 ### build/index.d.mts#BlobStore
 interface BlobStore {

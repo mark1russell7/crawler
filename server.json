@@ -4,9 +4,9 @@
   "title": "polite-crawler",
   "description": "A polite crawler for agents: obeys robots.txt, fetches each page once, finds and verifies quotes.",
   "version": "0.7.9",
-  "websiteUrl": "https://mark1russell7.github.io/crawler/",
+  "websiteUrl": "https://metrograph-labs.github.io/crawler/",
   "repository": {
-    "url": "https://github.com/mark1russell7/crawler",
+    "url": "https://github.com/metrograph-labs/crawler",
     "source": "github",
     "subfolder": "packages/polite-crawler-mcp"
   },

@@ -137,7 +137,7 @@ Each field has a `value` (a text or a number) and a `kind`: `text`, `number`, `m
 - `candidates`: the places of an ambiguous field, each with its `readings`. The method does not choose one.
 - `capture` and `fetched_at` of the text that the method read.
 
-A normalized match must have one meaning. `1,234`, `03/04/2026` and `$12` for `USD 12` give `ambiguous`, and the method does not guess. A page that refuses AI input gives `held-back` for each field, with no position, unless `userProvided` is true. The [README of the package](https://github.com/mark1russell7/crawler/tree/main/packages/polite-crawler#check-field-values-against-a-page) gives each normalization.
+A normalized match must have one meaning. `1,234`, `03/04/2026` and `$12` for `USD 12` give `ambiguous`, and the method does not guess. A page that refuses AI input gives `held-back` for each field, with no position, unless `userProvided` is true. The [README of the package](https://github.com/metrograph-labs/crawler/tree/main/packages/polite-crawler#check-field-values-against-a-page) gives each normalization.
 
 `checkFields(source, fields)` does the same check on a text and its metadata, with no store.
 
@@ -326,7 +326,7 @@ const run = await runRecipe(crawler, menu, "mon");
 - `runRecipe(crawler, recipe, input, options?)` gives `outcome`, `docs`, `capture`, `from_cache`, `held_back`, `error` and `note`. `reindex` reads the captures of the recipe again.
 - An extractor is pure and sends no request. When it throws, the runtime reports the error, and the fetch continues.
 - `readJson(body, capture)` reads a body as JSON in its declared encoding, and names a body that is not JSON.
-- The name of a recipe is part of each capture id. The [README of the package](https://github.com/mark1russell7/crawler/tree/main/packages/polite-crawler#writing-a-recipe) gives each rule.
+- The name of a recipe is part of each capture id. The [README of the package](https://github.com/metrograph-labs/crawler/tree/main/packages/polite-crawler#writing-a-recipe) gives each rule.
 
 ## Hybrid search
 
@@ -478,4 +478,4 @@ The entry points below `polite-crawler` have no Node.js dependency, so they oper
 
 The main entry point also exports `Crawler`, `CaptureLog`, `DocIndex`, `FileBlobStore`, `Extractors`, `fetchAndIndex`, `fetchPage`, `reindex` and `makeRecord`, for an application that builds its own runtime. It exports the readers that such an application uses: `extractPage`, `decodeBody`, `readPdf`, the hours reader, `parseRobots` and `decide`.
 
-The stable API is `openCrawler` with its results (`extract` too), the MCP server of `polite-crawler-mcp`, the reader entry points, and `exportWarc` and `exportWacz`. The recipes (`readVenue`, `readProduct`, `compareHours`) and the recipe SDK (`defineRecipe`, `runRecipe`) are stable too. The diff, the watch list, the command line and the store on disk are stable too. The parts of the runtime are the engine: before version 1.0.0, a minor version can change them, and the changelog says so. The declaration of each part of the engine has the tag `@beta`, so your editor shows it. [The API review](https://github.com/mark1russell7/crawler/blob/main/docs/API-REVIEW.md) gives the tier of each export, and CI compares the public API with a report of it.
+The stable API is `openCrawler` with its results (`extract` too), the MCP server of `polite-crawler-mcp`, the reader entry points, and `exportWarc` and `exportWacz`. The recipes (`readVenue`, `readProduct`, `compareHours`) and the recipe SDK (`defineRecipe`, `runRecipe`) are stable too. The diff, the watch list, the command line and the store on disk are stable too. The parts of the runtime are the engine: before version 1.0.0, a minor version can change them, and the changelog says so. The declaration of each part of the engine has the tag `@beta`, so your editor shows it. [The API review](https://github.com/metrograph-labs/crawler/blob/main/docs/API-REVIEW.md) gives the tier of each export, and CI compares the public API with a report of it.

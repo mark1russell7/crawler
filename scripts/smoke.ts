@@ -503,11 +503,14 @@ export const start: typeof startMcpServer = startMcpServer;
     urls: 850,
     // the size of version 0.7.0 (1126 B, the body decoder), and 20 percent more
     text: 1360,
-    // the size with the limiter of @mark1russell7/service 0.8.20 (13418 B: its quota logic, and the
-    // exact time units of @mark1russell7/quantity 0.4.1), and 20 percent more. The quotas have one
-    // home, the limiter. The part "api without the quota gates" below holds the size for a caller
-    // that does not use them.
-    api: 16_102,
+    // the size with the limiter of @mark1russell7/service 0.8.20 and @mark1russell7/quantity 0.4.3
+    // (16449 B in CI on 2026-11-20), and 20 percent more. The quotas have one home, the limiter. The
+    // consumer of this check installs the dependencies of service from the registry, so each release
+    // of quantity in the range of service changes this size: 13418 B with quantity 0.4.1, 16024 B on
+    // 2026-11-18 after 0.4.2, and 16449 B after 0.4.3. The code of polite-crawler did not change. The
+    // item quota-gates-units finds the part of quantity that the quota gates bundle. The part "api
+    // without the quota gates" below holds the size for a caller that does not use them.
+    api: 19_739,
     html: 192_000,
   };
   // A budget is the size of an entry and 20 percent more. When the entry shrinks, a budget that

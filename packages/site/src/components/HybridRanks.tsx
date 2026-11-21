@@ -618,7 +618,7 @@ export default function HybridRanks(): ReactElement {
         The full-text ranks come from the index of polite-crawler {figure.provenance.package}. The
         vector ranks come from <code>{figure.provenance.model}</code> through transformers.js{" "}
         {figure.provenance.transformers}, in{" "}
-        <a href={figure.provenance.run ?? "https://github.com/mark1russell7/crawler/actions"}>
+        <a href={figure.provenance.run ?? "https://github.com/metrograph-labs/crawler/actions"}>
           a CI run on {figure.provenance.date.slice(0, 10)}
         </a>
         .

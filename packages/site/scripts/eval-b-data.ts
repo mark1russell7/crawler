@@ -8,7 +8,7 @@
 // its dry run and the result of each model. Give the versions the earliest first. To refresh the page
 // after a new run of part B, add a version, or replace the options of a version:
 //
-//   gh run download <summary run id> -R mark1russell7/crawler -n eval-b -D <dir>
+//   gh run download <summary run id> -R metrograph-labs/crawler -n eval-b -D <dir>
 //   pnpm exec tsx packages/site/scripts/eval-b-data.ts \
 //     --version <mcp version> --date <YYYY-MM-DD> --claude-code <version> \
 //       --dry <dry run dir>/eval-b-result.json --dry-run <dry run id> \

@@ -15,7 +15,7 @@ import { fileURLToPath } from "node:url";
 import { writeEvalPage, type Result } from "./eval-data.ts";
 
 /** The repository of the workflow eval.yml. */
-export const EVAL_REPOSITORY = "mark1russell7/crawler";
+export const EVAL_REPOSITORY = "metrograph-labs/crawler";
 
 /** One run of `gh run list`, with the fields that this script asks for. */
 export interface ListedRun {

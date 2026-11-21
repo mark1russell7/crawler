@@ -6,6 +6,10 @@ This file records the changes to `polite-crawler-mcp` in each version. The chang
 
 ## Unreleased
 
+## 0.7.11 - 2026-11-18
+
+- **The MCP registry name is `io.github.metrograph-labs/polite-crawler`.** The repository moves to metrograph-labs, and the registry takes the namespace from the owner of the repository. The tools do not change.
+
 ## 0.7.10 - 2026-11-18
 
 - **The server uses polite-crawler 0.7.10.** The changes of the library are in the [changelog of polite-crawler](../../CHANGELOG.md). The server does not change.

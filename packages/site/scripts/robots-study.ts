@@ -359,7 +359,7 @@ if (command === "fetch" && args.length >= 3) {
   recordDoi(args[0], args[1]);
 } else if (command === "report" && args[0] !== undefined) {
   const [out, ...checks] = args as [string, ...string[]];
-  const repository = process.env["GITHUB_REPOSITORY"] ?? "mark1russell7/crawler";
+  const repository = process.env["GITHUB_REPOSITORY"] ?? "metrograph-labs/crawler";
   writeFileSync(out, runReport(readHistory(), { checks, repository }));
   console.info(`wrote ${out}`);
 } else {

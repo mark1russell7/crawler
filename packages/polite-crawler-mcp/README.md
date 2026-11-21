@@ -3,10 +3,10 @@
 **The MCP server of [polite-crawler](https://www.npmjs.com/package/polite-crawler).** It gives Claude and other MCP clients nine tools over one local store of web pages. The tools fetch, find, read and verify pages, check field values, discover and crawl a site, compare versions and list the watched pages. Each fetch obeys robots.txt and sends one request at a time to each site.
 
 [![npm](https://img.shields.io/npm/v/polite-crawler-mcp)](https://www.npmjs.com/package/polite-crawler-mcp)
-[![CI](https://github.com/mark1russell7/crawler/actions/workflows/ci.yml/badge.svg)](https://github.com/mark1russell7/crawler/actions/workflows/ci.yml)
-[![license](https://img.shields.io/npm/l/polite-crawler-mcp)](https://github.com/mark1russell7/crawler/blob/main/LICENSE)
+[![CI](https://github.com/metrograph-labs/crawler/actions/workflows/ci.yml/badge.svg)](https://github.com/metrograph-labs/crawler/actions/workflows/ci.yml)
+[![license](https://img.shields.io/npm/l/polite-crawler-mcp)](https://github.com/metrograph-labs/crawler/blob/main/LICENSE)
 
-The site has a guide to the server: <https://mark1russell7.github.io/crawler/guide/mcp/>
+The site has a guide to the server: <https://metrograph-labs.github.io/crawler/guide/mcp/>
 
 Until polite-crawler 0.2.0, the server was the entry point `polite-crawler/mcp` and the command `polite-crawler mcp`. It is a package of its own since 0.2.0, so the library loads no MCP SDK and no `zod`. The tools and their answers did not change. The tools are procedures on the shared MCP host of [`@procedures/mcp-server`](https://www.npmjs.com/package/@procedures/mcp-server).
 
@@ -72,7 +72,7 @@ The server applies the robots.txt rules for `Claude-User` too, because an assist
 
 No tool adds a watch. A watch commits future requests to a site, so the operator adds it with `polite-crawler watch add`. An assistant can read the list (`crawl_watch_list`) and compare the versions of a watched page (`crawl_diff`).
 
-The daemon of polite-crawler serves the same tools over local HTTP, with a bearer token (`polite-crawler daemon --mcp-http`). It needs this package next to polite-crawler. There, `crawl_site` and `crawl_discover` are MCP tasks: a client gets a task id at once, and gets the result later. The [README of polite-crawler](https://github.com/mark1russell7/crawler/tree/main/packages/polite-crawler#mcp-over-http) tells how.
+The daemon of polite-crawler serves the same tools over local HTTP, with a bearer token (`polite-crawler daemon --mcp-http`). It needs this package next to polite-crawler. There, `crawl_site` and `crawl_discover` are MCP tasks: a client gets a task id at once, and gets the result later. The [README of polite-crawler](https://github.com/metrograph-labs/crawler/tree/main/packages/polite-crawler#mcp-over-http) tells how.
 
 ### Web text is data, not instructions
 

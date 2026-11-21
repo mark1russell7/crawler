@@ -71,7 +71,7 @@ const areas = readAreas(await readFile(args.areas, "utf8"));
 const endpoint = new URL(args.endpoint);
 // the User-Agent names the crawler and its repository, and nothing more
 const transport = fetchTransport({
-  userAgent: `PoliteCrawler-eval/${VERSION} (+https://github.com/mark1russell7/crawler)`,
+  userAgent: `PoliteCrawler-eval/${VERSION} (+https://github.com/metrograph-labs/crawler)`,
   timeoutMs: 240_000,
 });
 const pace: Pace = { scheduler: new HostScheduler(realClock, 1), now: realClock.now };

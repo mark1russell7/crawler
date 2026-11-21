@@ -539,7 +539,7 @@ describe("an application that links the bot page of polite-crawler", () => {
   it("obeys the rules for PoliteCrawler too, unless it turns that off or does not link the page", async () => {
     const linked = {
       token: "MyApp",
-      userAgent: "MyApp/1.0 (+https://mark1russell7.github.io/crawler/bot/)",
+      userAgent: "MyApp/1.0 (+https://metrograph-labs.github.io/crawler/bot/)",
     };
     expect(await ask(linked)).toEqual({ "/private": "skipped", "/open": "ok" });
     expect(await ask({ ...linked, obeyDefaultToken: false })).toEqual({

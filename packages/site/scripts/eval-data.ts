@@ -5,7 +5,7 @@
 // The build of the site takes the newest green run of eval.yml on main that has the artifact `eval`
 // (scripts/eval-latest.ts). To write the data of one run by hand:
 //
-//   gh run download <run id> -R mark1russell7/crawler -n eval -D <dir>
+//   gh run download <run id> -R metrograph-labs/crawler -n eval -D <dir>
 //   node packages/site/scripts/eval-data.ts --result <dir>/eval-result.json --run <run id> --started <ISO time>
 //
 // The functions fail when a claim is not verified, when a claim is not in the question set, or when a

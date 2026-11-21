@@ -105,19 +105,19 @@ describe("the feed of the monthly runs", () => {
     expect(items).toHaveLength(2);
     const links = elements.filter((element) => element.name === "link").map((link) => link.text);
     expect(links).toEqual([
-      "https://mark1russell7.github.io/crawler/notes/robots-txt-ai-agents/",
-      "https://mark1russell7.github.io/crawler/notes/robots-txt-ai-agents/#run-2026-11-02",
-      "https://mark1russell7.github.io/crawler/notes/robots-txt-ai-agents/#run-2026-10-12",
+      "https://metrograph-labs.github.io/crawler/notes/robots-txt-ai-agents/",
+      "https://metrograph-labs.github.io/crawler/notes/robots-txt-ai-agents/#run-2026-11-02",
+      "https://metrograph-labs.github.io/crawler/notes/robots-txt-ai-agents/#run-2026-10-12",
     ]);
     const enclosures = elements.filter((element) => element.name === "enclosure");
     expect(enclosures.map((element) => element.attrs)).toEqual([
       {
-        url: "https://mark1russell7.github.io/crawler/data/robots-study-2026-11-02.csv",
+        url: "https://metrograph-labs.github.io/crawler/data/robots-study-2026-11-02.csv",
         length: "2000",
         type: "text/csv",
       },
       {
-        url: "https://mark1russell7.github.io/crawler/data/robots-study-2026-10-12.csv",
+        url: "https://metrograph-labs.github.io/crawler/data/robots-study-2026-10-12.csv",
         length: "1000",
         type: "text/csv",
       },

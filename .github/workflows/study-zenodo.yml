@@ -1,6 +1,6 @@
 # Puts the dataset of the robots.txt study on Zenodo, with a DOI. Start it by hand:
-#   gh workflow run study-zenodo.yml -R mark1russell7/crawler
-#   gh workflow run study-zenodo.yml -R mark1russell7/crawler -f new_version_of=<record id>
+#   gh workflow run study-zenodo.yml -R metrograph-labs/crawler
+#   gh workflow run study-zenodo.yml -R metrograph-labs/crawler -f new_version_of=<record id>
 # The record stays a draft unless publish is true. Zenodo reserves the DOI of the draft, so the DOI is
 # known before anything is public. The log and the summary of the run give the DOI and the address
 # of the draft. Review the draft on Zenodo and publish it there.

@@ -4,7 +4,7 @@
 #   mcp-quote  the same server with --tools quote: only the four tools of a quote
 #   webfetch   the built-in tool WebFetch, and no MCP server
 # Each session costs money on the API. A dry run first:
-#   gh workflow run eval-sessions.yml -R mark1russell7/crawler -f limit=2
+#   gh workflow run eval-sessions.yml -R metrograph-labs/crawler -f limit=2
 # The artifact "eval-b" holds the records and the summary, and each arm has an artifact with the
 # stream of each session. The job summary has the tables.
 #

@@ -38,7 +38,7 @@
 #
 # npm trusted publishing uses the OIDC token of GitHub Actions: no npm token, and each version
 # gets a provenance statement. The trusted publisher of each package names the repository
-# mark1russell7/crawler and the workflow file release.yml, with NO environment (npm refuses an
+# metrograph-labs/crawler and the workflow file release.yml, with NO environment (npm refuses an
 # environment for a repository with the immutable OIDC subject, npm/cli#9969). A version with a
 # hyphen (0.2.0-beta.1) gets the dist-tag "next". The others get "latest".
 #

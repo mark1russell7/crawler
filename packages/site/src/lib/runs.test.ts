@@ -168,7 +168,7 @@ describe("a new run in the history", () => {
     );
     const body = runReport(two, {
       checks: ["The site builds"],
-      repository: "mark1russell7/crawler",
+      repository: "metrograph-labs/crawler",
     });
     expect(body).toContain("## The robots.txt study of 2 November 2026");
     expect(body).toContain("| Sites that answered | 510 | 500 | +10 |");

@@ -15,6 +15,10 @@ A prerelease version (`0.2.0-beta.1`) goes to the npm tag `next`. Each other ver
 
 ## Unreleased
 
+## 0.7.11 - 2026-11-21
+
+- New versions of the dependencies (the release train).
+
 ## 0.7.10 - 2026-11-18
 
 - **Seal a store of kept answers.** `sealKept` of `polite-crawler/api` encrypts the entries of a store with AES-256-GCM. The key comes from a secret by HKDF-SHA-256, with a new random salt for each seal. `openKept` gives the entries back. Data that does not open gives an empty store and a note, and no error. Thus a client can keep its answers in a place that others can read, for example the cache of a public repository. Each entry is compressed alone, so the size of the seal does not tell how two answers match. Each export is beta. [Seal a store](packages/polite-crawler/README.md#seal-a-store) tells how.

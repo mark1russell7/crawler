@@ -30,7 +30,7 @@ jobs:
       security-events: write
       actions: read
     steps:
-      - uses: mark1russell7/template/.github/actions/security-scan@a456a3a088d2bf443f2bce9ac0dc0041e827a1de # main
+      - uses: mark1russell7/template/.github/actions/security-scan@130d7d6038dfa2e32fb0d6f01c385f22046a752f # main
         with:
           # The default setup of code scanning already analyzes this repository with CodeQL
           codeql: false

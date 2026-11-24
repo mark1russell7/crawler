@@ -1,6 +1,6 @@
 import { MockAgent } from "undici";
 import { afterEach, describe, expect, it } from "vitest";
-import type { OpenedCrawler } from "./open.ts";
+import type { HybridCrawler } from "./open.ts";
 import { openCrawler } from "./open.ts";
 import { fakeClock, removeDir, tempDir } from "./test-helpers.ts";
 
@@ -13,7 +13,7 @@ const SECOND = page("The second text of the example page, after a change.");
 const HTML = { "content-type": "text/html; charset=utf-8" };
 
 let dir: string | undefined;
-let crawler: OpenedCrawler | undefined;
+let crawler: HybridCrawler | undefined;
 
 afterEach(async () => {
   await crawler?.close();

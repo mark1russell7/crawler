@@ -1531,6 +1531,7 @@ export const HYBRID_DEFAULTS: {
 
 // @public
 export interface HybridCrawler extends OpenedCrawler {
+    body(capture: string): Promise<Uint8Array | undefined>;
     embed(options?: EmbedOptions): Promise<EmbedResult>;
     find(q: string, options?: SearchOptions): Promise<Found[]>;
     readonly hybrid: HybridSearch | undefined;
@@ -1762,7 +1763,6 @@ export const openCrawler: (options: OpenOptions) => HybridCrawler;
 
 // @public
 export interface OpenedCrawler extends PoliteCrawler {
-    body(capture: string): Promise<Uint8Array | undefined>;
     crawl(seeds: string | readonly string[], options?: CrawlOptions): CrawlRun;
     diff(doc: string, options?: DiffOptions): Promise<DiffResult>;
     discover(site: string, options?: DiscoverOptions): Promise<DiscoverResult>;

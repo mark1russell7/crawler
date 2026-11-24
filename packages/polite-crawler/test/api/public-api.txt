@@ -2260,6 +2260,7 @@ export declare const HYBRID_DEFAULTS: {
 ### build/index.d.mts#HybridCrawler
 interface HybridCrawler extends OpenedCrawler {
   find(q: string, options?: SearchOptions): Promise<Found[]>;
+  body(capture: string): Promise<Uint8Array | undefined>;
   readonly watch: Required<WatchList>;
   readonly hybrid: HybridSearch | undefined;
   embed(options?: EmbedOptions): Promise<EmbedResult>;
@@ -2413,7 +2414,6 @@ interface OpenedCrawler extends PoliteCrawler {
   discover(site: string, options?: DiscoverOptions): Promise<DiscoverResult>;
   crawl(seeds: string | readonly string[], options?: CrawlOptions): CrawlRun;
   diff(doc: string, options?: DiffOptions): Promise<DiffResult>;
-  body(capture: string): Promise<Uint8Array | undefined>;
   readonly watch: WatchList;
   extract(doc: string, fields: Readonly<Record<string, FieldClaim>>, options?: ExtractOptions): Promise<ExtractResult>;
 }

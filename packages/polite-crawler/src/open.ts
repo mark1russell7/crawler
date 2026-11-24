@@ -482,8 +482,6 @@ export interface OpenedCrawler extends PoliteCrawler {
   crawl(seeds: string | readonly string[], options?: CrawlOptions): CrawlRun;
   /** This method compares two versions of a stored document. It sends no request. */
   diff(doc: string, options?: DiffOptions): Promise<DiffResult>;
-  /** This method gives the bytes of the body of a capture, or undefined. It sends no request. */
-  body(capture: string): Promise<Uint8Array | undefined>;
   /** This list keeps the pages that the crawler checks again on a schedule, in `watch.sqlite`. */
   readonly watch: WatchList;
   /**
@@ -499,12 +497,14 @@ export interface OpenedCrawler extends PoliteCrawler {
 
 /**
  * This crawler is the result of `openCrawler`: an `OpenedCrawler` with hybrid search. Its `find`
- * takes `rank: "hybrid"`, and it has `hybrid`, `embed` and `rankWithin`. `OpenedCrawler` does not
+ * takes `rank: "hybrid"`, and it has `hybrid`, `embed`, `rankWithin` and `body`. `OpenedCrawler` does not
  * change, so an object of your own that implements the `OpenedCrawler` of 0.1.2 stays correct.
  */
 export interface HybridCrawler extends OpenedCrawler {
   /** This method searches the stored documents. It also takes `rank: "hybrid"`, when the crawler has an embedder. */
   find(q: string, options?: SearchOptions): Promise<Found[]>;
+  /** This method gives the bytes of the body of a capture, or undefined. It sends no request. */
+  body(capture: string): Promise<Uint8Array | undefined>;
   /** This list is the watch list of `OpenedCrawler`, with each optional method, for example `reschedule`. */
   readonly watch: Required<WatchList>;
   /** This search ranks with the vectors of the embedder, or it is undefined when the crawler has no embedder. */

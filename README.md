@@ -4,6 +4,7 @@
 [![CI](https://github.com/mark1russell7/crawler/actions/workflows/ci.yml/badge.svg)](https://github.com/mark1russell7/crawler/actions/workflows/ci.yml)
 [![Pages](https://github.com/mark1russell7/crawler/actions/workflows/pages.yml/badge.svg)](https://mark1russell7.github.io/crawler/)
 [![license](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+[![mark1russell7/crawler MCP server](https://glama.ai/mcp/servers/mark1russell7/crawler/badges/score.svg)](https://glama.ai/mcp/servers/mark1russell7/crawler)
 
 This repository holds [`polite-crawler`](packages/polite-crawler), a polite web crawler for research and for AI agents, and its site.
 

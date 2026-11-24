@@ -594,6 +594,12 @@ export interface ReadingIndex {
   /** This method tells if a capture gave a version of a document. */
   hasVersion(capture: string): boolean;
   /**
+   * This optional method gives a version that a capture gave, with no text, or undefined when the
+   * capture gave no version. `body` uses it to find the blob of a capture. An index without it
+   * makes `body` read the capture log, more slowly.
+   */
+  captureVersion?(capture: string): DocVersion | undefined;
+  /**
    * This optional method gives the hash of the current text of documents, with no text. Hybrid
    * search uses it to find the documents whose text has no vectors. An index without it gives the
    * same facts from `get`, more slowly.
@@ -1144,6 +1150,16 @@ export class DocIndex implements ReadingIndex {
         if (out.length >= limit) break;
       }
       return out;
+    });
+  }
+
+  /** This method gives a version that a capture gave, with no text, or undefined when the capture gave no version. */
+  captureVersion(capture: string): DocVersion | undefined {
+    return this.live((n) => {
+      const row = this.stmt(`SELECT * FROM ${n.versions} WHERE capture = ? LIMIT 1`).get(
+        capture,
+      ) as VersionRow | undefined;
+      return row === undefined ? undefined : toVersion(row);
     });
   }
 

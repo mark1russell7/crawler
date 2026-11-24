@@ -49,6 +49,7 @@ import {
   Extractors,
   catchUpIndex,
   fetchPage,
+  captureBody,
   findDocuments,
   readDocument,
   reindex,
@@ -445,6 +446,13 @@ export interface PoliteCrawler {
   diff?(doc: string, options?: DiffOptions): Promise<DiffResult>;
   /** This optional list keeps the pages that the crawler checks again on a schedule. `openCrawler` gives it. */
   readonly watch?: WatchList;
+  /**
+   * This optional method gives the bytes of the body of a capture (the field `capture` of a page),
+   * or undefined. It gives undefined for an unknown capture, a capture with no body, and a page that
+   * asked not to be AI input. It sends no request. `openCrawler` gives it. Over a runtime of your
+   * own, use `captureBody`.
+   */
+  body?(capture: string): Promise<Uint8Array | undefined>;
   // ── extract ──
   /**
    * This optional method checks the proposed values of fields against a stored document, and it
@@ -489,12 +497,14 @@ export interface OpenedCrawler extends PoliteCrawler {
 
 /**
  * This crawler is the result of `openCrawler`: an `OpenedCrawler` with hybrid search. Its `find`
- * takes `rank: "hybrid"`, and it has `hybrid`, `embed` and `rankWithin`. `OpenedCrawler` does not
+ * takes `rank: "hybrid"`, and it has `hybrid`, `embed`, `rankWithin` and `body`. `OpenedCrawler` does not
  * change, so an object of your own that implements the `OpenedCrawler` of 0.1.2 stays correct.
  */
 export interface HybridCrawler extends OpenedCrawler {
   /** This method searches the stored documents. It also takes `rank: "hybrid"`, when the crawler has an embedder. */
   find(q: string, options?: SearchOptions): Promise<Found[]>;
+  /** This method gives the bytes of the body of a capture, or undefined. It sends no request. */
+  body(capture: string): Promise<Uint8Array | undefined>;
   /** This list is the watch list of `OpenedCrawler`, with each optional method, for example `reschedule`. */
   readonly watch: Required<WatchList>;
   /** This search ranks with the vectors of the embedder, or it is undefined when the crawler has no embedder. */
@@ -612,6 +622,10 @@ export const openCrawler = (options: OpenOptions): HybridCrawler => {
         fallback: fetchOptions.fallback,
         archiveDespiteRobots: fetchOptions.archiveDespiteRobots,
       });
+    },
+    async body(capture) {
+      await live();
+      return captureBody(runtime, capture);
     },
     async find(q, findOptions = {}) {
       await live();

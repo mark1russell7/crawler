@@ -135,6 +135,9 @@ export const canonicalUrl: (value: string) => string;
 // @beta
 export const CAPTURE_SCHEMA = 2;
 
+// @beta
+export const captureBody: (runtime: CrawlRuntime, capture: string) => Promise<Uint8Array | undefined>;
+
 // @public
 export interface CaptureFilter {
     // (undocumented)
@@ -947,6 +950,7 @@ export class DocIndex implements ReadingIndex {
     beginRebuild(options?: {
         readonly batch?: number;
     }): IndexBuild;
+    captureVersion(capture: string): DocVersion | undefined;
     close(): void;
     // (undocumented)
     counts(): IndexCounts;
@@ -1527,6 +1531,7 @@ export const HYBRID_DEFAULTS: {
 
 // @public
 export interface HybridCrawler extends OpenedCrawler {
+    body(capture: string): Promise<Uint8Array | undefined>;
     embed(options?: EmbedOptions): Promise<EmbedResult>;
     find(q: string, options?: SearchOptions): Promise<Found[]>;
     readonly hybrid: HybridSearch | undefined;
@@ -1834,6 +1839,7 @@ export interface PageOptions {
 // @public (undocumented)
 export interface PageResult {
     readonly archived?: Archived | undefined;
+    readonly blob?: string | null | undefined;
     readonly capture: string | null;
     readonly capture_count: number;
     readonly captures: readonly string[];
@@ -1856,6 +1862,7 @@ export interface PageResult {
     readonly status: number;
     readonly structured: readonly string[];
     readonly title: string | null;
+    readonly unchanged?: boolean | undefined;
     // (undocumented)
     readonly url: string;
 }
@@ -1918,6 +1925,7 @@ export interface PolicyOptions extends Partial<PolitenessPolicy> {
 
 // @public
 export interface PoliteCrawler {
+    body?(capture: string): Promise<Uint8Array | undefined>;
     close(): Promise<void>;
     crawl?(seeds: string | readonly string[], options?: CrawlOptions): CrawlRun;
     diff?(doc: string, options?: DiffOptions): Promise<DiffResult>;
@@ -2112,6 +2120,7 @@ export interface ReadingIndex {
     beginRebuild(options?: {
         readonly batch?: number;
     }): IndexBuild;
+    captureVersion?(capture: string): DocVersion | undefined;
     // (undocumented)
     counts(): IndexCounts;
     digests?(options: DigestOptions): DocDigest[];
@@ -3121,7 +3130,7 @@ export const verifySignature: (request: SignedRequest, directory: KeyDirectory, 
 }) => SignatureCheck;
 
 // @public
-export const VERSION = "0.7.10";
+export const VERSION = "0.7.11";
 
 // @public
 export interface VersionAt {

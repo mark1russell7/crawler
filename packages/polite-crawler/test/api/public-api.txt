@@ -301,6 +301,7 @@ bodyEncoding: build/text.d.mts#bodyEncoding
 browserMissing: build/index.d.mts#browserMissing
 cacheKeyOf: build/urls.d.mts#cacheKeyOf
 canonicalUrl: build/urls.d.mts#canonicalUrl
+captureBody: build/index.d.mts#captureBody
 catchUpIndex: build/index.d.mts#catchUpIndex
 changeCommand: build/index.d.mts#changeCommand
 checkFields: build/index.d.mts#checkFields
@@ -1871,6 +1872,7 @@ export declare class DocIndex implements ReadingIndex {
   earlierTexts(doc: string, options?: {
     readonly limit?: number;
   }): VersionText[];
+  captureVersion(capture: string): DocVersion | undefined;
   hasVersion(capture: string): boolean;
   digests(options?: DigestOptions): DocDigest[];
   newestFetch(): string | undefined;
@@ -2258,6 +2260,7 @@ export declare const HYBRID_DEFAULTS: {
 ### build/index.d.mts#HybridCrawler
 interface HybridCrawler extends OpenedCrawler {
   find(q: string, options?: SearchOptions): Promise<Found[]>;
+  body(capture: string): Promise<Uint8Array | undefined>;
   readonly watch: Required<WatchList>;
   readonly hybrid: HybridSearch | undefined;
   embed(options?: EmbedOptions): Promise<EmbedResult>;
@@ -2455,6 +2458,8 @@ interface PageResult {
   readonly fetched_at: string | null;
   readonly from_cache: boolean;
   readonly held_back: boolean;
+  readonly blob?: string | null | undefined;
+  readonly unchanged?: boolean | undefined;
   readonly note: string | null;
   readonly archived?: Archived | undefined;
 }
@@ -2504,6 +2509,7 @@ interface PoliteCrawler {
   crawl?(seeds: string | readonly string[], options?: CrawlOptions): CrawlRun;
   diff?(doc: string, options?: DiffOptions): Promise<DiffResult>;
   readonly watch?: WatchList;
+  body?(capture: string): Promise<Uint8Array | undefined>;
   extract?(doc: string, fields: Readonly<Record<string, FieldClaim>>, options?: ExtractOptions): Promise<ExtractResult>;
   readonly hybrid?: HybridSearch | undefined;
   embed?(options?: EmbedOptions): Promise<EmbedResult>;
@@ -2642,6 +2648,7 @@ interface ReadingIndex {
   }): VersionText[];
   docsOfCapture(capture: string): Doc[];
   hasVersion(capture: string): boolean;
+  captureVersion?(capture: string): DocVersion | undefined;
   digests?(options: DigestOptions): DocDigest[];
   find(q: string, options: FindIndexOptions): Found[];
   rankWithin(q: string, docs: readonly string[], options?: {
@@ -3051,7 +3058,7 @@ export declare const VENUE_LIMITS: {
 };
 
 ### build/index.d.mts#VERSION
-export declare const VERSION = "0.7.10";
+export declare const VERSION = "0.7.11";
 
 ### build/index.d.mts#Variant
 type Variant = "plain" | "rendered";
@@ -3555,6 +3562,9 @@ export declare const browserMissing: (load?: () => Promise<{
     executablePath(): string;
   };
 }>) => Promise<string | undefined>;
+
+### build/index.d.mts#captureBody
+export declare const captureBody: (runtime: CrawlRuntime, capture: string) => Promise<Uint8Array | undefined>;
 
 ### build/index.d.mts#catchUpIndex
 export declare const catchUpIndex: (runtime: CrawlRuntime) => Promise<CatchUpResult | undefined>;

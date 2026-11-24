@@ -1459,6 +1459,20 @@ A server examines `If-None-Match` first, and it ignores `If-Modified-Since` when
 3. When the date alone also fails 3 times in sequence, the crawler sends the two validators again, because they cost nothing. The memo records that neither validator works.
 4. A changed body tells nothing about a validator. The robots.txt of a host is not part of its memo, because it is often a static file with validators of its own.
 
+### The body of a capture, and an unchanged page
+
+The result of `fetch` tells if the page changed. `unchanged` is true for a 304 and for an answer of the stored copy (`from_cache`). It is also true when the new body is the same as the previous body of the document. `blob` is the SHA-256 hash of the body that the document shows. Thus a caller does not keep its own hash of each page.
+
+`body(capture)` gives the bytes of the body of a capture, for example the `capture` of a page. It sends no request. It gives `undefined` for an unknown capture, for a capture with no body, and for a page that asked not to be AI input. Over a runtime of your own, `captureBody(runtime, capture)` does the same.
+
+```ts
+const page = await crawler.fetch("https://example.com/list", { maxAge: "0s" });
+if (!page.unchanged && page.capture !== null) {
+  const bytes = await crawler.body(page.capture);
+  // parse the bytes
+}
+```
+
 The memo is in the host state store. `openCrawler` keeps it in `hosts.sqlite`, so the processes on one store share it, and it stays after a restart. `MemoryHostStateStore` keeps it in memory. A `HostStateStore` of your own gets a memo when it has the optional methods `validators` and `noteValidators`. `nextValidatorMemo` and `VALIDATOR_MEMO` give the rules and the limits.
 
 ## The store

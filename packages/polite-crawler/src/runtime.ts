@@ -476,6 +476,17 @@ export interface PageResult {
   readonly from_cache: boolean;
   /** This value is true when the page asked not to be AI input. Its title and text are then held back. */
   readonly held_back: boolean;
+  /**
+   * This hash (SHA-256) is the blob of the body that the document shows, or null when the fetch gave
+   * no document. `body` of `openCrawler` gives the bytes of a capture.
+   */
+  readonly blob?: string | null | undefined;
+  /**
+   * This value is true when the page did not change since the previous fetch. It is true for a 304
+   * (`not-modified`) and for an answer of the stored copy (`from_cache`). It is also true when the
+   * new body is the same as the body of the previous capture. A caller can then skip the page.
+   */
+  readonly unchanged?: boolean | undefined;
   readonly note: string | null;
   /**
    * This value tells that the document is an archived copy, not a fresh fetch: the archive, the date
@@ -602,6 +613,10 @@ export const fetchPage = async (
   const note = [plain.fetched.note, ...notes].filter(
     (part): part is string => part !== undefined && part.length > 0,
   );
+  const unchanged =
+    plain.fetched.outcome === "not-modified" ||
+    fromCache ||
+    (doc !== undefined && sameAsPrevious(runtime, doc));
   return {
     url,
     doc: doc?.doc ?? null,
@@ -618,8 +633,48 @@ export const fetchPage = async (
     fetched_at: doc?.fetched_at ?? plain.fetched.fetchedAt ?? null,
     from_cache: fromCache,
     held_back: held,
+    blob: doc?.blob ?? null,
+    unchanged,
     note: note.length > 0 ? note.join("; ") : null,
   };
+};
+
+/** This function tells if the version that a document shows has the same body as the version before it. */
+const sameAsPrevious = (
+  runtime: CrawlRuntime,
+  doc: { readonly doc: string; readonly capture: string; readonly blob: string | null },
+): boolean => {
+  if (doc.blob === null) return false;
+  const [current, previous] = runtime.index.versions(doc.doc, { limit: 2 });
+  return current?.capture === doc.capture && previous !== undefined && previous.blob === doc.blob;
+};
+
+/**
+ * This function gives the body of a capture from the blob store, or undefined. It gives undefined
+ * when the capture is not known, has no body, or its blob is not in the store. It also gives
+ * undefined for a capture of a page that asked not to be AI input, as the held-back text is not
+ * given. It sends no request.
+ *
+ * @beta
+ */
+export const captureBody = async (
+  runtime: CrawlRuntime,
+  capture: string,
+): Promise<Uint8Array | undefined> => {
+  const version = runtime.index.captureVersion?.(capture);
+  if (version !== undefined) {
+    if (isHeldBack(version) || version.blob === null) return undefined;
+    return runtime.blobs.get(version.blob);
+  }
+  // a capture with no version, for example of a recipe with no extractor: read its record in the log
+  for await (const record of runtime.captures.scan({ source: "fetch" })) {
+    if (record.id !== capture) continue;
+    const payload = record.payload as CapturePayload | null;
+    if (payload === null || typeof payload !== "object") return undefined;
+    if (payload.signals?.ai_input === "no" || typeof payload.blob !== "string") return undefined;
+    return runtime.blobs.get(payload.blob);
+  }
+  return undefined;
 };
 
 // ── reading, verifying and finding ──────────────────────────────────────────

@@ -532,6 +532,8 @@ type KeepOptions: build/api.d.mts#KeepOptions
 type Kept: build/api.d.mts#Kept
 type KeptAnswer: build/api.d.mts#KeptAnswer
 type KeptMemory: build/api.d.mts#KeptMemory
+type KeptReplies: build/api.d.mts#KeptReplies
+type KeptReply: build/api.d.mts#KeptReply
 type KeptStore: build/api.d.mts#KeptStore
 type OpenedKept: build/api.d.mts#OpenedKept
 type Outcome: build/classify.d.mts#Outcome
@@ -574,6 +576,7 @@ isTextType: build/api.d.mts#isTextType
 keepAnswer: build/api.d.mts#keepAnswer
 keptFetch: build/api.d.mts#keptFetch
 keptKey: build/api.d.mts#keptKey
+keptReplies: build/api.d.mts#keptReplies
 keptRequestHeaders: build/api.d.mts#keptRequestHeaders
 keptStore: build/api.d.mts#keptStore
 memoryQuotaStore: build/api.d.mts#memoryQuotaStore
@@ -757,6 +760,19 @@ interface KeptAnswer {
 ### build/api.d.mts#KeptMemory
 interface KeptMemory extends KeptStore {
   used(): [string, Kept][];
+}
+
+### build/api.d.mts#KeptReplies
+interface KeptReplies<Extra> {
+  keep(url: string, reply: Reply, extra: Extra): void;
+  get(url: string): Promise<KeptReply<Extra> | undefined>;
+  delete(url: string): void;
+}
+
+### build/api.d.mts#KeptReply
+interface KeptReply<Extra> {
+  readonly reply: Reply;
+  readonly extra: Extra;
 }
 
 ### build/api.d.mts#KeptStore
@@ -952,6 +968,9 @@ export declare function keptFetch(fetch: FetchLike, store: KeptStore, options?: 
 
 ### build/api.d.mts#keptKey
 export declare function keptKey(url: string, headers: Readonly<Record<string, string>>): string;
+
+### build/api.d.mts#keptReplies
+export declare function keptReplies<Extra>(): KeptReplies<Extra>;
 
 ### build/api.d.mts#keptRequestHeaders
 export declare function keptRequestHeaders(kept: Kept | undefined, headers: Readonly<Record<string, string>>): Record<string, string>;

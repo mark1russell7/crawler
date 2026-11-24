@@ -13,7 +13,7 @@ This file records the changes to [`polite-crawler`](packages/polite-crawler) in 
 
 A prerelease version (`0.2.0-beta.1`) goes to the npm tag `next`. Each other version goes to `latest`.
 
-## Unreleased
+## 0.7.12 - 2026-11-24
 
 - **Kept replies of a poll.** `keptReplies` of `polite-crawler/api` keeps the last full reply of each URL of a poll, with its body as compressed bytes. A 304 has no body, so the client reads the kept reply again, with a value of its own (for example the time of the fetch). Each export is beta. [Keep the replies of a poll](packages/polite-crawler/README.md#keep-the-replies-of-a-poll) tells how.
 

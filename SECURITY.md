@@ -8,7 +8,7 @@ Only the latest version of `polite-crawler` on npm gets security fixes. Before v
 
 Do not open a public issue for a security problem. Use the private vulnerability report of GitHub:
 
-1. Open <https://github.com/mark1russell7/crawler/security/advisories/new>.
+1. Open <https://github.com/metrograph-labs/crawler/security/advisories/new>.
 2. Give the version of `polite-crawler`, the Node.js version and the operating system.
 3. Give the steps, the command or the MCP tool call that shows the problem.
 

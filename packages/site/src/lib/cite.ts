@@ -7,13 +7,13 @@ import type { Study } from "./study.ts";
 import { DATA_LICENSE, STUDY_AUTHOR } from "./study.ts";
 
 /** This address is the site of polite-crawler, with a `/` at the end. A feed and llms.txt use full addresses. */
-export const SITE_URL = "https://mark1russell7.github.io/crawler/";
+export const SITE_URL = "https://metrograph-labs.github.io/crawler/";
 /** This address is the page of the study. */
 export const STUDY_PAGE = `${SITE_URL}notes/robots-txt-ai-agents/`;
 /** This day is the day of the first version of the study. A new run changes the date of the data, not this day. */
 export const STUDY_PUBLISHED = "2026-10-12";
 /** This address is the repository of the crawler and of the study script. */
-export const REPOSITORY = "https://github.com/mark1russell7/crawler";
+export const REPOSITORY = "https://github.com/metrograph-labs/crawler";
 /** This text is the title of the dataset on Zenodo. */
 export const DATASET_TITLE = "Robots.txt rules for AI crawlers on popular sites";
 /** This name is the author, with the family name first, as a citation writes it. */

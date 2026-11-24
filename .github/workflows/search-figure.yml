@@ -3,7 +3,7 @@
 # model (bge-small through transformers.js) for the vector ranks. The model runs here, not on a laptop.
 #
 # It runs when the corpus, the script or this file changes on a branch, and when a person starts it:
-#   gh workflow run search-figure.yml -R mark1russell7/crawler --ref <branch>
+#   gh workflow run search-figure.yml -R metrograph-labs/crawler --ref <branch>
 # The artifact "search-figure" holds the JSON, with the model, the versions, the date and the commit.
 # Commit it as packages/site/src/data/search-figure.json. The test of the figure fails when the
 # corpus changed and the JSON did not.

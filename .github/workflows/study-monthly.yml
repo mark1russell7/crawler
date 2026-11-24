@@ -1,7 +1,7 @@
 # The robots.txt study, each month (roadmap item study-monthly). On day 2 of each month, this
 # workflow runs the study again on a GitHub runner, with the list size and the method of the first
 # run. polite-crawler reads only /robots.txt of each domain, with its own User-Agent and no contact.
-#   gh workflow run study-monthly.yml -R mark1russell7/crawler [--ref <branch>]
+#   gh workflow run study-monthly.yml -R metrograph-labs/crawler [--ref <branch>]
 #
 # A pull request that the token of GitHub Actions opens starts no workflow, so the job "study" does
 # the checks of the site itself. It runs the code of the repository, so it gets only "contents: read".
@@ -16,7 +16,7 @@ name: Study each month
 on:
   schedule:
     # 06:39 UTC on day 2 of each month. Tranco makes the list of day 1 at the end of day 1.
-    - cron: "39 6 2 * *"
+    - cron: "48 6 2 * *"
   workflow_dispatch:
 
 permissions: {}

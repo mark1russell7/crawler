@@ -29,7 +29,7 @@ const sandbox = env("ZENODO_SANDBOX") === "true";
 const token = env(sandbox ? "ZENODO_SANDBOX_TOKEN" : "ZENODO_TOKEN");
 if (token.length === 0) {
   console.error(
-    `The secret ${sandbox ? "ZENODO_SANDBOX_TOKEN" : "ZENODO_TOKEN"} is not set. Make a token on ${sandbox ? "sandbox.zenodo.org" : "zenodo.org"} with the scopes deposit:write and deposit:actions, then: gh secret set ${sandbox ? "ZENODO_SANDBOX_TOKEN" : "ZENODO_TOKEN"} -R mark1russell7/crawler`,
+    `The secret ${sandbox ? "ZENODO_SANDBOX_TOKEN" : "ZENODO_TOKEN"} is not set. Make a token on ${sandbox ? "sandbox.zenodo.org" : "zenodo.org"} with the scopes deposit:write and deposit:actions, then: gh secret set ${sandbox ? "ZENODO_SANDBOX_TOKEN" : "ZENODO_TOKEN"} -R metrograph-labs/crawler`,
   );
   process.exit(1);
 }

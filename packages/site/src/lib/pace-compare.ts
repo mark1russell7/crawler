@@ -45,7 +45,7 @@ export const PACE_TOOLS: readonly PaceTool[] = [
     sources: [
       {
         label: "politeness.ts",
-        href: "https://github.com/mark1russell7/crawler/blob/main/packages/polite-crawler/src/politeness.ts",
+        href: "https://github.com/metrograph-labs/crawler/blob/main/packages/polite-crawler/src/politeness.ts",
       },
     ],
   },

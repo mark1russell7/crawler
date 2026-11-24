@@ -10,9 +10,9 @@ import { EVAL_A_LIMIT_TEXT } from "../../../lib/data-stamps.ts";
 import { STUDY_AUTHOR } from "../../../lib/study.ts";
 
 export const s = evalA.summary;
-export const runUrl = `https://github.com/mark1russell7/crawler/actions/runs/${evalA.run}`;
-export const readme = "https://github.com/mark1russell7/crawler/tree/main/packages/polite-crawler/eval";
-export const dataFile = "https://github.com/mark1russell7/crawler/blob/main/packages/site/src/data/eval-a.json";
+export const runUrl = `https://github.com/metrograph-labs/crawler/actions/runs/${evalA.run}`;
+export const readme = "https://github.com/metrograph-labs/crawler/tree/main/packages/polite-crawler/eval";
+export const dataFile = "https://github.com/metrograph-labs/crawler/blob/main/packages/site/src/data/eval-a.json";
 export const politeCosts = evalA.claims.map((claim) => claim.polite);
 export const pages = evalA.claims.map((claim) => claim.markdown);
 export const more = evalA.claims.filter(costsMore);

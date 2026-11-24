@@ -201,10 +201,10 @@ describe("the Zenodo client", () => {
       prereserve_doi: true,
       related_identifiers: [
         {
-          identifier: "https://mark1russell7.github.io/crawler/notes/robots-txt-ai-agents/",
+          identifier: "https://metrograph-labs.github.io/crawler/notes/robots-txt-ai-agents/",
           relation: "isSupplementTo",
         },
-        { identifier: "https://github.com/mark1russell7/crawler", relation: "isSupplementTo" },
+        { identifier: "https://github.com/metrograph-labs/crawler", relation: "isSupplementTo" },
       ],
     });
     // the files know the DOI, and Zenodo gets their bytes as they are

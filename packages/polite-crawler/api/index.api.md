@@ -84,7 +84,7 @@ export interface BlobStore {
 export const bodyEncoding: (bytes: Uint8Array, contentType: string | null) => string;
 
 // @public
-export const BOT_PAGE = "https://mark1russell7.github.io/crawler/bot/";
+export const BOT_PAGE = "https://metrograph-labs.github.io/crawler/bot/";
 
 // @beta
 export const browserMissing: (load?: () => Promise<{
@@ -3121,7 +3121,7 @@ export const verifySignature: (request: SignedRequest, directory: KeyDirectory, 
 }) => SignatureCheck;
 
 // @public
-export const VERSION = "0.7.10";
+export const VERSION = "0.7.11";
 
 // @public
 export interface VersionAt {

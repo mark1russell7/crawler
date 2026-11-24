@@ -9,7 +9,7 @@ import survey from "../data/restaurant-survey.json";
 import study from "../data/robots-study.json";
 import crawlerPackage from "polite-crawler/package.json";
 
-const REPOSITORY = "https://github.com/mark1russell7/crawler";
+const REPOSITORY = "https://github.com/metrograph-labs/crawler";
 
 /** One run that made the data of a page. */
 export interface StampRun {

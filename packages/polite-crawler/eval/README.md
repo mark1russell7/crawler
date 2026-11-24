@@ -35,7 +35,7 @@ The quotes come from the memory of the author, not from a fetch on a shared comp
 
 ## The method
 
-1. **The fetch.** Online mode fetches each URL one time into a new store, with the default identity of the crawler. The `User-Agent` is `PoliteCrawler/<version> (+https://mark1russell7.github.io/crawler/bot/)`, with no contact. The crawler obeys robots.txt for `PoliteCrawler` and `Claude-User`, and the pace of each site. It opens no browser.
+1. **The fetch.** Online mode fetches each URL one time into a new store, with the default identity of the crawler. The `User-Agent` is `PoliteCrawler/<version> (+https://metrograph-labs.github.io/crawler/bot/)`, with no contact. The crawler obeys robots.txt for `PoliteCrawler` and `Claude-User`, and the pace of each site. It opens no browser.
 2. **The archive.** The run exports the store as a WACZ file with `exportWacz`, with the refusals and the redirects (`includeRefusals`).
 3. **The replay.** The measurement reads the WACZ file into a new store. A mock agent answers each request from the archive, and it refuses each other request. Thus the measurement uses no network.
 4. **The polite-crawler path.** The measurement starts the MCP server of the package in memory. For each claim, it uses the tools in the sequence of an agent:
@@ -73,7 +73,7 @@ The Claude Code WebFetch tool converts the page to Markdown and gives it to a sm
 Online mode fetches pages. Start it in CI only:
 
 ```sh
-gh workflow run eval.yml -R mark1russell7/crawler --ref <branch>
+gh workflow run eval.yml -R metrograph-labs/crawler --ref <branch>
 ```
 
 The workflow also starts after each release. The job summary shows the tables. The artifact `eval` holds these files for 90 days:
@@ -151,7 +151,7 @@ The column "On the page" tells if each quote of the answer is on the page.
 Start a dry run with two claims first:
 
 ```sh
-gh workflow run eval-sessions.yml -R mark1russell7/crawler -f limit=2
+gh workflow run eval-sessions.yml -R metrograph-labs/crawler -f limit=2
 ```
 
 The inputs are `arms` (a JSON list, default `["mcp","webfetch"]`), `mcp_version`, `limit`, `only` (claim ids), `repeat` (the sessions of each claim in each arm), `model`, `budget`, `max_turns`, `max_session_usd` and `summary_of`. With the id of an earlier run in `summary_of`, the workflow starts no session. It makes the summary of that run again, with the code of the branch. The job summary shows the tables. The artifact `eval-b` holds `eval-b-result.json` and `eval-b-summary.md`. The artifacts `sessions-mcp` and `sessions-webfetch` hold the stream of each session.
@@ -169,7 +169,7 @@ The table "Projected for the set" gives the cost of the 30 claims at the mean co
 
 ## The latest numbers
 
-The eval of 2026-10-18 ([workflow 39085336453](https://github.com/mark1russell7/crawler/actions/runs/39085336453), commit `a8194ad`) verified 30 of 30 claims. Its archive `eval.wacz` has the SHA-256 `d32f43f95b8b8435`.
+The eval of 2026-10-18 ([workflow 39085336453](https://github.com/metrograph-labs/crawler/actions/runs/39085336453), commit `a8194ad`) verified 30 of 30 claims. Its archive `eval.wacz` has the SHA-256 `d32f43f95b8b8435`.
 
 | Path | Median tokens | Total tokens |
 | --- | ---: | ---: |
@@ -186,7 +186,7 @@ The eval of 2026-10-18 ([workflow 39085336453](https://github.com/mark1russell7/
 
 ### Part B
 
-The sessions of 2026-10-25 used Claude Code 2.1.296 and `polite-crawler-mcp` 0.2.1: 180 sessions with Sonnet ([workflow 40153411428](https://github.com/mark1russell7/crawler/actions/runs/40153411428)) and 60 with Opus ([workflow 40154501047](https://github.com/mark1russell7/crawler/actions/runs/40154501047)). Each claim got 3 sessions in each arm with Sonnet, and 1 with Opus. The whole eval cost 5.1755 USD, with a dry run of 0.0804 USD.
+The sessions of 2026-10-25 used Claude Code 2.1.296 and `polite-crawler-mcp` 0.2.1: 180 sessions with Sonnet ([workflow 40153411428](https://github.com/metrograph-labs/crawler/actions/runs/40153411428)) and 60 with Opus ([workflow 40154501047](https://github.com/metrograph-labs/crawler/actions/runs/40154501047)). Each claim got 3 sessions in each arm with Sonnet, and 1 with Opus. The whole eval cost 5.1755 USD, with a dry run of 0.0804 USD.
 
 | Model | Arm | Quotes on the page | Median cost of a session | Cost for each quote on the page |
 | --- | --- | ---: | ---: | ---: |
@@ -195,11 +195,11 @@ The sessions of 2026-10-25 used Claude Code 2.1.296 and `polite-crawler-mcp` 0.2
 | Opus | `mcp` | 29 of 30 | 0.0408 USD | 0.0464 USD |
 | Opus | `webfetch` | 30 of 30 | 0.0201 USD | 0.0244 USD |
 
-WebFetch costs approximately half as much, because a small model (`claude-haiku-5-5`) reads the page and the main model reads only its answer. The page [Real Claude Code sessions](https://mark1russell7.github.io/crawler/notes/claude-code-sessions/) gives each claim and the limits.
+WebFetch costs approximately half as much, because a small model (`claude-haiku-5-5`) reads the page and the main model reads only its answer. The page [Real Claude Code sessions](https://metrograph-labs.github.io/crawler/notes/claude-code-sessions/) gives each claim and the limits.
 
 #### The run of `polite-crawler-mcp` 0.2.3
 
-`polite-crawler-mcp` 0.2.3 made the tool text and the instructions shorter. The sessions of 2026-10-25 in [workflow 40163619030](https://github.com/mark1russell7/crawler/actions/runs/40163619030) used Claude Code 2.1.296, Sonnet (`claude-sonnet-5-5`) and `polite-crawler-mcp` 0.2.3. The run started only the arms `mcp` and `mcp-quote`, with 3 sessions for each claim in each arm: 180 sessions. The run cost 3.3529 USD, with a dry run of 0.0879 USD ([workflow 40163467327](https://github.com/mark1russell7/crawler/actions/runs/40163467327)).
+`polite-crawler-mcp` 0.2.3 made the tool text and the instructions shorter. The sessions of 2026-10-25 in [workflow 40163619030](https://github.com/metrograph-labs/crawler/actions/runs/40163619030) used Claude Code 2.1.296, Sonnet (`claude-sonnet-5-5`) and `polite-crawler-mcp` 0.2.3. The run started only the arms `mcp` and `mcp-quote`, with 3 sessions for each claim in each arm: 180 sessions. The run cost 3.3529 USD, with a dry run of 0.0879 USD ([workflow 40163467327](https://github.com/metrograph-labs/crawler/actions/runs/40163467327)).
 
 The run did not start the WebFetch arm again, because it changed nothing for WebFetch. The rows of `webfetch` and of `mcp` 0.2.1 come from the Sonnet run of 0.2.1 above.
 
@@ -322,7 +322,7 @@ Each rate has `k`, `n`, `value`, and the 95% Wilson interval `low` and `high` (`
 ### Start part C
 
 ```sh
-gh workflow run decisions.yml -R mark1russell7/crawler -f per_area=400 -f budget=80
+gh workflow run decisions.yml -R metrograph-labs/crawler -f per_area=400 -f budget=80
 ```
 
 The job `archive` uploads the artifact `decisions-archive`: `venues.json`, `decisions.wacz` and `decisions-crawl.json`. The job `score` uploads the artifact `decisions-result`: `labels.jsonl`, `result.json` and `decisions-summary.md`. The job summary shows the tables.
@@ -367,7 +367,7 @@ The runtime: the job installs a pinned version of the Python package `laya` on t
 Start step 2 with the labels of an earlier run, with no new crawl:
 
 ```sh
-gh workflow run decisions.yml -R mark1russell7/crawler -f labels_run=<run id> -f train=auto -f train_budget=120 -f epochs=4
+gh workflow run decisions.yml -R metrograph-labs/crawler -f labels_run=<run id> -f train=auto -f train_budget=120 -f epochs=4
 ```
 
 With no `labels_run`, step 2 runs after step 1 in the same run. `-f laya=false` stops it. `-f train=none` scores only the untrained arm. The job `laya` uploads the artifact `laya-result`. It holds:

@@ -29,7 +29,7 @@ on:
         default: false
   schedule:
     # Each Monday. The smoke test installs the tarball with the newest versions of its dependencies.
-    - cron: "54 6 * * 1"
+    - cron: "33 6 * * 1"
 
 permissions:
   contents: read

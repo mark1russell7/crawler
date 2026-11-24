@@ -2,7 +2,7 @@
 # It fetches the pages of the question set with the default identity of the crawler, exports the
 # store as a WACZ file and counts the text that an agent reads for each claim. It calls no model.
 # Then it measures again from the WACZ file with no network, and fails when the numbers differ.
-#   gh workflow run eval.yml -R mark1russell7/crawler --ref <branch>
+#   gh workflow run eval.yml -R metrograph-labs/crawler --ref <branch>
 # The artifact "eval" holds the JSON result, the Markdown summary and the WACZ file. The job
 # summary has the tables.
 #
@@ -26,7 +26,7 @@ on:
   release:
     types: [published]
   schedule:
-    - cron: "53 6 * * 1"
+    - cron: "25 6 * * 1"
   workflow_run:
     workflows: [Release]
     types: [completed]

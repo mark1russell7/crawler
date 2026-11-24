@@ -393,7 +393,7 @@ describe("the WARC export", () => {
     expect(field(records[0]!, "WARC-Filename")).toBe("store.warc.gz");
     const info = records[0]!.block.toString("utf8");
     expect(info).toContain(
-      `software: polite-crawler/${VERSION} (+https://mark1russell7.github.io/crawler/)`,
+      `software: polite-crawler/${VERSION} (+https://metrograph-labs.github.io/crawler/)`,
     );
     expect(info).toContain("format: WARC File Format 1.1");
     expect(byType(records, "warcinfo")).toHaveLength(1);

@@ -13,6 +13,8 @@
  * `keepAnswer` keep the last full answer of a GET with its body, so a 304 gives the kept answer. The
  * client decides where the store is: a store is data. Each export is beta: a minor version can
  * change it.
+ *
+ * `keptReplies` keeps the last full reply of each URL of a poll, with the body compressed.
  */
 import { ApiError } from "./api-error.ts";
 import type { Classified } from "./classify.ts";
@@ -48,6 +50,8 @@ export {
   keptStore,
   readKept,
 } from "./kept.ts";
+export type { KeptReplies, KeptReply } from "./kept-replies.ts";
+export { keptReplies } from "./kept-replies.ts";
 export type { OpenedKept, SealOptions } from "./kept-seal.ts";
 export { KEPT_SEAL_FORMAT, KEPT_SEAL_SECRET_MIN, openKept, sealKept } from "./kept-seal.ts";
 export type {

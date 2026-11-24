@@ -15,6 +15,8 @@ A prerelease version (`0.2.0-beta.1`) goes to the npm tag `next`. Each other ver
 
 ## Unreleased
 
+- **Kept replies of a poll.** `keptReplies` of `polite-crawler/api` keeps the last full reply of each URL of a poll, with its body as compressed bytes. A 304 has no body, so the client reads the kept reply again, with a value of its own (for example the time of the fetch). Each export is beta. [Keep the replies of a poll](packages/polite-crawler/README.md#keep-the-replies-of-a-poll) tells how.
+
 ## 0.7.11 - 2026-11-24
 
 - **The body of a capture, and an unchanged page.** `body(capture)` of `openCrawler` gives the bytes of the body of a capture, with no request. It gives `undefined` for a page that asked not to be AI input. `captureBody(runtime, capture)` does the same over a runtime of your own. The result of `fetch` has two new fields. `blob` is the SHA-256 hash of the body that the document shows. `unchanged` is true for a 304, an answer of the stored copy, or a body that is the same as the previous capture. Thus a caller does not keep its own hash of each page. The index gets the optional method `captureVersion`. Each new export is beta. [The body of a capture](packages/polite-crawler/README.md#the-body-of-a-capture-and-an-unchanged-page) tells how.

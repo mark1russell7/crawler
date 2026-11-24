@@ -352,6 +352,7 @@ export type {
 export {
   Extractors,
   HELD_BACK,
+  captureBody,
   catchUpIndex,
   fetchAndIndex,
   fetchPage,

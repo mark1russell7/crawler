@@ -15,6 +15,10 @@ A prerelease version (`0.2.0-beta.1`) goes to the npm tag `next`. Each other ver
 
 ## Unreleased
 
+## 0.7.11 - 2026-11-24
+
+- **The body of a capture, and an unchanged page.** `body(capture)` of `openCrawler` gives the bytes of the body of a capture, with no request. It gives `undefined` for a page that asked not to be AI input. `captureBody(runtime, capture)` does the same over a runtime of your own. The result of `fetch` has two new fields. `blob` is the SHA-256 hash of the body that the document shows. `unchanged` is true for a 304, an answer of the stored copy, or a body that is the same as the previous capture. Thus a caller does not keep its own hash of each page. The index gets the optional method `captureVersion`. Each new export is beta. [The body of a capture](packages/polite-crawler/README.md#the-body-of-a-capture-and-an-unchanged-page) tells how.
+
 ## 0.7.10 - 2026-11-18
 
 - **Seal a store of kept answers.** `sealKept` of `polite-crawler/api` encrypts the entries of a store with AES-256-GCM. The key comes from a secret by HKDF-SHA-256, with a new random salt for each seal. `openKept` gives the entries back. Data that does not open gives an empty store and a note, and no error. Thus a client can keep its answers in a place that others can read, for example the cache of a public repository. Each entry is compressed alone, so the size of the seal does not tell how two answers match. Each export is beta. [Seal a store](packages/polite-crawler/README.md#seal-a-store) tells how.

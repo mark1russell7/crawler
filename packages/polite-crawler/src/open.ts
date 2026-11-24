@@ -49,6 +49,7 @@ import {
   Extractors,
   catchUpIndex,
   fetchPage,
+  captureBody,
   findDocuments,
   readDocument,
   reindex,
@@ -445,6 +446,13 @@ export interface PoliteCrawler {
   diff?(doc: string, options?: DiffOptions): Promise<DiffResult>;
   /** This optional list keeps the pages that the crawler checks again on a schedule. `openCrawler` gives it. */
   readonly watch?: WatchList;
+  /**
+   * This optional method gives the bytes of the body of a capture (the field `capture` of a page),
+   * or undefined. It gives undefined for an unknown capture, a capture with no body, and a page that
+   * asked not to be AI input. It sends no request. `openCrawler` gives it. Over a runtime of your
+   * own, use `captureBody`.
+   */
+  body?(capture: string): Promise<Uint8Array | undefined>;
   // ── extract ──
   /**
    * This optional method checks the proposed values of fields against a stored document, and it
@@ -474,6 +482,8 @@ export interface OpenedCrawler extends PoliteCrawler {
   crawl(seeds: string | readonly string[], options?: CrawlOptions): CrawlRun;
   /** This method compares two versions of a stored document. It sends no request. */
   diff(doc: string, options?: DiffOptions): Promise<DiffResult>;
+  /** This method gives the bytes of the body of a capture, or undefined. It sends no request. */
+  body(capture: string): Promise<Uint8Array | undefined>;
   /** This list keeps the pages that the crawler checks again on a schedule, in `watch.sqlite`. */
   readonly watch: WatchList;
   /**
@@ -612,6 +622,10 @@ export const openCrawler = (options: OpenOptions): HybridCrawler => {
         fallback: fetchOptions.fallback,
         archiveDespiteRobots: fetchOptions.archiveDespiteRobots,
       });
+    },
+    async body(capture) {
+      await live();
+      return captureBody(runtime, capture);
     },
     async find(q, findOptions = {}) {
       await live();

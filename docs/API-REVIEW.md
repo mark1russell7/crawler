@@ -149,7 +149,7 @@ The package is the MCP server of polite-crawler since 0.2.0. Its tiers follow th
 
 | Entry point | Stable | Beta | Deprecated |
 | --- | --- | --- | --- |
-| polite-crawler root | 238 | 139 | 0 |
+| polite-crawler root | 238 | 140 | 0 |
 | `/robots`, `/hours`, `/html`, `/classify`, `/politeness`, `/signals`, `/urls`, `/text` | 94 | 2 | 0 |
 | `/api` | 13 | 71 | 0 |
 | `/pinned` | 12 | 20 | 0 |

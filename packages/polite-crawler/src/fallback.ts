@@ -702,6 +702,8 @@ export const archivedPage = async (
       fetched_at: doc.fetched_at,
       from_cache: answer.fromCache,
       held_back: held,
+      blob: doc.blob,
+      unchanged: answer.fromCache,
       archived,
       note: note.join("; "),
     },

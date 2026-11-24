@@ -204,6 +204,22 @@ export interface KeptMemory extends KeptStore {
 }
 
 // @beta
+export interface KeptReplies<Extra> {
+    delete(url: string): void;
+    get(url: string): Promise<KeptReply<Extra> | undefined>;
+    keep(url: string, reply: Reply, extra: Extra): void;
+}
+
+// @beta
+export function keptReplies<Extra>(): KeptReplies<Extra>;
+
+// @beta
+export interface KeptReply<Extra> {
+    readonly extra: Extra;
+    readonly reply: Reply;
+}
+
+// @beta
 export function keptRequestHeaders(kept: Kept | undefined, headers: Readonly<Record<string, string>>): Record<string, string>;
 
 // @beta

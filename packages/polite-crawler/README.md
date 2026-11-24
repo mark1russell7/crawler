@@ -1312,6 +1312,28 @@ if (polled.changed) {
 - **The validator memo of the crawler.** Some hosts give an `ETag` that changes at each answer. With a store of the scheduler that keeps the validator memo, the poll then sends only `If-Modified-Since`, as the crawler does.
 - **One store for one set of headers.** A store keeps one entry for each URL. Give a second store to a request with a different `accept` header.
 
+#### Keep the replies of a poll
+
+A 304 has no body. A client that reads each body into many values keeps those values until the next changed body, so its memory grows with the data. `keptReplies` keeps the last full reply of each URL instead, with its body as compressed bytes. At a 304, the client reads the reply again.
+
+```ts
+import { keptReplies, poll } from "polite-crawler/api";
+
+const replies = keptReplies<{ fetched: number }>();
+const polled = await poll(pace, transport, conditions, input);
+if (polled.reply.status === 304) {
+  const kept = await replies.get(input.exchange.url);
+  // read kept.reply.body again, with kept.extra.fetched
+} else {
+  replies.keep(input.exchange.url, polled.reply, { fetched: Date.now() });
+}
+```
+
+- **The value of the client.** Each reply keeps a value of the client, for example the time of the fetch. Thus a new read gives the same result.
+- **Only the text gets the compression.** A reply with `bytes` keeps its bytes as they are.
+- **A failure gives no reply.** A failed compression or expansion rejects the `get`. Then the client has no earlier full answer: delete the condition of the URL, and the next poll asks for the full answer.
+- **One run only.** The store is in memory. `keptStore` keeps answers between two runs.
+
 ### Keep the answers of an API
 
 `poll` tells only if the data changed. A client that needs the data at each request uses `keptFetch`. It keeps the last full answer of each GET with its body. The next GET of the same URL sends the validators. A 304 then gives the kept answer: the status, the body and the kept headers, with the new fields of the 304. Some APIs do not count a 304 in the rate limit, for example the REST API of GitHub. A run that reads the same files again then counts fewer requests.

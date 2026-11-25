@@ -197,8 +197,8 @@ importers:
         specifier: ^0.1.2
         version: 0.1.9
       '@mark1russell7/text':
-        specifier: ^0.0.17
-        version: 0.0.17
+        specifier: ^0.0.18
+        version: 0.0.18
       '@types/node':
         specifier: ^22.20.5
         version: 22.20.5
@@ -355,8 +355,8 @@ importers:
         specifier: ^0.8.0
         version: 0.8.4
       '@mark1russell7/text':
-        specifier: ^0.0.17
-        version: 0.0.17
+        specifier: ^0.0.18
+        version: 0.0.18
       '@pagefind/default-ui':
         specifier: ^1.5.2
         version: 1.6.0
@@ -1318,6 +1318,10 @@ packages:
 
   '@mark1russell7/text@0.0.17':
     resolution: {integrity: sha512-jFqqVfCTQ0N65qvMP/gANAbnqB7ewpA3IeNxPeQTuF3IoSZkTgTl92PE47F5IOOfgz0Q0dF723crrYB8T6pR3g==}
+    engines: {node: '>=22.12'}
+
+  '@mark1russell7/text@0.0.18':
+    resolution: {integrity: sha512-sIOsTkBOhWLSDyE4qKyiokUT84NPJgPuhLPDyh2Y+mjGnNbGhF9Q6dt9NnSBtSW8C1D0rZfx8fPJ53g0gQGWfQ==}
     engines: {node: '>=22.12'}
 
   '@mark1russell7/text@0.0.2':
@@ -5120,6 +5124,8 @@ snapshots:
       '@clack/prompts': 1.8.1
 
   '@mark1russell7/text@0.0.17': {}
+
+  '@mark1russell7/text@0.0.18': {}
 
   '@mark1russell7/text@0.0.2': {}
 

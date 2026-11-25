@@ -95,10 +95,10 @@ The window counting of quotaGate (rolling buckets and calendar days and months i
 - Started: 2026-11-15
 - Shipped: 2026-11-15
 - [crawler #161 (the review that asks for the move)](https://github.com/mark1russell7/crawler/pull/161)
-- [systems #527 (SYS-115: service 0.8.15, algebra 0.8.9)](https://github.com/mark1russell7/systems/pull/527)
-- [systems #535 (maxBlock and the narrow part, merged 75f8efb)](https://github.com/mark1russell7/systems/pull/535)
-- [systems #538 (service 0.8.19)](https://github.com/mark1russell7/systems/pull/538)
-- [systems #543 (the leaner limiter: service 0.8.20, quantity 0.4.1)](https://github.com/mark1russell7/systems/pull/543)
+- [systems #527 (SYS-115: service 0.8.15, algebra 0.8.9)](https://github.com/metrograph-labs/systems/pull/527)
+- [systems #535 (maxBlock and the narrow part, merged 75f8efb)](https://github.com/metrograph-labs/systems/pull/535)
+- [systems #538 (service 0.8.19)](https://github.com/metrograph-labs/systems/pull/538)
+- [systems #543 (the leaner limiter: service 0.8.20, quantity 0.4.1)](https://github.com/metrograph-labs/systems/pull/543)
 - [crawler #171 (merged 468e5cc)](https://github.com/mark1russell7/crawler/pull/171)
 - [polite-crawler 0.7.5 on npm](https://www.npmjs.com/package/polite-crawler/v/0.7.5)
 
@@ -111,7 +111,7 @@ For the alerts project: a package that gets a transport of withQuota, with no de
 - Started: 2026-11-15
 - Shipped: 2026-11-15
 - [crawler #162 (api-guards, 0.7.0, merged dff2fe8)](https://github.com/mark1russell7/crawler/pull/162)
-- [alerts PR 19 (the ask)](https://github.com/mark1russell7/alerts/pull/19)
+- [alerts PR 19 (the ask)](https://github.com/metrograph-labs/alerts/pull/19)
 - [polite-crawler 0.7.0 on npm](https://www.npmjs.com/package/polite-crawler/v/0.7.0)
 
 ### `report-chunks`: API report: no chunk paths (html.chunk.d.mts)

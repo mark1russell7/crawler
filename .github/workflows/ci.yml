@@ -203,7 +203,7 @@ jobs:
   # The site of .github/site.json: the build, the site check and the probe, with no deploy (CI.md of the
   # template, "The site config"). The Pages workflow deploys the same site from main.
   site:
-    uses: mark1russell7/template/.github/workflows/reusable-pages-check.yml@19a14ae7da54e6e529ef90c5c4ab872867f152b9 # main
+    uses: mark1russell7/template/.github/workflows/reusable-pages-check.yml@ce52f5ad840cd213bcc0649551e948e4a57c51ac # main
     permissions:
       contents: read
 

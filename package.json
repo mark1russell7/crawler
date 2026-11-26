@@ -28,6 +28,9 @@
   "apiReport": {
     "entriesOnly": true
   },
+  "sitePages": {
+    "bareErrors": "fail"
+  },
   "devDependencies": {
     "@arethetypeswrong/cli": "^0.18.5",
     "@mark1russell7/api-report": "^0.5.7",

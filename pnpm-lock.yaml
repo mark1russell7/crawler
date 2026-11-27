@@ -197,8 +197,8 @@ importers:
         specifier: ^0.1.2
         version: 0.1.12
       '@mark1russell7/text':
-        specifier: ^0.0.20
-        version: 0.0.20
+        specifier: ^0.0.21
+        version: 0.0.21
       '@types/node':
         specifier: ^22.20.5
         version: 22.20.7
@@ -355,8 +355,8 @@ importers:
         specifier: ^0.8.0
         version: 0.8.8
       '@mark1russell7/text':
-        specifier: ^0.0.20
-        version: 0.0.20
+        specifier: ^0.0.21
+        version: 0.0.21
       '@pagefind/default-ui':
         specifier: ^1.5.2
         version: 1.6.0
@@ -1312,6 +1312,10 @@ packages:
 
   '@mark1russell7/text@0.0.20':
     resolution: {integrity: sha512-HrjBak4BE0fDC+bLzFi/c4NDCHqiUm7VhYR5YhJmkApRSB8mUOao4bFiO9Jy3xwpsCGJCj4echVDCUxXjV+3NA==}
+    engines: {node: '>=22.12'}
+
+  '@mark1russell7/text@0.0.21':
+    resolution: {integrity: sha512-Y0ZNBrHHeIo9LPJc0dWJrhjQUoK+PQHgotitEaJo3J6xppYPIBqJ0AXQBHjzpdoL7xUWYCqriFNe+WA/4S15KQ==}
     engines: {node: '>=22.12'}
 
   '@mark1russell7/text@0.0.6':
@@ -5036,6 +5040,8 @@ snapshots:
   '@mark1russell7/text@0.0.2': {}
 
   '@mark1russell7/text@0.0.20': {}
+
+  '@mark1russell7/text@0.0.21': {}
 
   '@mark1russell7/text@0.0.6': {}
 
